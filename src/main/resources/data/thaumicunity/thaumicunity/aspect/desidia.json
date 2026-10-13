@@ -1,0 +1,8 @@
+{
+  "color": "#6e6e6e",
+  "components": [
+    "thaumicunity:vinculum",
+    "thaumicunity:spiritus"
+  ],
+  "origin": "addon:forbidden_magic"
+}

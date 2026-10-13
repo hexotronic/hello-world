@@ -1,0 +1,8 @@
+{
+  "color": "#c0ffc0",
+  "components": [
+    "thaumicunity:lux",
+    "thaumicunity:potentia"
+  ],
+  "origin": "addon:gregtech"
+}

@@ -1,0 +1,8 @@
+{
+  "color": "#ff0000",
+  "components": [
+    "thaumicunity:ignis",
+    "thaumicunity:praecantatio"
+  ],
+  "origin": "addon:forbidden_magic"
+}

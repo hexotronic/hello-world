@@ -1,0 +1,8 @@
+{
+  "color": "#b90000",
+  "components": [
+    "thaumicunity:lucrum",
+    "thaumicunity:alienis"
+  ],
+  "origin": "addon:avaritia"
+}

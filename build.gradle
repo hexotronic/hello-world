@@ -80,6 +80,8 @@ dependencies {
     // spell compilation and balancing, research graph validation and aura simulation.
     testImplementation platform('org.junit:junit-bom:5.13.4')
     testImplementation 'org.junit.jupiter:junit-jupiter'
+    // Used by ShippedAspectsTest to read the aspect JSON files (Minecraft ships the same library at runtime).
+    testImplementation 'com.google.code.gson:gson:2.11.0'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
