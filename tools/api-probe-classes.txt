@@ -1,77 +1,53 @@
 # Classes whose signatures are printed by .github/workflows/api-probe.yml (javap -protected).
 # Syntax: see tools/api-probe.sh. Avoid parentheses in filters.
-net.minecraft.world.item.ItemInstance
-net.minecraft.core.component.DataComponentHolder
-net.minecraft.core.component.DataComponentGetter
-net.minecraft.client.gui.GuiGraphicsExtractor
-net.minecraft.client.gui.components.Renderable
-net.minecraft.client.gui.components.Tooltip
-net.minecraft.client.gui.components.AbstractButton
-net.minecraft.client.gui.components.ImageButton
-net.minecraft.client.input.KeyEvent
-net.minecraft.client.input.MouseButtonEvent
-net.minecraft.client.input.MouseButtonInfo
-net.minecraft.client.input.CharacterEvent
-net.minecraft.client.KeyMapping
-net.minecraft.client.KeyMapping$Category
-com.mojang.blaze3d.platform.InputConstants | static|public
-net.minecraft.world.entity.projectile.throwableitemprojectile.ThrowableItemProjectile
-net.minecraft.world.entity.projectile.throwableitemprojectile.Snowball
-net.minecraft.world.entity.projectile.ItemSupplier
-net.minecraft.world.level.storage.SavedDataStorage
-net.minecraft.server.level.ServerPlayer | public
-net.minecraft.world.entity.player.Inventory
-net.minecraft.client.player.LocalPlayer | public
-net.minecraft.client.renderer.entity.state.ThrownItemRenderState
-net.minecraft.tags.BiomeTags | static
-net.minecraft.tags.BlockTags | static
-net.minecraft.tags.ItemTags | static
-net.minecraft.world.level.material.Fluids | static
-net.minecraft.world.level.material.FluidState | public
-net.minecraft.world.level.block.CampfireBlock | public static
-net.minecraft.world.entity.player.Abilities
-net.minecraft.world.item.context.BlockPlaceContext
+net.minecraft.world.level.block.BonemealSource
+net.minecraft.world.level.block.BonemealableBlock
+net.minecraft.world.entity.EntityTypes | LIGHTNING_BOLT|ITEM|EXPERIENCE|BAT|ZOMBIE
+net.minecraft.core.TypedInstance
+net.minecraft.world.level.ChunkPos
+net.minecraft.resources.ResourceKey
+net.minecraft.world.ContainerHelper
+net.minecraft.world.entity.player.Inventory | public
+net.minecraft.world.inventory.Slot
+net.minecraft.world.Containers
+net.minecraft.world.SimpleContainer
+net.minecraft.world.Container
+net.minecraft.world.inventory.ContainerData
+net.minecraft.world.inventory.SimpleContainerData
+net.minecraft.world.inventory.ContainerLevelAccess
+net.minecraft.world.SimpleMenuProvider
+net.minecraft.world.MenuProvider
+net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket
+net.minecraft.world.level.block.state.StateDefinition$Builder
+net.minecraft.world.level.block.state.properties.BlockStateProperties | FACING|LIT|HORIZONTAL_FACING|LEVEL|WATERLOGGED|POWERED
 net.minecraft.world.level.block.HorizontalDirectionalBlock
-net.minecraft.world.level.LevelReader | public
-net.minecraft.world.damagesource.DamageSource
-net.minecraft.world.effect.MobEffectInstance
-net.minecraft.core.particles.ParticleOptions
-net.minecraft.server.packs.PackType
-net.minecraft.server.packs.repository.PackSource | static
-net.minecraft.server.packs.repository.Pack$Position
-net.minecraft.world.inventory.ResultContainer
-net.minecraft.world.inventory.TransientCraftingContainer
-net.minecraft.world.inventory.CraftingContainer
-net.minecraft.world.inventory.ResultSlot
-net.minecraft.world.inventory.DataSlot
-net.minecraft.world.inventory.CraftingMenu
-net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket | static
-net.minecraft.world.level.block.Blocks | Block AIR|Block FIRE|Block WATER|Block LAVA|Block CAULDRON|Block MAGMA_BLOCK|Block CAMPFIRE|Block SOUL_FIRE|Block BOOKSHELF|Block CRAFTING_TABLE|Block STONE|Block GLASS
-net.minecraft.world.item.Items | Item WATER_BUCKET|Item BUCKET|Item GLASS_BOTTLE|Item BOOK|Item REDSTONE|Item GLOWSTONE_DUST|Item IRON_INGOT|Item GOLD_INGOT
-net.minecraft.client.renderer.entity.EntityRenderer
-net.minecraft.client.renderer.entity.ItemRenderer | public
-net.minecraft.client.renderer.item.ItemModelResolver | public
-net.minecraft.client.renderer.item.ItemStackRenderState | public
+net.minecraft.world.item.context.BlockPlaceContext
+net.minecraft.world.level.block.entity.BlockEntityTicker
+net.minecraft.world.item.component.CustomData
+net.minecraft.world.item.component.ItemContainerContents
+net.minecraft.core.component.DataComponents | MAX_STACK|MAX_DAMAGE|CUSTOM_NAME|ITEM_NAME|LORE|RARITY|ENCHANTMENT_GLINT|CUSTOM_DATA|CONTAINER|DYED|TOOLTIP_DISPLAY|EQUIPPABLE|GLIDER|USE_COOLDOWN
+net.minecraft.world.item.equipment.Equippable
+net.minecraft.world.item.equipment.Equippable$Builder
+net.minecraft.world.entity.EquipmentSlot
+net.minecraft.world.item.Rarity
+net.minecraft.client.renderer.blockentity.BlockEntityRenderers
+net.minecraft.client.gui.screens.MenuScreens
+net.minecraft.client.renderer.entity.NoopRenderer
 net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent
-net.minecraft.world.inventory.tooltip.TooltipComponent
-net.minecraft.client.multiplayer.ClientPacketListener | registryAccess|getConnection|recipes
-net.minecraft.world.level.biome.Biome | public
-net.minecraft.core.Holder$Reference | public
-net.minecraft.world.entity.EntityType | public
-net.minecraft.world.phys.HitResult
-net.minecraft.world.phys.BlockHitResult
-net.minecraft.world.phys.EntityHitResult
-net.minecraft.world.entity.Entity | public void|public boolean|public Vec3|public float|public double|public Level|public int|public BlockPos|public UUID|protected abstract|protected void
-net.minecraft.util.Mth | static float|static double|static int
-net.minecraft.util.RandomSource
-net.minecraft.util.ARGB | static
-net.minecraft.world.level.Level | public
-net.minecraft.server.MinecraftServer | public
-net.minecraft.commands.arguments.EntityArgument | static
-net.minecraft.commands.arguments.IdentifierArgument | static
-net.minecraft.commands.CommandSourceStack | public
-net.minecraft.network.chat.HoverEvent
-net.minecraft.network.chat.ClickEvent
-net.minecraft.world.level.block.state.properties.Property
+net.minecraft.client.DeltaTracker
+net.minecraft.client.Minecraft | player|level|screen|setScreen|font|getInstance|options|gui|hitResult|isPaused|getDeltaTracker|particleEngine|getWindow|keyboardHandler|mouseHandler
+net.minecraft.client.player.LocalPlayer | getInventory|getMainHandItem|level|getData
+net.minecraft.client.multiplayer.ClientLevel | registryAccess|getGameTime|addParticle|playLocalSound
 net.minecraft.world.level.levelgen.Heightmap$Types
+net.minecraft.world.level.Level | public boolean setBlockAndUpdate|getEntitiesOfClass|clip|getHeight|getSeaLevel|getBiome|getChunkAt|hasChunk|getChunk
+net.minecraft.world.level.LevelReader | getBiome|getSeaLevel|getHeight|hasChunk|getChunk
+net.minecraft.world.level.BlockGetter | clip|getBlockState|getBlockEntity
+net.minecraft.world.level.EntityGetter
+net.minecraft.world.level.LevelWriter
+net.minecraft.world.level.block.LightBlock
+net.minecraft.server.level.ServerLevel | getEntity|sendParticles|players|getServer|getDataStorage|getRandom
+net.minecraft.world.phys.AABB
+net.minecraft.core.BlockPos | public static|public BlockPos
+net.minecraft.core.Direction | public
 net.minecraft.world.level.block.state.BlockState | public
+net.minecraft.world.level.block.state.BlockBehaviour$BlockStateBase | is|getBlock|isAir|canBeReplaced|getFluidState|getDestroySpeed

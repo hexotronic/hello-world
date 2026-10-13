@@ -54,7 +54,7 @@ public final class EffectPrimitives {
             return;
         }
         float amount = (float) (params.getDouble("damage", 4.0) * power);
-        if (params.has("undead_bonus") && victim.getType().is(net.minecraft.tags.EntityTypeTags.UNDEAD)) {
+        if (params.has("undead_bonus") && victim.getType().builtInRegistryHolder().is(net.minecraft.tags.EntityTypeTags.UNDEAD)) {
             amount *= (float) params.getDouble("undead_bonus", 1.0);
         }
         victim.hurtServer(ctx.level(), damageSource(ctx, params), amount);
@@ -106,7 +106,7 @@ public final class EffectPrimitives {
             return;
         }
         float amount = (float) (params.getDouble("amount", 4.0) * power);
-        if (params.getBoolean("harm_undead", true) && living.getType().is(net.minecraft.tags.EntityTypeTags.UNDEAD)) {
+        if (params.getBoolean("harm_undead", true) && living.getType().builtInRegistryHolder().is(net.minecraft.tags.EntityTypeTags.UNDEAD)) {
             living.hurtServer(ctx.level(), ctx.level().damageSources().magic(), amount);
             return;
         }
@@ -305,7 +305,7 @@ public final class EffectPrimitives {
 
     /** Calls lightning. Params: visual_only (bool). */
     public static final SpellPrimitive.Effect LIGHTNING = (ctx, target, params, power) -> {
-        LightningBolt bolt = EntityType.LIGHTNING_BOLT.create(ctx.level(), EntitySpawnReason.TRIGGERED);
+        LightningBolt bolt = net.minecraft.world.entity.EntityTypes.LIGHTNING_BOLT.create(ctx.level(), EntitySpawnReason.TRIGGERED);
         if (bolt == null) {
             return;
         }
@@ -335,10 +335,10 @@ public final class EffectPrimitives {
             if (state.getBlock() instanceof BonemealableBlock growable) {
                 for (int i = 0; i < times; i++) {
                     state = ctx.level().getBlockState(pos);
-                    if (!(state.getBlock() instanceof BonemealableBlock) || !growable.isValidBonemealTarget(ctx.level(), pos, state)) {
+                    if (!(state.getBlock() instanceof BonemealableBlock) || !growable.isValidBonemealTarget(ctx.level(), pos, state, BONEMEAL_SOURCE)) {
                         break;
                     }
-                    growable.performBonemeal(ctx.level(), ctx.random(), pos, state);
+                    growable.performBonemeal(ctx.level(), ctx.random(), pos, state, BONEMEAL_SOURCE);
                 }
             }
         }

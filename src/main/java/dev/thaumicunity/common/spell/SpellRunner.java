@@ -138,7 +138,7 @@ public final class SpellRunner {
     }
 
     /** Recompiles a stored node (spell entities keep the raw node so they survive data reloads). */
-    public static @Nullable CompiledSpell.CompiledNode compileStored(ServerLevel level, SpellNode node) {
+    public static CompiledSpell.@Nullable CompiledNode compileStored(ServerLevel level, SpellNode node) {
         CompiledSpell compiled = SpellLibrary.get(level.registryAccess()).compile(node, SpellLimits.UNBOUNDED);
         return compiled.root();
     }

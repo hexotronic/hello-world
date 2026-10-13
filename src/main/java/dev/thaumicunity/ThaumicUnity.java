@@ -26,7 +26,8 @@ public final class ThaumicUnity {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public ThaumicUnity(IEventBus modBus, ModContainer container) {
-        container.registerConfig(ModConfig.Type.COMMON, TUConfig.SPEC);
+        // Gameplay settings are server-authoritative and synced to clients.
+        container.registerConfig(ModConfig.Type.SYNCED, TUConfig.SPEC);
         container.registerConfig(ModConfig.Type.CLIENT, TUClientConfig.SPEC);
 
         TURegistries.init(modBus);
