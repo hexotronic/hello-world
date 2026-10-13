@@ -45,6 +45,9 @@ import java.util.Optional;
  * strengths linearly unless noted.
  */
 public final class EffectPrimitives {
+    private static final net.minecraft.world.level.block.BonemealSource BONEMEAL_SOURCE =
+            net.minecraft.world.level.block.BonemealSource.INTERACTION;
+
     private EffectPrimitives() {
     }
 

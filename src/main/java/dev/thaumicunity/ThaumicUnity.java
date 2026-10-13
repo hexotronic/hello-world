@@ -1,10 +1,19 @@
 package dev.thaumicunity;
 
 import com.mojang.logging.LogUtils;
+import dev.thaumicunity.common.TUEvents;
 import dev.thaumicunity.common.aura.AuraManager;
+import dev.thaumicunity.common.network.TUNetwork;
 import dev.thaumicunity.common.config.TUClientConfig;
 import dev.thaumicunity.common.config.TUConfig;
 import dev.thaumicunity.common.registry.TUAttachments;
+import dev.thaumicunity.common.registry.TUBlockEntities;
+import dev.thaumicunity.common.registry.TUBlocks;
+import dev.thaumicunity.common.registry.TUCreativeTabs;
+import dev.thaumicunity.common.registry.TUDataComponents;
+import dev.thaumicunity.common.registry.TUItems;
+import dev.thaumicunity.common.registry.TUMenus;
+import dev.thaumicunity.common.registry.TURecipes;
 import dev.thaumicunity.common.registry.TUDataMaps;
 import dev.thaumicunity.common.registry.TUEntities;
 import dev.thaumicunity.common.registry.TUParticles;
@@ -33,11 +42,20 @@ public final class ThaumicUnity {
         TURegistries.init(modBus);
         TUDataMaps.init(modBus);
         TUAttachments.init(modBus);
+        TUDataComponents.init(modBus);
+        TUBlocks.init(modBus);
+        TUItems.init(modBus);
+        TUBlockEntities.init(modBus);
+        TUMenus.init(modBus);
+        TURecipes.init(modBus);
         TUParticles.init(modBus);
         TUSounds.init(modBus);
         TUEntities.init(modBus);
+        TUCreativeTabs.init(modBus);
         TUSpellPrimitives.init(modBus);
+        TUNetwork.init(modBus);
 
+        TUEvents.init(modBus);
         AuraManager.init();
         SpellScheduler.init();
     }
