@@ -3,6 +3,7 @@ package dev.thaumicunity.common.blockentity;
 import dev.thaumicunity.common.aspect.AspectList;
 import dev.thaumicunity.common.aspect.ItemAspects;
 import dev.thaumicunity.common.registry.TUBlockEntities;
+import dev.thaumicunity.common.registry.TUDataMaps;
 import dev.thaumicunity.common.spell.SpellFx;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
@@ -76,7 +77,8 @@ public class AlchemicalFurnaceBlockEntity extends InventoryBlockEntity {
             furnace.burnTime--;
         } else if (canWork) {
             ItemStack fuel = furnace.inventory.getItem(FUEL);
-            int duration = fuel.isEmpty() ? 0 : level.fuelValues().burnDuration(fuel);
+            Integer fuelTicks = fuel.isEmpty() ? null : fuel.getItem().builtInRegistryHolder().getData(TUDataMaps.ALCHEMICAL_FUEL);
+            int duration = fuelTicks == null ? 0 : fuelTicks;
             if (duration > 0) {
                 furnace.burnTime = furnace.burnTotal = duration;
                 ItemStack remainder = fuel.getItem().getCraftingRemainder() != null

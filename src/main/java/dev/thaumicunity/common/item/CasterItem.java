@@ -48,7 +48,7 @@ public class CasterItem extends Item {
         ItemStack focus = player.getItemInHand(hand == InteractionHand.MAIN_HAND ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND);
         if (!(focus.getItem() instanceof FocusItem focusItem) || !focus.has(TUDataComponents.SPELL.get())) {
             if (!level.isClientSide()) {
-                player.displayClientMessage(Component.translatable("message.thaumicunity.caster.no_focus"), true);
+                player.sendOverlayMessage(Component.translatable("message.thaumicunity.caster.no_focus"));
             }
             return InteractionResult.FAIL;
         }
@@ -61,14 +61,14 @@ public class CasterItem extends Item {
         SpellNode node = focus.get(TUDataComponents.SPELL.get());
         CompiledSpell spell = SpellLibrary.get(server.registryAccess()).compile(node, focusItem.limits());
         if (!spell.isValid()) {
-            player.displayClientMessage(Component.translatable("message.thaumicunity.caster.invalid", spell.errors().get(0))
-                    .withStyle(ChatFormatting.RED), true);
+            player.sendOverlayMessage(Component.translatable("message.thaumicunity.caster.invalid", spell.errors().get(0))
+                    .withStyle(ChatFormatting.RED));
             return InteractionResult.FAIL;
         }
         BlockPos at = player.blockPosition();
         if (!player.isCreative() && !payVis(server, at, spell)) {
             server.playSound(null, at, TUSounds.FIZZLE.get(), SoundSource.PLAYERS, 0.6f, 0.8f);
-            player.displayClientMessage(Component.translatable("message.thaumicunity.caster.no_vis"), true);
+            player.sendOverlayMessage(Component.translatable("message.thaumicunity.caster.no_vis"));
             player.getCooldowns().addCooldown(caster, 10);
             return InteractionResult.FAIL;
         }

@@ -38,6 +38,11 @@ public final class TUDataMaps {
             .builder(ThaumicUnity.id("infusion_stabilizer"), Registries.BLOCK, Codec.floatRange(-20f, 20f))
             .build();
 
+    /** Burn time in ticks of an item in the alchemical furnace (and other arcane burners). */
+    public static final DataMapType<Item, Integer> ALCHEMICAL_FUEL = DataMapType
+            .builder(ThaumicUnity.id("alchemical_fuel"), Registries.ITEM, Codec.intRange(1, 1_000_000))
+            .build();
+
     private TUDataMaps() {
     }
 
@@ -50,5 +55,6 @@ public final class TUDataMaps {
         event.register(ENTITY_ASPECTS);
         event.register(AURA_PROFILE);
         event.register(INFUSION_STABILIZER);
+        event.register(ALCHEMICAL_FUEL);
     }
 }

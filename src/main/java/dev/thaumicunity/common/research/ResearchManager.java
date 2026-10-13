@@ -96,7 +96,7 @@ public final class ResearchManager {
         PlayerKnowledge knowledge = knowledge(player);
         String key = ScanTarget.scanKey(kind, id);
         if (!knowledge.markScanned(key)) {
-            player.displayClientMessage(Component.translatable("message.thaumicunity.scan.known", name).withStyle(ChatFormatting.GRAY), true);
+            player.sendOverlayMessage(Component.translatable("message.thaumicunity.scan.known", name).withStyle(ChatFormatting.GRAY));
             return false;
         }
         int points = TUConfig.SCAN_POINTS_PER_ASPECT.get();
@@ -106,7 +106,7 @@ public final class ResearchManager {
         });
         grantObservations(player, knowledge, aspects);
         NeoForge.EVENT_BUS.post(new ScanEvent(player, key, aspects.asMap()));
-        player.displayClientMessage(Component.translatable("message.thaumicunity.scan.new", name).withStyle(ChatFormatting.LIGHT_PURPLE), true);
+        player.sendOverlayMessage(Component.translatable("message.thaumicunity.scan.new", name).withStyle(ChatFormatting.LIGHT_PURPLE));
         sync(player);
         return true;
     }
@@ -216,8 +216,8 @@ public final class ResearchManager {
         List<ResearchRequirement> requirements = currentRequirements(player, id, entry);
         for (int i = 0; i < requirements.size(); i++) {
             if (!player.isCreative() && !isMet(player, id, stage, i, requirements.get(i))) {
-                player.displayClientMessage(Component.translatable("message.thaumicunity.research.not_ready")
-                        .withStyle(ChatFormatting.RED), true);
+                player.sendOverlayMessage(Component.translatable("message.thaumicunity.research.not_ready")
+                        .withStyle(ChatFormatting.RED));
                 return false;
             }
         }
@@ -228,8 +228,8 @@ public final class ResearchManager {
         sync(player);
         player.level().playSound(null, player.blockPosition(), TUSounds.RESEARCH.get(), SoundSource.PLAYERS, 0.8f, 1.0f);
         if (stage + 1 >= entry.stageCount()) {
-            player.displayClientMessage(Component.translatable("message.thaumicunity.research.complete",
-                    Component.translatable(ResearchEntry.titleKey(id))).withStyle(ChatFormatting.GOLD), false);
+            player.sendSystemMessage(Component.translatable("message.thaumicunity.research.complete",
+                    Component.translatable(ResearchEntry.titleKey(id))).withStyle(ChatFormatting.GOLD));
             NeoForge.EVENT_BUS.post(new ResearchCompletedEvent(player, id));
         }
         return true;

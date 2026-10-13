@@ -1,5 +1,6 @@
 package dev.thaumicunity.common.block;
 
+import dev.thaumicunity.common.util.TUUtil;
 import dev.thaumicunity.common.aspect.Aspect;
 import dev.thaumicunity.common.aspect.AspectList;
 import dev.thaumicunity.common.aspect.Aspects;
@@ -92,15 +93,15 @@ public class WardedJarBlock extends TUEntityBlock<WardedJarBlockEntity> {
         }
         if (player.isShiftKeyDown() && jar.filter() != null) {
             jar.setFilter(null);
-            player.displayClientMessage(Component.translatable("message.thaumicunity.jar.label_removed"), true);
+            player.sendOverlayMessage(Component.translatable("message.thaumicunity.jar.label_removed"));
             return InteractionResult.SUCCESS;
         }
         Identifier aspect = jar.aspect();
         if (aspect == null || jar.amount() == 0) {
-            player.displayClientMessage(Component.translatable("message.thaumicunity.jar.empty"), true);
+            player.sendOverlayMessage(Component.translatable("message.thaumicunity.jar.empty"));
         } else {
-            player.displayClientMessage(Component.translatable("message.thaumicunity.jar.contents", jar.amount(),
-                    Aspect.displayName(aspect, Aspects.color(level.registryAccess(), aspect))), true);
+            player.sendOverlayMessage(Component.translatable("message.thaumicunity.jar.contents", jar.amount(),
+                    Aspect.displayName(aspect, Aspects.color(level.registryAccess(), aspect))));
         }
         return InteractionResult.SUCCESS;
     }
@@ -109,8 +110,6 @@ public class WardedJarBlock extends TUEntityBlock<WardedJarBlockEntity> {
         if (!player.isCreative()) {
             used.shrink(1);
         }
-        if (!player.getInventory().add(result)) {
-            player.drop(result, false);
-        }
+        TUUtil.giveOrDrop(player, result);
     }
 }

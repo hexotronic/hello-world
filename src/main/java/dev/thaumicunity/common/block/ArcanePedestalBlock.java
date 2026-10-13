@@ -1,5 +1,6 @@
 package dev.thaumicunity.common.block;
 
+import dev.thaumicunity.common.util.TUUtil;
 import dev.thaumicunity.common.blockentity.ArcanePedestalBlockEntity;
 import dev.thaumicunity.common.registry.TUBlockEntities;
 import net.minecraft.core.BlockPos;
@@ -57,9 +58,7 @@ public class ArcanePedestalBlock extends TUEntityBlock<ArcanePedestalBlockEntity
         if (!level.isClientSide()) {
             ItemStack item = pedestal.item().copy();
             pedestal.setItem(ItemStack.EMPTY);
-            if (!player.getInventory().add(item)) {
-                player.drop(item, false);
-            }
+            TUUtil.giveOrDrop(player, item);
             level.playSound(null, pos, SoundEvents.ITEM_FRAME_REMOVE_ITEM, SoundSource.BLOCKS, 0.8f, 1.0f);
         }
         return InteractionResult.SUCCESS;

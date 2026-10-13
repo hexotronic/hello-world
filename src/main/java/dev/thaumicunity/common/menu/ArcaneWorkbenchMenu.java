@@ -1,5 +1,6 @@
 package dev.thaumicunity.common.menu;
 
+import dev.thaumicunity.common.util.TUUtil;
 import dev.thaumicunity.common.aspect.AspectList;
 import dev.thaumicunity.common.aspect.Aspects;
 import dev.thaumicunity.common.aura.AuraManager;
@@ -204,8 +205,8 @@ public class ArcaneWorkbenchMenu extends AbstractContainerMenu {
                         ItemStack remainder = remainderTemplate.create();
                         if (ingredient.isEmpty()) {
                             grid.setItem(i, remainder);
-                        } else if (!crafter.getInventory().add(remainder)) {
-                            crafter.drop(remainder, false);
+                        } else {
+                            TUUtil.giveOrDrop(crafter, remainder);
                         }
                     }
                 }

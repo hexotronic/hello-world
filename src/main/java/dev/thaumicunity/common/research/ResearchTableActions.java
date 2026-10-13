@@ -1,5 +1,6 @@
 package dev.thaumicunity.common.research;
 
+import dev.thaumicunity.common.util.TUUtil;
 import dev.thaumicunity.common.aspect.Aspects;
 import dev.thaumicunity.common.config.TUConfig;
 import dev.thaumicunity.common.menu.ResearchTableMenu;
@@ -40,7 +41,7 @@ public final class ResearchTableActions {
     private static boolean useInk(ResearchTableMenu menu, ServerPlayer player) {
         ItemStack tools = menu.tools();
         if (!tools.is(TUItems.SCRIBING_TOOLS.get())) {
-            player.displayClientMessage(Component.translatable("message.thaumicunity.table.no_tools").withStyle(ChatFormatting.RED), true);
+            player.sendOverlayMessage(Component.translatable("message.thaumicunity.table.no_tools").withStyle(ChatFormatting.RED));
             return false;
         }
         if (!player.isCreative()) {
@@ -56,7 +57,7 @@ public final class ResearchTableActions {
         }
         ResearchTableMenu menu = open.get();
         if (!menu.paper().is(TUTags.Items.RESEARCH_PAPER)) {
-            player.displayClientMessage(Component.translatable("message.thaumicunity.table.no_paper").withStyle(ChatFormatting.RED), true);
+            player.sendOverlayMessage(Component.translatable("message.thaumicunity.table.no_paper").withStyle(ChatFormatting.RED));
             return;
         }
         Optional<ResearchEntry> entry = ResearchManager.entry(player.level().registryAccess(), research);
@@ -81,8 +82,8 @@ public final class ResearchTableActions {
         paper.shrink(1);
         if (paper.isEmpty()) {
             menu.setPaper(notes);
-        } else if (!player.getInventory().add(notes)) {
-            player.drop(notes, false);
+        } else {
+            TUUtil.giveOrDrop(player, notes);
         }
         player.level().playSound(null, player.blockPosition(), TUSounds.PAGE.get(), SoundSource.PLAYERS, 0.7f, 1.0f);
     }
@@ -95,7 +96,7 @@ public final class ResearchTableActions {
             }
             PlayerKnowledge knowledge = ResearchManager.knowledge(player);
             if (!player.isCreative() && !knowledge.spendAspectPoint(aspect)) {
-                player.displayClientMessage(Component.translatable("message.thaumicunity.table.no_points").withStyle(ChatFormatting.RED), true);
+                player.sendOverlayMessage(Component.translatable("message.thaumicunity.table.no_points").withStyle(ChatFormatting.RED));
                 return null;
             }
             return puzzle.place(cell, aspect.toString());
@@ -144,7 +145,7 @@ public final class ResearchTableActions {
                         knowledge.addKnowledge(ResearchRequirement.KnowledgeKind.THEORY, entry.category(), 1));
             }
             player.level().playSound(null, player.blockPosition(), TUSounds.RESEARCH.get(), SoundSource.PLAYERS, 0.8f, 1.2f);
-            player.displayClientMessage(Component.translatable("message.thaumicunity.table.solved").withStyle(ChatFormatting.GOLD), true);
+            player.sendOverlayMessage(Component.translatable("message.thaumicunity.table.solved").withStyle(ChatFormatting.GOLD));
         }
         open.get().broadcastChanges();
         player.syncData(TUAttachments.KNOWLEDGE);
@@ -159,7 +160,7 @@ public final class ResearchTableActions {
         ResearchTableMenu menu = open.get();
         PlayerKnowledge knowledge = ResearchManager.knowledge(player);
         if (knowledge.knowledge(ResearchRequirement.KnowledgeKind.OBSERVATION, category) < 2) {
-            player.displayClientMessage(Component.translatable("message.thaumicunity.table.no_observations").withStyle(ChatFormatting.RED), true);
+            player.sendOverlayMessage(Component.translatable("message.thaumicunity.table.no_observations").withStyle(ChatFormatting.RED));
             return;
         }
         if (!menu.paper().is(TUTags.Items.RESEARCH_PAPER) || !useInk(menu, player)) {
