@@ -1,5 +1,6 @@
 package dev.thaumicunity.common.item;
 
+import dev.thaumicunity.api.event.SpellCastEvent;
 import dev.thaumicunity.common.aspect.Aspects;
 import dev.thaumicunity.common.aura.AuraManager;
 import dev.thaumicunity.common.config.TUConfig;
@@ -24,6 +25,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.Level;
+import net.neoforged.neoforge.common.NeoForge;
 
 import java.util.function.Consumer;
 
@@ -63,6 +65,9 @@ public class CasterItem extends Item {
         if (!spell.isValid()) {
             player.sendOverlayMessage(Component.translatable("message.thaumicunity.caster.invalid", spell.errors().get(0))
                     .withStyle(ChatFormatting.RED));
+            return InteractionResult.FAIL;
+        }
+        if (NeoForge.EVENT_BUS.post(new SpellCastEvent(player, spell)).isCanceled()) {
             return InteractionResult.FAIL;
         }
         BlockPos at = player.blockPosition();

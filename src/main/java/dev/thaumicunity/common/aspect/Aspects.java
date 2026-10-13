@@ -14,6 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.WeakHashMap;
 
 /**
  * Aspect registry access with a cached {@link AspectGraph}. The cache is keyed by the {@link RegistryAccess}
@@ -31,29 +32,32 @@ public final class Aspects {
     /** Primals in {@link dev.thaumicunity.core.aura.PrimalAttunement#PRIMAL_ORDER} order. */
     public static final List<Identifier> PRIMALS = List.of(AER, TERRA, IGNIS, AQUA, ORDO, PERDITIO);
 
-    private static volatile Snapshot snapshot;
+    /**
+     * One snapshot per registry access; in single player the client and the integrated server each have their own,
+     * so a single slot would be rebuilt constantly. Weak keys drop snapshots of worlds that were left.
+     */
+    private static final Map<RegistryAccess, Snapshot> SNAPSHOTS = Collections.synchronizedMap(new WeakHashMap<>());
 
-    private record Snapshot(RegistryAccess access, Map<Identifier, Aspect> aspects, AspectGraph graph) {
+    private record Snapshot(Map<Identifier, Aspect> aspects, AspectGraph graph) {
     }
 
     private Aspects() {
     }
 
     private static Snapshot snapshot(RegistryAccess access) {
-        Snapshot current = snapshot;
-        if (current == null || current.access() != access) {
-            Map<Identifier, Aspect> map = new LinkedHashMap<>();
-            Optional<Registry<Aspect>> registry = access.lookup(TURegistries.ASPECT);
-            registry.ifPresent(r -> r.entrySet().forEach(e -> map.put(e.getKey().identifier(), e.getValue())));
-            List<AspectDefinition> defs = new ArrayList<>();
-            map.forEach((id, aspect) -> defs.add(new AspectDefinition(id.toString(), aspect.color(),
-                    aspect.components().stream().map(Identifier::toString).toList())));
-            AspectGraph graph = AspectGraph.build(defs);
-            graph.problems().forEach(p -> ThaumicUnity.LOGGER.warn("Aspect data problem: {}", p));
-            current = new Snapshot(access, Collections.unmodifiableMap(map), graph);
-            snapshot = current;
-        }
-        return current;
+        return SNAPSHOTS.computeIfAbsent(access, Aspects::build);
+    }
+
+    private static Snapshot build(RegistryAccess access) {
+        Map<Identifier, Aspect> map = new LinkedHashMap<>();
+        Optional<Registry<Aspect>> registry = access.lookup(TURegistries.ASPECT);
+        registry.ifPresent(r -> r.entrySet().forEach(e -> map.put(e.getKey().identifier(), e.getValue())));
+        List<AspectDefinition> defs = new ArrayList<>();
+        map.forEach((id, aspect) -> defs.add(new AspectDefinition(id.toString(), aspect.color(),
+                aspect.components().stream().map(Identifier::toString).toList())));
+        AspectGraph graph = AspectGraph.build(defs);
+        graph.problems().forEach(p -> ThaumicUnity.LOGGER.warn("Aspect data problem: {}", p));
+        return new Snapshot(Collections.unmodifiableMap(map), graph);
     }
 
     public static AspectGraph graph(RegistryAccess access) {

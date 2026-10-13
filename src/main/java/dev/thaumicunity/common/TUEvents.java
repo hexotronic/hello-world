@@ -9,6 +9,7 @@ import dev.thaumicunity.common.command.TUCommands;
 import dev.thaumicunity.common.network.AuraSnapshotPayload;
 import dev.thaumicunity.common.network.ItemAspectsPayload;
 import dev.thaumicunity.common.registry.TUItems;
+import dev.thaumicunity.common.registry.TURecipes;
 import dev.thaumicunity.common.registry.TUTags;
 import dev.thaumicunity.common.research.ResearchManager;
 import dev.thaumicunity.common.spell.SpellLibrary;
@@ -77,6 +78,8 @@ public final class TUEvents {
         }
         ItemAspectsPayload payload = new ItemAspectsPayload(ItemAspects.serverTable());
         event.getRelevantPlayers().forEach(player -> PacketDistributor.sendToPlayer(player, payload));
+        // The Thaumonomicon draws recipe pages on the client.
+        event.sendRecipes(TURecipes.CRUCIBLE.get(), TURecipes.ARCANE_CRAFTING.get(), TURecipes.INFUSION.get());
     }
 
     private static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {

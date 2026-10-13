@@ -98,7 +98,7 @@ public class ArcaneWorkbenchMenu extends AbstractContainerMenu {
                 super.onTake(p, stack);
             }
         });
-        MenuUtil.addPlayerInventory(this::addSlot, inventory, 16, 140);
+        MenuUtil.addPlayerInventory(this::addSlot, inventory, 16, 152);
         addDataSlots(data);
         slotsChanged(grid);
     }
