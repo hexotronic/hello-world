@@ -1,53 +1,39 @@
 # Classes whose signatures are printed by .github/workflows/api-probe.yml (javap -protected).
 # Syntax: see tools/api-probe.sh. Avoid parentheses in filters.
-net.minecraft.world.level.block.BonemealSource
-net.minecraft.world.level.block.BonemealableBlock
-net.minecraft.world.entity.EntityTypes | LIGHTNING_BOLT|ITEM|EXPERIENCE|BAT|ZOMBIE
-net.minecraft.core.TypedInstance
-net.minecraft.world.level.ChunkPos
-net.minecraft.resources.ResourceKey
-net.minecraft.world.ContainerHelper
-net.minecraft.world.entity.player.Inventory | public
-net.minecraft.world.inventory.Slot
-net.minecraft.world.Containers
-net.minecraft.world.SimpleContainer
-net.minecraft.world.Container
-net.minecraft.world.inventory.ContainerData
-net.minecraft.world.inventory.SimpleContainerData
-net.minecraft.world.inventory.ContainerLevelAccess
-net.minecraft.world.SimpleMenuProvider
-net.minecraft.world.MenuProvider
-net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket
-net.minecraft.world.level.block.state.StateDefinition$Builder
-net.minecraft.world.level.block.state.properties.BlockStateProperties | FACING|LIT|HORIZONTAL_FACING|LEVEL|WATERLOGGED|POWERED
-net.minecraft.world.level.block.HorizontalDirectionalBlock
-net.minecraft.world.item.context.BlockPlaceContext
-net.minecraft.world.level.block.entity.BlockEntityTicker
-net.minecraft.world.item.component.CustomData
-net.minecraft.world.item.component.ItemContainerContents
-net.minecraft.core.component.DataComponents | MAX_STACK|MAX_DAMAGE|CUSTOM_NAME|ITEM_NAME|LORE|RARITY|ENCHANTMENT_GLINT|CUSTOM_DATA|CONTAINER|DYED|TOOLTIP_DISPLAY|EQUIPPABLE|GLIDER|USE_COOLDOWN
-net.minecraft.world.item.equipment.Equippable
-net.minecraft.world.item.equipment.Equippable$Builder
-net.minecraft.world.entity.EquipmentSlot
-net.minecraft.world.item.Rarity
-net.minecraft.client.renderer.blockentity.BlockEntityRenderers
-net.minecraft.client.gui.screens.MenuScreens
-net.minecraft.client.renderer.entity.NoopRenderer
-net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent
-net.minecraft.client.DeltaTracker
-net.minecraft.client.Minecraft | player|level|screen|setScreen|font|getInstance|options|gui|hitResult|isPaused|getDeltaTracker|particleEngine|getWindow|keyboardHandler|mouseHandler
-net.minecraft.client.player.LocalPlayer | getInventory|getMainHandItem|level|getData
-net.minecraft.client.multiplayer.ClientLevel | registryAccess|getGameTime|addParticle|playLocalSound
-net.minecraft.world.level.levelgen.Heightmap$Types
-net.minecraft.world.level.Level | public boolean setBlockAndUpdate|getEntitiesOfClass|clip|getHeight|getSeaLevel|getBiome|getChunkAt|hasChunk|getChunk
-net.minecraft.world.level.LevelReader | getBiome|getSeaLevel|getHeight|hasChunk|getChunk
-net.minecraft.world.level.BlockGetter | clip|getBlockState|getBlockEntity
-net.minecraft.world.level.EntityGetter
-net.minecraft.world.level.LevelWriter
-net.minecraft.world.level.block.LightBlock
-net.minecraft.server.level.ServerLevel | getEntity|sendParticles|players|getServer|getDataStorage|getRandom
-net.minecraft.world.phys.AABB
-net.minecraft.core.BlockPos | public static|public BlockPos
-net.minecraft.core.Direction | public
-net.minecraft.world.level.block.state.BlockState | public
-net.minecraft.world.level.block.state.BlockBehaviour$BlockStateBase | is|getBlock|isAir|canBeReplaced|getFluidState|getDestroySpeed
+net.minecraft.client.particle.Particle
+net.minecraft.client.gui.screens.inventory.HopperScreen
+net.minecraft.client.gui.screens.inventory.FurnaceScreen
+net.minecraft.client.gui.screens.inventory.AbstractFurnaceScreen
+net.minecraft.client.gui.screens.inventory.CraftingScreen
+net.minecraft.client.gui.screens.inventory.ContainerScreen
+net.minecraft.client.gui.screens.inventory.BookViewScreen
+com.mojang.blaze3d.platform.InputConstants
+com.mojang.blaze3d.platform.Window | public
+net.minecraft.client.Minecraft | public boolean|hasShift|hasControl|getWindow|player|level|screen|font|setScreen|getInstance
+net.minecraft.client.gui.Font | public
+net.minecraft.client.gui.components.Button
+net.minecraft.client.gui.components.Button$Builder
+net.minecraft.client.gui.components.Button$OnPress
+net.minecraft.client.gui.components.EditBox | public
+net.minecraft.client.gui.components.AbstractWidget | public|protected abstract
+net.minecraft.client.renderer.RenderPipelines | GUI
+net.minecraft.client.gui.navigation.ScreenRectangle
+net.minecraft.client.resources.sounds.SimpleSoundInstance | static
+net.minecraft.client.gui.screens.Screen | protected|public boolean
+net.minecraft.client.gui.components.events.GuiEventListener | default
+net.minecraft.util.FormattedCharSequence
+net.minecraft.client.gui.components.MultiLineLabel | static|public
+net.minecraft.client.renderer.LightCoordsUtil | static
+net.minecraft.client.renderer.LightTexture | static
+net.minecraft.client.renderer.blockentity.BlockEntityRenderer
+net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider
+net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider$Context
+net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState
+net.minecraft.client.renderer.item.ItemModelResolver | public
+net.minecraft.client.renderer.item.ItemStackRenderState | public
+net.minecraft.world.item.ItemDisplayContext
+net.minecraft.client.renderer.SubmitNodeCollector
+net.minecraft.client.renderer.state.CameraRenderState
+com.mojang.blaze3d.vertex.PoseStack
+org.joml.Matrix3x2fStack | pushMatrix|popMatrix|translate|scale|rotate
+net.minecraft.client.gui.screens.inventory.EnchantmentScreen
