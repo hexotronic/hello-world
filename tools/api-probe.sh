@@ -27,9 +27,19 @@ ALL_CLASSES=$(mktemp)
   | grep '\.class$' | sed -e 's/\.class$//' -e 's#/#.#g' | sort -u > "${ALL_CLASSES}"
 echo "== $(wc -l < "${ALL_CLASSES}") classes on the probe classpath"
 if [[ "${PROBE_LIST_ALL:-0}" == "1" ]]; then
-  echo "===== ALL CLASSES"
-  grep -v '\$[0-9]' "${ALL_CLASSES}"
+  echo "===== ALL CLASSES (one package per line)"
+  grep -v '\$[0-9]' "${ALL_CLASSES}" | awk -F. '{cls=$NF; pkg=$0; sub("\\." cls "$", "", pkg); a[pkg]=a[pkg] " " cls} END {for (p in a) print p ":" a[p]}' | sort
 fi
+
+# PROBE_COMPACT=1 joins each class dump into a single line (members separated by " ;; ") so that CI log
+# readers limited by line count still receive everything.
+compact() {
+  if [[ "${PROBE_COMPACT:-0}" == "1" ]]; then
+    grep -v '^Compiled from' | sed -e 's/^  *//' | awk 'BEGIN { ORS = " ;; " } { print } END { printf "\n" }'
+  else
+    cat
+  fi
+}
 
 while IFS= read -r line || [[ -n "${line}" ]]; do
   line="${line%%#*}"
@@ -44,9 +54,9 @@ while IFS= read -r line || [[ -n "${line}" ]]; do
     [[ "${line}" == *"|"* ]] && filter="$(echo "${line#*|}" | xargs)"
     echo "===== CLASS ${cls}${filter:+ (filter: ${filter})}"
     if [[ -n "${filter}" ]]; then
-      javap -protected -cp "${CP}" "${cls}" 2>&1 | grep -E -- "class |interface |record |enum |${filter}" || true
+      javap -protected -cp "${CP}" "${cls}" 2>&1 | grep -E -- "class |interface |record |enum |${filter}" | compact || true
     else
-      javap -protected -cp "${CP}" "${cls}" 2>&1 || true
+      javap -protected -cp "${CP}" "${cls}" 2>&1 | compact || true
     fi
   fi
 done < "${LIST}"

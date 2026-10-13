@@ -29,6 +29,7 @@ jobs:
       - name: Print signatures
         env:
           PROBE_LIST_ALL: '1'
+          PROBE_COMPACT: '1'
         run: bash tools/api-probe.sh tools/api-probe-classes.txt | tee api-probe.txt
 
       - name: Upload probe output
