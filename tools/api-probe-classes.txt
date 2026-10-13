@@ -1,58 +1,138 @@
-# Classes whose public signatures are printed by .github/workflows/api-probe.yml.
-# Syntax: see tools/api-probe.sh.
-net.minecraft.resources.Identifier | static|getPath|getNamespace
-net.minecraft.world.item.crafting.Recipe
-net.minecraft.world.item.crafting.RecipeType
-net.minecraft.world.item.crafting.RecipeSerializer
-net.minecraft.world.item.crafting.RecipeInput
-net.minecraft.world.item.crafting.CraftingInput
-net.minecraft.world.item.crafting.Ingredient
-net.minecraft.world.item.crafting.PlacementInfo | static
-net.minecraft.world.item.crafting.RecipeBookCategory
-net.minecraft.world.item.crafting.RecipeBookCategories | static
-net.minecraft.world.item.crafting.RecipeManager | getRecipeFor|recipeMap|byKey|getRecipes|byType
-net.minecraft.world.item.crafting.RecipeMap | byType|getRecipesFor|values
-net.minecraft.world.item.crafting.ShapedRecipePattern
-net.minecraft.world.item.crafting.display.SlotDisplay | static|Codec
-net.minecraft.world.level.saveddata.SavedData
-net.minecraft.world.level.saveddata.SavedDataType
-net.minecraft.world.level.storage.DimensionDataStorage | computeIfAbsent|get|set
-net.minecraft.world.level.storage.ValueInput
-net.minecraft.world.level.storage.ValueOutput
+# Classes whose signatures are printed by .github/workflows/api-probe.yml (javap -protected).
+# Syntax: see tools/api-probe.sh. Avoid parentheses in filters.
 net.minecraft.world.level.block.entity.BlockEntity
-net.minecraft.world.level.block.entity.BlockEntityType | BlockEntityType\(|static|create
+net.minecraft.world.level.block.entity.BlockEntityType
 net.minecraft.world.level.block.BaseEntityBlock
-net.minecraft.world.level.block.Block | protected|use|place|codec|Properties|setPlaced|playerWill|destroy|animateTick|stepOn
-net.minecraft.world.level.block.state.BlockBehaviour | use|getShape|onRemove|affectNeighbors|onPlace|tick|randomTick|getTicker|getMenuProvider|triggerEvent|getRenderShape|codec|entityInside
-net.minecraft.world.level.block.state.BlockBehaviour$Properties | static|lightLevel|strength|sound|noOcclusion|mapColor|requiresCorrectToolForDrops|instabreak|noCollision|setId|randomTicks|emissive|replaceable|pushReaction|isViewBlocking
-net.minecraft.world.item.Item | use|appendHoverText|isFoil|inventoryTick|getName|getUseDuration|releaseUsing|onUseTick|finishUsingItem|interactLivingEntity|Item\(|getDefaultInstance|overrideStackedOnOther|getBarWidth|isBarVisible|getBarColor
-net.minecraft.world.item.Item$Properties
-net.minecraft.world.item.Item$TooltipContext
-net.minecraft.world.item.ItemStack | get\(|set\(|update|has|getItem|getCount|shrink|grow|copy|isEmpty|is\(|getHoverName|hurtAndBreak|split|static
-net.minecraft.world.InteractionResult
-net.minecraft.world.item.component.TooltipDisplay | static|shows
-net.minecraft.world.item.component.TooltipProvider
-net.minecraft.client.particle.Particle
-net.minecraft.client.particle.SingleQuadParticle
-net.minecraft.client.particle.ParticleProvider
-net.minecraft.client.particle.SpriteSet
-grep:^net\.minecraft\.client\.particle\.[A-Z][A-Za-z]*(Particle|Provider|Group|Engine|Render|Sprite)
-net.minecraft.client.gui.GuiGraphics
-net.minecraft.client.gui.screens.Screen | protected|public net|render|init|isPauseScreen|keyPressed|mouse|onClose|addRenderableWidget|tick
-net.minecraft.client.gui.screens.inventory.AbstractContainerScreen | protected|render|AbstractContainerScreen\(
-net.minecraft.client.renderer.RenderPipelines | GUI|static
-net.minecraft.client.renderer.entity.ThrownItemRenderer
-net.minecraft.world.entity.projectile.ThrowableItemProjectile
+net.minecraft.world.level.block.EntityBlock
+net.minecraft.world.level.block.Block
+net.minecraft.world.level.block.state.BlockBehaviour
+net.minecraft.world.level.block.state.BlockBehaviour$BlockStateBase | public
+net.minecraft.world.item.Item
+net.minecraft.world.item.ItemStack
+net.minecraft.world.item.BlockItem
+net.minecraft.world.item.context.UseOnContext
+net.minecraft.world.entity.Entity
+net.minecraft.world.entity.projectile.Projectile
 net.minecraft.world.entity.projectile.ThrowableProjectile
-net.minecraft.world.entity.projectile.Projectile | protected|onHit|shoot|getOwner|setOwner|tick
-net.minecraft.world.entity.EntityType$Builder | static|build|sized|clientTrackingRange|updateInterval|noSave|fireImmune
-net.minecraft.world.entity.Entity | defineSynchedData|readAdditional|addAdditional|ValueInput|ValueOutput|hurtServer|level\(|getDeltaMovement|setDeltaMovement|discard|tick\(|teleportTo|position\(|getEyePosition|getLookAngle|igniteForSeconds|setRemainingFireTicks|isAlive
-net.minecraft.world.entity.LivingEntity | heal|addEffect|hurtServer|getHealth|getMaxHealth|removeEffect|knockback|getItemInHand|setItemInHand
-net.minecraft.world.level.Level | playSound|addParticle|getBlockState|setBlock|destroyBlock|getEntitiesOfClass|getEntities|isClientSide|explode|getGameTime|getChunkAt|getChunk\(|clip|addFreshEntity|levelEvent|sendBlockUpdated|getBiome|dimension\(|registryAccess|recipeAccess|isLoaded|hasChunkAt
-net.minecraft.server.level.ServerLevel | sendParticles|getDataStorage|recipeAccess|getServer|players\(|getChunkSource
-net.minecraft.world.inventory.AbstractContainerMenu | AbstractContainerMenu\(|quickMoveStack|stillValid|addSlot|addDataSlots|addStandardInventorySlots|addInventorySlots|addPlayerInventory|moveItemStackTo|slotsChanged|removed|clickMenuButton
-net.minecraft.world.inventory.MenuType | MenuType\(|static|create
-net.minecraft.world.item.CreativeModeTab$Builder
-net.minecraft.world.entity.player.Player | getAbilities|displayClientMessage|giveExperience|getInventory|isCreative|isSpectator|addItem|getCooldowns|sendSystemMessage|openMenu
-net.minecraft.world.item.ItemCooldowns
-net.minecraft.world.item.ItemUseAnimation
+net.minecraft.world.entity.projectile.ProjectileUtil
+net.minecraft.world.level.Level
+net.minecraft.world.level.LevelAccessor
+net.minecraft.server.level.ServerLevel
+net.minecraft.world.level.chunk.LevelChunk
+net.minecraft.world.level.chunk.ChunkAccess
+net.minecraft.world.inventory.AbstractContainerMenu
+net.minecraft.world.inventory.MenuType
+net.minecraft.world.inventory.Slot
+net.minecraft.world.inventory.ContainerData
+net.minecraft.world.inventory.ContainerLevelAccess
+net.minecraft.world.SimpleContainer
+net.minecraft.world.Container
+net.minecraft.world.MenuProvider
+net.minecraft.world.Containers
+net.minecraft.client.gui.screens.Screen
+net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
+net.minecraft.client.gui.components.Button
+net.minecraft.client.gui.components.Button$Builder
+net.minecraft.client.gui.components.AbstractWidget
+net.minecraft.client.gui.components.EditBox
+net.minecraft.client.gui.Font
+net.minecraft.client.renderer.entity.EntityRenderer
+net.minecraft.client.renderer.entity.EntityRendererProvider$Context
+net.minecraft.client.renderer.entity.state.EntityRenderState
+net.minecraft.client.renderer.blockentity.BlockEntityRenderer
+net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider$Context
+net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState
+net.minecraft.client.renderer.SubmitNodeCollector
+net.minecraft.client.particle.SingleQuadParticle
+net.minecraft.client.particle.TextureSheetParticle
+net.minecraft.client.particle.SimpleAnimatedParticle
+net.minecraft.client.particle.ParticleRenderType
+net.minecraft.client.particle.SingleQuadParticle$Layer
+net.minecraft.client.particle.GlowParticle
+net.minecraft.client.particle.PortalParticle
+net.minecraft.client.particle.PortalParticle$Provider
+net.minecraft.client.particle.ParticleProvider$Sprite
+net.minecraft.client.particle.SpellParticle
+net.minecraft.client.particle.EndRodParticle
+net.minecraft.client.multiplayer.ClientLevel | addParticle|getGameTime|random|playLocalSound
+net.minecraft.client.Minecraft | public static|player|level|screen|setScreen|font|getInstance|options|gui|hitResult|isPaused|getDeltaTracker|particleEngine
+net.minecraft.core.particles.ParticleType
+net.minecraft.core.particles.SimpleParticleType
+net.minecraft.core.particles.ParticleTypes | static
+net.minecraft.core.particles.DustParticleOptions
+net.minecraft.core.particles.ColorParticleOption
+net.minecraft.core.particles.PowerParticleOption
+net.minecraft.world.level.saveddata.SavedData
+net.minecraft.server.packs.resources.SimplePreparableReloadListener
+net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener
+net.minecraft.server.packs.resources.ResourceManagerReloadListener
+net.minecraft.core.component.DataComponentType
+net.minecraft.core.component.DataComponentType$Builder
+net.minecraft.network.codec.ByteBufCodecs | static
+net.minecraft.network.codec.StreamCodec | static
+net.minecraft.util.ExtraCodecs | static
+net.minecraft.world.effect.MobEffect
+net.minecraft.world.effect.MobEffectInstance | public MobEffectInstance
+net.minecraft.world.effect.MobEffects | static
+net.minecraft.world.damagesource.DamageSources
+net.minecraft.world.damagesource.DamageTypes | static
+net.minecraft.sounds.SoundEvent
+net.minecraft.sounds.SoundEvents | AMETHYST|ENCHANT|BEACON|PORTAL|FIRE|GLASS|BREWING|BUBBLE|EVOKER|ILLUSIONER|ZOMBIE_VILLAGER_CURE|LIGHTNING|ELYTRA|WITHER|ALLAY|TRIDENT|SCULK|BOOK|EXPERIENCE|BLAZE|GENERIC|BOTTLE|BUCKET|CHAIN|WARDEN|RESPAWN|FIREWORK|TOTEM|SHULKER|ENDER
+net.minecraft.world.level.levelgen.Heightmap$Types
+net.minecraft.world.level.biome.Biome | public
+net.minecraft.world.level.GameRules
+net.minecraft.world.entity.player.Player
+net.minecraft.world.entity.LivingEntity
+net.minecraft.world.entity.Mob | public
+net.minecraft.world.item.crafting.Recipe
+net.minecraft.world.item.crafting.RecipeHolder
+net.minecraft.world.item.crafting.display.RecipeDisplay
+net.minecraft.world.item.crafting.display.ShapedCraftingRecipeDisplay
+net.minecraft.world.item.crafting.display.SlotDisplay$ItemStackSlotDisplay
+net.minecraft.world.item.crafting.display.SlotDisplay$ItemSlotDisplay
+net.minecraft.world.item.ItemStackTemplate
+net.minecraft.world.item.crafting.CraftingRecipe
+net.minecraft.world.item.crafting.ShapedRecipe
+net.minecraft.world.item.crafting.ShapelessRecipe
+net.minecraft.world.item.crafting.SingleRecipeInput
+net.minecraft.network.chat.Component | static
+net.minecraft.network.chat.MutableComponent | withStyle|withColor|append
+net.minecraft.network.chat.Style | public
+net.minecraft.ChatFormatting | static
+net.minecraft.commands.Commands | static
+net.minecraft.world.phys.Vec3
+net.minecraft.world.phys.AABB | public
+net.minecraft.world.level.ClipContext
+net.minecraft.world.level.ClipContext$Block
+net.minecraft.world.level.ClipContext$Fluid
+net.minecraft.world.level.Explosion$BlockInteraction
+net.minecraft.world.level.Level$ExplosionInteraction
+net.minecraft.world.InteractionHand
+net.minecraft.world.InteractionResult$Success
+net.minecraft.world.item.CreativeModeTab
+net.minecraft.world.item.CreativeModeTab$Output
+net.minecraft.world.item.CreativeModeTab$ItemDisplayParameters
+net.minecraft.world.item.Rarity
+net.minecraft.world.level.block.SoundType | static
+net.minecraft.world.level.material.MapColor | static
+net.minecraft.world.level.block.state.properties.BlockStateProperties | static
+net.minecraft.world.level.block.state.properties.IntegerProperty
+net.minecraft.world.level.block.state.properties.BooleanProperty
+net.minecraft.world.level.block.state.properties.EnumProperty
+net.minecraft.world.level.block.state.StateDefinition$Builder
+net.minecraft.world.phys.shapes.Shapes | static
+net.minecraft.world.level.block.Block | static
+net.minecraft.world.item.TooltipFlag
+net.minecraft.core.Holder
+net.minecraft.core.HolderSet
+net.minecraft.core.Registry | public
+net.minecraft.core.RegistryAccess
+net.minecraft.core.HolderLookup$Provider
+net.minecraft.core.registries.Registries | static
+net.minecraft.tags.TagKey
+net.minecraft.world.entity.EntityType
+net.minecraft.world.entity.MobCategory
+net.minecraft.world.entity.item.ItemEntity | public
+net.minecraft.world.entity.ExperienceOrb | public static
+net.minecraft.world.entity.LightningBolt | public
+net.minecraft.world.level.block.Blocks | AIR|STONE|DIRT|GRASS_BLOCK|SAND|GRAVEL|FIRE|WATER|LAVA|ICE|SNOW|GLASS|OBSIDIAN|COBBLESTONE|PACKED_ICE|BLUE_ICE|FROSTED_ICE|COBWEB|LIGHT|MAGMA_BLOCK|SOUL_FIRE|MOSS_BLOCK
