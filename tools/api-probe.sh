@@ -1,21 +1,22 @@
 #!/usr/bin/env bash
-# Prints public API signatures for the classes listed in the given file (one per line).
-#   net.minecraft.world.level.block.Block      -> javap -public of that class
-#   grep:<regex>                               -> every class name in the game jar matching <regex>
-#   # comment / blank lines                    -> ignored
+# Prints public API signatures for the classes listed in the given file (one entry per line).
+#   net.minecraft.world.level.block.Block              -> javap -public of that class
+#   net.minecraft.world.level.block.Block | use|tick   -> only members whose line matches the regex
+#   grep:<regex>                                       -> every class name on the classpath matching <regex>
+#   # comment / blank lines                            -> ignored
 # Requires `./gradlew createMinecraftArtifacts` to have run first.
 set -uo pipefail
 
 LIST="${1:?usage: api-probe.sh <class-list>}"
+CACHE="${GRADLE_USER_HOME:-$HOME/.gradle}/caches"
 
-GAME_JAR=$(find build/moddev/artifacts -maxdepth 1 -name 'neoforge-*.jar' ! -name '*-sources.jar' 2>/dev/null | head -n 1)
-NEO_JAR=$(find "$HOME/.gradle/caches" -name 'neoforge-*-universal.jar' 2>/dev/null | head -n 1)
+GAME_JAR=$(find "${CACHE}/neoformruntime/artifacts" -maxdepth 1 -name 'minecraft_*_client.jar' 2>/dev/null | head -n 1)
+NEO_JAR=$(find "${CACHE}/modules-2" -name 'neoforge-*-universal.jar' 2>/dev/null | head -n 1)
 
 echo "== game jar: ${GAME_JAR:-<missing>}"
 echo "== neoforge jar: ${NEO_JAR:-<missing>}"
 if [[ -z "${GAME_JAR}" ]]; then
-  echo "Candidate jars:"
-  find build "$HOME/.gradle/caches" -name '*.jar' 2>/dev/null | grep -iE 'neoforge|minecraft|moddev' | head -n 50
+  find build "${CACHE}" -name '*.jar' 2>/dev/null | grep -iE 'neoforge|minecraft|moddev' | head -n 50
   exit 1
 fi
 
@@ -27,14 +28,20 @@ echo "== $(wc -l < "${ALL_CLASSES}") classes on the probe classpath"
 
 while IFS= read -r line || [[ -n "${line}" ]]; do
   line="${line%%#*}"
-  line="$(echo "${line}" | xargs)"
-  [[ -z "${line}" ]] && continue
+  [[ -z "${line//[[:space:]]/}" ]] && continue
   if [[ "${line}" == grep:* ]]; then
-    pattern="${line#grep:}"
+    pattern="$(echo "${line#grep:}" | xargs)"
     echo "===== GREP ${pattern}"
     grep -E "${pattern}" "${ALL_CLASSES}" | grep -v '\$[0-9]' || echo "(no match)"
   else
-    echo "===== CLASS ${line}"
-    javap -public -cp "${CP}" "${line}" 2>&1 || true
+    cls="$(echo "${line%%|*}" | xargs)"
+    filter=""
+    [[ "${line}" == *"|"* ]] && filter="$(echo "${line#*|}" | xargs)"
+    echo "===== CLASS ${cls}${filter:+ (filter: ${filter})}"
+    if [[ -n "${filter}" ]]; then
+      javap -public -cp "${CP}" "${cls}" 2>&1 | grep -E "class |interface |record |enum |${filter}" || true
+    else
+      javap -public -cp "${CP}" "${cls}" 2>&1 || true
+    fi
   fi
 done < "${LIST}"
