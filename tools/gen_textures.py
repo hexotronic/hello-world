@@ -1079,12 +1079,34 @@ def logo():
     WRITTEN.append("../../thaumicunity_logo")
 
 
+# ---------------------------------------------------------------------------------------------------------- misc
+
+def liquids():
+    """Light grey, tileable liquid surface; renderers tint it with water or essentia colours and scroll it."""
+    size = 32
+    r = rng("essentia_liquid")
+    broad = value_noise(r, size, 4)
+    fine = value_noise(r, size, 8)
+    img = Image.new("RGBA", (size, size))
+    px = img.load()
+    for y in range(size):
+        for x in range(size):
+            v = 0.72 + 0.18 * broad[y][x] + 0.1 * fine[y][x]
+            # Soft highlight ripples.
+            if abs(fine[y][x] - 0.5) < 0.03:
+                v = min(1.0, v + 0.12)
+            g = clamp(255 * v)
+            px[x, y] = (g, g, g, 255)
+    save(img, "misc/essentia_liquid")
+
+
 def main():
     items()
     blocks()
     particles()
     aspects()
     backgrounds()
+    liquids()
     logo()
     print(f"Wrote {len(WRITTEN)} textures ({len(OVERRIDES)} overridden paths skipped)")
 

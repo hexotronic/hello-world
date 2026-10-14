@@ -4,10 +4,13 @@ import dev.thaumicunity.ThaumicUnity;
 import dev.thaumicunity.client.hud.AuraHud;
 import dev.thaumicunity.client.particle.MagicParticle;
 import dev.thaumicunity.client.render.ArcanePedestalRenderer;
+import dev.thaumicunity.client.render.CrucibleRenderer;
+import dev.thaumicunity.client.render.WardedJarRenderer;
 import dev.thaumicunity.client.screen.AlchemicalFurnaceScreen;
 import dev.thaumicunity.client.screen.ArcaneWorkbenchScreen;
 import dev.thaumicunity.client.screen.GuiUtil;
 import dev.thaumicunity.client.screen.ResearchTableScreen;
+import dev.thaumicunity.client.smoke.ClientSmokeTest;
 import dev.thaumicunity.common.aspect.ItemAspects;
 import dev.thaumicunity.common.item.ClientBridge;
 import dev.thaumicunity.common.network.AuraSnapshotPayload;
@@ -57,6 +60,9 @@ public final class ThaumicUnityClient {
             ClientRecipes.clear();
             ItemAspects.setClientTable(Map.of());
         });
+        if (ClientSmokeTest.isEnabled()) {
+            ClientSmokeTest.register();
+        }
     }
 
     private static void registerParticles(RegisterParticleProvidersEvent event) {
@@ -71,6 +77,8 @@ public final class ThaumicUnityClient {
         event.registerEntityRenderer(TUEntities.SPELL_PROJECTILE.get(), NoopRenderer::new);
         event.registerEntityRenderer(TUEntities.SPELL_ZONE.get(), NoopRenderer::new);
         event.registerBlockEntityRenderer(TUBlockEntities.ARCANE_PEDESTAL.get(), ArcanePedestalRenderer::new);
+        event.registerBlockEntityRenderer(TUBlockEntities.CRUCIBLE.get(), CrucibleRenderer::new);
+        event.registerBlockEntityRenderer(TUBlockEntities.WARDED_JAR.get(), WardedJarRenderer::new);
     }
 
     private static void registerScreens(RegisterMenuScreensEvent event) {

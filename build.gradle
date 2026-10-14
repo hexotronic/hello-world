@@ -53,6 +53,15 @@ neoForge {
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
+        // Scripted client run used by CI (see ClientSmokeTest): builds a test world, opens every screen, saves
+        // screenshots to run/smoke/screenshots and quits.
+        smokeClient {
+            client()
+            gameDirectory = project.file('run/smoke')
+            systemProperty 'thaumicunity.smokeTest', 'true'
+            programArguments.addAll '--width', '1280', '--height', '720'
+        }
+
         data {
             clientData()
             programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()

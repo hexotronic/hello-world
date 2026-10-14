@@ -73,6 +73,12 @@ public class ThaumonomiconScreen extends Screen {
         this.entry = lastEntry;
     }
 
+    /** Makes the next Thaumonomicon opened show this category and entry (null for the category's map). */
+    public static void bookmark(@Nullable Identifier categoryId, @Nullable Identifier entryId) {
+        lastCategory = categoryId;
+        lastEntry = entryId;
+    }
+
     // --- data
 
     private RegistryAccess access() {
