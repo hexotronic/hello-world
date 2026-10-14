@@ -1,0 +1,28 @@
+{
+  "type": "thaumicunity:arcane_shapeless",
+  "ingredients": [
+    "thaumicunity:adept_focus",
+    "minecraft:ender_pearl",
+    "minecraft:obsidian"
+  ],
+  "vis": {
+    "thaumicunity:perditio": 15,
+    "thaumicunity:aer": 10,
+    "thaumicunity:ordo": 5
+  },
+  "result": {
+    "id": "thaumicunity:adept_focus",
+    "components": {
+      "thaumicunity:spell": {
+        "medium": "thaumicunity:bolt",
+        "effects": [
+          "thaumicunity:phase"
+        ]
+      },
+      "minecraft:item_name": {
+        "translate": "focus.thaumicunity.portable_hole"
+      }
+    }
+  },
+  "research": "thaumicunity:auromancy/classic_foci"
+}

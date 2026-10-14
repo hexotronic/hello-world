@@ -5,10 +5,12 @@ Model kinds:
   bottom_top     textures <top>, <side>, <bottom> (see `textures`)
   custom:<kind>  element model written by gen_content.py (crucible, pedestal, jar, matrix)
   tube, valve    multipart pipe: a core plus an arm per connected side (and a handle for valves)
+  invisible      no model and no item (technical blocks such as the portable hole's phased space)
 Loot kinds:
   self           drops itself (if it survives the explosion)
   ore:<item>     silk touch drops the ore, otherwise <item> with Fortune
   jar            drops itself keeping its essentia (copy_components from the block entity)
+  none           drops nothing (no loot table)
 """
 
 BLOCKS = {
@@ -52,6 +54,8 @@ BLOCKS = {
         name="Essentia Centrifuge", model="bottom_top", loot="self",
         textures=dict(top="centrifuge_top", side="centrifuge_side", bottom="centrifuge_bottom"),
         tags=["minecraft:mineable/pickaxe"]),
+    "phased_space": dict(
+        name="Phased Space", model="invisible", loot="none", tags=[]),
     "warded_jar": dict(
         name="Warded Jar", model="custom:jar", loot="jar",
         textures=dict(side="warded_jar_side", lid="warded_jar_lid"),

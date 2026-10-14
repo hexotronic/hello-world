@@ -9,6 +9,7 @@ import dev.thaumicunity.common.block.CrucibleBlock;
 import dev.thaumicunity.common.block.EssentiaBufferBlock;
 import dev.thaumicunity.common.block.EssentiaTubeBlock;
 import dev.thaumicunity.common.block.EssentiaValveBlock;
+import dev.thaumicunity.common.block.PhasedSpaceBlock;
 import dev.thaumicunity.common.block.ResearchTableBlock;
 import dev.thaumicunity.common.block.RunicMatrixBlock;
 import dev.thaumicunity.common.block.WandPedestalBlock;
@@ -55,6 +56,11 @@ public final class TUBlocks {
             EssentiaBufferBlock::new, p -> p.mapColor(MapColor.WOOD).strength(1.5f).sound(SoundType.WOOD));
     public static final DeferredBlock<CentrifugeBlock> CENTRIFUGE = BLOCKS.registerBlock("centrifuge",
             CentrifugeBlock::new, p -> p.mapColor(MapColor.METAL).strength(2.5f, 6.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
+
+    /** Left behind by the portable hole focus; restores the original block after a while. */
+    public static final DeferredBlock<PhasedSpaceBlock> PHASED_SPACE = BLOCKS.registerBlock("phased_space",
+            PhasedSpaceBlock::new, p -> p.noCollision().noOcclusion().noLootTable().strength(-1.0f, 3600000.0f)
+                    .pushReaction(net.minecraft.world.level.material.PushReaction.BLOCK));
 
     public static final DeferredBlock<Block> ARCANE_STONE = BLOCKS.registerSimpleBlock("arcane_stone",
             p -> p.mapColor(MapColor.STONE).strength(2.0f, 10.0f).requiresCorrectToolForDrops());

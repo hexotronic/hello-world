@@ -196,8 +196,9 @@ SIMPLE_ITEMS = dict(blocks.ITEMS)
 SIMPLE_ITEMS.update({name: (english_name, []) for name, english_name in wands.ITEMS.items()})
 
 ITEM_IDS = {rid("wand")}
-for _name in blocks.BLOCKS:
-    ITEM_IDS.add(rid(_name))
+for _name, _spec in blocks.BLOCKS.items():
+    if _spec["model"] != "invisible":
+        ITEM_IDS.add(rid(_name))
 for _name in SIMPLE_ITEMS:
     ITEM_IDS.add(rid(_name))
 
@@ -325,6 +326,12 @@ def gen_blocks_items(lang):
     for name, spec in blocks.BLOCKS.items():
         block_id = rid(name)
         model = spec["model"]
+        if model == "invisible":
+            write_json(os.path.join(blockstates, name + ".json"), {"variants": {"": {"model": f"{NS}:block/{name}"}}})
+            write_json(os.path.join(block_models, name + ".json"),
+                       {"textures": {"particle": "minecraft:block/glass"}, "elements": []})
+            lang[f"block.{NS}.{name}"] = spec["name"]
+            continue
         if model in ("tube", "valve"):
             gen_tube_models(name, spec, blockstates, block_models)
             write_json(os.path.join(item_defs, name + ".json"),
@@ -871,6 +878,7 @@ GAME_TESTS = {
     "salis_mundus": 40,
     "wands": 20,
     "essentia_transport": 300,
+    "portable_hole": 120,
 }
 
 

@@ -1,0 +1,27 @@
+{
+  "type": "thaumicunity:arcane_shapeless",
+  "ingredients": [
+    "thaumicunity:adept_focus",
+    "minecraft:emerald"
+  ],
+  "vis": {
+    "thaumicunity:ordo": 10,
+    "thaumicunity:perditio": 10,
+    "thaumicunity:terra": 5
+  },
+  "result": {
+    "id": "thaumicunity:adept_focus",
+    "components": {
+      "thaumicunity:spell": {
+        "medium": "thaumicunity:bolt",
+        "effects": [
+          "thaumicunity:exchange"
+        ]
+      },
+      "minecraft:item_name": {
+        "translate": "focus.thaumicunity.equal_trade"
+      }
+    }
+  },
+  "research": "thaumicunity:auromancy/classic_foci"
+}

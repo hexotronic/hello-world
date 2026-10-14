@@ -17,7 +17,7 @@ spell system, written from scratch with original code, text and art.
 | Aura | Per-chunk vis and flux with biome profiles and primal attunement, cheap bounded simulation, aura HUD |
 | Crafting | Crucible, arcane workbench, alchemical furnace and warded jars, runic matrix infusion with a stability model |
 | Essentia | Suction-driven tubes and valves, essentia buffer, centrifuge; labelled jars pull their aspect |
-| Spells | 80 spell components (mediums, effects, synergies, modifiers) on 43 Java primitives; caster's gauntlets; 3 focus tiers; 11 focus archetypes |
+| Spells | 81 spell components (mediums, effects, synergies, modifiers) on 44 Java primitives; caster's gauntlets; 3 focus tiers; 17 focus archetypes |
 | Wands | Rods and caps as data (7 rods, 5 caps, 35 combinations); per-primal vis storage, fixed foci, vis crystals, aura recharge and a recharge pedestal |
 | World | Cinnabar and amber ores (switchable), arcane stone, metals |
 

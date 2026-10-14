@@ -81,6 +81,7 @@ public final class TUGameTests {
         test("salis_mundus", TUGameTests::salisMundus);
         test("wands", TUGameTests::wands);
         test("essentia_transport", TUGameTests::essentiaTransport);
+        test("portable_hole", TUGameTests::portableHole);
     }
 
     private TUGameTests() {
@@ -148,7 +149,7 @@ public final class TUGameTests {
             helper.assertTrue(spell.isValid(), holder.id().identifier() + " makes an invalid spell: " + spell.errors());
             foci++;
         }
-        helper.assertTrue(foci >= 11, "expected at least 11 focus recipes, found " + foci);
+        helper.assertTrue(foci >= 17, "expected at least 17 focus recipes, found " + foci);
         helper.succeed();
     }
 
@@ -338,6 +339,73 @@ public final class TUGameTests {
             WardedJarBlockEntity caught = jar(helper, catcher);
             helper.assertTrue(caught.amount() > 0 && parts.contains(caught.aspect()),
                     "the jar under the centrifuge should hold a part of Lux " + parts + ", has " + caught.contents());
+        });
+    }
+
+    /** The portable hole opens a tunnel six deep into stone, leaves the seventh block, and closes again. */
+    private static void portableHole(GameTestHelper helper) {
+        for (int x = 1; x <= 3; x++) {
+            for (int y = 1; y <= 3; y++) {
+                for (int z = 1; z <= 7; z++) {
+                    helper.setBlock(new BlockPos(x, y, z), Blocks.STONE);
+                }
+            }
+        }
+        ServerLevel level = helper.getLevel();
+        dev.thaumicunity.api.spell.SpellContext context = new dev.thaumicunity.api.spell.SpellContext() {
+            @Override
+            public ServerLevel level() {
+                return level;
+            }
+
+            @Override
+            public net.minecraft.world.entity.LivingEntity caster() {
+                return null;
+            }
+
+            @Override
+            public net.minecraft.util.RandomSource random() {
+                return level.getRandom();
+            }
+
+            @Override
+            public double powerScale() {
+                return 1.0;
+            }
+
+            @Override
+            public boolean mayAlterWorld() {
+                return true;
+            }
+
+            @Override
+            public int color() {
+                return 0xFFFFFF;
+            }
+
+            @Override
+            public Identifier componentId() {
+                return ThaumicUnity.id("phase");
+            }
+        };
+        BlockPos face = helper.absolutePos(new BlockPos(2, 2, 1));
+        com.google.gson.JsonObject json = new com.google.gson.JsonObject();
+        json.addProperty("depth", 6);
+        json.addProperty("radius", 1);
+        json.addProperty("duration", 40);
+        dev.thaumicunity.common.spell.primitive.EffectPrimitives.PHASE.apply(context,
+                dev.thaumicunity.api.spell.SpellTarget.ofBlock(face, Direction.NORTH, Vec3.atCenterOf(face)),
+                dev.thaumicunity.api.spell.SpellParams.of(json), 1.0);
+        for (int z = 1; z <= 6; z++) {
+            helper.assertBlockPresent(TUBlocks.PHASED_SPACE.get(), new BlockPos(2, 2, z));
+            helper.assertBlockPresent(TUBlocks.PHASED_SPACE.get(), new BlockPos(1, 3, z));
+        }
+        helper.assertBlockPresent(Blocks.STONE, new BlockPos(2, 2, 7));
+        helper.succeedWhen(() -> {
+            for (int z = 1; z <= 6; z++) {
+                helper.assertBlockPresent(Blocks.STONE, new BlockPos(2, 2, z));
+                helper.assertBlockPresent(Blocks.STONE, new BlockPos(3, 1, z));
+            }
         });
     }
 }

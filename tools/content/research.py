@@ -384,6 +384,27 @@ ENTRIES = {
                 "and it may take the aura lower. Place it where the aura is strong and give the place time to "
                 "recover."),
                 recipes=["wand/wand_pedestal"])]),
+    "auromancy/classic_foci": dict(
+        title="Thaumaturge's Foci", x=2, y=2, icon="thaumicunity:adept_focus",
+        parents=["auromancy/foci"], aspects=["permutatio", "vacuos"],
+        stages=[
+            dict(text="Make two observations in Auromancy and craft an apprentice's focus.",
+                 requirements=[("knowledge", "observation", "auromancy", 2), ("craft", "thaumicunity:apprentice_focus")]),
+            dict(text=(
+                "Four old workhorses of thaumaturgy. Smelting bakes the block it touches. Telekinesis draws loose "
+                "items to you. Equal Trade swaps the block it hits for the block held in your other hand. Portable "
+                "Hole opens a tunnel six blocks deep that closes again after ten seconds; it will not open blocks "
+                "that hold things."),
+                recipes=["focus/smelting", "focus/telekinesis", "focus/equal_trade", "focus/portable_hole"])]),
+    "auromancy/primal_focus": dict(
+        title="Primal Focus", x=6, y=2, icon="thaumicunity:archmage_focus",
+        parents=["auromancy/master_foci", "auromancy/classic_foci"], aspects=["potentia", "aer"],
+        stages=[
+            dict(text="Develop three theories of Auromancy.", requirements=[("knowledge", "theory", "auromancy", 3)]),
+            dict(text=(
+                "The archmage's focus can hold four effects at once. The Primal focus burns, freezes, shocks and "
+                "flings in one shot; Thunderhead calls lightning down wherever it points."),
+                recipes=["focus/primal", "focus/thunderhead"])]),
     "auromancy/flux": dict(
         title="Living with Flux", x=0, y=2, icon="thaumicunity:perditio_vis_crystal",
         parents=["auromancy/casting"], aspects=["vitium", "auram"],

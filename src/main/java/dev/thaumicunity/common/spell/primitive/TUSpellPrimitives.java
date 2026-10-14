@@ -38,6 +38,7 @@ public final class TUSpellPrimitives {
         PRIMITIVES.register("break", () -> EffectPrimitives.BREAK);
         PRIMITIVES.register("place", () -> EffectPrimitives.PLACE);
         PRIMITIVES.register("exchange", () -> EffectPrimitives.EXCHANGE);
+        PRIMITIVES.register("phase", () -> EffectPrimitives.PHASE);
         PRIMITIVES.register("push", () -> EffectPrimitives.PUSH);
         PRIMITIVES.register("teleport", () -> EffectPrimitives.TELEPORT);
         PRIMITIVES.register("light", () -> EffectPrimitives.LIGHT);

@@ -7,9 +7,12 @@ import dev.thaumicunity.api.spell.SpellParams;
 import dev.thaumicunity.api.spell.SpellPrimitive;
 import dev.thaumicunity.api.spell.SpellTarget;
 import dev.thaumicunity.common.aura.AuraManager;
+import dev.thaumicunity.common.blockentity.PhasedSpaceBlockEntity;
 import dev.thaumicunity.common.registry.TUAttachments;
+import dev.thaumicunity.common.registry.TUBlocks;
 import dev.thaumicunity.common.registry.TUTags;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -251,6 +254,44 @@ public final class EffectPrimitives {
         ctx.level().setBlockAndUpdate(pos, blockItem.getBlock().defaultBlockState());
         if (!player.isCreative()) {
             offhand.shrink(1);
+        }
+    };
+
+    /**
+     * Portable hole: opens a tunnel straight into the face the medium hit, which closes again by itself. Blocks with
+     * block entities, unbreakable and magic-immune blocks stay. Params: depth, radius, duration (ticks), max_hardness.
+     */
+    public static final SpellPrimitive.Effect PHASE = (ctx, target, params, power) -> {
+        if (!target.hasBlock() || target.face() == null || !ctx.mayAlterWorld()) {
+            return;
+        }
+        Direction into = target.face().getOpposite();
+        int depth = (int) Math.round(params.getInt("depth", 6) * power);
+        int radius = params.getInt("radius", 1);
+        int duration = (int) Math.round(params.getInt("duration", 200) * power);
+        double maxHardness = params.getDouble("max_hardness", 25.0);
+        Direction.Axis axis = into.getAxis();
+        for (int step = 0; step < depth; step++) {
+            BlockPos center = target.block().relative(into, step);
+            for (int a = -radius; a <= radius; a++) {
+                for (int b = -radius; b <= radius; b++) {
+                    BlockPos pos = switch (axis) {
+                        case X -> center.offset(0, a, b);
+                        case Y -> center.offset(a, 0, b);
+                        case Z -> center.offset(a, b, 0);
+                    };
+                    BlockState state = ctx.level().getBlockState(pos);
+                    float hardness = state.getDestroySpeed(ctx.level(), pos);
+                    if (state.isAir() || state.hasBlockEntity() || hardness < 0 || hardness > maxHardness
+                            || !state.getFluidState().isEmpty() || !mayEdit(ctx, pos)) {
+                        continue;
+                    }
+                    ctx.level().setBlock(pos, TUBlocks.PHASED_SPACE.get().defaultBlockState(), Block.UPDATE_CLIENTS);
+                    if (ctx.level().getBlockEntity(pos) instanceof PhasedSpaceBlockEntity space) {
+                        space.open(state, duration);
+                    }
+                }
+            }
         }
     };
 

@@ -8,6 +8,7 @@ import dev.thaumicunity.common.blockentity.CentrifugeBlockEntity;
 import dev.thaumicunity.common.blockentity.CrucibleBlockEntity;
 import dev.thaumicunity.common.blockentity.EssentiaBufferBlockEntity;
 import dev.thaumicunity.common.blockentity.EssentiaTubeBlockEntity;
+import dev.thaumicunity.common.blockentity.PhasedSpaceBlockEntity;
 import dev.thaumicunity.common.blockentity.ResearchTableBlockEntity;
 import dev.thaumicunity.common.blockentity.RunicMatrixBlockEntity;
 import dev.thaumicunity.common.blockentity.WandPedestalBlockEntity;
@@ -46,6 +47,8 @@ public final class TUBlockEntities {
             TYPES.register("essentia_buffer", () -> new BlockEntityType<>(EssentiaBufferBlockEntity::new, Set.of(TUBlocks.ESSENTIA_BUFFER.get())));
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CentrifugeBlockEntity>> CENTRIFUGE =
             TYPES.register("centrifuge", () -> new BlockEntityType<>(CentrifugeBlockEntity::new, Set.of(TUBlocks.CENTRIFUGE.get())));
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PhasedSpaceBlockEntity>> PHASED_SPACE =
+            TYPES.register("phased_space", () -> new BlockEntityType<>(PhasedSpaceBlockEntity::new, Set.of(TUBlocks.PHASED_SPACE.get())));
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<AlchemicalFurnaceBlockEntity>> ALCHEMICAL_FURNACE =
             TYPES.register("alchemical_furnace", () -> new BlockEntityType<>(AlchemicalFurnaceBlockEntity::new,
                     Set.of(TUBlocks.ALCHEMICAL_FURNACE.get())));

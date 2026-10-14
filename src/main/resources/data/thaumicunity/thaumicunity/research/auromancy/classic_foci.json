@@ -1,0 +1,41 @@
+{
+  "category": "thaumicunity:auromancy",
+  "x": 2,
+  "y": 2,
+  "icon": "thaumicunity:adept_focus",
+  "parents": [
+    "thaumicunity:auromancy/foci"
+  ],
+  "aspects": [
+    "thaumicunity:permutatio",
+    "thaumicunity:vacuos"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.auromancy.classic_foci.stage0",
+      "requirements": [
+        {
+          "type": "knowledge",
+          "kind": "observation",
+          "category": "thaumicunity:auromancy",
+          "amount": 2
+        },
+        {
+          "type": "craft",
+          "item": "thaumicunity:apprentice_focus"
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.auromancy.classic_foci.stage1",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:focus/smelting",
+        "thaumicunity:focus/telekinesis",
+        "thaumicunity:focus/equal_trade",
+        "thaumicunity:focus/portable_hole"
+      ]
+    }
+  ]
+}

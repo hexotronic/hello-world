@@ -1,0 +1,26 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:phase",
+  "aspect": "thaumicunity:vacuos",
+  "cost": {
+    "thaumicunity:perditio": 3,
+    "thaumicunity:aer": 2,
+    "thaumicunity:ordo": 1
+  },
+  "complexity": 3,
+  "cooldown": 40,
+  "tags": [
+    "world"
+  ],
+  "params": {
+    "depth": 6,
+    "radius": 1,
+    "duration": 200,
+    "max_hardness": 25.0
+  },
+  "visual": {
+    "color": "#5a3a7a",
+    "particle": "thaumicunity:spark",
+    "sound": "thaumicunity:misc.zap"
+  }
+}
