@@ -5,15 +5,15 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 import java.util.List;
 
 /**
- * Common configuration (config/thaumicunity-common.toml). Every major system can be switched off here
- * (docs/ARCHITECTURE.md, "Compatibility rules").
+ * Gameplay configuration. Registered as a synced config: the server loads it when a world starts (a copy in the
+ * world's {@code syncedconfig} folder overrides the global file) and sends it to every client, so research mode and
+ * aspect visibility agree on both sides. Options for systems that later phases add are introduced with them.
  */
 public final class TUConfig {
     public static final ModConfigSpec SPEC;
 
     // --- research
     public static final ModConfigSpec.EnumValue<ResearchModeOption> RESEARCH_MODE;
-    public static final ModConfigSpec.BooleanValue HIDE_UNKNOWN_RECIPES;
     public static final ModConfigSpec.IntValue SCAN_POINTS_PER_ASPECT;
     public static final ModConfigSpec.IntValue INSIGHT_BOARD_RADIUS;
 
@@ -33,14 +33,10 @@ public final class TUConfig {
     public static final ModConfigSpec.DoubleValue AURA_RIFT_PRESSURE;
     public static final ModConfigSpec.IntValue AURA_DEFAULT_BASE;
 
-    // --- flux and taint
+    // --- flux
     public static final ModConfigSpec.BooleanValue FLUX_ENABLED;
-    public static final ModConfigSpec.BooleanValue TAINT_ENABLED;
-    public static final ModConfigSpec.BooleanValue TAINT_SPREAD;
-    public static final ModConfigSpec.IntValue TAINT_MAX_SPREAD_PER_TICK;
 
     // --- casting
-    public static final ModConfigSpec.BooleanValue WANDS_ENABLED;
     public static final ModConfigSpec.BooleanValue CASTERS_ENABLED;
     public static final ModConfigSpec.DoubleValue SPELL_COST_SCALE;
     public static final ModConfigSpec.DoubleValue SPELL_POWER_SCALE;
@@ -49,7 +45,6 @@ public final class TUConfig {
 
     // --- warp
     public static final ModConfigSpec.BooleanValue WARP_ENABLED;
-    public static final ModConfigSpec.BooleanValue WARP_EVENTS;
 
     // --- crafting
     public static final ModConfigSpec.IntValue CRUCIBLE_CAPACITY;
@@ -58,7 +53,6 @@ public final class TUConfig {
 
     // --- world
     public static final ModConfigSpec.BooleanValue WORLDGEN_ENABLED;
-    public static final ModConfigSpec.BooleanValue OUTER_LANDS_ENABLED;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -67,8 +61,6 @@ public final class TUConfig {
         RESEARCH_MODE = b.comment("unified: stages as written; classic: knowledge costs become insight puzzles;",
                         "modern: insight puzzles become theory costs")
                 .defineEnum("mode", ResearchModeOption.UNIFIED);
-        HIDE_UNKNOWN_RECIPES = b.comment("Hide recipes from recipe viewers and devices until their research is known")
-                .define("hideUnknownRecipes", true);
         SCAN_POINTS_PER_ASPECT = b.comment("Aspect points granted per aspect type the first time something is scanned")
                 .defineInRange("scanPointsPerAspect", 2, 0, 64);
         INSIGHT_BOARD_RADIUS = b.comment("Radius of the insight puzzle board")
@@ -93,25 +85,24 @@ public final class TUConfig {
                 .defineInRange("chunksPerTick", 64, 1, 4096);
         AURA_TICK_INTERVAL = b.comment("Game ticks between aura updates")
                 .defineInRange("tickInterval", 10, 1, 200);
-        AURA_REGEN_RATE = b.defineInRange("regenRate", 0.02, 0.0, 1.0);
-        AURA_DIFFUSION_RATE = b.defineInRange("diffusionRate", 0.08, 0.0, 1.0);
-        AURA_FLUX_DECAY = b.defineInRange("fluxDecay", 0.004, 0.0, 1.0);
+        AURA_REGEN_RATE = b.comment("Fraction of the missing vis a chunk regains per update")
+                .defineInRange("regenRate", 0.02, 0.0, 1.0);
+        AURA_DIFFUSION_RATE = b.comment("Fraction of the vis difference to lower neighbouring chunks that flows out per update (shared by the four sides)")
+                .defineInRange("diffusionRate", 0.08, 0.0, 1.0);
+        AURA_FLUX_DECAY = b.comment("Fraction of flux that dissipates per update while flux pressure is below riftPressure")
+                .defineInRange("fluxDecay", 0.004, 0.0, 1.0);
         AURA_RIFT_PRESSURE = b.comment("Flux pressure (flux / base) above which flux stops dissipating and rifts may form")
                 .defineInRange("riftPressure", 0.75, 0.05, 100.0);
         AURA_DEFAULT_BASE = b.comment("Base vis of biomes without an aura profile")
                 .defineInRange("defaultBase", 100, 0, 10000);
         b.pop();
 
-        b.comment("Flux and taint (docs/DESIGN_DECISIONS.md, D6)").push("taint");
-        FLUX_ENABLED = b.comment("Magic produces flux; disable to make all magic clean").define("fluxEnabled", true);
-        TAINT_ENABLED = b.define("taintEnabled", true);
-        TAINT_SPREAD = b.define("taintSpread", true);
-        TAINT_MAX_SPREAD_PER_TICK = b.defineInRange("maxSpreadPerTick", 16, 0, 1024);
+        b.comment("Flux (docs/DESIGN_DECISIONS.md, D6)").push("flux");
+        FLUX_ENABLED = b.comment("Magic produces flux; disable to make all magic clean").define("enabled", true);
         b.pop();
 
         b.comment("Casting (docs/DESIGN_DECISIONS.md, D4)").push("casting");
-        WANDS_ENABLED = b.define("wands", true);
-        CASTERS_ENABLED = b.define("casters", true);
+        CASTERS_ENABLED = b.comment("Allow casting spells with caster's gauntlets").define("casters", true);
         SPELL_COST_SCALE = b.comment("Multiplier on every spell's vis cost").defineInRange("costScale", 1.0, 0.0, 100.0);
         SPELL_POWER_SCALE = b.comment("Multiplier on every spell's power (damage, healing, duration)")
                 .defineInRange("powerScale", 1.0, 0.0, 100.0);
@@ -121,21 +112,20 @@ public final class TUConfig {
         b.pop();
 
         b.comment("Warp (docs/DESIGN_DECISIONS.md, D6)").push("warp");
-        WARP_ENABLED = b.define("enabled", true);
-        WARP_EVENTS = b.define("events", true);
+        WARP_ENABLED = b.comment("Forbidden spells and research give warp").define("enabled", true);
         b.pop();
 
         b.push("crafting");
         CRUCIBLE_CAPACITY = b.comment("Essentia a crucible holds before the excess turns into flux")
                 .defineInRange("crucibleCapacity", 500, 10, 100000);
-        INFUSION_INSTABILITY_SCALE = b.defineInRange("infusionInstabilityScale", 1.0, 0.0, 10.0);
+        INFUSION_INSTABILITY_SCALE = b.comment("Multiplier on the chance of instability events during infusion")
+                .defineInRange("infusionInstabilityScale", 1.0, 0.0, 10.0);
         INFUSION_RANGE = b.comment("Horizontal range in blocks in which the runic matrix finds pedestals and jars")
                 .defineInRange("infusionRange", 8, 3, 16);
         b.pop();
 
         b.push("world");
-        WORLDGEN_ENABLED = b.define("worldgen", true);
-        OUTER_LANDS_ENABLED = b.define("outerLands", true);
+        WORLDGEN_ENABLED = b.comment("Generate Thaumic Unity ores and features in new chunks").define("worldgen", true);
         b.pop();
 
         SPEC = b.build();

@@ -17,7 +17,7 @@ public final class TUClientConfig {
         PARTICLE_QUALITY = b.comment("How many magic particles to show").defineEnum("particleQuality", ParticleQuality.ALL);
         SHOW_AURA_HUD = b.comment("Show the aura meter while holding a thaumometer or wearing goggles of revealing")
                 .define("auraHud", true);
-        BOOK_ANIMATIONS = b.comment("Animate the Thaumonomicon (page glow, drifting motes)").define("bookAnimations", true);
+        BOOK_ANIMATIONS = b.comment("Drifting motes over the Thaumonomicon research map").define("bookAnimations", true);
         b.pop();
         b.push("tooltips");
         ASPECTS_NEED_SHIFT = b.comment("Only show aspects in tooltips while Shift is held").define("aspectsNeedShift", true);

@@ -23,7 +23,7 @@ public final class AuraHud {
 
     public static void render(GuiGraphicsExtractor g, DeltaTracker deltaTracker) {
         Minecraft minecraft = Minecraft.getInstance();
-        if (!TUClientConfig.SHOW_AURA_HUD.get() || minecraft.level == null || minecraft.options.hideGui) {
+        if (!TUClientConfig.SHOW_AURA_HUD.get() || minecraft.level == null) {
             return;
         }
         AuraSnapshotPayload aura = ClientAura.current(minecraft.level.getGameTime());

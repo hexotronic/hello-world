@@ -3,6 +3,7 @@ package dev.thaumicunity.client.screen;
 import dev.thaumicunity.client.ClientRecipes;
 import dev.thaumicunity.common.aspect.Aspect;
 import dev.thaumicunity.common.aspect.Aspects;
+import dev.thaumicunity.common.config.TUClientConfig;
 import dev.thaumicunity.common.network.ResearchAdvancePayload;
 import dev.thaumicunity.common.registry.TURegistries;
 import dev.thaumicunity.common.registry.TUSounds;
@@ -325,7 +326,27 @@ public class ThaumonomiconScreen extends Screen {
                 drawNode(g, e.getKey(), e.getValue(), state, accent, mouseX, mouseY);
             }
         }
+        if (TUClientConfig.BOOK_ANIMATIONS.get()) {
+            drawMotes(g, accent);
+        }
         g.disableScissor();
+    }
+
+    /** Slowly rising, flickering motes in the category colour; positions derive from time, so nothing is stored. */
+    private void drawMotes(GuiGraphicsExtractor g, int accent) {
+        long ticks = minecraft.level != null ? minecraft.level.getGameTime() : 0;
+        float time = ticks + minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+        for (int i = 0; i < 28; i++) {
+            long seed = i * 0x9E3779B97F4A7C15L;
+            float speed = 0.15f + ((seed >>> 40) & 0xFF) / 255f * 0.35f;
+            float px = ((seed >>> 8) & 0xFFFF) / 65535f * mapW() + (float) Math.sin(time / 30f + i) * 6f;
+            float py = mapH() - (((seed >>> 24) & 0xFFFF) / 65535f * mapH() + time * speed) % mapH();
+            float flicker = 0.5f + 0.5f * (float) Math.sin(time / 7f + i * 1.7f);
+            int alpha = (int) (40 + 120 * flicker);
+            int x = mapX() + (int) px;
+            int y = mapY() + (int) py;
+            g.fill(x, y, x + 2, y + 2, (alpha << 24) | (GuiUtil.lighten(accent) & 0xFFFFFF));
+        }
     }
 
     /** L-shaped connection: horizontal from the parent, then vertical into the child. */
