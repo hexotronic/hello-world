@@ -220,6 +220,29 @@ ENTRIES = {
             dict(text="Both are common in recipes of every field.",
                  recipes=["amber_block", "amber_from_block", "quicksilver_from_smelting_cinnabar",
                           "quicksilver_from_smelting_cinnabar_ore", "amber_from_smelting_amber_ore"])]),
+    "alchemy/essentia_tubes": dict(
+        title="Essentia Tubes", x=2, y=-2, icon="thaumicunity:essentia_tube",
+        parents=["alchemy/essentia"], aspects=["aqua", "ordo"],
+        stages=[
+            dict(text="Solve the puzzle linking Aqua and Ordo.", requirements=[("insight", ["aqua", "ordo"])]),
+            dict(text=(
+                "Essentia flows towards whatever pulls it hardest. A jar pulls on a tube set on its lid, a labelled "
+                "jar twice as hard, and every tube passes the pull on to its neighbours, a little weaker each step. "
+                "Run tubes from the sides of an alchemical furnace to your jars and the essentia finds its own way; "
+                "a labelled jar draws only its aspect, even out of other jars.\n\nA valve stops the flow when "
+                "closed by hand or by a redstone signal. A buffer holds a little of several aspects and gives them "
+                "up to anything pulling harder. Right-click a tube to see what it holds and how hard it pulls."),
+                recipes=["essentia_tube", "essentia_valve", "essentia_buffer"])]),
+    "alchemy/centrifuge": dict(
+        title="Centrifuge", x=4, y=-2, icon="thaumicunity:centrifuge",
+        parents=["alchemy/essentia_tubes"], aspects=["perditio", "permutatio"],
+        stages=[
+            dict(text="Make two observations in Alchemy.", requirements=[("knowledge", "observation", "alchemy", 2)]),
+            dict(text=(
+                "Spinning essentia hard enough tears a compound aspect back into the two it was made from. The "
+                "centrifuge draws essentia in from above, strongly enough to empty jars, and gives the parts out on "
+                "every other side, taking the two components in turn. Primal essentia passes through untouched."),
+                recipes=["centrifuge"])]),
     # ------------------------------------------------------------------ infusion
     "infusion/runic_matrix": dict(
         title="Infusion", x=0, y=0, icon="thaumicunity:runic_matrix",

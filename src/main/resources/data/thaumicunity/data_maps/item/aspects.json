@@ -910,6 +910,26 @@
       "thaumicunity:perditio": 4,
       "thaumicunity:mortuus": 2,
       "thaumicunity:praecantatio": 2
+    },
+    "thaumicunity:essentia_tube": {
+      "thaumicunity:aqua": 1,
+      "thaumicunity:vitreus": 1,
+      "thaumicunity:instrumentum": 1
+    },
+    "thaumicunity:essentia_valve": {
+      "thaumicunity:aqua": 1,
+      "thaumicunity:machina": 1,
+      "thaumicunity:instrumentum": 1
+    },
+    "thaumicunity:essentia_buffer": {
+      "thaumicunity:aqua": 4,
+      "thaumicunity:vacuos": 2,
+      "thaumicunity:instrumentum": 2
+    },
+    "thaumicunity:centrifuge": {
+      "thaumicunity:machina": 4,
+      "thaumicunity:permutatio": 4,
+      "thaumicunity:perditio": 2
     }
   }
 }

@@ -94,4 +94,9 @@ ITEM_ASPECTS = {
     "thaumicunity:ice_wand_core": "aqua 4 gelum 2 praecantatio 2",
     "thaumicunity:quartz_wand_core": "ordo 4 vitreus 2 praecantatio 2",
     "thaumicunity:bone_wand_core": "perditio 4 mortuus 2 praecantatio 2",
+    # Essentia transport (phase 4.2); kept here with the other explicit device aspects.
+    "thaumicunity:essentia_tube": "aqua 1 vitreus 1 instrumentum 1",
+    "thaumicunity:essentia_valve": "aqua 1 machina 1 instrumentum 1",
+    "thaumicunity:essentia_buffer": "aqua 4 vacuos 2 instrumentum 2",
+    "thaumicunity:centrifuge": "machina 4 permutatio 4 perditio 2",
 }

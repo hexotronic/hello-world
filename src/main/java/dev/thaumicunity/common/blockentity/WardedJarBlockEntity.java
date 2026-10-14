@@ -1,12 +1,16 @@
 package dev.thaumicunity.common.blockentity;
 
 import dev.thaumicunity.common.aspect.AspectList;
+import dev.thaumicunity.common.essentia.EssentiaNode;
+import dev.thaumicunity.common.essentia.EssentiaTransfer;
 import dev.thaumicunity.common.registry.TUBlockEntities;
 import dev.thaumicunity.common.registry.TUDataComponents;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
@@ -16,7 +20,7 @@ import org.jspecify.annotations.Nullable;
  * Warded jar: holds up to {@link #CAPACITY} essentia of a single aspect. A label ({@code filter}) locks it to one
  * aspect even when empty. Contents travel with the item when the jar is broken.
  */
-public class WardedJarBlockEntity extends SyncedBlockEntity {
+public class WardedJarBlockEntity extends SyncedBlockEntity implements EssentiaNode {
     public static final int CAPACITY = 250;
 
     private @Nullable Identifier aspect;
@@ -77,6 +81,51 @@ public class WardedJarBlockEntity extends SyncedBlockEntity {
         }
         markForSync();
         return taken;
+    }
+
+    // --- essentia transport: tubes connect to the lid only
+
+    @Override
+    public boolean connectsTo(Direction side) {
+        return side == Direction.UP;
+    }
+
+    @Override
+    public int suction(Direction side) {
+        return side == Direction.UP && amount < CAPACITY ? retention(side) : 0;
+    }
+
+    @Override
+    public int retention(Direction side) {
+        return filter != null ? LABELLED_JAR : JAR;
+    }
+
+    @Override
+    public @Nullable Identifier suctionAspect(Direction side) {
+        return filter != null ? filter : amount > 0 ? aspect : null;
+    }
+
+    @Override
+    public @Nullable Identifier offered(Direction side) {
+        return side == Direction.UP && amount > 0 ? aspect : null;
+    }
+
+    @Override
+    public int take(Identifier wanted, int count, Direction side) {
+        return take(wanted, count);
+    }
+
+    @Override
+    public int give(Identifier incoming, int count, Direction side) {
+        return add(incoming, count);
+    }
+
+    /** Pulls essentia from a tube on the lid. */
+    public static void serverTick(Level level, BlockPos pos, BlockState state, WardedJarBlockEntity jar) {
+        int suction = jar.suction(Direction.UP);
+        if (suction > 0) {
+            EssentiaTransfer.pull(level, pos, jar, Direction.UP, suction, jar.suctionAspect(Direction.UP));
+        }
     }
 
     public AspectList contents() {

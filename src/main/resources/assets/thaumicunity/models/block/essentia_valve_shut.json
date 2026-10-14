@@ -1,0 +1,44 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "tube": "thaumicunity:block/essentia_tube",
+    "valve": "thaumicunity:block/essentia_valve",
+    "particle": "thaumicunity:block/essentia_tube",
+    "shut": "thaumicunity:block/essentia_valve_shut"
+  },
+  "elements": [
+    {
+      "from": [
+        4.4,
+        6.9,
+        6.9
+      ],
+      "to": [
+        11.6,
+        9.1,
+        9.1
+      ],
+      "faces": {
+        "north": {
+          "texture": "#shut"
+        },
+        "east": {
+          "texture": "#shut"
+        },
+        "south": {
+          "texture": "#shut"
+        },
+        "west": {
+          "texture": "#shut"
+        },
+        "up": {
+          "texture": "#shut"
+        },
+        "down": {
+          "texture": "#shut"
+        }
+      }
+    }
+  ]
+}

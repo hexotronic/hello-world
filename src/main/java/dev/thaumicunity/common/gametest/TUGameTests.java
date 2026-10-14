@@ -20,6 +20,7 @@ import dev.thaumicunity.common.research.ResearchRequirement;
 import dev.thaumicunity.common.research.ResearchStage;
 import dev.thaumicunity.common.spell.SpellComponent;
 import dev.thaumicunity.common.spell.SpellLibrary;
+import dev.thaumicunity.common.blockentity.WardedJarBlockEntity;
 import dev.thaumicunity.common.wand.WandCap;
 import dev.thaumicunity.common.wand.WandFocus;
 import dev.thaumicunity.common.wand.WandParts;
@@ -79,6 +80,7 @@ public final class TUGameTests {
         test("insight_puzzles_solvable", TUGameTests::insightPuzzlesSolvable);
         test("salis_mundus", TUGameTests::salisMundus);
         test("wands", TUGameTests::wands);
+        test("essentia_transport", TUGameTests::essentiaTransport);
     }
 
     private TUGameTests() {
@@ -293,5 +295,49 @@ public final class TUGameTests {
         helper.assertTrue(fixed != null && fixed.stack().is(TUItems.APPRENTICE_FOCUS.get()), "the focus should be fixed to the wand");
         helper.assertTrue(player.getItemInHand(InteractionHand.OFF_HAND).isEmpty(), "the focus should leave the other hand");
         helper.succeed();
+    }
+
+    private static WardedJarBlockEntity jar(GameTestHelper helper, BlockPos pos) {
+        if (helper.getLevel().getBlockEntity(helper.absolutePos(pos)) instanceof WardedJarBlockEntity jar) {
+            return jar;
+        }
+        throw helper.assertionException("no warded jar at " + pos);
+    }
+
+    /**
+     * A labelled jar draws its aspect out of an unlabelled jar through three tubes; a centrifuge fed from a jar of
+     * Lux splits it and a jar below catches one of the parts.
+     */
+    private static void essentiaTransport(GameTestHelper helper) {
+        BlockPos source = new BlockPos(0, 1, 0);
+        BlockPos sink = new BlockPos(2, 1, 0);
+        helper.setBlock(source, TUBlocks.WARDED_JAR.get());
+        helper.setBlock(sink, TUBlocks.WARDED_JAR.get());
+        for (int x = 0; x <= 2; x++) {
+            helper.setBlock(new BlockPos(x, 2, 0), TUBlocks.ESSENTIA_TUBE.get());
+        }
+        jar(helper, source).add(Aspects.IGNIS, 20);
+        jar(helper, sink).setFilter(Aspects.IGNIS);
+
+        Identifier lux = ThaumicUnity.id("lux");
+        List<Identifier> parts = dev.thaumicunity.common.aspect.Aspects.get(helper.getLevel().registryAccess(), lux)
+                .orElseThrow(() -> helper.assertionException("no Lux aspect")).components();
+        BlockPos luxJar = new BlockPos(4, 1, 0);
+        BlockPos centrifuge = new BlockPos(6, 1, 0);
+        BlockPos catcher = new BlockPos(6, 0, 0);
+        helper.setBlock(luxJar, TUBlocks.WARDED_JAR.get());
+        for (int x = 4; x <= 6; x++) {
+            helper.setBlock(new BlockPos(x, 2, 0), TUBlocks.ESSENTIA_TUBE.get());
+        }
+        helper.setBlock(centrifuge, TUBlocks.CENTRIFUGE.get());
+        helper.setBlock(catcher, TUBlocks.WARDED_JAR.get());
+        jar(helper, luxJar).add(lux, 10);
+
+        helper.succeedWhen(() -> {
+            helper.assertTrue(jar(helper, sink).amount() >= 3, "the labelled jar should have drawn Ignis, has " + jar(helper, sink).amount());
+            WardedJarBlockEntity caught = jar(helper, catcher);
+            helper.assertTrue(caught.amount() > 0 && parts.contains(caught.aspect()),
+                    "the jar under the centrifuge should hold a part of Lux " + parts + ", has " + caught.contents());
+        });
     }
 }

@@ -98,6 +98,10 @@ public final class TUItems {
     public static final DeferredItem<BlockItem> WARDED_JAR = ITEMS.registerSimpleBlockItem(TUBlocks.WARDED_JAR);
     public static final DeferredItem<BlockItem> WAND_PEDESTAL = ITEMS.registerSimpleBlockItem(TUBlocks.WAND_PEDESTAL);
     public static final DeferredItem<BlockItem> ALCHEMICAL_FURNACE = ITEMS.registerSimpleBlockItem(TUBlocks.ALCHEMICAL_FURNACE);
+    public static final DeferredItem<BlockItem> ESSENTIA_TUBE = ITEMS.registerSimpleBlockItem(TUBlocks.ESSENTIA_TUBE);
+    public static final DeferredItem<BlockItem> ESSENTIA_VALVE = ITEMS.registerSimpleBlockItem(TUBlocks.ESSENTIA_VALVE);
+    public static final DeferredItem<BlockItem> ESSENTIA_BUFFER = ITEMS.registerSimpleBlockItem(TUBlocks.ESSENTIA_BUFFER);
+    public static final DeferredItem<BlockItem> CENTRIFUGE = ITEMS.registerSimpleBlockItem(TUBlocks.CENTRIFUGE);
     public static final DeferredItem<BlockItem> ARCANE_STONE = ITEMS.registerSimpleBlockItem(TUBlocks.ARCANE_STONE);
     public static final DeferredItem<BlockItem> ARCANE_STONE_BRICKS = ITEMS.registerSimpleBlockItem(TUBlocks.ARCANE_STONE_BRICKS);
     public static final DeferredItem<BlockItem> THAUMIUM_BLOCK = ITEMS.registerSimpleBlockItem(TUBlocks.THAUMIUM_BLOCK);

@@ -1,0 +1,37 @@
+{
+  "category": "thaumicunity:alchemy",
+  "x": 2,
+  "y": -2,
+  "icon": "thaumicunity:essentia_tube",
+  "parents": [
+    "thaumicunity:alchemy/essentia"
+  ],
+  "aspects": [
+    "thaumicunity:aqua",
+    "thaumicunity:ordo"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.alchemy.essentia_tubes.stage0",
+      "requirements": [
+        {
+          "type": "insight",
+          "aspects": [
+            "thaumicunity:aqua",
+            "thaumicunity:ordo"
+          ]
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.alchemy.essentia_tubes.stage1",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:essentia_tube",
+        "thaumicunity:essentia_valve",
+        "thaumicunity:essentia_buffer"
+      ]
+    }
+  ]
+}

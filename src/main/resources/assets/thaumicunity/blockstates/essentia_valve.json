@@ -1,0 +1,77 @@
+{
+  "multipart": [
+    {
+      "apply": {
+        "model": "thaumicunity:block/essentia_valve_core"
+      }
+    },
+    {
+      "when": {
+        "north": "true"
+      },
+      "apply": {
+        "model": "thaumicunity:block/essentia_valve_arm"
+      }
+    },
+    {
+      "when": {
+        "east": "true"
+      },
+      "apply": {
+        "model": "thaumicunity:block/essentia_valve_arm",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "south": "true"
+      },
+      "apply": {
+        "model": "thaumicunity:block/essentia_valve_arm",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "west": "true"
+      },
+      "apply": {
+        "model": "thaumicunity:block/essentia_valve_arm",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "up": "true"
+      },
+      "apply": {
+        "model": "thaumicunity:block/essentia_valve_arm",
+        "x": 270
+      }
+    },
+    {
+      "when": {
+        "down": "true"
+      },
+      "apply": {
+        "model": "thaumicunity:block/essentia_valve_arm",
+        "x": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "open": "false"
+          },
+          {
+            "powered": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "thaumicunity:block/essentia_valve_shut"
+      }
+    }
+  ]
+}

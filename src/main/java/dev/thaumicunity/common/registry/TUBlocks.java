@@ -4,7 +4,11 @@ import dev.thaumicunity.ThaumicUnity;
 import dev.thaumicunity.common.block.AlchemicalFurnaceBlock;
 import dev.thaumicunity.common.block.ArcanePedestalBlock;
 import dev.thaumicunity.common.block.ArcaneWorkbenchBlock;
+import dev.thaumicunity.common.block.CentrifugeBlock;
 import dev.thaumicunity.common.block.CrucibleBlock;
+import dev.thaumicunity.common.block.EssentiaBufferBlock;
+import dev.thaumicunity.common.block.EssentiaTubeBlock;
+import dev.thaumicunity.common.block.EssentiaValveBlock;
 import dev.thaumicunity.common.block.ResearchTableBlock;
 import dev.thaumicunity.common.block.RunicMatrixBlock;
 import dev.thaumicunity.common.block.WandPedestalBlock;
@@ -43,6 +47,15 @@ public final class TUBlocks {
                     .requiresCorrectToolForDrops().lightLevel(s -> 10));
 
     // --- building and storage blocks
+    public static final DeferredBlock<EssentiaTubeBlock> ESSENTIA_TUBE = BLOCKS.registerBlock("essentia_tube",
+            EssentiaTubeBlock::new, p -> p.mapColor(MapColor.METAL).strength(0.5f).sound(SoundType.COPPER).noOcclusion());
+    public static final DeferredBlock<EssentiaValveBlock> ESSENTIA_VALVE = BLOCKS.registerBlock("essentia_valve",
+            EssentiaValveBlock::new, p -> p.mapColor(MapColor.METAL).strength(0.5f).sound(SoundType.COPPER).noOcclusion());
+    public static final DeferredBlock<EssentiaBufferBlock> ESSENTIA_BUFFER = BLOCKS.registerBlock("essentia_buffer",
+            EssentiaBufferBlock::new, p -> p.mapColor(MapColor.WOOD).strength(1.5f).sound(SoundType.WOOD));
+    public static final DeferredBlock<CentrifugeBlock> CENTRIFUGE = BLOCKS.registerBlock("centrifuge",
+            CentrifugeBlock::new, p -> p.mapColor(MapColor.METAL).strength(2.5f, 6.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
+
     public static final DeferredBlock<Block> ARCANE_STONE = BLOCKS.registerSimpleBlock("arcane_stone",
             p -> p.mapColor(MapColor.STONE).strength(2.0f, 10.0f).requiresCorrectToolForDrops());
     public static final DeferredBlock<Block> ARCANE_STONE_BRICKS = BLOCKS.registerSimpleBlock("arcane_stone_bricks",

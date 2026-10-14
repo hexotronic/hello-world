@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "thaumicunity:block/essentia_buffer_top",
+    "side": "thaumicunity:block/essentia_buffer_side",
+    "bottom": "thaumicunity:block/essentia_buffer_top"
+  }
+}

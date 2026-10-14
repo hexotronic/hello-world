@@ -279,6 +279,37 @@ def custom_model(kind, textures):
     raise SystemExit(f"unknown custom model {kind}")
 
 
+def gen_tube_models(name, spec, blockstates, block_models):
+    """Pipe blocks: a core, one arm model rotated to each connected side, and for valves a handle that turns red
+    while the valve is shut. The item shows a straight piece."""
+    tex = {k: f"{NS}:block/{v}" for k, v in spec["textures"].items()}
+    tex["particle"] = tex["tube"]
+    core = cube_element([5.5, 5.5, 5.5], [10.5, 10.5, 10.5], all_faces("#tube"))
+    arm_faces = {d: {"texture": "#tube"} for d in ("east", "west", "up", "down")}
+    arm_faces["north"] = {"texture": "#tube", "cullface": "north"}
+    arm = cube_element([6.5, 6.5, 0], [9.5, 9.5, 5.5], arm_faces)
+    elements_core = [core]
+    if spec["model"] == "valve":
+        elements_core.append(cube_element([4.5, 7, 7], [11.5, 9, 9], all_faces("#valve")))
+    base = {"parent": "minecraft:block/block", "ambientocclusion": False, "textures": tex}
+    write_json(os.path.join(block_models, name + "_core.json"), dict(base, elements=elements_core))
+    write_json(os.path.join(block_models, name + "_arm.json"), dict(base, elements=[arm]))
+    south_arm = cube_element([6.5, 6.5, 10.5], [9.5, 9.5, 16], all_faces("#tube"))
+    write_json(os.path.join(block_models, name + "_inventory.json"),
+               dict(base, elements=elements_core + [cube_element([6.5, 6.5, 0], [9.5, 9.5, 5.5], all_faces("#tube")), south_arm]))
+    rotations = {"north": {}, "east": {"y": 90}, "south": {"y": 180}, "west": {"y": 270}, "up": {"x": 270}, "down": {"x": 90}}
+    parts = [{"apply": {"model": f"{NS}:block/{name}_core"}}]
+    for side, rotation in rotations.items():
+        parts.append({"when": {side: "true"}, "apply": dict({"model": f"{NS}:block/{name}_arm"}, **rotation)})
+    if spec["model"] == "valve":
+        shut = cube_element([4.4, 6.9, 6.9], [11.6, 9.1, 9.1], all_faces("#shut"))
+        write_json(os.path.join(block_models, name + "_shut.json"),
+                   dict(base, textures=dict(tex, shut=f"{NS}:block/essentia_valve_shut"), elements=[shut]))
+        parts.append({"when": {"OR": [{"open": "false"}, {"powered": "true"}]},
+                      "apply": {"model": f"{NS}:block/{name}_shut"}})
+    write_json(os.path.join(blockstates, name + ".json"), {"multipart": parts})
+
+
 @generator
 def gen_blocks_items(lang):
     blockstates = os.path.join(ASSETS, "blockstates")
@@ -293,9 +324,16 @@ def gen_blocks_items(lang):
 
     for name, spec in blocks.BLOCKS.items():
         block_id = rid(name)
-        write_json(os.path.join(blockstates, name + ".json"), {"variants": {"": {"model": f"{NS}:block/{name}"}}})
         model = spec["model"]
-        if model == "cube":
+        if model in ("tube", "valve"):
+            gen_tube_models(name, spec, blockstates, block_models)
+            write_json(os.path.join(item_defs, name + ".json"),
+                       {"model": {"type": "minecraft:model", "model": f"{NS}:block/{name}_inventory"}})
+        else:
+            write_json(os.path.join(blockstates, name + ".json"), {"variants": {"": {"model": f"{NS}:block/{name}"}}})
+        if model in ("tube", "valve"):
+            pass
+        elif model == "cube":
             data = {"parent": "minecraft:block/cube_all", "textures": {"all": f"{NS}:block/{name}"}}
         elif model == "bottom_top":
             t = spec["textures"]
@@ -305,9 +343,10 @@ def gen_blocks_items(lang):
             data = custom_model(model.split(":", 1)[1], spec["textures"])
         else:
             raise SystemExit(f"{name}: unknown model kind {model}")
-        write_json(os.path.join(block_models, name + ".json"), data)
-        write_json(os.path.join(item_defs, name + ".json"),
-                   {"model": {"type": "minecraft:model", "model": f"{NS}:block/{name}"}})
+        if model not in ("tube", "valve"):
+            write_json(os.path.join(block_models, name + ".json"), data)
+            write_json(os.path.join(item_defs, name + ".json"),
+                       {"model": {"type": "minecraft:model", "model": f"{NS}:block/{name}"}})
         lang[f"block.{NS}.{name}"] = spec["name"]
 
         loot_kind = spec["loot"]
@@ -831,6 +870,7 @@ GAME_TESTS = {
     "insight_puzzles_solvable": 20,
     "salis_mundus": 40,
     "wands": 20,
+    "essentia_transport": 300,
 }
 
 

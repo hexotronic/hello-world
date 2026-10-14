@@ -1,0 +1,22 @@
+{
+  "type": "thaumicunity:arcane_shaped",
+  "key": {
+    "B": "thaumicunity:brass_ingot",
+    "T": "thaumicunity:essentia_tube",
+    "P": "minecraft:piston"
+  },
+  "pattern": [
+    "BTB",
+    "TPT",
+    "BTB"
+  ],
+  "vis": {
+    "thaumicunity:ordo": 5,
+    "thaumicunity:perditio": 5,
+    "thaumicunity:aqua": 3
+  },
+  "result": {
+    "id": "thaumicunity:centrifuge"
+  },
+  "research": "thaumicunity:alchemy/centrifuge"
+}

@@ -1,11 +1,13 @@
 package dev.thaumicunity.common.blockentity;
 
 import dev.thaumicunity.common.aspect.AspectList;
+import dev.thaumicunity.common.essentia.EssentiaNode;
 import dev.thaumicunity.common.aspect.ItemAspects;
 import dev.thaumicunity.common.registry.TUBlockEntities;
 import dev.thaumicunity.common.registry.TUDataMaps;
 import dev.thaumicunity.common.spell.SpellFx;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.inventory.ContainerData;
@@ -14,12 +16,13 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Alchemical furnace: burns fuel to distil items into essentia and pushes it into a warded jar placed directly on
  * top (alembics and tubes extend this in phase 4).
  */
-public class AlchemicalFurnaceBlockEntity extends InventoryBlockEntity {
+public class AlchemicalFurnaceBlockEntity extends InventoryBlockEntity implements EssentiaNode {
     public static final int INPUT = 0;
     public static final int FUEL = 1;
     public static final int CAPACITY = 64;
@@ -66,6 +69,43 @@ public class AlchemicalFurnaceBlockEntity extends InventoryBlockEntity {
 
     public AspectList buffer() {
         return buffer;
+    }
+
+    // --- essentia transport: the distilled essentia can be drawn off through tubes on any side
+
+    @Override
+    public boolean connectsTo(Direction side) {
+        return true;
+    }
+
+    @Override
+    public int suction(Direction side) {
+        return 0;
+    }
+
+    @Override
+    public @Nullable Identifier suctionAspect(Direction side) {
+        return null;
+    }
+
+    @Override
+    public @Nullable Identifier offered(Direction side) {
+        return buffer.isEmpty() ? null : buffer.dominant();
+    }
+
+    @Override
+    public int take(Identifier aspect, int count, Direction side) {
+        int taken = Math.min(count, buffer.get(aspect));
+        if (taken > 0) {
+            buffer = buffer.subtract(AspectList.of(aspect, taken));
+            setChanged();
+        }
+        return taken;
+    }
+
+    @Override
+    public int give(Identifier aspect, int count, Direction side) {
+        return 0;
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, AlchemicalFurnaceBlockEntity furnace) {

@@ -1184,6 +1184,60 @@ def wands():
     save(top, "block/wand_pedestal_top")
 
 
+# ---------------------------------------------------------------------------------------------------------- essentia transport
+
+def essentia_transport():
+    # Tube: brass bands around a glass window; the same texture covers the core and the arms.
+    tube = Image.new("RGBA", (16, 16), (196, 226, 232, 150))
+    d = ImageDraw.Draw(tube)
+    for y in (0, 1, 14, 15):
+        d.line([0, y, 15, y], fill=shade(BRASS, 1.1 if y in (0, 14) else 0.8) + (255,))
+    for x in (0, 15):
+        d.line([x, 0, x, 15], fill=shade(BRASS, 0.7) + (255,))
+    d.line([3, 4, 3, 11], fill=(236, 250, 252, 200))
+    save(tube, "block/essentia_tube")
+    valve = noisy_fill("essentia_valve", shade(BRASS, 0.95), amount=0.08, cells=2)
+    d = ImageDraw.Draw(valve)
+    d.rectangle([0, 0, 15, 15], outline=shade(BRASS, 0.6))
+    save(valve, "block/essentia_valve")
+    shut = noisy_fill("essentia_valve_shut", rgb(0xB8322A), amount=0.08, cells=2)
+    save(shut, "block/essentia_valve_shut")
+
+    # Buffer: a wooden crate with glass windows.
+    side = noisy_fill("essentia_buffer_side", shade(WOOD, 0.9), amount=0.1, cells=3)
+    d = ImageDraw.Draw(side)
+    d.rectangle([0, 0, 15, 15], outline=shade(BRASS, 0.85))
+    d.rectangle([4, 4, 11, 11], fill=(150, 196, 210, 255), outline=shade(BRASS, 0.7))
+    d.line([5, 5, 5, 9], fill=(220, 244, 250, 255))
+    save(side, "block/essentia_buffer_side")
+    top = noisy_fill("essentia_buffer_top", shade(WOOD, 0.8), amount=0.1, cells=3)
+    d = ImageDraw.Draw(top)
+    d.rectangle([0, 0, 15, 15], outline=shade(BRASS, 0.85))
+    d.ellipse([5, 5, 10, 10], fill=shade(BRASS, 1.1), outline=shade(BRASS, 0.6))
+    save(top, "block/essentia_buffer_top")
+
+    # Centrifuge: iron housing with a brass rotor.
+    iron = rgb(0x8E949C)
+    cside = noisy_fill("centrifuge_side", iron, amount=0.08, cells=2)
+    d = ImageDraw.Draw(cside)
+    d.rectangle([0, 0, 15, 15], outline=shade(iron, 0.5))
+    d.rectangle([2, 5, 13, 10], fill=shade(BRASS, 0.9), outline=shade(BRASS, 0.55))
+    for x in range(3, 13, 3):
+        d.line([x, 6, x + 1, 9], fill=shade(BRASS, 1.35))
+    save(cside, "block/centrifuge_side")
+    ctop = noisy_fill("centrifuge_top", iron, amount=0.08, cells=2)
+    d = ImageDraw.Draw(ctop)
+    d.rectangle([0, 0, 15, 15], outline=shade(iron, 0.5))
+    d.ellipse([3, 3, 12, 12], outline=shade(BRASS, 1.0))
+    d.ellipse([6, 6, 9, 9], fill=(40, 40, 46))
+    save(ctop, "block/centrifuge_top")
+    cbottom = noisy_fill("centrifuge_bottom", shade(iron, 0.8), amount=0.08, cells=2)
+    d = ImageDraw.Draw(cbottom)
+    d.rectangle([0, 0, 15, 15], outline=shade(iron, 0.45))
+    d.rectangle([6, 6, 9, 9], fill=shade(BRASS, 0.8))
+    save(cbottom, "block/centrifuge_bottom")
+
+
 # ---------------------------------------------------------------------------------------------------------- misc
 
 def liquids():
@@ -1213,6 +1267,7 @@ def main():
     backgrounds()
     liquids()
     wands()
+    essentia_transport()
     logo()
     print(f"Wrote {len(WRITTEN)} textures ({len(OVERRIDES)} overridden paths skipped)")
 

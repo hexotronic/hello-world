@@ -57,6 +57,15 @@ ARCANE = {
                      "thaumicunity:basic_caster", 1, "aer 10 ordo 10 ignis 5", "auromancy/casting"),
     "apprentice_focus": ([" N ", "NAN", " N "], {"N": "minecraft:gold_nugget", "A": "minecraft:amethyst_shard"},
                          "thaumicunity:apprentice_focus", 1, "ordo 5 aer 5", "auromancy/casting"),
+    "essentia_tube": (["BGB"], {"B": "thaumicunity:brass_nugget", "G": "minecraft:glass"},
+                      "thaumicunity:essentia_tube", 8, "aqua 1 ordo 1", "alchemy/essentia_tubes"),
+    "essentia_valve": (None, ["thaumicunity:essentia_tube", "minecraft:lever"],
+                       "thaumicunity:essentia_valve", 1, "ordo 1", "alchemy/essentia_tubes"),
+    "essentia_buffer": (["T T", " J ", "T T"], {"T": "thaumicunity:essentia_tube", "J": "thaumicunity:warded_jar"},
+                        "thaumicunity:essentia_buffer", 1, "aqua 3 ordo 3", "alchemy/essentia_tubes"),
+    "centrifuge": (["BTB", "TPT", "BTB"], {"B": "thaumicunity:brass_ingot", "T": "thaumicunity:essentia_tube",
+                                          "P": "minecraft:piston"},
+                   "thaumicunity:centrifuge", 1, "ordo 5 perditio 5 aqua 3", "alchemy/centrifuge"),
 }
 
 # --- crucible: id -> (catalyst, aspects, result, count, research)

@@ -34,7 +34,7 @@ public class WardedJarBlock extends TUEntityBlock<WardedJarBlockEntity> {
     public static final int PHIAL_AMOUNT = 10;
 
     public WardedJarBlock(Properties properties) {
-        super(properties, TUBlockEntities.WARDED_JAR, WardedJarBlockEntity::new, null);
+        super(properties, TUBlockEntities.WARDED_JAR, WardedJarBlockEntity::new, WardedJarBlockEntity::serverTick);
     }
 
     @Override

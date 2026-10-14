@@ -183,6 +183,12 @@ public final class ClientSmokeTest {
         pedestal(level, 0, TUItems.BASIC_CASTER.get());
         pedestal(level, -2, TUItems.THAUMIUM_INGOT.get());
         pedestal(level, 2, TUItems.AMBER.get());
+        // Essentia tubes from the furnace to the Ignis jar, with a valve in the middle; a buffer and a centrifuge.
+        place(level, 2, 1, 3, TUBlocks.ESSENTIA_TUBE.get());
+        place(level, 3, 1, 3, TUBlocks.ESSENTIA_VALVE.get());
+        place(level, 4, 1, 3, TUBlocks.ESSENTIA_TUBE.get());
+        place(level, 4, 0, 9, TUBlocks.ESSENTIA_BUFFER.get());
+        place(level, 5, 0, 9, TUBlocks.CENTRIFUGE.get());
         // Wands on recharge pedestals.
         wandPedestal(level, 4, "blaze", "gold");
         wandPedestal(level, -4, "ice", "thaumium");
@@ -230,7 +236,9 @@ public final class ClientSmokeTest {
     }
 
     private static void place(ServerLevel level, int dx, int dy, int dz, Block block) {
-        level.setBlock(origin.offset(dx, dy, dz), block.defaultBlockState(), Block.UPDATE_ALL);
+        BlockPos pos = origin.offset(dx, dy, dz);
+        // Let blocks that join their neighbours (tubes) look around, as when a player places them.
+        level.setBlock(pos, Block.updateFromNeighbourShapes(block.defaultBlockState(), level, pos), Block.UPDATE_ALL);
     }
 
     private static void fillJar(ServerLevel level, int dx, Identifier aspect, int amount) {

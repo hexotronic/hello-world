@@ -4,6 +4,7 @@ Model kinds:
   cube           one texture on all faces (block/<name>)
   bottom_top     textures <top>, <side>, <bottom> (see `textures`)
   custom:<kind>  element model written by gen_content.py (crucible, pedestal, jar, matrix)
+  tube, valve    multipart pipe: a core plus an arm per connected side (and a handle for valves)
 Loot kinds:
   self           drops itself (if it survives the explosion)
   ore:<item>     silk touch drops the ore, otherwise <item> with Fortune
@@ -34,6 +35,22 @@ BLOCKS = {
     "wand_pedestal": dict(
         name="Wand Recharge Pedestal", model="custom:pedestal", loot="self",
         textures=dict(side="wand_pedestal_side", top="wand_pedestal_top"),
+        tags=["minecraft:mineable/pickaxe"]),
+    "essentia_tube": dict(
+        name="Essentia Tube", model="tube", loot="self",
+        textures=dict(tube="essentia_tube"),
+        tags=["minecraft:mineable/pickaxe"]),
+    "essentia_valve": dict(
+        name="Essentia Valve", model="valve", loot="self",
+        textures=dict(tube="essentia_tube", valve="essentia_valve"),
+        tags=["minecraft:mineable/pickaxe"]),
+    "essentia_buffer": dict(
+        name="Essentia Buffer", model="bottom_top", loot="self",
+        textures=dict(top="essentia_buffer_top", side="essentia_buffer_side", bottom="essentia_buffer_top"),
+        tags=["minecraft:mineable/axe"]),
+    "centrifuge": dict(
+        name="Essentia Centrifuge", model="bottom_top", loot="self",
+        textures=dict(top="centrifuge_top", side="centrifuge_side", bottom="centrifuge_bottom"),
         tags=["minecraft:mineable/pickaxe"]),
     "warded_jar": dict(
         name="Warded Jar", model="custom:jar", loot="jar",
