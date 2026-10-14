@@ -56,12 +56,12 @@ focus workbench GUI and the per-component visuals.
 | 1 | Research and inventory of every source mod | **Done** — [INVENTORY.md](INVENTORY.md) (with a verification backlog) |
 | 2 | Architecture: packages, registries, data formats, aspect system, API | **Done** — [ARCHITECTURE.md](ARCHITECTURE.md), [DESIGN_DECISIONS.md](DESIGN_DECISIONS.md) |
 | 3 | Core systems: aspects, research, aura/vis, crucible, arcane crafting, infusion, spell framework | **Done** — Minecraft-independent core with 47 unit tests; NeoForge layer, client screens, 258 generated textures, all phase 3 data; in-game tests run in CI |
-| 4 | Migration of all existing content (items, blocks, devices, wands, foci, tools, armor, flora, ores, basic mobs) | In progress — wands done (step 1) |
+| 4 | Migration of all existing content (items, blocks, devices, wands, foci, tools, armor, flora, ores, basic mobs) | In progress — wands (step 1) and essentia transport (step 2) done |
 | 5 | New content: devices, golems, armor, worldgen, mobs, bosses, dimensions, endgame | Not started |
 | 6 | Spell expansion to ≈720 components, focus workbench, synergies, forbidden magic | Framework done; catalogue not started |
 | 7 | Integrations (JEI, EMI, REI, Jade, Curios, KubeJS, CraftTweaker, Create, Mekanism, AE2, RS, Botania, Ars Nouveau, Iron's Spells, Blood Magic, Tinkers', Farmer's Delight) and API docs | Not started |
 | 8 | Visual polish: animated Thaumonomicon, GUIs, models, particles and shaders, sound, balancing, configs | Not started |
-| 9 | Testing: single player, dedicated server, large packs, performance | CI: build, 47 unit tests, 7 in-game tests on a dedicated server, scripted client tour with 12 screenshots |
+| 9 | Testing: single player, dedicated server, large packs, performance | CI: build, 47 unit tests, 9 in-game tests on a dedicated server, scripted client tour with 12 screenshots |
 
 ## 4. Phase 3 deliverables in detail
 
@@ -82,7 +82,7 @@ focus workbench GUI and the per-component visuals.
 
 ## 5. Next steps (exact continuation point)
 
-Phase 3 is complete. **Phase 4, migration of existing content**, continues with step 2:
+Phase 3 is complete. **Phase 4, migration of existing content**, continues with step 3:
 
 1. ~~`common/wand/` — wands~~ **done**: rods and caps are datapack registries (`thaumicunity:wand_rod`,
    `thaumicunity:wand_cap`, tables in `tools/content/wands.py`); `WandItem` stores vis per primal, casts its fixed
@@ -90,8 +90,11 @@ Phase 3 is complete. **Phase 4, migration of existing content**, continues with 
    when carried and faster on the wand recharge pedestal; one arcane recipe per rod and cap; game test `wands`.
    Still to come with later steps: greatwood, silverwood and primal rods (need the trees), staves and sceptres,
    void caps, paying arcane workbench costs from a wand.
-2. `common/essentia/` — essentia tubes, valves, filters and buffers, the alembic on the alchemical furnace, the
-   centrifuge and the essentia mirror.
+2. ~~`common/essentia/` — essentia transport~~ **done**: suction model (`EssentiaNode`, `EssentiaTransfer`), essentia
+   tubes and valves (multipart models), essentia buffer, centrifuge; warded jars pull through their lid (labelled
+   jars harder) and the alchemical furnace offers its essentia on every side, so no alembic is needed (as in
+   Thaumcraft 6); game test `essentia_transport`. Still to come: the essentia mirror (with mirrors) and filtered
+   tubes.
 3. TC4/TC6 focus archetypes as data (`tools/content/spells.py`): the remaining classic foci (portable hole, primal,
    warding, equal trade with presets, …) and their research.
 4. Tools, weapons and armour (thaumium, void metal, robes, fortress) with their research.
