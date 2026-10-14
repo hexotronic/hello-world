@@ -1,14 +1,5 @@
 # Classes whose signatures are printed by .github/workflows/api-probe.yml (javap -protected).
 # Syntax: see tools/api-probe.sh. Avoid parentheses in filters.
-net.minecraft.gametest.framework.FunctionGameTestInstance
-net.minecraft.gametest.framework.TestData
-net.minecraft.gametest.framework.GameTestHelper | public void|succeed|fail|assert|getLevel|absolute|runAtTickTime|makeMockPlayer|spawn
-net.minecraft.gametest.framework.GameTestEnvironments
-net.minecraft.gametest.framework.TestEnvironmentDefinition
-net.minecraft.gametest.framework.TestEnvironmentDefinition$AllOf
-net.minecraft.gametest.framework.GameTestAssertException
-net.minecraft.gametest.framework.GameTestMainUtil
-net.minecraft.gametest.framework.BuiltinTestFunctions
-net.minecraft.core.registries.Registries | TEST
-file:^data/minecraft/test_instance/.*\.json$
-file:^data/minecraft/test_environment/.*\.json$
+file:^assets/minecraft/models/block/(block|cube|cube_bottom_top|cube_all)\.json$
+file:^assets/minecraft/models/item/generated\.json$
+file:^assets/minecraft/items/(lantern|chest)\.json$
