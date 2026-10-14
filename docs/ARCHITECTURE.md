@@ -23,7 +23,13 @@ This document is the phase 2 design. What phase 3 built follows it, with these d
   `world.worldgen` option.
 * **Testing**: besides the `core` unit tests, in-game tests (`common.gametest.TUGameTests` with
   `data/thaumicunity/test_instance/`) run on a dedicated server via `./gradlew runGameTestServer`, in CI after every
-  build.
+  build. The client is covered by `client.smoke.ClientSmokeTest` (`./gradlew runSmokeClient`, only active with
+  `-Dthaumicunity.smokeTest=true`): it creates a flat creative world, builds a workshop with every device, opens
+  every screen, saves screenshots and quits. CI runs it under Xvfb with Mesa's software Vulkan driver (OpenGL is
+  not available there, the game falls back to Vulkan by itself).
+* **Block entity renderers**: arcane pedestal (floating item), crucible (liquid level and essentia tone) and warded
+  jar (essentia column). The liquids share `client.render.LiquidQuads`, which submits custom geometry with a
+  tinted, scrolling texture.
 
 ## 1. Layering
 
