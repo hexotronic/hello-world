@@ -1,21 +1,28 @@
 # Classes whose signatures are printed by .github/workflows/api-probe.yml (javap -protected).
 # Syntax: see tools/api-probe.sh. Avoid parentheses in filters.
-net.minecraft.client.gui.screens.worldselection.WorldOpenFlows | public
-net.minecraft.world.level.LevelSettings | public
-net.minecraft.world.level.levelgen.WorldOptions | public
-net.minecraft.world.level.levelgen.presets.WorldPresets | public
-net.minecraft.world.level.levelgen.presets.WorldPreset | public
-net.minecraft.world.level.levelgen.WorldDimensions | public
-net.minecraft.world.level.gamerules.GameRules | public GameRules|public static
-net.minecraft.world.level.WorldDataConfiguration | public
-net.minecraft.client.Screenshot | public
-net.minecraft.client.Minecraft | stop|getMainRenderTarget|gameDirectory|isWindowActive|getWindow|options
-net.minecraft.server.level.ServerPlayer | teleportTo|setYRot|connection
-net.minecraft.world.level.block.state.BlockBehaviour$BlockStateBase | useWithoutItem|useItemOn
-net.minecraft.client.gui.screens.TitleScreen | public
-net.minecraft.server.MinecraftServer | overworld|getPlayerList|execute|isReady|getCommands|createCommandSourceStack
-net.minecraft.commands.Commands | performPrefixedCommand
-net.minecraft.commands.CommandSourceStack | withPermission|withSuppressedOutput
-net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen | public
-grep:GameRules$|gamerules\.GameRules
-grep:\.Screenshot$
+net.minecraft.client.Minecraft | RenderTarget|LevelStorageSource|WorldOpenFlows|IntegratedServer|setScreen|getOverlay|getLevelSource|getAtlasManager|getModelManager|getBlockRenderer|getTextureManager|MaterialSet|getResourceManager
+net.minecraft.world.level.LevelSettings$DifficultySettings
+net.minecraft.client.renderer.GameRenderer | RenderTarget|mainRenderTarget
+net.minecraft.client.renderer.SubmitNodeCollector
+net.minecraft.client.renderer.OrderedSubmitNodeCollector
+net.minecraft.client.renderer.SubmitNodeCollector$CustomGeometryRenderer
+net.minecraft.client.renderer.rendertype.RenderTypes | public static
+net.minecraft.client.renderer.Sheets | public static
+net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider$Context
+net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState
+net.minecraft.client.resources.model.MaterialSet
+net.minecraft.client.resources.model.Material
+net.minecraft.client.renderer.texture.TextureAtlas | public static
+net.minecraft.client.renderer.texture.TextureAtlasSprite | getU|getV|contents|atlasLocation
+net.minecraft.data.AtlasIds | public static
+com.mojang.blaze3d.vertex.VertexConsumer
+com.mojang.blaze3d.vertex.PoseStack$Pose | public
+net.minecraft.util.ARGB | public static int
+net.neoforged.neoforge.client.event.ClientTickEvent$Post
+net.neoforged.neoforge.client.event.ScreenEvent$Opening | public
+net.minecraft.client.player.LocalPlayer | connection|getInventory
+net.minecraft.client.gui.screens.inventory.InventoryScreen | public
+net.minecraft.client.renderer.LevelRenderer | hasRenderedAllSections|countRenderedSections|isSectionCompiled
+net.minecraft.client.Options | gui|renderDistance|pauseOnLostFocus|onboard|guiScale
+grep:AtlasIds|\.Sheets$|rendertype\.RenderTypes$|ModelFeatureRenderer|CustomGeometry
+grep:client\.renderer\.texture\.atlas|SpriteGetter|MaterialSet|AtlasManager
