@@ -5,10 +5,12 @@ import dev.thaumicunity.client.screen.ThaumonomiconScreen;
 import dev.thaumicunity.common.aspect.Aspects;
 import dev.thaumicunity.common.blockentity.ArcanePedestalBlockEntity;
 import dev.thaumicunity.common.blockentity.CrucibleBlockEntity;
+import dev.thaumicunity.common.blockentity.WandPedestalBlockEntity;
 import dev.thaumicunity.common.blockentity.WardedJarBlockEntity;
 import dev.thaumicunity.common.registry.TUBlocks;
 import dev.thaumicunity.common.registry.TUItems;
 import dev.thaumicunity.common.research.ResearchManager;
+import dev.thaumicunity.common.wand.Wands;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
 import net.minecraft.client.server.IntegratedServer;
@@ -181,6 +183,9 @@ public final class ClientSmokeTest {
         pedestal(level, 0, TUItems.BASIC_CASTER.get());
         pedestal(level, -2, TUItems.THAUMIUM_INGOT.get());
         pedestal(level, 2, TUItems.AMBER.get());
+        // Wands on recharge pedestals.
+        wandPedestal(level, 4, "blaze", "gold");
+        wandPedestal(level, -4, "ice", "thaumium");
         // Materials.
         List<Block> materials = List.of(TUBlocks.ARCANE_STONE.get(), TUBlocks.ARCANE_STONE_BRICKS.get(),
                 TUBlocks.THAUMIUM_BLOCK.get(), TUBlocks.BRASS_BLOCK.get(), TUBlocks.AMBER_BLOCK.get(),
@@ -241,6 +246,15 @@ public final class ClientSmokeTest {
             pedestal.setItem(new ItemStack(item));
         } else {
             fail("build workshop", "no pedestal block entity at x" + dx);
+        }
+    }
+
+    private static void wandPedestal(ServerLevel level, int dx, String rod, String cap) {
+        place(level, dx, 0, 6, TUBlocks.WAND_PEDESTAL.get());
+        if (level.getBlockEntity(origin.offset(dx, 0, 6)) instanceof WandPedestalBlockEntity pedestal) {
+            pedestal.setItem(Wands.create(level.registryAccess(), ThaumicUnity.id(rod), ThaumicUnity.id(cap)));
+        } else {
+            fail("build workshop", "no wand pedestal block entity at x" + dx);
         }
     }
 

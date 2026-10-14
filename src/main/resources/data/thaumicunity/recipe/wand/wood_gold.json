@@ -1,0 +1,47 @@
+{
+  "type": "thaumicunity:arcane_shaped",
+  "key": {
+    "C": "thaumicunity:gold_wand_cap",
+    "R": "minecraft:stick"
+  },
+  "pattern": [
+    "  C",
+    " R ",
+    "C  "
+  ],
+  "vis": {
+    "thaumicunity:aer": 5,
+    "thaumicunity:terra": 5,
+    "thaumicunity:ignis": 5,
+    "thaumicunity:aqua": 5,
+    "thaumicunity:ordo": 5,
+    "thaumicunity:perditio": 5
+  },
+  "result": {
+    "id": "thaumicunity:wand",
+    "components": {
+      "thaumicunity:wand_parts": {
+        "rod": "thaumicunity:wood",
+        "cap": "thaumicunity:gold"
+      },
+      "minecraft:custom_model_data": {
+        "colors": [
+          9136702,
+          15913276
+        ]
+      },
+      "minecraft:item_name": {
+        "translate": "item.thaumicunity.wand.parts",
+        "with": [
+          {
+            "translate": "wand_cap.thaumicunity.gold"
+          },
+          {
+            "translate": "wand_rod.thaumicunity.wood"
+          }
+        ]
+      }
+    }
+  },
+  "research": "thaumicunity:auromancy/wand_caps"
+}

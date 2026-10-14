@@ -1,0 +1,32 @@
+{
+  "category": "thaumicunity:auromancy",
+  "x": 0,
+  "y": -4,
+  "icon": "thaumicunity:wand_pedestal",
+  "parents": [
+    "thaumicunity:auromancy/wands"
+  ],
+  "aspects": [
+    "thaumicunity:auram",
+    "thaumicunity:ordo"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.auromancy.wand_pedestal.stage0",
+      "requirements": [
+        {
+          "type": "craft",
+          "item": "thaumicunity:wand"
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.auromancy.wand_pedestal.stage1",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:wand/wand_pedestal"
+      ]
+    }
+  ]
+}

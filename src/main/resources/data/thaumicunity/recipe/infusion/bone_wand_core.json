@@ -1,0 +1,20 @@
+{
+  "type": "thaumicunity:infusion",
+  "central": "minecraft:bone",
+  "components": [
+    "minecraft:rotten_flesh",
+    "thaumicunity:perditio_vis_crystal",
+    "minecraft:rotten_flesh",
+    "thaumicunity:perditio_vis_crystal"
+  ],
+  "essentia": {
+    "thaumicunity:perditio": 16,
+    "thaumicunity:mortuus": 8,
+    "thaumicunity:praecantatio": 8
+  },
+  "instability": 2,
+  "result": {
+    "id": "thaumicunity:bone_wand_core"
+  },
+  "research": "thaumicunity:auromancy/elemental_cores"
+}

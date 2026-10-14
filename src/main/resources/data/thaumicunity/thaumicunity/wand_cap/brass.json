@@ -1,0 +1,9 @@
+{
+  "item": "thaumicunity:brass_wand_cap",
+  "cost": 1.0,
+  "color": "#c9a43a",
+  "primal_cost": {
+    "thaumicunity:ignis": 0.9,
+    "thaumicunity:terra": 0.9
+  }
+}

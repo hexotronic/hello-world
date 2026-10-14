@@ -304,6 +304,63 @@ ENTRIES = {
             dict(text="Develop two theories of Auromancy.",
                  requirements=[("knowledge", "theory", "auromancy", 2)]),
             dict(text="Light and lightning, split into seeking stars.", recipes=["focus/starfall"])]),
+    "auromancy/wands": dict(
+        title="Wands", x=0, y=-2, icon="thaumicunity:wand",
+        parents=["auromancy/casting"], aspects=["auram", "instrumentum"],
+        stages=[
+            dict(text=(
+                "A gauntlet borrows vis from the place where you stand. A wand carries its own: a rod that holds vis "
+                "of each primal, capped at both ends with metal that keeps it from leaking away.\n\nMake an "
+                "observation in Auromancy."),
+                requirements=[("knowledge", "observation", "auromancy", 1)]),
+            dict(text=(
+                "Set two caps and a rod diagonally on the arcane workbench. A wooden rod holds 30 vis of each primal. "
+                "The wand casts the focus fixed to it: hold a focus in your other hand and use the wand while "
+                "sneaking to fix it, or sneak and use it with an empty off-hand to take the focus off. Spells cost "
+                "the wand's own vis, made a little dearer by iron caps.\n\nA wand carried around slowly draws vis "
+                "from a strong aura, and when it runs dry it eats vis crystals from your pack. Used on a bookshelf, "
+                "crafting table, cauldron or lectern it works like Salis Mundus, for a little vis."),
+                recipes=["wand/iron_cap", "wand/wood_iron"])]),
+    "auromancy/wand_caps": dict(
+        title="Wand Caps", x=2, y=-2, icon="thaumicunity:gold_wand_cap",
+        parents=["auromancy/wands"], aspects=["metallum", "instrumentum"],
+        stages=[
+            dict(text="Craft a wand.", requirements=[("craft", "thaumicunity:wand")]),
+            dict(text=(
+                "Better metal wastes less. Gold caps cost nothing extra; copper caps are cheap but only spare order "
+                "and entropy; brass caps make fire and earth spells a tenth cheaper."),
+                recipes=["wand/copper_cap", "wand/gold_cap", "wand/brass_cap", "wand/wood_copper", "wand/wood_gold",
+                         "wand/wood_brass"])]),
+    "auromancy/thaumium_caps": dict(
+        title="Thaumium Caps", x=4, y=-2, icon="thaumicunity:thaumium_wand_cap",
+        parents=["auromancy/wand_caps", "alchemy/metallurgy"], aspects=["praecantatio", "metallum"],
+        stages=[
+            dict(text="Develop a theory of Auromancy and obtain a thaumium ingot.",
+                 requirements=[("knowledge", "theory", "auromancy", 1), ("obtain", "thaumicunity:thaumium_ingot", 1)]),
+            dict(text="Thaumium caps make every spell a tenth cheaper than its plain cost.",
+                 recipes=["wand/thaumium_cap", "wand/wood_thaumium"])]),
+    "auromancy/elemental_cores": dict(
+        title="Elemental Cores", x=2, y=-4, icon="thaumicunity:blaze_wand_core",
+        parents=["auromancy/wands", "infusion/runic_matrix"], aspects=["praecantatio", "potentia"],
+        stages=[
+            dict(text="Develop a theory of Auromancy.", requirements=[("knowledge", "theory", "auromancy", 1)]),
+            dict(text=(
+                "Infuse a material steeped in one primal and it becomes a wand core that holds 75 vis of each. "
+                "Each core favours its primal: spells pay a tenth less of it, and the core slowly refills it by "
+                "itself. Reed favours Aer, obsidian Terra, blaze Ignis, ice Aqua, quartz Ordo and bone Perditio."),
+                recipes=[f"infusion/{rod}_wand_core" for rod in ("reed", "obsidian", "blaze", "ice", "quartz", "bone")]
+                + [f"wand/{rod}_{cap}" for rod in ("reed", "obsidian", "blaze", "ice", "quartz", "bone")
+                   for cap in ("iron", "copper", "gold", "brass", "thaumium")])]),
+    "auromancy/wand_pedestal": dict(
+        title="Recharge Pedestal", x=0, y=-4, icon="thaumicunity:wand_pedestal",
+        parents=["auromancy/wands"], aspects=["auram", "ordo"],
+        stages=[
+            dict(text="Craft a wand.", requirements=[("craft", "thaumicunity:wand")]),
+            dict(text=(
+                "A wand left on this pedestal fills from the aura of the chunk far faster than one carried around, "
+                "and it may take the aura lower. Place it where the aura is strong and give the place time to "
+                "recover."),
+                recipes=["wand/wand_pedestal"])]),
     "auromancy/flux": dict(
         title="Living with Flux", x=0, y=2, icon="thaumicunity:perditio_vis_crystal",
         parents=["auromancy/casting"], aspects=["vitium", "auram"],

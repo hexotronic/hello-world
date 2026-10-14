@@ -1080,6 +1080,110 @@ def logo():
     WRITTEN.append("../../thaumicunity_logo")
 
 
+# ---------------------------------------------------------------------------------------------------------- wands
+
+T_WAND_CAP_ITEM = [
+    "................",
+    "................",
+    "................",
+    "................",
+    "......OOOO......",
+    ".....O5444O.....",
+    "....O543332O....",
+    "....O4OOOO2O....",
+    "....O3O..O1O....",
+    "....O3O..O1O....",
+    "....O32OO21O....",
+    ".....O3221O.....",
+    "......OOOO......",
+    "................",
+    "................",
+    "................",
+]
+
+ROD_COLORS = {
+    "reed": rgb(0xC9D98C), "obsidian": rgb(0x40305E), "blaze": rgb(0xF2A23A),
+    "ice": rgb(0xB8E6F6), "quartz": rgb(0xEDE6DE), "bone": rgb(0xE2DCC2),
+}
+CAP_COLORS = {
+    "iron": rgb(0xC4C4C4), "copper": rgb(0xD9824B), "gold": rgb(0xF2D13C), "brass": rgb(0xC9A43A),
+    "thaumium": rgb(0x7558B8),
+}
+
+
+def outline(img, color):
+    """Adds a one-pixel outline around the opaque pixels of a sprite."""
+    px = img.load()
+    filled = {(x, y) for y in range(16) for x in range(16) if px[x, y][3]}
+    for x, y in filled:
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < 16 and 0 <= ny < 16 and (nx, ny) not in filled:
+                px[nx, ny] = color
+    return img
+
+
+def diagonal(img, palette, lo, hi, x_from, x_to):
+    """Fills the diagonal band lo <= x + y <= hi for x_from <= x <= x_to, lit from the upper left."""
+    px = img.load()
+    for x in range(x_from, x_to + 1):
+        for total in range(lo, hi + 1):
+            y = total - x
+            if 0 <= y < 16:
+                shade_key = "4" if total == lo else "2" if total == hi else "3"
+                px[x, y] = palette[shade_key]
+
+
+def wands():
+    # Wand layers are light grey; the item model tints them with the rod's and the caps' colours.
+    grey = ramp(rgb(0xE8E8E8), 0.32)
+    rod = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    diagonal(rod, grey, 15, 16, 3, 12)
+    save(outline(rod, grey["O"]), "item/wand_rod")
+    caps = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    diagonal(caps, grey, 14, 17, 1, 3)
+    diagonal(caps, grey, 14, 17, 12, 14)
+    px = caps.load()
+    px[2, 13] = grey["5"]
+    px[13, 2] = grey["5"]
+    save(outline(caps, grey["O"]), "item/wand_caps")
+    gem = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    gem_palette = ramp(rgb(0xB06CE0))
+    gp = gem.load()
+    for x, y, k in ((14, 0, "4"), (15, 1, "3"), (14, 1, "5"), (13, 1, "3"), (14, 2, "2"), (15, 0, "3"), (13, 0, "4")):
+        gp[x, y] = gem_palette[k]
+    save(gem, "item/wand_focus")
+
+    # Cores: the rod's material, with a glint of its primal.
+    for name, color in ROD_COLORS.items():
+        palette = ramp(color, 0.3)
+        core = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+        diagonal(core, palette, 14, 17, 2, 13)
+        cp = core.load()
+        for x, y in ((5, 10), (8, 7), (11, 4)):
+            cp[x, y] = palette["5"]
+        save(outline(core, palette["O"]), f"item/{name}_wand_core")
+    for name, color in CAP_COLORS.items():
+        save(template(T_WAND_CAP_ITEM, ramp(color)), f"item/{name}_wand_cap")
+
+    # Recharge pedestal: dark arcane stone with amethyst inlay.
+    side = stone("wand_pedestal_side", ARCANE_STONE, 0.1)
+    d = ImageDraw.Draw(side)
+    d.line([0, 0, 15, 0], fill=shade(BRASS, 1.1))
+    d.line([0, 15, 15, 15], fill=shade(BRASS, 0.8))
+    d.line([3, 2, 3, 13], fill=shade(ARCANE_STONE, 0.75))
+    d.line([12, 2, 12, 13], fill=shade(ARCANE_STONE, 0.75))
+    d.line([7, 4, 7, 11], fill=rgb(0xB98AF0))
+    d.line([8, 4, 8, 11], fill=rgb(0x8E5FC8))
+    save(side, "block/wand_pedestal_side")
+    top = stone("wand_pedestal_top", ARCANE_STONE, 0.1)
+    d = ImageDraw.Draw(top)
+    d.rectangle([0, 0, 15, 15], outline=shade(BRASS, 1.0))
+    d.ellipse([3, 3, 12, 12], outline=rgb(0xB98AF0))
+    d.ellipse([6, 6, 9, 9], fill=rgb(0x8E5FC8))
+    save(top, "block/wand_pedestal_top")
+
+
 # ---------------------------------------------------------------------------------------------------------- misc
 
 def liquids():
@@ -1108,6 +1212,7 @@ def main():
     aspects()
     backgrounds()
     liquids()
+    wands()
     logo()
     print(f"Wrote {len(WRITTEN)} textures ({len(OVERRIDES)} overridden paths skipped)")
 

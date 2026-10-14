@@ -56,7 +56,7 @@ focus workbench GUI and the per-component visuals.
 | 1 | Research and inventory of every source mod | **Done** — [INVENTORY.md](INVENTORY.md) (with a verification backlog) |
 | 2 | Architecture: packages, registries, data formats, aspect system, API | **Done** — [ARCHITECTURE.md](ARCHITECTURE.md), [DESIGN_DECISIONS.md](DESIGN_DECISIONS.md) |
 | 3 | Core systems: aspects, research, aura/vis, crucible, arcane crafting, infusion, spell framework | **Done** — Minecraft-independent core with 47 unit tests; NeoForge layer, client screens, 258 generated textures, all phase 3 data; in-game tests run in CI |
-| 4 | Migration of all existing content (items, blocks, devices, wands, foci, tools, armor, flora, ores, basic mobs) | Not started |
+| 4 | Migration of all existing content (items, blocks, devices, wands, foci, tools, armor, flora, ores, basic mobs) | In progress — wands done (step 1) |
 | 5 | New content: devices, golems, armor, worldgen, mobs, bosses, dimensions, endgame | Not started |
 | 6 | Spell expansion to ≈720 components, focus workbench, synergies, forbidden magic | Framework done; catalogue not started |
 | 7 | Integrations (JEI, EMI, REI, Jade, Curios, KubeJS, CraftTweaker, Create, Mekanism, AE2, RS, Botania, Ars Nouveau, Iron's Spells, Blood Magic, Tinkers', Farmer's Delight) and API docs | Not started |
@@ -82,11 +82,14 @@ focus workbench GUI and the per-component visuals.
 
 ## 5. Next steps (exact continuation point)
 
-Phase 3 is complete. Continue with **phase 4, migration of existing content**, in this order:
+Phase 3 is complete. **Phase 4, migration of existing content**, continues with step 2:
 
-1. `common/wand/` — wands: rods and caps as datapack registries (`thaumicunity:wand_rod`, `thaumicunity:wand_cap`),
-   `WandItem` storing vis per primal (data component), recharge from the aura and from vis crystals, the wand
-   recharge pedestal; wands cast the same foci as gauntlets (D4).
+1. ~~`common/wand/` — wands~~ **done**: rods and caps are datapack registries (`thaumicunity:wand_rod`,
+   `thaumicunity:wand_cap`, tables in `tools/content/wands.py`); `WandItem` stores vis per primal, casts its fixed
+   focus through the same `Casting` steps as gauntlets, eats vis crystals for shortfalls, recharges from the aura
+   when carried and faster on the wand recharge pedestal; one arcane recipe per rod and cap; game test `wands`.
+   Still to come with later steps: greatwood, silverwood and primal rods (need the trees), staves and sceptres,
+   void caps, paying arcane workbench costs from a wand.
 2. `common/essentia/` — essentia tubes, valves, filters and buffers, the alembic on the alchemical furnace, the
    centrifuge and the essentia mirror.
 3. TC4/TC6 focus archetypes as data (`tools/content/spells.py`): the remaining classic foci (portable hole, primal,

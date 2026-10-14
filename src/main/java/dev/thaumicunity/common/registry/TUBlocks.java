@@ -7,6 +7,7 @@ import dev.thaumicunity.common.block.ArcaneWorkbenchBlock;
 import dev.thaumicunity.common.block.CrucibleBlock;
 import dev.thaumicunity.common.block.ResearchTableBlock;
 import dev.thaumicunity.common.block.RunicMatrixBlock;
+import dev.thaumicunity.common.block.WandPedestalBlock;
 import dev.thaumicunity.common.block.WardedJarBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
@@ -31,6 +32,9 @@ public final class TUBlocks {
                     .noOcclusion().lightLevel(s -> 7));
     public static final DeferredBlock<ArcanePedestalBlock> ARCANE_PEDESTAL = BLOCKS.registerBlock("arcane_pedestal",
             ArcanePedestalBlock::new, p -> p.mapColor(MapColor.STONE).strength(2.0f, 6.0f).sound(SoundType.STONE)
+                    .requiresCorrectToolForDrops().noOcclusion());
+    public static final DeferredBlock<WandPedestalBlock> WAND_PEDESTAL = BLOCKS.registerBlock("wand_pedestal",
+            WandPedestalBlock::new, p -> p.mapColor(MapColor.STONE).strength(2.0f, 6.0f).sound(SoundType.STONE)
                     .requiresCorrectToolForDrops().noOcclusion());
     public static final DeferredBlock<WardedJarBlock> WARDED_JAR = BLOCKS.registerBlock("warded_jar", WardedJarBlock::new,
             p -> p.mapColor(MapColor.NONE).strength(0.6f).sound(SoundType.GLASS).noOcclusion());

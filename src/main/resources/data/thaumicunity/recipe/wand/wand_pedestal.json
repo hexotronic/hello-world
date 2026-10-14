@@ -1,0 +1,25 @@
+{
+  "type": "thaumicunity:arcane_shaped",
+  "key": {
+    "N": "minecraft:gold_nugget",
+    "B": "minecraft:amethyst_shard",
+    "S": "thaumicunity:arcane_stone"
+  },
+  "pattern": [
+    "NBN",
+    " S ",
+    "SSS"
+  ],
+  "vis": {
+    "thaumicunity:aer": 5,
+    "thaumicunity:terra": 5,
+    "thaumicunity:ignis": 5,
+    "thaumicunity:aqua": 5,
+    "thaumicunity:ordo": 5,
+    "thaumicunity:perditio": 5
+  },
+  "result": {
+    "id": "thaumicunity:wand_pedestal"
+  },
+  "research": "thaumicunity:auromancy/wand_pedestal"
+}

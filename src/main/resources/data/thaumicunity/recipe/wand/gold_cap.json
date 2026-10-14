@@ -1,0 +1,19 @@
+{
+  "type": "thaumicunity:arcane_shaped",
+  "key": {
+    "N": "minecraft:gold_nugget"
+  },
+  "pattern": [
+    "NNN",
+    "N N"
+  ],
+  "vis": {
+    "thaumicunity:ordo": 4,
+    "thaumicunity:aer": 4
+  },
+  "result": {
+    "id": "thaumicunity:gold_wand_cap",
+    "count": 2
+  },
+  "research": "thaumicunity:auromancy/wand_caps"
+}

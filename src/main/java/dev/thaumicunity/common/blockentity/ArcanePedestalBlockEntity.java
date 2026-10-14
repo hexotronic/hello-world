@@ -9,13 +9,14 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
 /** Arcane pedestal: holds a single item for infusion (and display). */
-public class ArcanePedestalBlockEntity extends SyncedBlockEntity {
+public class ArcanePedestalBlockEntity extends SyncedBlockEntity implements DisplaysItem {
     private ItemStack item = ItemStack.EMPTY;
 
     public ArcanePedestalBlockEntity(BlockPos pos, BlockState state) {
         super(TUBlockEntities.ARCANE_PEDESTAL.get(), pos, state);
     }
 
+    @Override
     public ItemStack item() {
         return item;
     }

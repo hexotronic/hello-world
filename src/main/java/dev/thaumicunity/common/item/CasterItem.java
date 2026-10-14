@@ -1,22 +1,16 @@
 package dev.thaumicunity.common.item;
 
-import dev.thaumicunity.api.event.SpellCastEvent;
 import dev.thaumicunity.common.aspect.Aspects;
 import dev.thaumicunity.common.aura.AuraManager;
 import dev.thaumicunity.common.config.TUConfig;
-import dev.thaumicunity.common.registry.TUAttachments;
 import dev.thaumicunity.common.registry.TUDataComponents;
-import dev.thaumicunity.common.registry.TUSounds;
-import dev.thaumicunity.common.spell.SpellLibrary;
-import dev.thaumicunity.common.spell.SpellRunner;
+import dev.thaumicunity.common.spell.Casting;
 import dev.thaumicunity.core.spell.CompiledSpell;
-import dev.thaumicunity.core.spell.SpellNode;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -25,7 +19,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.common.NeoForge;
 
 import java.util.function.Consumer;
 
@@ -48,7 +41,7 @@ public class CasterItem extends Item {
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
         ItemStack caster = player.getItemInHand(hand);
         ItemStack focus = player.getItemInHand(hand == InteractionHand.MAIN_HAND ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND);
-        if (!(focus.getItem() instanceof FocusItem focusItem) || !focus.has(TUDataComponents.SPELL.get())) {
+        if (!(focus.getItem() instanceof FocusItem) || !focus.has(TUDataComponents.SPELL.get())) {
             if (!level.isClientSide()) {
                 player.sendOverlayMessage(Component.translatable("message.thaumicunity.caster.no_focus"));
             }
@@ -60,31 +53,15 @@ public class CasterItem extends Item {
         if (!(level instanceof ServerLevel server) || !(player instanceof ServerPlayer serverPlayer)) {
             return InteractionResult.SUCCESS;
         }
-        SpellNode node = focus.get(TUDataComponents.SPELL.get());
-        CompiledSpell spell = SpellLibrary.get(server.registryAccess()).compile(node, focusItem.limits());
-        if (!spell.isValid()) {
-            player.sendOverlayMessage(Component.translatable("message.thaumicunity.caster.invalid", spell.errors().get(0))
-                    .withStyle(ChatFormatting.RED));
+        CompiledSpell spell = Casting.prepare(server, player, focus, "message.thaumicunity.caster.no_focus");
+        if (spell == null) {
             return InteractionResult.FAIL;
         }
-        if (NeoForge.EVENT_BUS.post(new SpellCastEvent(player, spell)).isCanceled()) {
+        if (!player.isCreative() && !payVis(server, player.blockPosition(), spell)) {
+            Casting.fizzle(server, player, caster, "message.thaumicunity.caster.no_vis");
             return InteractionResult.FAIL;
         }
-        BlockPos at = player.blockPosition();
-        if (!player.isCreative() && !payVis(server, at, spell)) {
-            server.playSound(null, at, TUSounds.FIZZLE.get(), SoundSource.PLAYERS, 0.6f, 0.8f);
-            player.sendOverlayMessage(Component.translatable("message.thaumicunity.caster.no_vis"));
-            player.getCooldowns().addCooldown(caster, 10);
-            return InteractionResult.FAIL;
-        }
-        SpellRunner.cast(server, player, spell, power);
-        if (spell.warp() > 0 && TUConfig.WARP_ENABLED.get()) {
-            serverPlayer.getData(TUAttachments.KNOWLEDGE).addWarp(0, 0, spell.warp());
-            serverPlayer.syncData(TUAttachments.KNOWLEDGE);
-        }
-        AuraManager.addFlux(server, at, spell.cost().total() * 0.02);
-        server.playSound(null, at, TUSounds.CAST.get(), SoundSource.PLAYERS, 0.7f, 0.9f + server.getRandom().nextFloat() * 0.2f);
-        player.getCooldowns().addCooldown(caster, spell.cooldown());
+        Casting.release(server, serverPlayer, caster, spell, power);
         return InteractionResult.SUCCESS;
     }
 

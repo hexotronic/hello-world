@@ -1,0 +1,47 @@
+{
+  "type": "thaumicunity:arcane_shaped",
+  "key": {
+    "C": "thaumicunity:brass_wand_cap",
+    "R": "thaumicunity:blaze_wand_core"
+  },
+  "pattern": [
+    "  C",
+    " R ",
+    "C  "
+  ],
+  "vis": {
+    "thaumicunity:aer": 9,
+    "thaumicunity:terra": 9,
+    "thaumicunity:ignis": 9,
+    "thaumicunity:aqua": 9,
+    "thaumicunity:ordo": 9,
+    "thaumicunity:perditio": 9
+  },
+  "result": {
+    "id": "thaumicunity:wand",
+    "components": {
+      "thaumicunity:wand_parts": {
+        "rod": "thaumicunity:blaze",
+        "cap": "thaumicunity:brass"
+      },
+      "minecraft:custom_model_data": {
+        "colors": [
+          15901242,
+          13214778
+        ]
+      },
+      "minecraft:item_name": {
+        "translate": "item.thaumicunity.wand.parts",
+        "with": [
+          {
+            "translate": "wand_cap.thaumicunity.brass"
+          },
+          {
+            "translate": "wand_rod.thaumicunity.blaze"
+          }
+        ]
+      }
+    }
+  },
+  "research": "thaumicunity:auromancy/elemental_cores"
+}

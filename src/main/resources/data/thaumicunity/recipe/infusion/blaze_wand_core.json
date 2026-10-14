@@ -1,0 +1,20 @@
+{
+  "type": "thaumicunity:infusion",
+  "central": "minecraft:blaze_rod",
+  "components": [
+    "minecraft:magma_cream",
+    "thaumicunity:ignis_vis_crystal",
+    "minecraft:magma_cream",
+    "thaumicunity:ignis_vis_crystal"
+  ],
+  "essentia": {
+    "thaumicunity:ignis": 16,
+    "thaumicunity:potentia": 8,
+    "thaumicunity:praecantatio": 8
+  },
+  "instability": 2,
+  "result": {
+    "id": "thaumicunity:blaze_wand_core"
+  },
+  "research": "thaumicunity:auromancy/elemental_cores"
+}

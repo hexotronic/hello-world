@@ -1,0 +1,20 @@
+{
+  "type": "thaumicunity:arcane_shaped",
+  "key": {
+    "N": "thaumicunity:thaumium_nugget"
+  },
+  "pattern": [
+    "NNN",
+    "N N"
+  ],
+  "vis": {
+    "thaumicunity:ordo": 8,
+    "thaumicunity:aer": 6,
+    "thaumicunity:perditio": 6
+  },
+  "result": {
+    "id": "thaumicunity:thaumium_wand_cap",
+    "count": 2
+  },
+  "research": "thaumicunity:auromancy/thaumium_caps"
+}

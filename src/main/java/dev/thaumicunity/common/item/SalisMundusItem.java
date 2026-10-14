@@ -20,17 +20,21 @@ import net.minecraft.world.level.block.state.BlockState;
 /**
  * Salis Mundus, the "world salt": sprinkled on ordinary blocks it awakens them — a bookshelf yields a
  * Thaumonomicon, a crafting table becomes an arcane workbench, a cauldron becomes a crucible, a lectern becomes a
- * research table.
+ * research table. Wands can do the same ({@link #awaken}).
  */
 public class SalisMundusItem extends Item {
     public SalisMundusItem(Properties properties) {
         super(properties);
     }
 
-    @Override
-    public InteractionResult useOn(UseOnContext context) {
-        Level level = context.getLevel();
-        BlockPos pos = context.getClickedPos();
+    /** True for the blocks Salis Mundus (or a wand) can awaken. */
+    public static boolean canAwaken(BlockState state) {
+        return state.is(Blocks.BOOKSHELF) || state.is(Blocks.CRAFTING_TABLE) || state.is(Blocks.CAULDRON)
+                || state.is(Blocks.WATER_CAULDRON) || state.is(Blocks.LECTERN);
+    }
+
+    /** Awakens the block at {@code pos}; returns false if it is not one that can be awakened. */
+    public static boolean awaken(ServerLevel level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
         Block converted = null;
         ItemStack drop = ItemStack.EMPTY;
@@ -43,17 +47,26 @@ public class SalisMundusItem extends Item {
         } else if (state.is(Blocks.LECTERN)) {
             converted = TUBlocks.RESEARCH_TABLE.get();
         } else {
+            return false;
+        }
+        if (converted != null) {
+            level.setBlockAndUpdate(pos, converted.defaultBlockState());
+        } else {
+            level.removeBlock(pos, false);
+            Block.popResource(level, pos, drop);
+        }
+        level.sendParticles(SpellFx.spark(0xE8D9FF), pos.getX() + 0.5, pos.getY() + 0.8, pos.getZ() + 0.5, 40, 0.4, 0.4, 0.4, 0.05);
+        level.playSound(null, pos, TUSounds.CRAFT_SUCCESS.get(), SoundSource.BLOCKS, 1.0f, 1.0f);
+        return true;
+    }
+
+    @Override
+    public InteractionResult useOn(UseOnContext context) {
+        Level level = context.getLevel();
+        if (!canAwaken(level.getBlockState(context.getClickedPos()))) {
             return InteractionResult.PASS;
         }
-        if (level instanceof ServerLevel server) {
-            if (converted != null) {
-                server.setBlockAndUpdate(pos, converted.defaultBlockState());
-            } else {
-                server.removeBlock(pos, false);
-                Block.popResource(server, pos, drop);
-            }
-            server.sendParticles(SpellFx.spark(0xE8D9FF), pos.getX() + 0.5, pos.getY() + 0.8, pos.getZ() + 0.5, 40, 0.4, 0.4, 0.4, 0.05);
-            server.playSound(null, pos, TUSounds.CRAFT_SUCCESS.get(), SoundSource.BLOCKS, 1.0f, 1.0f);
+        if (level instanceof ServerLevel server && awaken(server, context.getClickedPos())) {
             Player player = context.getPlayer();
             if (player == null || !player.isCreative()) {
                 context.getItemInHand().shrink(1);

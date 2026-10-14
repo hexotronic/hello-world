@@ -5,6 +5,8 @@ import dev.thaumicunity.common.aspect.Aspect;
 import dev.thaumicunity.common.research.ResearchCategory;
 import dev.thaumicunity.common.research.ResearchEntry;
 import dev.thaumicunity.common.spell.SpellComponent;
+import dev.thaumicunity.common.wand.WandCap;
+import dev.thaumicunity.common.wand.WandRod;
 import dev.thaumicunity.api.spell.SpellPrimitive;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
@@ -24,6 +26,8 @@ public final class TURegistries {
     public static final ResourceKey<Registry<ResearchEntry>> RESEARCH = ResourceKey.createRegistryKey(ThaumicUnity.id("research"));
     public static final ResourceKey<Registry<SpellComponent>> SPELL_COMPONENT =
             ResourceKey.createRegistryKey(ThaumicUnity.id("spell_component"));
+    public static final ResourceKey<Registry<WandRod>> WAND_ROD = ResourceKey.createRegistryKey(ThaumicUnity.id("wand_rod"));
+    public static final ResourceKey<Registry<WandCap>> WAND_CAP = ResourceKey.createRegistryKey(ThaumicUnity.id("wand_cap"));
 
     /** Static registry mapping primitive ids used by spell component JSON to Java behaviour. */
     public static final ResourceKey<Registry<SpellPrimitive>> SPELL_PRIMITIVE_KEY =
@@ -47,5 +51,7 @@ public final class TURegistries {
         event.worldRegistry(RESEARCH_CATEGORY, ResearchCategory.CODEC, ResearchCategory.CODEC);
         event.worldRegistry(RESEARCH, ResearchEntry.CODEC, ResearchEntry.CODEC);
         event.worldRegistry(SPELL_COMPONENT, SpellComponent.CODEC, SpellComponent.CODEC);
+        event.worldRegistry(WAND_ROD, WandRod.CODEC, WandRod.CODEC);
+        event.worldRegistry(WAND_CAP, WandCap.CODEC, WandCap.CODEC);
     }
 }

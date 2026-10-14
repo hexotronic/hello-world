@@ -1,0 +1,39 @@
+{
+  "model": {
+    "type": "minecraft:condition",
+    "property": "minecraft:has_component",
+    "component": "thaumicunity:wand_focus",
+    "on_true": {
+      "type": "minecraft:model",
+      "model": "thaumicunity:item/wand_focused",
+      "tints": [
+        {
+          "type": "minecraft:custom_model_data",
+          "index": 0,
+          "default": 9136702
+        },
+        {
+          "type": "minecraft:custom_model_data",
+          "index": 1,
+          "default": 12895428
+        }
+      ]
+    },
+    "on_false": {
+      "type": "minecraft:model",
+      "model": "thaumicunity:item/wand",
+      "tints": [
+        {
+          "type": "minecraft:custom_model_data",
+          "index": 0,
+          "default": 9136702
+        },
+        {
+          "type": "minecraft:custom_model_data",
+          "index": 1,
+          "default": 12895428
+        }
+      ]
+    }
+  }
+}

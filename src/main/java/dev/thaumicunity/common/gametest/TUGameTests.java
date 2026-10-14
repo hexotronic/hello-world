@@ -20,6 +20,13 @@ import dev.thaumicunity.common.research.ResearchRequirement;
 import dev.thaumicunity.common.research.ResearchStage;
 import dev.thaumicunity.common.spell.SpellComponent;
 import dev.thaumicunity.common.spell.SpellLibrary;
+import dev.thaumicunity.common.wand.WandCap;
+import dev.thaumicunity.common.wand.WandFocus;
+import dev.thaumicunity.common.wand.WandParts;
+import dev.thaumicunity.common.wand.WandRod;
+import dev.thaumicunity.common.wand.WandVis;
+import dev.thaumicunity.common.wand.Wands;
+import dev.thaumicunity.core.aspect.AspectAmounts;
 import dev.thaumicunity.core.aspect.AspectGraph;
 import dev.thaumicunity.core.research.InsightPuzzle;
 import dev.thaumicunity.core.spell.CompiledSpell;
@@ -28,6 +35,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.Identifier;
@@ -70,6 +78,7 @@ public final class TUGameTests {
         test("world_data", TUGameTests::worldData);
         test("insight_puzzles_solvable", TUGameTests::insightPuzzlesSolvable);
         test("salis_mundus", TUGameTests::salisMundus);
+        test("wands", TUGameTests::wands);
     }
 
     private TUGameTests() {
@@ -219,6 +228,70 @@ public final class TUGameTests {
         helper.assertTrue(result.consumesAction(), "Salis Mundus should act on a crafting table, got " + result);
         helper.assertBlockPresent(TUBlocks.ARCANE_WORKBENCH.get(), table);
         helper.assertValueEqual(salis.getCount(), 1, "Salis Mundus should be used up");
+        helper.succeed();
+    }
+
+    private static void wands(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        RegistryAccess access = level.registryAccess();
+        Registry<WandRod> rods = registry(helper, TURegistries.WAND_ROD);
+        Registry<WandCap> caps = registry(helper, TURegistries.WAND_CAP);
+        helper.assertTrue(rods.size() >= 7 && caps.size() >= 5, "expected at least 7 rods and 5 caps");
+        rods.entrySet().forEach(e -> helper.assertTrue(BuiltInRegistries.ITEM.containsKey(e.getValue().item()),
+                "rod " + e.getKey().identifier() + " names a missing item"));
+        caps.entrySet().forEach(e -> helper.assertTrue(BuiltInRegistries.ITEM.containsKey(e.getValue().item()),
+                "cap " + e.getKey().identifier() + " names a missing item"));
+        // One assembly recipe per rod and cap, each making a wand of known parts.
+        int assemblies = 0;
+        for (RecipeHolder<?> holder : recipes(helper).getRecipes()) {
+            if (holder.value() instanceof ArcaneCraftingRecipe arcane && arcane.result().create().is(TUItems.WAND.get())) {
+                WandParts parts = arcane.result().create().get(TUDataComponents.WAND_PARTS.get());
+                helper.assertTrue(parts != null && rods.containsKey(parts.rod()) && caps.containsKey(parts.cap()),
+                        holder.id().identifier() + " makes a wand of unknown parts: " + parts);
+                assemblies++;
+            }
+        }
+        helper.assertValueEqual(assemblies, rods.size() * caps.size(), "wand assembly recipes");
+
+        // Costs: iron caps make spells a tenth dearer; a blaze rod spares a tenth of its Ignis.
+        ItemStack wooden = Wands.create(access, ThaumicUnity.id("wood"), ThaumicUnity.id("iron"));
+        helper.assertValueEqual(Wands.capacity(access, wooden), 30 * WandVis.SCALE, "wooden rod capacity");
+        AspectAmounts fire = AspectAmounts.of(Aspects.IGNIS.toString(), 10);
+        int ignis = Aspects.PRIMALS.indexOf(Aspects.IGNIS);
+        helper.assertValueEqual(Wands.cost(access, wooden, fire)[ignis], 1100, "Ignis cost with iron caps");
+        ItemStack blazing = Wands.create(access, ThaumicUnity.id("blaze"), ThaumicUnity.id("gold"));
+        helper.assertValueEqual(Wands.cost(access, blazing, fire)[ignis], 900, "Ignis cost with a blaze rod and gold caps");
+
+        // Paying: from the wand first, then from vis crystals in the inventory; all or nothing.
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        wooden.set(TUDataComponents.WAND_VIS.get(), WandVis.EMPTY.withCapacity(3000).with(ignis, 500));
+        int[] cost = Wands.cost(access, wooden, fire);
+        helper.assertFalse(Wands.pay(player, wooden, cost), "a wand with 5 Ignis and no crystals cannot pay 11");
+        helper.assertValueEqual(Wands.vis(wooden).get(ignis), 500, "a failed payment must not take vis");
+        player.getInventory().add(new ItemStack(TUItems.VIS_CRYSTALS.get("ignis").get(), 3));
+        helper.assertTrue(Wands.pay(player, wooden, cost), "one Ignis crystal should make up the shortfall");
+        helper.assertValueEqual(Wands.vis(wooden).get(ignis), 500 + Wands.crystalValue() - 1100, "Ignis left after paying");
+        helper.assertValueEqual(player.getInventory().countItem(TUItems.VIS_CRYSTALS.get("ignis").get()), 2, "crystals left");
+
+        // Recharging from the aura fills primals that are not full and drains the aura by as much.
+        BlockPos at = helper.absolutePos(BlockPos.ZERO);
+        var aura = dev.thaumicunity.common.aura.AuraManager.auraAt(level, at);
+        aura.setVis(aura.base() * 2 + 50);
+        double before = aura.vis();
+        double moved = Wands.rechargeFromAura(level, at, wooden, 6.0, 0.25);
+        helper.assertTrue(moved > 0, "a wand below capacity should draw vis from a full aura");
+        helper.assertTrue(Math.abs(before - moved - dev.thaumicunity.common.aura.AuraManager.auraAt(level, at).vis()) < 1.0e-6,
+                "the aura should lose exactly what the wand gained");
+
+        // Fixing a focus: sneak-use with a focus in the other hand.
+        ItemStack focus = new ItemStack(TUItems.APPRENTICE_FOCUS.get());
+        player.setItemInHand(InteractionHand.MAIN_HAND, wooden);
+        player.setItemInHand(InteractionHand.OFF_HAND, focus);
+        player.setShiftKeyDown(true);
+        TUItems.WAND.get().use(level, player, InteractionHand.MAIN_HAND);
+        WandFocus fixed = wooden.get(TUDataComponents.WAND_FOCUS.get());
+        helper.assertTrue(fixed != null && fixed.stack().is(TUItems.APPRENTICE_FOCUS.get()), "the focus should be fixed to the wand");
+        helper.assertTrue(player.getItemInHand(InteractionHand.OFF_HAND).isEmpty(), "the focus should leave the other hand");
         helper.succeed();
     }
 }

@@ -26,6 +26,7 @@ import item_aspects  # noqa: E402
 import recipes  # noqa: E402
 import research  # noqa: E402
 import spells  # noqa: E402
+import wands  # noqa: E402
 import world  # noqa: E402
 
 NS = "thaumicunity"
@@ -190,10 +191,14 @@ def clean_tree(path):
                 os.remove(os.path.join(root, name))
 
 
-ITEM_IDS = set()
+# Simple items from every table: name -> (English name, item tags).
+SIMPLE_ITEMS = dict(blocks.ITEMS)
+SIMPLE_ITEMS.update({name: (english_name, []) for name, english_name in wands.ITEMS.items()})
+
+ITEM_IDS = {rid("wand")}
 for _name in blocks.BLOCKS:
     ITEM_IDS.add(rid(_name))
-for _name in blocks.ITEMS:
+for _name in SIMPLE_ITEMS:
     ITEM_IDS.add(rid(_name))
 
 
@@ -333,7 +338,7 @@ def gen_blocks_items(lang):
             if tag in blocks.MIRRORED_ITEM_TAGS:
                 item_tags.setdefault(tag, []).append(block_id)
 
-    for name, (english_name, tags) in blocks.ITEMS.items():
+    for name, (english_name, tags) in SIMPLE_ITEMS.items():
         write_json(os.path.join(item_models, name + ".json"),
                    {"parent": "minecraft:item/generated", "textures": {"layer0": f"{NS}:item/{name}"}})
         write_json(os.path.join(item_defs, name + ".json"),
@@ -341,6 +346,8 @@ def gen_blocks_items(lang):
         lang[f"item.{NS}.{name}"] = english_name
         for tag in tags:
             item_tags.setdefault(tag, []).append(rid(name))
+
+    gen_wand_item(item_models, item_defs, lang)
 
     for kind in ("block", "item"):
         for namespace in ("minecraft", "c", NS):
@@ -372,8 +379,93 @@ def gen_blocks_items(lang):
         sounds_json[event] = {"sounds": [{"name": target, "type": "event"}], "subtitle": f"subtitles.{NS}.{event}"}
         lang[f"subtitles.{NS}.{event}"] = subtitle
     write_json(os.path.join(ASSETS, "sounds.json"), sounds_json)
-    print(f"blocks: {len(blocks.BLOCKS)}, items: {len(blocks.ITEMS)}, block tags: {len(block_tags)}, "
+    print(f"blocks: {len(blocks.BLOCKS)}, items: {len(SIMPLE_ITEMS) + 1}, block tags: {len(block_tags)}, "
           f"item tags: {len(item_tags)}")
+
+
+# ---------------------------------------------------------------------------------------------------------- wands
+
+def gen_wand_item(item_models, item_defs, lang):
+    """The wand's look comes from its rod and cap colours (custom model data colours 0 and 1, set by the assembly
+    recipe) tinting two grey layers; an attached focus adds a third layer."""
+    layers = {"layer0": f"{NS}:item/wand_rod", "layer1": f"{NS}:item/wand_caps"}
+    write_json(os.path.join(item_models, "wand.json"), {"parent": "minecraft:item/handheld", "textures": layers})
+    write_json(os.path.join(item_models, "wand_focused.json"),
+               {"parent": "minecraft:item/handheld", "textures": dict(layers, layer2=f"{NS}:item/wand_focus")})
+    wood, iron = wands.RODS["wood"][4], wands.CAPS["iron"][4]
+    tints = [{"type": "minecraft:custom_model_data", "index": 0, "default": wood},
+             {"type": "minecraft:custom_model_data", "index": 1, "default": iron}]
+    write_json(os.path.join(item_defs, "wand.json"), {"model": {
+        "type": "minecraft:condition", "property": "minecraft:has_component", "component": f"{NS}:wand_focus",
+        "on_true": {"type": "minecraft:model", "model": f"{NS}:item/wand_focused", "tints": tints},
+        "on_false": {"type": "minecraft:model", "model": f"{NS}:item/wand", "tints": tints}}})
+    lang[f"item.{NS}.wand"] = "Wand"
+    lang[f"item.{NS}.wand.parts"] = "%s-capped %s Wand"
+    for rod, spec in wands.RODS.items():
+        lang[f"wand_rod.{NS}.{rod}"] = spec[0]
+    for cap, spec in wands.CAPS.items():
+        lang[f"wand_cap.{NS}.{cap}"] = spec[0]
+
+
+def wand_components(rod, cap):
+    return {
+        f"{NS}:wand_parts": {"rod": rid(rod), "cap": rid(cap)},
+        "minecraft:custom_model_data": {"colors": [wands.RODS[rod][4], wands.CAPS[cap][4]]},
+        "minecraft:item_name": {"translate": f"item.{NS}.wand.parts",
+                                "with": [{"translate": f"wand_cap.{NS}.{cap}"}, {"translate": f"wand_rod.{NS}.{rod}"}]},
+    }
+
+
+def wand_recipes():
+    """Arcane and infusion recipes for caps, cores, the recharge pedestal and every rod and cap combination."""
+    arcane, infusion = {}, {}
+    for cap, (nugget, vis) in wands.CAP_RECIPES.items():
+        arcane[f"wand/{cap}_cap"] = (["NNN", "N N"], {"N": nugget}, wands.CAPS[cap][1], 2, vis, wands.CAPS[cap][5])
+    for rod, (central, (first, second), essentia, instability) in wands.CORE_INFUSIONS.items():
+        infusion[f"infusion/{rod}_wand_core"] = (central, [first, second, first, second], essentia, instability,
+                                                 wands.RODS[rod][1], wands.RODS[rod][5])
+    pattern, key, vis = wands.PEDESTAL_RECIPE
+    arcane["wand/wand_pedestal"] = (pattern, key, rid("wand_pedestal"), 1, vis, "auromancy/wand_pedestal")
+    for rod, rod_spec in wands.RODS.items():
+        for cap, cap_spec in wands.CAPS.items():
+            # Gate on the rod's research; plain wooden rods take the cap's.
+            entry = rod_spec[5] if rod != "wood" else cap_spec[5]
+            arcane[f"wand/{rod}_{cap}"] = (["  C", " R ", "C  "], {"C": cap_spec[1], "R": rod_spec[1]}, rid("wand"), 1,
+                                           wands.assembly_vis(rod, cap), entry, wand_components(rod, cap))
+    return arcane, infusion
+
+
+WAND_ARCANE, WAND_INFUSION = wand_recipes()
+ARCANE = dict(recipes.ARCANE)
+ARCANE.update(WAND_ARCANE)
+INFUSION = dict(recipes.INFUSION)
+INFUSION.update(WAND_INFUSION)
+
+
+@generator
+def gen_wand_parts(lang):
+    rods_dir = os.path.join(DATA, NS, NS, "wand_rod")
+    caps_dir = os.path.join(DATA, NS, NS, "wand_cap")
+    clean_dir(rods_dir)
+    clean_dir(caps_dir)
+    for rod, (english_name, item, capacity, affinity, color, entry) in wands.RODS.items():
+        check_item(item, f"rod {rod}")
+        if affinity is not None and affinity not in wands.PRIMALS:
+            raise SystemExit(f"rod {rod}: affinity must be a primal, got {affinity}")
+        data = {"item": item, "capacity": capacity, "color": f"#{color:06x}"}
+        if affinity:
+            data["affinity"] = rid(affinity)
+        write_json(os.path.join(rods_dir, rod + ".json"), data)
+    for cap, (english_name, item, cost, primal_cost, color, entry) in wands.CAPS.items():
+        check_item(item, f"cap {cap}")
+        for primal in primal_cost:
+            if primal not in wands.PRIMALS:
+                raise SystemExit(f"cap {cap}: {primal} is not a primal")
+        data = {"item": item, "cost": cost, "color": f"#{color:06x}"}
+        if primal_cost:
+            data["primal_cost"] = {rid(p): f for p, f in primal_cost.items()}
+        write_json(os.path.join(caps_dir, cap + ".json"), data)
+    print(f"wand rods: {len(wands.RODS)}, caps: {len(wands.CAPS)}, wand recipes: {len(WAND_ARCANE) + len(WAND_INFUSION)}")
 
 
 # ---------------------------------------------------------------------------------------------------------- aspects of things
@@ -381,7 +473,12 @@ def gen_blocks_items(lang):
 @generator
 def gen_item_aspects(lang):
     item_map = {}
-    for item, text in item_aspects.ITEM_ASPECTS.items():
+    all_aspects = dict(item_aspects.ITEM_ASPECTS)
+    for item, text in wands.ITEM_ASPECTS.items():
+        if item in all_aspects:
+            raise SystemExit(f"item aspects: {item} is defined twice")
+        all_aspects[item] = text
+    for item, text in all_aspects.items():
         check_item(item, "item aspects")
         item_map[item] = parse_aspects(text, item)
     write_json(os.path.join(DATA, NS, "data_maps", "item", "aspects.json"), {"values": item_map})
@@ -540,8 +637,8 @@ def result(item, count=1, components=None):
 
 
 def recipe_ids():
-    ids = set(recipes.SHAPELESS) | set(recipes.SHAPED) | set(recipes.SMELTING) | set(recipes.ARCANE)
-    ids |= set(recipes.CRUCIBLE) | set(recipes.INFUSION)
+    ids = set(recipes.SHAPELESS) | set(recipes.SHAPED) | set(recipes.SMELTING) | set(ARCANE)
+    ids |= set(recipes.CRUCIBLE) | set(INFUSION)
     ids |= {f"focus/{name}" for name in spells.FOCUS_ARCHETYPES}
     return ids
 
@@ -580,7 +677,7 @@ def gen_recipes(lang):
         write_json(os.path.join(out, name + ".json"), {
             "type": "minecraft:smelting", "cookingtime": 200, "experience": xp,
             "ingredient": ingredient(source, name), "result": result(item)})
-    for name, (pattern, key, item, count, vis, entry) in recipes.ARCANE.items():
+    for name, (pattern, key, item, count, vis, entry, *extra) in ARCANE.items():
         data = {"type": f"{NS}:arcane_shaped" if pattern else f"{NS}:arcane_shapeless"}
         if pattern:
             data["key"] = {k: ingredient(v, name) for k, v in key.items()}
@@ -591,14 +688,14 @@ def gen_recipes(lang):
         for aspect in data["vis"]:
             if aspect.split(":")[1] not in aspects.descriptions():
                 raise SystemExit(f"{name}: arcane vis must be primal, got {aspect}")
-        data["result"] = result(item, count)
+        data["result"] = result(item, count, extra[0] if extra else None)
         data["research"] = gate(entry, name)
         write_json(os.path.join(out, name + ".json"), data)
     for name, (catalyst, aspect_text, item, count, entry) in recipes.CRUCIBLE.items():
         write_json(os.path.join(out, name + ".json"), {
             "type": f"{NS}:crucible", "catalyst": ingredient(catalyst, name),
             "aspects": parse_aspects(aspect_text, name), "result": result(item, count), "research": gate(entry, name)})
-    for name, (central, components, essentia, instability, item, entry) in recipes.INFUSION.items():
+    for name, (central, components, essentia, instability, item, entry) in INFUSION.items():
         write_json(os.path.join(out, name + ".json"), {
             "type": f"{NS}:infusion", "central": ingredient(central, name),
             "components": [ingredient(c, name) for c in components],
@@ -716,7 +813,7 @@ def gen_research(lang):
         lang[key_base] = spec["title"]
     # Every gated recipe must be shown by some entry, and a gate must not block its own unlock requirement.
     shown = {r for spec in research.ENTRIES.values() for st in spec["stages"] for r in st.get("recipes", [])}
-    for name in recipes.ARCANE:
+    for name in ARCANE:
         if name not in shown:
             raise SystemExit(f"arcane recipe {name} is not shown in any research entry")
     print(f"research categories: {len(research.CATEGORIES)}, entries: {len(research.ENTRIES)}")
@@ -733,6 +830,7 @@ GAME_TESTS = {
     "world_data": 20,
     "insight_puzzles_solvable": 20,
     "salis_mundus": 40,
+    "wands": 20,
 }
 
 

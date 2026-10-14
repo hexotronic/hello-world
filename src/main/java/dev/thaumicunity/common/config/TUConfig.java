@@ -38,6 +38,10 @@ public final class TUConfig {
 
     // --- casting
     public static final ModConfigSpec.BooleanValue CASTERS_ENABLED;
+    public static final ModConfigSpec.BooleanValue WANDS_ENABLED;
+    public static final ModConfigSpec.DoubleValue WAND_AURA_RECHARGE;
+    public static final ModConfigSpec.DoubleValue WAND_PEDESTAL_RECHARGE;
+    public static final ModConfigSpec.IntValue VIS_CRYSTAL_VALUE;
     public static final ModConfigSpec.DoubleValue SPELL_COST_SCALE;
     public static final ModConfigSpec.DoubleValue SPELL_POWER_SCALE;
     public static final ModConfigSpec.BooleanValue SPELL_GRIEFING;
@@ -103,6 +107,13 @@ public final class TUConfig {
 
         b.comment("Casting (docs/DESIGN_DECISIONS.md, D4)").push("casting");
         CASTERS_ENABLED = b.comment("Allow casting spells with caster's gauntlets").define("casters", true);
+        WANDS_ENABLED = b.comment("Allow casting spells with wands").define("wands", true);
+        WAND_AURA_RECHARGE = b.comment("Vis a carried wand draws from a strong aura every five seconds")
+                .defineInRange("wandAuraRecharge", 1.0, 0.0, 1000.0);
+        WAND_PEDESTAL_RECHARGE = b.comment("Vis a wand on a recharge pedestal draws from the aura every second")
+                .defineInRange("wandPedestalRecharge", 2.0, 0.0, 1000.0);
+        VIS_CRYSTAL_VALUE = b.comment("Vis of its primal a wand gains from eating one vis crystal")
+                .defineInRange("visCrystalValue", 10, 0, 1000);
         SPELL_COST_SCALE = b.comment("Multiplier on every spell's vis cost").defineInRange("costScale", 1.0, 0.0, 100.0);
         SPELL_POWER_SCALE = b.comment("Multiplier on every spell's power (damage, healing, duration)")
                 .defineInRange("powerScale", 1.0, 0.0, 100.0);

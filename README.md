@@ -4,7 +4,7 @@ A NeoForge mod for **Minecraft 26.3** that brings the magic of Thaumcraft (every
 one mod, then expands it: aspects, research, aura and vis, alchemy, arcane crafting, infusion and a data-driven
 spell system, written from scratch with original code, text and art.
 
-> **Status: alpha, phase 3 of 9.** Core systems work end to end (scan → research → crucible / arcane workbench /
+> **Status: alpha, phase 4 of 9 under way.** Core systems work end to end (scan → research → crucible / arcane workbench /
 > infusion → caster's gauntlet and foci). Later phases add the migrated content, golems, worldgen, dimensions,
 > integrations and polish. See [docs/PLAN.md](docs/PLAN.md) for the plan, feature counts and exact next steps.
 
@@ -17,6 +17,7 @@ spell system, written from scratch with original code, text and art.
 | Aura | Per-chunk vis and flux with biome profiles and primal attunement, cheap bounded simulation, aura HUD |
 | Crafting | Crucible, arcane workbench, alchemical furnace and warded jars, runic matrix infusion with a stability model |
 | Spells | 80 spell components (mediums, effects, synergies, modifiers) on 43 Java primitives; caster's gauntlets; 3 focus tiers; 11 focus archetypes |
+| Wands | Rods and caps as data (7 rods, 5 caps, 35 combinations); per-primal vis storage, fixed foci, vis crystals, aura recharge and a recharge pedestal |
 | World | Cinnabar and amber ores (switchable), arcane stone, metals |
 
 ## Playing

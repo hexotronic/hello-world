@@ -31,6 +31,10 @@ BLOCKS = {
         name="Arcane Pedestal", model="custom:pedestal", loot="self",
         textures=dict(side="arcane_pedestal_side", top="arcane_pedestal_top"),
         tags=["minecraft:mineable/pickaxe"]),
+    "wand_pedestal": dict(
+        name="Wand Recharge Pedestal", model="custom:pedestal", loot="self",
+        textures=dict(side="wand_pedestal_side", top="wand_pedestal_top"),
+        tags=["minecraft:mineable/pickaxe"]),
     "warded_jar": dict(
         name="Warded Jar", model="custom:jar", loot="jar",
         textures=dict(side="warded_jar_side", lid="warded_jar_lid"),
@@ -119,4 +123,5 @@ ITEMS = {
 # Extra item tag entries.
 ITEM_TAGS = {
     "thaumicunity:research_paper": ["minecraft:paper"],
+    "thaumicunity:casting_instruments": ["thaumicunity:wand"],
 }

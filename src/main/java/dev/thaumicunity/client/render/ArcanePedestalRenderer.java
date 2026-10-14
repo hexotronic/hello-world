@@ -2,7 +2,7 @@ package dev.thaumicunity.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
-import dev.thaumicunity.common.blockentity.ArcanePedestalBlockEntity;
+import dev.thaumicunity.common.blockentity.DisplaysItem;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
@@ -13,11 +13,12 @@ import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
-/** Floats and slowly spins the item placed on an arcane pedestal. */
-public class ArcanePedestalRenderer implements BlockEntityRenderer<ArcanePedestalBlockEntity, ArcanePedestalRenderer.State> {
+/** Floats and slowly spins the item placed on a pedestal (arcane pedestal, wand recharge pedestal). */
+public class ArcanePedestalRenderer<T extends BlockEntity & DisplaysItem> implements BlockEntityRenderer<T, ArcanePedestalRenderer.State> {
     private final ItemModelResolver itemModels;
 
     public ArcanePedestalRenderer(BlockEntityRendererProvider.Context context) {
@@ -35,7 +36,7 @@ public class ArcanePedestalRenderer implements BlockEntityRenderer<ArcanePedesta
     }
 
     @Override
-    public void extractRenderState(ArcanePedestalBlockEntity pedestal, State state, float partialTick, Vec3 camera,
+    public void extractRenderState(T pedestal, State state, float partialTick, Vec3 camera,
                                    ModelFeatureRenderer.@Nullable CrumblingOverlay crumbling) {
         BlockEntityRenderer.super.extractRenderState(pedestal, state, partialTick, camera, crumbling);
         state.item.clear();

@@ -1,0 +1,19 @@
+{
+  "type": "thaumicunity:arcane_shaped",
+  "key": {
+    "N": "thaumicunity:brass_nugget"
+  },
+  "pattern": [
+    "NNN",
+    "N N"
+  ],
+  "vis": {
+    "thaumicunity:ordo": 4,
+    "thaumicunity:ignis": 4
+  },
+  "result": {
+    "id": "thaumicunity:brass_wand_cap",
+    "count": 2
+  },
+  "research": "thaumicunity:auromancy/wand_caps"
+}

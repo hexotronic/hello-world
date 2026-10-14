@@ -8,6 +8,7 @@ import dev.thaumicunity.common.item.ResearchNotesItem;
 import dev.thaumicunity.common.item.SalisMundusItem;
 import dev.thaumicunity.common.item.ThaumometerItem;
 import dev.thaumicunity.common.item.ThaumonomiconItem;
+import dev.thaumicunity.common.item.WandItem;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -74,6 +75,20 @@ public final class TUItems {
     public static final DeferredItem<FocusItem> ARCHMAGE_FOCUS = ITEMS.registerItem("archmage_focus",
             p -> new FocusItem(3, p), p -> p.stacksTo(1).rarity(Rarity.RARE));
 
+    // --- wands: one item; rod and caps are data (thaumicunity:wand_rod, thaumicunity:wand_cap)
+    public static final DeferredItem<WandItem> WAND = ITEMS.registerItem("wand", WandItem::new, p -> p.stacksTo(1));
+    public static final Map<String, DeferredItem<Item>> WAND_CORES = new LinkedHashMap<>();
+    public static final Map<String, DeferredItem<Item>> WAND_CAPS = new LinkedHashMap<>();
+
+    static {
+        for (String core : List.of("reed", "obsidian", "blaze", "ice", "quartz", "bone")) {
+            WAND_CORES.put(core, ITEMS.registerSimpleItem(core + "_wand_core", p -> p.rarity(Rarity.UNCOMMON)));
+        }
+        for (String cap : List.of("iron", "copper", "gold", "brass", "thaumium")) {
+            WAND_CAPS.put(cap, ITEMS.registerSimpleItem(cap + "_wand_cap"));
+        }
+    }
+
     // --- block items
     public static final DeferredItem<BlockItem> CRUCIBLE = ITEMS.registerSimpleBlockItem(TUBlocks.CRUCIBLE);
     public static final DeferredItem<BlockItem> ARCANE_WORKBENCH = ITEMS.registerSimpleBlockItem(TUBlocks.ARCANE_WORKBENCH);
@@ -81,6 +96,7 @@ public final class TUItems {
     public static final DeferredItem<BlockItem> RUNIC_MATRIX = ITEMS.registerSimpleBlockItem(TUBlocks.RUNIC_MATRIX);
     public static final DeferredItem<BlockItem> ARCANE_PEDESTAL = ITEMS.registerSimpleBlockItem(TUBlocks.ARCANE_PEDESTAL);
     public static final DeferredItem<BlockItem> WARDED_JAR = ITEMS.registerSimpleBlockItem(TUBlocks.WARDED_JAR);
+    public static final DeferredItem<BlockItem> WAND_PEDESTAL = ITEMS.registerSimpleBlockItem(TUBlocks.WAND_PEDESTAL);
     public static final DeferredItem<BlockItem> ALCHEMICAL_FURNACE = ITEMS.registerSimpleBlockItem(TUBlocks.ALCHEMICAL_FURNACE);
     public static final DeferredItem<BlockItem> ARCANE_STONE = ITEMS.registerSimpleBlockItem(TUBlocks.ARCANE_STONE);
     public static final DeferredItem<BlockItem> ARCANE_STONE_BRICKS = ITEMS.registerSimpleBlockItem(TUBlocks.ARCANE_STONE_BRICKS);

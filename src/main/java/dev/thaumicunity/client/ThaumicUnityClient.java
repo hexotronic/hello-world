@@ -77,6 +77,7 @@ public final class ThaumicUnityClient {
         event.registerEntityRenderer(TUEntities.SPELL_PROJECTILE.get(), NoopRenderer::new);
         event.registerEntityRenderer(TUEntities.SPELL_ZONE.get(), NoopRenderer::new);
         event.registerBlockEntityRenderer(TUBlockEntities.ARCANE_PEDESTAL.get(), ArcanePedestalRenderer::new);
+        event.registerBlockEntityRenderer(TUBlockEntities.WAND_PEDESTAL.get(), ArcanePedestalRenderer::new);
         event.registerBlockEntityRenderer(TUBlockEntities.CRUCIBLE.get(), CrucibleRenderer::new);
         event.registerBlockEntityRenderer(TUBlockEntities.WARDED_JAR.get(), WardedJarRenderer::new);
     }

@@ -849,6 +849,67 @@
     "thaumicunity:enchanted_fabric": {
       "thaumicunity:pannus": 3,
       "thaumicunity:praecantatio": 2
+    },
+    "thaumicunity:wand": {
+      "thaumicunity:instrumentum": 4,
+      "thaumicunity:praecantatio": 4,
+      "thaumicunity:auram": 2
+    },
+    "thaumicunity:wand_pedestal": {
+      "thaumicunity:auram": 4,
+      "thaumicunity:ordo": 2,
+      "thaumicunity:terra": 4,
+      "thaumicunity:praecantatio": 2
+    },
+    "thaumicunity:iron_wand_cap": {
+      "thaumicunity:metallum": 2,
+      "thaumicunity:instrumentum": 1
+    },
+    "thaumicunity:copper_wand_cap": {
+      "thaumicunity:metallum": 2,
+      "thaumicunity:permutatio": 1
+    },
+    "thaumicunity:gold_wand_cap": {
+      "thaumicunity:aurum": 2,
+      "thaumicunity:instrumentum": 1
+    },
+    "thaumicunity:brass_wand_cap": {
+      "thaumicunity:instrumentum": 2,
+      "thaumicunity:machina": 1
+    },
+    "thaumicunity:thaumium_wand_cap": {
+      "thaumicunity:praecantatio": 3,
+      "thaumicunity:metallum": 1
+    },
+    "thaumicunity:reed_wand_core": {
+      "thaumicunity:aer": 4,
+      "thaumicunity:herba": 2,
+      "thaumicunity:praecantatio": 2
+    },
+    "thaumicunity:obsidian_wand_core": {
+      "thaumicunity:terra": 4,
+      "thaumicunity:tutamen": 2,
+      "thaumicunity:praecantatio": 2
+    },
+    "thaumicunity:blaze_wand_core": {
+      "thaumicunity:ignis": 4,
+      "thaumicunity:potentia": 2,
+      "thaumicunity:praecantatio": 2
+    },
+    "thaumicunity:ice_wand_core": {
+      "thaumicunity:aqua": 4,
+      "thaumicunity:gelum": 2,
+      "thaumicunity:praecantatio": 2
+    },
+    "thaumicunity:quartz_wand_core": {
+      "thaumicunity:ordo": 4,
+      "thaumicunity:vitreus": 2,
+      "thaumicunity:praecantatio": 2
+    },
+    "thaumicunity:bone_wand_core": {
+      "thaumicunity:perditio": 4,
+      "thaumicunity:mortuus": 2,
+      "thaumicunity:praecantatio": 2
     }
   }
 }
