@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "key": {
+    "#": "thaumicunity:arcane_stone"
+  },
+  "pattern": [
+    "##",
+    "##"
+  ],
+  "result": {
+    "id": "thaumicunity:arcane_stone_bricks",
+    "count": 4
+  }
+}

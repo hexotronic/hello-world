@@ -1,0 +1,19 @@
+{
+  "kind": "medium",
+  "primitive": "thaumicunity:projectile",
+  "complexity": 2,
+  "cost_multiplier": 1.0,
+  "tags": [
+    "projectile"
+  ],
+  "params": {
+    "speed": 1.6,
+    "spread": 10.0
+  },
+  "visual": {
+    "particle": "thaumicunity:spark"
+  },
+  "cost": {
+    "thaumicunity:aer": 1
+  }
+}

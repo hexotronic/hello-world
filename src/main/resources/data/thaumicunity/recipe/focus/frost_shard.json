@@ -1,0 +1,26 @@
+{
+  "type": "thaumicunity:arcane_shapeless",
+  "ingredients": [
+    "thaumicunity:apprentice_focus",
+    "minecraft:snowball"
+  ],
+  "vis": {
+    "thaumicunity:aqua": 10,
+    "thaumicunity:ordo": 5
+  },
+  "result": {
+    "id": "thaumicunity:apprentice_focus",
+    "components": {
+      "thaumicunity:spell": {
+        "medium": "thaumicunity:bolt",
+        "effects": [
+          "thaumicunity:frost"
+        ]
+      },
+      "minecraft:item_name": {
+        "translate": "focus.thaumicunity.frost_shard"
+      }
+    }
+  },
+  "research": "thaumicunity:auromancy/foci"
+}

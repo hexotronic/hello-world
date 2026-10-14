@@ -1,0 +1,854 @@
+{
+  "values": {
+    "minecraft:stone": {
+      "thaumicunity:terra": 2,
+      "thaumicunity:saxum": 1
+    },
+    "minecraft:cobblestone": {
+      "thaumicunity:terra": 2,
+      "thaumicunity:perditio": 1
+    },
+    "minecraft:deepslate": {
+      "thaumicunity:terra": 3,
+      "thaumicunity:saxum": 1,
+      "thaumicunity:tenebrae": 1
+    },
+    "minecraft:cobbled_deepslate": {
+      "thaumicunity:terra": 3,
+      "thaumicunity:perditio": 1
+    },
+    "minecraft:granite": {
+      "thaumicunity:terra": 2,
+      "thaumicunity:saxum": 1,
+      "thaumicunity:ignis": 1
+    },
+    "minecraft:diorite": {
+      "thaumicunity:terra": 2,
+      "thaumicunity:saxum": 1,
+      "thaumicunity:ordo": 1
+    },
+    "minecraft:andesite": {
+      "thaumicunity:terra": 2,
+      "thaumicunity:saxum": 1,
+      "thaumicunity:aer": 1
+    },
+    "minecraft:tuff": {
+      "thaumicunity:terra": 2,
+      "thaumicunity:cinis": 1
+    },
+    "minecraft:calcite": {
+      "thaumicunity:terra": 2,
+      "thaumicunity:ossum": 1
+    },
+    "minecraft:dripstone_block": {
+      "thaumicunity:terra": 2,
+      "thaumicunity:aqua": 1,
+      "thaumicunity:tempus": 1
+    },
+    "minecraft:pointed_dripstone": {
+      "thaumicunity:terra": 1,
+      "thaumicunity:aqua": 1,
+      "thaumicunity:telum": 1
+    },
+    "minecraft:dirt": {
+      "thaumicunity:terra": 2
+    },
+    "minecraft:coarse_dirt": {
+      "thaumicunity:terra": 2,
+      "thaumicunity:perditio": 1
+    },
+    "minecraft:rooted_dirt": {
+      "thaumicunity:terra": 2,
+      "thaumicunity:herba": 1
+    },
+    "minecraft:grass_block": {
+      "thaumicunity:terra": 2,
+      "thaumicunity:herba": 1
+    },
+    "minecraft:podzol": {
+      "thaumicunity:terra": 2,
+      "thaumicunity:herba": 1,
+      "thaumicunity:mortuus": 1
+    },
+    "minecraft:mycelium": {
+      "thaumicunity:terra": 2,
+      "thaumicunity:fungus": 1
+    },
+    "minecraft:mud": {
+      "thaumicunity:terra": 2,
+      "thaumicunity:aqua": 1,
+      "thaumicunity:lutum": 1
+    },
+    "minecraft:clay_ball": {
+      "thaumicunity:terra": 1,
+      "thaumicunity:aqua": 1,
+      "thaumicunity:lutum": 1
+    },
+    "minecraft:sand": {
+      "thaumicunity:terra": 1,
+      "thaumicunity:pulvis": 1
+    },
+    "minecraft:red_sand": {
+      "thaumicunity:terra": 1,
+      "thaumicunity:pulvis": 1,
+      "thaumicunity:ignis": 1
+    },
+    "minecraft:gravel": {
+      "thaumicunity:terra": 2,
+      "thaumicunity:pulvis": 1
+    },
+    "minecraft:flint": {
+      "thaumicunity:terra": 1,
+      "thaumicunity:instrumentum": 1,
+      "thaumicunity:telum": 1
+    },
+    "minecraft:obsidian": {
+      "thaumicunity:terra": 3,
+      "thaumicunity:ignis": 2,
+      "thaumicunity:tenebrae": 2,
+      "thaumicunity:tutamen": 1
+    },
+    "minecraft:crying_obsidian": {
+      "thaumicunity:terra": 3,
+      "thaumicunity:tenebrae": 2,
+      "thaumicunity:alienis": 1,
+      "thaumicunity:sanguis": 1
+    },
+    "minecraft:bedrock": {
+      "thaumicunity:terra": 16,
+      "thaumicunity:vacuos": 8,
+      "thaumicunity:tutamen": 16
+    },
+    "minecraft:netherrack": {
+      "thaumicunity:terra": 1,
+      "thaumicunity:ignis": 1,
+      "thaumicunity:infernus": 1
+    },
+    "minecraft:soul_sand": {
+      "thaumicunity:terra": 1,
+      "thaumicunity:spiritus": 2,
+      "thaumicunity:vinculum": 1
+    },
+    "minecraft:soul_soil": {
+      "thaumicunity:terra": 1,
+      "thaumicunity:spiritus": 2
+    },
+    "minecraft:basalt": {
+      "thaumicunity:terra": 2,
+      "thaumicunity:ignis": 1,
+      "thaumicunity:cinis": 1
+    },
+    "minecraft:blackstone": {
+      "thaumicunity:terra": 2,
+      "thaumicunity:tenebrae": 1,
+      "thaumicunity:infernus": 1
+    },
+    "minecraft:magma_block": {
+      "thaumicunity:terra": 1,
+      "thaumicunity:ignis": 2,
+      "thaumicunity:magma": 2
+    },
+    "minecraft:end_stone": {
+      "thaumicunity:terra": 2,
+      "thaumicunity:alienis": 1,
+      "thaumicunity:vacuos": 1
+    },
+    "minecraft:amethyst_shard": {
+      "thaumicunity:vitreus": 2,
+      "thaumicunity:praecantatio": 1,
+      "thaumicunity:sonus": 1
+    },
+    "minecraft:budding_amethyst": {
+      "thaumicunity:vitreus": 4,
+      "thaumicunity:praecantatio": 2,
+      "thaumicunity:victus": 1
+    },
+    "minecraft:ice": {
+      "thaumicunity:gelum": 2,
+      "thaumicunity:glacies": 2
+    },
+    "minecraft:packed_ice": {
+      "thaumicunity:gelum": 3,
+      "thaumicunity:glacies": 3,
+      "thaumicunity:ordo": 1
+    },
+    "minecraft:blue_ice": {
+      "thaumicunity:gelum": 4,
+      "thaumicunity:glacies": 4,
+      "thaumicunity:velocitas": 1
+    },
+    "minecraft:snowball": {
+      "thaumicunity:gelum": 1,
+      "thaumicunity:nix": 1
+    },
+    "minecraft:snow_block": {
+      "thaumicunity:gelum": 2,
+      "thaumicunity:nix": 2
+    },
+    "minecraft:sculk": {
+      "thaumicunity:tenebrae": 1,
+      "thaumicunity:sonus": 1,
+      "thaumicunity:spiritus": 1
+    },
+    "minecraft:sculk_sensor": {
+      "thaumicunity:sonus": 3,
+      "thaumicunity:sensus": 2,
+      "thaumicunity:tenebrae": 1
+    },
+    "minecraft:sculk_catalyst": {
+      "thaumicunity:sonus": 2,
+      "thaumicunity:spiritus": 3,
+      "thaumicunity:mortuus": 2
+    },
+    "minecraft:sculk_shrieker": {
+      "thaumicunity:sonus": 4,
+      "thaumicunity:tenebrae": 2,
+      "thaumicunity:vigil": 2
+    },
+    "minecraft:echo_shard": {
+      "thaumicunity:sonus": 3,
+      "thaumicunity:tenebrae": 2,
+      "thaumicunity:resonantia": 2
+    },
+    "minecraft:coal": {
+      "thaumicunity:potentia": 2,
+      "thaumicunity:ignis": 2,
+      "thaumicunity:cinis": 1
+    },
+    "minecraft:charcoal": {
+      "thaumicunity:potentia": 2,
+      "thaumicunity:ignis": 2,
+      "thaumicunity:lignum": 1
+    },
+    "minecraft:raw_iron": {
+      "thaumicunity:metallum": 4,
+      "thaumicunity:terra": 1,
+      "thaumicunity:minera": 1
+    },
+    "minecraft:iron_ingot": {
+      "thaumicunity:metallum": 5
+    },
+    "minecraft:iron_nugget": {
+      "thaumicunity:metallum": 1
+    },
+    "minecraft:raw_copper": {
+      "thaumicunity:metallum": 3,
+      "thaumicunity:terra": 1,
+      "thaumicunity:permutatio": 1
+    },
+    "minecraft:copper_ingot": {
+      "thaumicunity:metallum": 3,
+      "thaumicunity:permutatio": 1,
+      "thaumicunity:electrum": 1
+    },
+    "minecraft:raw_gold": {
+      "thaumicunity:metallum": 3,
+      "thaumicunity:aurum": 2,
+      "thaumicunity:terra": 1
+    },
+    "minecraft:gold_ingot": {
+      "thaumicunity:metallum": 3,
+      "thaumicunity:aurum": 4
+    },
+    "minecraft:gold_nugget": {
+      "thaumicunity:aurum": 1
+    },
+    "minecraft:diamond": {
+      "thaumicunity:vitreus": 6,
+      "thaumicunity:gemma": 4,
+      "thaumicunity:tutamen": 2
+    },
+    "minecraft:emerald": {
+      "thaumicunity:vitreus": 4,
+      "thaumicunity:gemma": 3,
+      "thaumicunity:lucrum": 4
+    },
+    "minecraft:lapis_lazuli": {
+      "thaumicunity:vitreus": 1,
+      "thaumicunity:praecantatio": 1,
+      "thaumicunity:cognitio": 1
+    },
+    "minecraft:redstone": {
+      "thaumicunity:potentia": 2,
+      "thaumicunity:machina": 1,
+      "thaumicunity:electrum": 1
+    },
+    "minecraft:glowstone_dust": {
+      "thaumicunity:lux": 2,
+      "thaumicunity:potentia": 1,
+      "thaumicunity:infernus": 1
+    },
+    "minecraft:quartz": {
+      "thaumicunity:vitreus": 2,
+      "thaumicunity:infernus": 1,
+      "thaumicunity:ordo": 1
+    },
+    "minecraft:netherite_scrap": {
+      "thaumicunity:metallum": 4,
+      "thaumicunity:infernus": 3,
+      "thaumicunity:tutamen": 2
+    },
+    "minecraft:ancient_debris": {
+      "thaumicunity:metallum": 4,
+      "thaumicunity:infernus": 4,
+      "thaumicunity:tempus": 2
+    },
+    "minecraft:oak_sapling": {
+      "thaumicunity:herba": 2,
+      "thaumicunity:arbor": 1,
+      "thaumicunity:granum": 1
+    },
+    "minecraft:wheat_seeds": {
+      "thaumicunity:herba": 1,
+      "thaumicunity:granum": 1
+    },
+    "minecraft:wheat": {
+      "thaumicunity:herba": 1,
+      "thaumicunity:messis": 1
+    },
+    "minecraft:carrot": {
+      "thaumicunity:herba": 1,
+      "thaumicunity:messis": 1,
+      "thaumicunity:sensus": 1
+    },
+    "minecraft:potato": {
+      "thaumicunity:herba": 1,
+      "thaumicunity:messis": 1,
+      "thaumicunity:terra": 1
+    },
+    "minecraft:poisonous_potato": {
+      "thaumicunity:herba": 1,
+      "thaumicunity:venenum": 2
+    },
+    "minecraft:beetroot": {
+      "thaumicunity:herba": 1,
+      "thaumicunity:messis": 1,
+      "thaumicunity:sanguis": 1
+    },
+    "minecraft:beetroot_seeds": {
+      "thaumicunity:herba": 1,
+      "thaumicunity:granum": 1
+    },
+    "minecraft:melon_slice": {
+      "thaumicunity:herba": 1,
+      "thaumicunity:messis": 1,
+      "thaumicunity:aqua": 1
+    },
+    "minecraft:pumpkin": {
+      "thaumicunity:herba": 3,
+      "thaumicunity:messis": 2
+    },
+    "minecraft:sugar_cane": {
+      "thaumicunity:herba": 1,
+      "thaumicunity:aqua": 1
+    },
+    "minecraft:sugar": {
+      "thaumicunity:messis": 1,
+      "thaumicunity:velocitas": 1
+    },
+    "minecraft:cactus": {
+      "thaumicunity:herba": 2,
+      "thaumicunity:telum": 1,
+      "thaumicunity:aqua": 1
+    },
+    "minecraft:bamboo": {
+      "thaumicunity:herba": 1,
+      "thaumicunity:arbor": 1,
+      "thaumicunity:velocitas": 1
+    },
+    "minecraft:kelp": {
+      "thaumicunity:herba": 1,
+      "thaumicunity:aqua": 1
+    },
+    "minecraft:seagrass": {
+      "thaumicunity:herba": 1,
+      "thaumicunity:aqua": 1
+    },
+    "minecraft:vine": {
+      "thaumicunity:herba": 1,
+      "thaumicunity:vinculum": 1
+    },
+    "minecraft:lily_pad": {
+      "thaumicunity:herba": 1,
+      "thaumicunity:aqua": 1
+    },
+    "minecraft:moss_block": {
+      "thaumicunity:herba": 2,
+      "thaumicunity:terra": 1
+    },
+    "minecraft:short_grass": {
+      "thaumicunity:herba": 1
+    },
+    "minecraft:fern": {
+      "thaumicunity:herba": 1
+    },
+    "minecraft:dead_bush": {
+      "thaumicunity:herba": 1,
+      "thaumicunity:mortuus": 1,
+      "thaumicunity:cinis": 1
+    },
+    "minecraft:sweet_berries": {
+      "thaumicunity:herba": 1,
+      "thaumicunity:messis": 1,
+      "thaumicunity:sapor": 1
+    },
+    "minecraft:glow_berries": {
+      "thaumicunity:herba": 1,
+      "thaumicunity:messis": 1,
+      "thaumicunity:lux": 1
+    },
+    "minecraft:apple": {
+      "thaumicunity:herba": 1,
+      "thaumicunity:messis": 1,
+      "thaumicunity:sano": 1
+    },
+    "minecraft:cocoa_beans": {
+      "thaumicunity:herba": 1,
+      "thaumicunity:messis": 1,
+      "thaumicunity:potentia": 1
+    },
+    "minecraft:nether_wart": {
+      "thaumicunity:herba": 1,
+      "thaumicunity:infernus": 2,
+      "thaumicunity:alkimia": 1
+    },
+    "minecraft:chorus_fruit": {
+      "thaumicunity:herba": 1,
+      "thaumicunity:alienis": 2,
+      "thaumicunity:spatium": 1
+    },
+    "minecraft:brown_mushroom": {
+      "thaumicunity:fungus": 2,
+      "thaumicunity:tenebrae": 1
+    },
+    "minecraft:red_mushroom": {
+      "thaumicunity:fungus": 2,
+      "thaumicunity:venenum": 1
+    },
+    "minecraft:crimson_fungus": {
+      "thaumicunity:fungus": 2,
+      "thaumicunity:infernus": 1
+    },
+    "minecraft:warped_fungus": {
+      "thaumicunity:fungus": 2,
+      "thaumicunity:infernus": 1,
+      "thaumicunity:alienis": 1
+    },
+    "minecraft:spore_blossom": {
+      "thaumicunity:flos": 2,
+      "thaumicunity:fertilitas": 1,
+      "thaumicunity:aer": 1
+    },
+    "minecraft:torchflower": {
+      "thaumicunity:flos": 2,
+      "thaumicunity:lux": 1
+    },
+    "minecraft:pitcher_plant": {
+      "thaumicunity:flos": 2,
+      "thaumicunity:aqua": 1
+    },
+    "minecraft:wither_rose": {
+      "thaumicunity:flos": 1,
+      "thaumicunity:mortuus": 3,
+      "thaumicunity:vitium": 1
+    },
+    "minecraft:rotten_flesh": {
+      "thaumicunity:corpus": 2,
+      "thaumicunity:mortuus": 1,
+      "thaumicunity:morbus": 1
+    },
+    "minecraft:bone": {
+      "thaumicunity:ossum": 2,
+      "thaumicunity:mortuus": 1
+    },
+    "minecraft:string": {
+      "thaumicunity:pannus": 1,
+      "thaumicunity:bestia": 1,
+      "thaumicunity:vinculum": 1
+    },
+    "minecraft:spider_eye": {
+      "thaumicunity:sensus": 2,
+      "thaumicunity:venenum": 2,
+      "thaumicunity:bestia": 1
+    },
+    "minecraft:gunpowder": {
+      "thaumicunity:ignis": 2,
+      "thaumicunity:perditio": 2,
+      "thaumicunity:exitium": 1
+    },
+    "minecraft:ender_pearl": {
+      "thaumicunity:alienis": 2,
+      "thaumicunity:iter": 2,
+      "thaumicunity:spatium": 2
+    },
+    "minecraft:blaze_rod": {
+      "thaumicunity:ignis": 4,
+      "thaumicunity:infernus": 2,
+      "thaumicunity:potentia": 2
+    },
+    "minecraft:ghast_tear": {
+      "thaumicunity:sano": 3,
+      "thaumicunity:spiritus": 2,
+      "thaumicunity:infernus": 1,
+      "thaumicunity:sonus": 1
+    },
+    "minecraft:slime_ball": {
+      "thaumicunity:limus": 3,
+      "thaumicunity:victus": 1
+    },
+    "minecraft:magma_cream": {
+      "thaumicunity:limus": 2,
+      "thaumicunity:ignis": 2,
+      "thaumicunity:magma": 1
+    },
+    "minecraft:feather": {
+      "thaumicunity:aer": 1,
+      "thaumicunity:volatus": 2,
+      "thaumicunity:avis": 1
+    },
+    "minecraft:leather": {
+      "thaumicunity:bestia": 2,
+      "thaumicunity:pannus": 1,
+      "thaumicunity:tutamen": 1
+    },
+    "minecraft:rabbit_hide": {
+      "thaumicunity:bestia": 1,
+      "thaumicunity:pannus": 1
+    },
+    "minecraft:rabbit_foot": {
+      "thaumicunity:bestia": 1,
+      "thaumicunity:fortuna": 3,
+      "thaumicunity:velocitas": 1
+    },
+    "minecraft:egg": {
+      "thaumicunity:bestia": 1,
+      "thaumicunity:victus": 1,
+      "thaumicunity:granum": 1
+    },
+    "minecraft:ink_sac": {
+      "thaumicunity:aqua": 1,
+      "thaumicunity:tenebrae": 2,
+      "thaumicunity:bestia": 1
+    },
+    "minecraft:glow_ink_sac": {
+      "thaumicunity:aqua": 1,
+      "thaumicunity:lux": 2,
+      "thaumicunity:bestia": 1
+    },
+    "minecraft:honeycomb": {
+      "thaumicunity:insectum": 1,
+      "thaumicunity:ordo": 1,
+      "thaumicunity:sapor": 1
+    },
+    "minecraft:phantom_membrane": {
+      "thaumicunity:volatus": 3,
+      "thaumicunity:somnium": 2,
+      "thaumicunity:exanimis": 1
+    },
+    "minecraft:nautilus_shell": {
+      "thaumicunity:aqua": 2,
+      "thaumicunity:tutamen": 2,
+      "thaumicunity:piscis": 1
+    },
+    "minecraft:heart_of_the_sea": {
+      "thaumicunity:aqua": 6,
+      "thaumicunity:praecantatio": 3,
+      "thaumicunity:cognitio": 2
+    },
+    "minecraft:scute": {
+      "thaumicunity:tutamen": 2,
+      "thaumicunity:bestia": 1,
+      "thaumicunity:aqua": 1
+    },
+    "minecraft:armadillo_scute": {
+      "thaumicunity:tutamen": 2,
+      "thaumicunity:bestia": 1,
+      "thaumicunity:terra": 1
+    },
+    "minecraft:shulker_shell": {
+      "thaumicunity:tutamen": 3,
+      "thaumicunity:alienis": 2,
+      "thaumicunity:levitas": 1
+    },
+    "minecraft:prismarine_shard": {
+      "thaumicunity:aqua": 1,
+      "thaumicunity:vitreus": 1,
+      "thaumicunity:ordo": 1
+    },
+    "minecraft:prismarine_crystals": {
+      "thaumicunity:aqua": 1,
+      "thaumicunity:vitreus": 1,
+      "thaumicunity:lux": 1
+    },
+    "minecraft:turtle_egg": {
+      "thaumicunity:bestia": 2,
+      "thaumicunity:victus": 2,
+      "thaumicunity:aqua": 1
+    },
+    "minecraft:breeze_rod": {
+      "thaumicunity:aer": 4,
+      "thaumicunity:ventus": 2,
+      "thaumicunity:motus": 2
+    },
+    "minecraft:dragon_breath": {
+      "thaumicunity:draco": 3,
+      "thaumicunity:praecantatio": 2,
+      "thaumicunity:alkimia": 1
+    },
+    "minecraft:dragon_egg": {
+      "thaumicunity:draco": 16,
+      "thaumicunity:alienis": 8,
+      "thaumicunity:victus": 8,
+      "thaumicunity:praecantatio": 8
+    },
+    "minecraft:nether_star": {
+      "thaumicunity:spiritus": 8,
+      "thaumicunity:lux": 6,
+      "thaumicunity:potentia": 8,
+      "thaumicunity:praecantatio": 6,
+      "thaumicunity:aevum": 2
+    },
+    "minecraft:totem_of_undying": {
+      "thaumicunity:victus": 6,
+      "thaumicunity:spiritus": 6,
+      "thaumicunity:aevum": 3,
+      "thaumicunity:praecantatio": 4
+    },
+    "minecraft:elytra": {
+      "thaumicunity:volatus": 8,
+      "thaumicunity:aer": 4,
+      "thaumicunity:alienis": 2
+    },
+    "minecraft:trident": {
+      "thaumicunity:telum": 6,
+      "thaumicunity:aqua": 4,
+      "thaumicunity:fulgur": 2
+    },
+    "minecraft:heavy_core": {
+      "thaumicunity:gravitas": 6,
+      "thaumicunity:metallum": 4,
+      "thaumicunity:tempus": 2
+    },
+    "minecraft:experience_bottle": {
+      "thaumicunity:cognitio": 3,
+      "thaumicunity:praecantatio": 2
+    },
+    "minecraft:beef": {
+      "thaumicunity:caro": 2,
+      "thaumicunity:bestia": 1,
+      "thaumicunity:fames": 1
+    },
+    "minecraft:porkchop": {
+      "thaumicunity:caro": 2,
+      "thaumicunity:bestia": 1,
+      "thaumicunity:fames": 1
+    },
+    "minecraft:chicken": {
+      "thaumicunity:caro": 1,
+      "thaumicunity:avis": 1,
+      "thaumicunity:fames": 1
+    },
+    "minecraft:mutton": {
+      "thaumicunity:caro": 2,
+      "thaumicunity:bestia": 1,
+      "thaumicunity:fames": 1
+    },
+    "minecraft:rabbit": {
+      "thaumicunity:caro": 1,
+      "thaumicunity:bestia": 1,
+      "thaumicunity:fames": 1
+    },
+    "minecraft:cod": {
+      "thaumicunity:caro": 1,
+      "thaumicunity:piscis": 2
+    },
+    "minecraft:salmon": {
+      "thaumicunity:caro": 1,
+      "thaumicunity:piscis": 2
+    },
+    "minecraft:tropical_fish": {
+      "thaumicunity:piscis": 2,
+      "thaumicunity:ars": 1
+    },
+    "minecraft:pufferfish": {
+      "thaumicunity:piscis": 2,
+      "thaumicunity:venenum": 2
+    },
+    "minecraft:milk_bucket": {
+      "thaumicunity:sano": 2,
+      "thaumicunity:victus": 1,
+      "thaumicunity:metallum": 6
+    },
+    "minecraft:honey_bottle": {
+      "thaumicunity:sapor": 2,
+      "thaumicunity:sano": 1,
+      "thaumicunity:vitreus": 1
+    },
+    "minecraft:water_bucket": {
+      "thaumicunity:aqua": 4,
+      "thaumicunity:metallum": 6
+    },
+    "minecraft:lava_bucket": {
+      "thaumicunity:ignis": 4,
+      "thaumicunity:magma": 2,
+      "thaumicunity:metallum": 6
+    },
+    "minecraft:powder_snow_bucket": {
+      "thaumicunity:gelum": 3,
+      "thaumicunity:nix": 2,
+      "thaumicunity:metallum": 6
+    },
+    "minecraft:white_wool": {
+      "thaumicunity:pannus": 2,
+      "thaumicunity:bestia": 1
+    },
+    "minecraft:cobweb": {
+      "thaumicunity:vinculum": 3,
+      "thaumicunity:bestia": 1
+    },
+    "minecraft:sponge": {
+      "thaumicunity:aqua": 2,
+      "thaumicunity:vacuos": 2,
+      "thaumicunity:bestia": 1
+    },
+    "minecraft:tnt": {
+      "thaumicunity:exitium": 4,
+      "thaumicunity:ignis": 4,
+      "thaumicunity:perditio": 4
+    },
+    "minecraft:book": {
+      "thaumicunity:cognitio": 2,
+      "thaumicunity:pannus": 1
+    },
+    "minecraft:paper": {
+      "thaumicunity:cognitio": 1,
+      "thaumicunity:herba": 1
+    },
+    "minecraft:name_tag": {
+      "thaumicunity:cognitio": 2,
+      "thaumicunity:humanus": 2,
+      "thaumicunity:vinculum": 1
+    },
+    "minecraft:saddle": {
+      "thaumicunity:bestia": 2,
+      "thaumicunity:iter": 2,
+      "thaumicunity:pannus": 2
+    },
+    "minecraft:enchanted_book": {
+      "thaumicunity:cognitio": 4,
+      "thaumicunity:praecantatio": 4
+    },
+    "minecraft:music_disc_13": {
+      "thaumicunity:sonus": 4,
+      "thaumicunity:harmonia": 2,
+      "thaumicunity:memoria": 1
+    },
+    "minecraft:goat_horn": {
+      "thaumicunity:sonus": 4,
+      "thaumicunity:bestia": 2
+    },
+    "minecraft:bell": {
+      "thaumicunity:sonus": 4,
+      "thaumicunity:aurum": 2,
+      "thaumicunity:harmonia": 2
+    },
+    "minecraft:spawner": {
+      "thaumicunity:vocatio": 6,
+      "thaumicunity:praecantatio": 4,
+      "thaumicunity:mortuus": 4,
+      "thaumicunity:machina": 2
+    },
+    "minecraft:end_crystal": {
+      "thaumicunity:sano": 4,
+      "thaumicunity:alienis": 4,
+      "thaumicunity:potentia": 4,
+      "thaumicunity:vitreus": 2
+    },
+    "minecraft:conduit": {
+      "thaumicunity:aqua": 8,
+      "thaumicunity:praecantatio": 4,
+      "thaumicunity:tutamen": 4
+    },
+    "minecraft:beacon": {
+      "thaumicunity:lux": 8,
+      "thaumicunity:praecantatio": 6,
+      "thaumicunity:auram": 4
+    },
+    "thaumicunity:cinnabar": {
+      "thaumicunity:hydrargyrum": 2,
+      "thaumicunity:terra": 1,
+      "thaumicunity:venenum": 1
+    },
+    "thaumicunity:quicksilver": {
+      "thaumicunity:hydrargyrum": 4,
+      "thaumicunity:alkimia": 1
+    },
+    "thaumicunity:amber": {
+      "thaumicunity:vitreus": 2,
+      "thaumicunity:vinculum": 2,
+      "thaumicunity:tempus": 1
+    },
+    "thaumicunity:aer_vis_crystal": {
+      "thaumicunity:aer": 4,
+      "thaumicunity:vitreus": 1
+    },
+    "thaumicunity:terra_vis_crystal": {
+      "thaumicunity:terra": 4,
+      "thaumicunity:vitreus": 1
+    },
+    "thaumicunity:ignis_vis_crystal": {
+      "thaumicunity:ignis": 4,
+      "thaumicunity:vitreus": 1
+    },
+    "thaumicunity:aqua_vis_crystal": {
+      "thaumicunity:aqua": 4,
+      "thaumicunity:vitreus": 1
+    },
+    "thaumicunity:ordo_vis_crystal": {
+      "thaumicunity:ordo": 4,
+      "thaumicunity:vitreus": 1
+    },
+    "thaumicunity:perditio_vis_crystal": {
+      "thaumicunity:perditio": 4,
+      "thaumicunity:vitreus": 1
+    },
+    "thaumicunity:salis_mundus": {
+      "thaumicunity:praecantatio": 2,
+      "thaumicunity:alkimia": 1,
+      "thaumicunity:auram": 1
+    },
+    "thaumicunity:thaumium_ingot": {
+      "thaumicunity:metallum": 4,
+      "thaumicunity:praecantatio": 3
+    },
+    "thaumicunity:thaumium_nugget": {
+      "thaumicunity:praecantatio": 1
+    },
+    "thaumicunity:brass_ingot": {
+      "thaumicunity:metallum": 4,
+      "thaumicunity:instrumentum": 2
+    },
+    "thaumicunity:brass_nugget": {
+      "thaumicunity:instrumentum": 1
+    },
+    "thaumicunity:alumentum": {
+      "thaumicunity:potentia": 4,
+      "thaumicunity:ignis": 4,
+      "thaumicunity:exitium": 2
+    },
+    "thaumicunity:nitor": {
+      "thaumicunity:lux": 6,
+      "thaumicunity:potentia": 2,
+      "thaumicunity:praecantatio": 2
+    },
+    "thaumicunity:tallow": {
+      "thaumicunity:corpus": 2,
+      "thaumicunity:ignis": 1,
+      "thaumicunity:oleum": 1
+    },
+    "thaumicunity:enchanted_fabric": {
+      "thaumicunity:pannus": 3,
+      "thaumicunity:praecantatio": 2
+    }
+  }
+}

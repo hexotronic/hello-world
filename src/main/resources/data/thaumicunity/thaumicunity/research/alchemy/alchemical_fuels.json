@@ -1,0 +1,39 @@
+{
+  "category": "thaumicunity:alchemy",
+  "x": 2,
+  "y": 2,
+  "icon": "thaumicunity:alumentum",
+  "parents": [
+    "thaumicunity:alchemy/crucible"
+  ],
+  "aspects": [
+    "thaumicunity:potentia",
+    "thaumicunity:lux"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.alchemy.alchemical_fuels.stage0",
+      "requirements": [
+        {
+          "type": "scan",
+          "target": "item:minecraft:glowstone_dust"
+        },
+        {
+          "type": "scan",
+          "target": "item:minecraft:gunpowder"
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.alchemy.alchemical_fuels.stage1",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:alchemy/nitor",
+        "thaumicunity:alchemy/alumentum",
+        "thaumicunity:alchemy/tallow",
+        "thaumicunity:tallow_from_smelting"
+      ]
+    }
+  ]
+}

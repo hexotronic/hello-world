@@ -1,0 +1,20 @@
+{
+  "kind": "medium",
+  "primitive": "thaumicunity:projectile",
+  "complexity": 2,
+  "cost_multiplier": 1.0,
+  "tags": [
+    "projectile",
+    "arc"
+  ],
+  "params": {
+    "speed": 1.2,
+    "gravity": 0.05
+  },
+  "visual": {
+    "particle": "thaumicunity:spark"
+  },
+  "cost": {
+    "thaumicunity:terra": 1
+  }
+}

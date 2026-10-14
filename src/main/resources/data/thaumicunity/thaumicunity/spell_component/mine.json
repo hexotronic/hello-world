@@ -1,0 +1,22 @@
+{
+  "kind": "medium",
+  "primitive": "thaumicunity:targeted_zone",
+  "complexity": 4,
+  "cost_multiplier": 1.6,
+  "tags": [
+    "zone",
+    "trap"
+  ],
+  "params": {
+    "range": 16.0,
+    "radius": 2.0,
+    "duration": 60,
+    "trigger": "delay"
+  },
+  "visual": {
+    "particle": "thaumicunity:rune"
+  },
+  "cost": {
+    "thaumicunity:perditio": 2
+  }
+}

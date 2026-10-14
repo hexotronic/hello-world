@@ -1,0 +1,9 @@
+{
+  "tag": "minecraft:saplings",
+  "aspects": {
+    "thaumicunity:herba": 2,
+    "thaumicunity:arbor": 1,
+    "thaumicunity:granum": 1
+  },
+  "priority": 10
+}

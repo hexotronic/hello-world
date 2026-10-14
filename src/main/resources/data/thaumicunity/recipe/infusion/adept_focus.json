@@ -1,0 +1,20 @@
+{
+  "type": "thaumicunity:infusion",
+  "central": "minecraft:diamond",
+  "components": [
+    "thaumicunity:thaumium_ingot",
+    "minecraft:amethyst_shard",
+    "thaumicunity:thaumium_ingot",
+    "minecraft:amethyst_shard"
+  ],
+  "essentia": {
+    "thaumicunity:praecantatio": 12,
+    "thaumicunity:cognitio": 6,
+    "thaumicunity:vitreus": 6
+  },
+  "instability": 3,
+  "result": {
+    "id": "thaumicunity:adept_focus"
+  },
+  "research": "thaumicunity:infusion/greater_foci"
+}

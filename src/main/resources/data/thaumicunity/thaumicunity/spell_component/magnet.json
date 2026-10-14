@@ -1,0 +1,22 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:attract_items",
+  "aspect": "thaumicunity:magneto",
+  "cost": {
+    "thaumicunity:terra": 2,
+    "thaumicunity:ordo": 1
+  },
+  "complexity": 1,
+  "cooldown": 10,
+  "tags": [
+    "neutral"
+  ],
+  "params": {
+    "radius": 6
+  },
+  "visual": {
+    "color": "#b0b0d0",
+    "particle": "thaumicunity:spark",
+    "sound": "thaumicunity:misc.zap"
+  }
+}

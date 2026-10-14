@@ -1,0 +1,13 @@
+{
+  "kind": "modifier",
+  "primitive": "thaumicunity:reveal",
+  "complexity": 1,
+  "ops": {
+    "cost": 1.1
+  },
+  "params": {
+    "duration": 160
+  },
+  "applies_to": [],
+  "tier": 1
+}

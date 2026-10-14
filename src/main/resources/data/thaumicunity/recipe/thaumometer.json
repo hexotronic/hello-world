@@ -1,0 +1,20 @@
+{
+  "type": "thaumicunity:arcane_shaped",
+  "key": {
+    "G": "minecraft:gold_ingot",
+    "A": "minecraft:amethyst_shard"
+  },
+  "pattern": [
+    " G ",
+    "GAG",
+    " G "
+  ],
+  "vis": {
+    "thaumicunity:aer": 5,
+    "thaumicunity:ordo": 5
+  },
+  "result": {
+    "id": "thaumicunity:thaumometer"
+  },
+  "research": "thaumicunity:fundamentals/arcane_workbench"
+}

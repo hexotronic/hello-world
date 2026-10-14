@@ -1,0 +1,17 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:heal",
+  "aspect": "thaumicunity:victus",
+  "synergy_of": "thaumicunity:victus",
+  "complexity": 0,
+  "params": {
+    "amount": 2.0
+  },
+  "visual": {
+    "color": "#de0005",
+    "particle": "thaumicunity:wisp"
+  },
+  "tags": [
+    "synergy"
+  ]
+}

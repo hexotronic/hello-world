@@ -1,0 +1,411 @@
+{
+  "values": {
+    "#minecraft:is_overworld": {
+      "base": 100,
+      "attunement": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    "#minecraft:is_ocean": {
+      "base": 90,
+      "attunement": [
+        1.1,
+        0.7,
+        0.6,
+        1.8,
+        1.0,
+        0.8
+      ]
+    },
+    "#minecraft:is_deep_ocean": {
+      "base": 110,
+      "attunement": [
+        0.9,
+        0.6,
+        0.4,
+        2.0,
+        1.1,
+        1.0
+      ]
+    },
+    "#minecraft:is_beach": {
+      "base": 95,
+      "attunement": [
+        1.3,
+        0.9,
+        0.9,
+        1.4,
+        1.0,
+        0.7
+      ]
+    },
+    "#minecraft:is_river": {
+      "base": 105,
+      "attunement": [
+        1.0,
+        1.0,
+        0.8,
+        1.6,
+        1.1,
+        0.7
+      ]
+    },
+    "#minecraft:is_mountain": {
+      "base": 120,
+      "attunement": [
+        1.6,
+        1.4,
+        0.7,
+        0.8,
+        1.2,
+        0.6
+      ]
+    },
+    "#minecraft:is_hill": {
+      "base": 110,
+      "attunement": [
+        1.4,
+        1.3,
+        0.8,
+        0.9,
+        1.1,
+        0.7
+      ]
+    },
+    "#minecraft:is_forest": {
+      "base": 125,
+      "attunement": [
+        1.0,
+        1.4,
+        0.7,
+        1.1,
+        1.0,
+        0.8
+      ]
+    },
+    "#minecraft:is_taiga": {
+      "base": 115,
+      "attunement": [
+        1.1,
+        1.3,
+        0.6,
+        1.0,
+        1.2,
+        0.8
+      ]
+    },
+    "#minecraft:is_jungle": {
+      "base": 140,
+      "attunement": [
+        1.0,
+        1.5,
+        0.9,
+        1.4,
+        0.7,
+        1.0
+      ]
+    },
+    "#minecraft:is_savanna": {
+      "base": 100,
+      "attunement": [
+        1.3,
+        1.1,
+        1.5,
+        0.6,
+        0.9,
+        0.9
+      ]
+    },
+    "#minecraft:is_badlands": {
+      "base": 90,
+      "attunement": [
+        1.0,
+        1.5,
+        1.6,
+        0.4,
+        0.8,
+        1.1
+      ]
+    },
+    "#minecraft:is_nether": {
+      "base": 160,
+      "attunement": [
+        0.5,
+        1.0,
+        2.2,
+        0.3,
+        0.6,
+        1.6
+      ]
+    },
+    "#minecraft:is_end": {
+      "base": 180,
+      "attunement": [
+        1.2,
+        0.6,
+        0.5,
+        0.5,
+        1.8,
+        1.4
+      ]
+    },
+    "#c:is_snowy": {
+      "base": 100,
+      "attunement": [
+        1.2,
+        1.0,
+        0.4,
+        1.2,
+        1.5,
+        0.8
+      ]
+    },
+    "#c:is_desert": {
+      "base": 85,
+      "attunement": [
+        1.4,
+        1.2,
+        1.8,
+        0.3,
+        0.9,
+        1.0
+      ]
+    },
+    "#c:is_swamp": {
+      "base": 120,
+      "attunement": [
+        0.8,
+        1.1,
+        0.6,
+        1.6,
+        0.7,
+        1.5
+      ]
+    },
+    "#c:is_spooky": {
+      "base": 130,
+      "attunement": [
+        0.8,
+        1.0,
+        0.7,
+        0.9,
+        0.6,
+        1.8
+      ]
+    },
+    "#c:is_magical": {
+      "base": 200,
+      "attunement": [
+        1.2,
+        1.2,
+        1.2,
+        1.2,
+        1.2,
+        1.2
+      ]
+    },
+    "#c:is_cave": {
+      "base": 95,
+      "attunement": [
+        0.6,
+        1.8,
+        0.9,
+        1.0,
+        1.0,
+        1.1
+      ]
+    },
+    "minecraft:plains": {
+      "base": 100,
+      "attunement": [
+        1.3,
+        1.2,
+        1.0,
+        1.0,
+        1.0,
+        0.8
+      ]
+    },
+    "minecraft:sunflower_plains": {
+      "base": 110,
+      "attunement": [
+        1.3,
+        1.2,
+        1.3,
+        0.9,
+        1.0,
+        0.7
+      ]
+    },
+    "minecraft:meadow": {
+      "base": 125,
+      "attunement": [
+        1.4,
+        1.2,
+        0.9,
+        1.0,
+        1.2,
+        0.6
+      ]
+    },
+    "minecraft:flower_forest": {
+      "base": 150,
+      "attunement": [
+        1.2,
+        1.3,
+        1.0,
+        1.1,
+        1.3,
+        0.5
+      ]
+    },
+    "minecraft:cherry_grove": {
+      "base": 160,
+      "attunement": [
+        1.4,
+        1.1,
+        0.9,
+        1.0,
+        1.4,
+        0.5
+      ]
+    },
+    "minecraft:dark_forest": {
+      "base": 140,
+      "attunement": [
+        0.7,
+        1.4,
+        0.6,
+        1.0,
+        0.7,
+        1.6
+      ]
+    },
+    "minecraft:pale_garden": {
+      "base": 150,
+      "attunement": [
+        0.8,
+        1.0,
+        0.4,
+        0.9,
+        0.8,
+        2.0
+      ]
+    },
+    "minecraft:mushroom_fields": {
+      "base": 220,
+      "attunement": [
+        0.9,
+        1.4,
+        0.6,
+        1.3,
+        1.0,
+        1.2
+      ]
+    },
+    "minecraft:ice_spikes": {
+      "base": 130,
+      "attunement": [
+        1.2,
+        0.8,
+        0.2,
+        1.3,
+        2.0,
+        0.7
+      ]
+    },
+    "minecraft:lush_caves": {
+      "base": 150,
+      "attunement": [
+        0.9,
+        1.5,
+        0.6,
+        1.5,
+        1.1,
+        0.7
+      ]
+    },
+    "minecraft:dripstone_caves": {
+      "base": 110,
+      "attunement": [
+        0.6,
+        1.9,
+        0.8,
+        1.3,
+        1.2,
+        0.8
+      ]
+    },
+    "minecraft:deep_dark": {
+      "base": 170,
+      "attunement": [
+        0.4,
+        1.3,
+        0.4,
+        0.7,
+        0.5,
+        2.4
+      ]
+    },
+    "minecraft:soul_sand_valley": {
+      "base": 170,
+      "attunement": [
+        0.6,
+        0.9,
+        1.6,
+        0.2,
+        0.5,
+        2.2
+      ]
+    },
+    "minecraft:warped_forest": {
+      "base": 165,
+      "attunement": [
+        0.9,
+        1.0,
+        1.4,
+        0.5,
+        1.4,
+        1.2
+      ]
+    },
+    "minecraft:crimson_forest": {
+      "base": 165,
+      "attunement": [
+        0.6,
+        1.2,
+        2.0,
+        0.3,
+        0.8,
+        1.4
+      ]
+    },
+    "minecraft:basalt_deltas": {
+      "base": 155,
+      "attunement": [
+        0.8,
+        1.6,
+        2.0,
+        0.2,
+        0.6,
+        1.3
+      ]
+    },
+    "minecraft:the_void": {
+      "base": 10,
+      "attunement": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    }
+  }
+}

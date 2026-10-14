@@ -1,0 +1,12 @@
+{
+  "type": "thaumicunity:crucible",
+  "catalyst": "#minecraft:wool",
+  "aspects": {
+    "thaumicunity:praecantatio": 2,
+    "thaumicunity:vinculum": 1
+  },
+  "result": {
+    "id": "thaumicunity:enchanted_fabric"
+  },
+  "research": "thaumicunity:alchemy/enchanted_fabric"
+}

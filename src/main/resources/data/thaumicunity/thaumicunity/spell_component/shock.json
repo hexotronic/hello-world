@@ -1,0 +1,23 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:damage",
+  "aspect": "thaumicunity:potentia",
+  "cost": {
+    "thaumicunity:ordo": 2,
+    "thaumicunity:ignis": 2
+  },
+  "complexity": 2,
+  "cooldown": 12,
+  "tags": [
+    "harmful"
+  ],
+  "params": {
+    "damage": 5.0,
+    "knockback": 0.2
+  },
+  "visual": {
+    "color": "#c0ffff",
+    "particle": "thaumicunity:spark",
+    "sound": "thaumicunity:misc.zap"
+  }
+}

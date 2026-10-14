@@ -1,0 +1,22 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:damage",
+  "aspect": "thaumicunity:ignis",
+  "cost": {
+    "thaumicunity:ignis": 4
+  },
+  "complexity": 1,
+  "cooldown": 10,
+  "tags": [
+    "harmful"
+  ],
+  "params": {
+    "damage": 4.0,
+    "ignite": 3.0
+  },
+  "visual": {
+    "color": "#ff5a01",
+    "particle": "thaumicunity:spark",
+    "sound": "thaumicunity:misc.zap"
+  }
+}

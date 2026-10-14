@@ -1,0 +1,11 @@
+{
+  "type": "thaumicunity:crucible",
+  "catalyst": "minecraft:amethyst_shard",
+  "aspects": {
+    "thaumicunity:terra": 5
+  },
+  "result": {
+    "id": "thaumicunity:terra_vis_crystal"
+  },
+  "research": "thaumicunity:alchemy/vis_crystals"
+}

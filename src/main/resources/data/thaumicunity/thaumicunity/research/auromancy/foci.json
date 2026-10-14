@@ -1,0 +1,37 @@
+{
+  "category": "thaumicunity:auromancy",
+  "x": 2,
+  "y": 0,
+  "icon": "thaumicunity:apprentice_focus",
+  "parents": [
+    "thaumicunity:auromancy/casting"
+  ],
+  "aspects": [
+    "thaumicunity:praecantatio",
+    "thaumicunity:ignis"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.auromancy.foci.stage0",
+      "requirements": [
+        {
+          "type": "craft",
+          "item": "thaumicunity:basic_caster"
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.auromancy.foci.stage1",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:focus/embers",
+        "thaumicunity:focus/frost_shard",
+        "thaumicunity:focus/excavation",
+        "thaumicunity:focus/mending",
+        "thaumicunity:focus/gale",
+        "thaumicunity:focus/warding"
+      ]
+    }
+  ]
+}

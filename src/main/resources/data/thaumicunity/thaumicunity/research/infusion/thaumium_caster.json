@@ -1,0 +1,34 @@
+{
+  "category": "thaumicunity:infusion",
+  "x": 0,
+  "y": 2,
+  "icon": "thaumicunity:thaumium_caster",
+  "parents": [
+    "thaumicunity:infusion/runic_matrix",
+    "thaumicunity:auromancy/casting"
+  ],
+  "aspects": [
+    "thaumicunity:instrumentum",
+    "thaumicunity:potentia"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.infusion.thaumium_caster.stage0",
+      "requirements": [
+        {
+          "type": "obtain",
+          "item": "thaumicunity:basic_caster",
+          "count": 1
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.infusion.thaumium_caster.stage1",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:infusion/thaumium_caster"
+      ]
+    }
+  ]
+}

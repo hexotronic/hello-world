@@ -1,0 +1,9 @@
+{
+  "type": "thaumicunity:add_features",
+  "biomes": "#minecraft:is_overworld",
+  "features": [
+    "thaumicunity:ore_cinnabar",
+    "thaumicunity:ore_amber"
+  ],
+  "step": "underground_ores"
+}

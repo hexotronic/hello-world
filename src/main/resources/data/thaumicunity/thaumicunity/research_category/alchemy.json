@@ -1,0 +1,7 @@
+{
+  "icon": "thaumicunity:crucible",
+  "background": "thaumicunity:alchemy",
+  "order": 10,
+  "color": "#5fb06a",
+  "requires": "thaumicunity:fundamentals/aspects"
+}

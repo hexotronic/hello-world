@@ -1,0 +1,29 @@
+{
+  "type": "thaumicunity:arcane_shapeless",
+  "ingredients": [
+    "thaumicunity:adept_focus",
+    "minecraft:ender_pearl"
+  ],
+  "vis": {
+    "thaumicunity:aer": 20,
+    "thaumicunity:ordo": 10
+  },
+  "result": {
+    "id": "thaumicunity:adept_focus",
+    "components": {
+      "thaumicunity:spell": {
+        "medium": "thaumicunity:self",
+        "effects": [
+          "thaumicunity:blink"
+        ],
+        "modifiers": [
+          "thaumicunity:quicken"
+        ]
+      },
+      "minecraft:item_name": {
+        "translate": "focus.thaumicunity.blink"
+      }
+    }
+  },
+  "research": "thaumicunity:auromancy/advanced_foci"
+}

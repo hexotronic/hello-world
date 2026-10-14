@@ -1,0 +1,32 @@
+{
+  "category": "thaumicunity:fundamentals",
+  "x": 4,
+  "y": 0,
+  "icon": "thaumicunity:thaumometer",
+  "parents": [
+    "thaumicunity:fundamentals/arcane_workbench"
+  ],
+  "aspects": [
+    "thaumicunity:sensus",
+    "thaumicunity:visio"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.fundamentals.thaumometer.stage0",
+      "requirements": [
+        {
+          "type": "craft",
+          "item": "thaumicunity:thaumometer"
+        }
+      ],
+      "recipes": [
+        "thaumicunity:thaumometer"
+      ]
+    },
+    {
+      "text": "research.thaumicunity.fundamentals.thaumometer.stage1",
+      "requirements": [],
+      "recipes": []
+    }
+  ]
+}

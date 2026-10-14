@@ -1,0 +1,8 @@
+{
+  "tag": "c:crops",
+  "aspects": {
+    "thaumicunity:herba": 1,
+    "thaumicunity:messis": 1
+  },
+  "priority": 1
+}

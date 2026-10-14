@@ -1,0 +1,23 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:potion",
+  "aspect": "thaumicunity:levitas",
+  "cost": {
+    "thaumicunity:aer": 4
+  },
+  "complexity": 2,
+  "cooldown": 40,
+  "tags": [
+    "harmful"
+  ],
+  "params": {
+    "effect": "minecraft:levitation",
+    "duration": 60,
+    "amplifier": 0
+  },
+  "visual": {
+    "color": "#f0f0c8",
+    "particle": "thaumicunity:spark",
+    "sound": "thaumicunity:misc.zap"
+  }
+}

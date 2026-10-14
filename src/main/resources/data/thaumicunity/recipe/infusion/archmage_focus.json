@@ -1,0 +1,23 @@
+{
+  "type": "thaumicunity:infusion",
+  "central": "minecraft:ender_eye",
+  "components": [
+    "thaumicunity:thaumium_ingot",
+    "minecraft:diamond",
+    "thaumicunity:thaumium_ingot",
+    "minecraft:diamond",
+    "thaumicunity:thaumium_ingot",
+    "minecraft:diamond"
+  ],
+  "essentia": {
+    "thaumicunity:praecantatio": 24,
+    "thaumicunity:alienis": 8,
+    "thaumicunity:cognitio": 8,
+    "thaumicunity:potentia": 8
+  },
+  "instability": 6,
+  "result": {
+    "id": "thaumicunity:archmage_focus"
+  },
+  "research": "thaumicunity:infusion/greater_foci"
+}

@@ -1,0 +1,9 @@
+{
+  "tag": "minecraft:music_discs",
+  "aspects": {
+    "thaumicunity:sonus": 4,
+    "thaumicunity:harmonia": 2,
+    "thaumicunity:memoria": 1
+  },
+  "priority": 10
+}

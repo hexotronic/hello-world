@@ -1,0 +1,23 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:light",
+  "aspect": "thaumicunity:lux",
+  "cost": {
+    "thaumicunity:aer": 1,
+    "thaumicunity:ignis": 1
+  },
+  "complexity": 1,
+  "cooldown": 10,
+  "tags": [
+    "world"
+  ],
+  "params": {
+    "level": 15,
+    "glow": 200
+  },
+  "visual": {
+    "color": "#fff663",
+    "particle": "thaumicunity:spark",
+    "sound": "thaumicunity:misc.zap"
+  }
+}

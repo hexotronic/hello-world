@@ -1,0 +1,23 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:shield",
+  "aspect": "thaumicunity:tutamen",
+  "cost": {
+    "thaumicunity:terra": 3,
+    "thaumicunity:ordo": 2
+  },
+  "complexity": 2,
+  "cooldown": 60,
+  "tags": [
+    "beneficial"
+  ],
+  "params": {
+    "amount": 2,
+    "duration": 600
+  },
+  "visual": {
+    "color": "#c0a060",
+    "particle": "thaumicunity:spark",
+    "sound": "thaumicunity:misc.zap"
+  }
+}

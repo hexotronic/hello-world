@@ -1,0 +1,9 @@
+{
+  "tag": "minecraft:candles",
+  "aspects": {
+    "thaumicunity:lux": 1,
+    "thaumicunity:ignis": 1,
+    "thaumicunity:corpus": 1
+  },
+  "priority": 10
+}

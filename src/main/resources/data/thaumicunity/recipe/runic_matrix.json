@@ -1,0 +1,22 @@
+{
+  "type": "thaumicunity:arcane_shaped",
+  "key": {
+    "S": "thaumicunity:arcane_stone_bricks",
+    "A": "minecraft:amethyst_shard",
+    "T": "thaumicunity:thaumium_ingot"
+  },
+  "pattern": [
+    "SAS",
+    "ATA",
+    "SAS"
+  ],
+  "vis": {
+    "thaumicunity:ordo": 20,
+    "thaumicunity:aer": 10,
+    "thaumicunity:terra": 10
+  },
+  "result": {
+    "id": "thaumicunity:runic_matrix"
+  },
+  "research": "thaumicunity:infusion/runic_matrix"
+}

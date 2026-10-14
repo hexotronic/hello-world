@@ -1,0 +1,19 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:potion",
+  "aspect": "thaumicunity:lux",
+  "synergy_of": "thaumicunity:lux",
+  "complexity": 0,
+  "params": {
+    "effect": "minecraft:glowing",
+    "duration": 200,
+    "amplifier": 0
+  },
+  "visual": {
+    "color": "#fff4a0",
+    "particle": "thaumicunity:wisp"
+  },
+  "tags": [
+    "synergy"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "type": "thaumicunity:crucible",
+  "catalyst": "minecraft:iron_ingot",
+  "aspects": {
+    "thaumicunity:praecantatio": 4,
+    "thaumicunity:terra": 2
+  },
+  "result": {
+    "id": "thaumicunity:thaumium_ingot"
+  },
+  "research": "thaumicunity:alchemy/metallurgy"
+}

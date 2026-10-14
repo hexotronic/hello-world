@@ -1,0 +1,23 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:teleport",
+  "aspect": "thaumicunity:iter",
+  "cost": {
+    "thaumicunity:aer": 3,
+    "thaumicunity:terra": 2,
+    "thaumicunity:ordo": 2
+  },
+  "complexity": 3,
+  "cooldown": 60,
+  "tags": [
+    "movement"
+  ],
+  "params": {
+    "max_distance": 24.0
+  },
+  "visual": {
+    "color": "#e0585b",
+    "particle": "thaumicunity:spark",
+    "sound": "thaumicunity:misc.zap"
+  }
+}

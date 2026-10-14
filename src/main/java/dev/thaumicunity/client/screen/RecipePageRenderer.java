@@ -10,11 +10,17 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.context.ContextMap;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.ShapedRecipePattern;
+import net.minecraft.world.item.crafting.display.FurnaceRecipeDisplay;
+import net.minecraft.world.item.crafting.display.RecipeDisplay;
+import net.minecraft.world.item.crafting.display.ShapedCraftingRecipeDisplay;
+import net.minecraft.world.item.crafting.display.ShapelessCraftingRecipeDisplay;
+import net.minecraft.world.item.crafting.display.SlotDisplay;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -31,15 +37,17 @@ final class RecipePageRenderer {
 
     private final Font font;
     private final RegistryAccess access;
+    private final ContextMap displayContext;
     private final long time;
     private final int mouseX;
     private final int mouseY;
     private ItemStack hoveredStack = ItemStack.EMPTY;
     private @Nullable Identifier hoveredAspect;
 
-    RecipePageRenderer(Font font, RegistryAccess access, long time, int mouseX, int mouseY) {
+    RecipePageRenderer(Font font, RegistryAccess access, ContextMap displayContext, long time, int mouseX, int mouseY) {
         this.font = font;
         this.access = access;
+        this.displayContext = displayContext;
         this.time = time;
         this.mouseX = mouseX;
         this.mouseY = mouseY;
@@ -53,7 +61,10 @@ final class RecipePageRenderer {
         return hoveredAspect;
     }
 
-    /** Draws the recipe with its top-left corner at (x, y). Returns false for recipe types this page cannot show. */
+    /**
+     * Draws the recipe with its top-left corner at (x, y). Thaumic Unity recipes get their own layouts; crafting
+     * table and furnace recipes are drawn from their vanilla recipe displays. Returns false for anything else.
+     */
     boolean draw(GuiGraphicsExtractor g, Recipe<?> recipe, int x, int y) {
         return switch (recipe) {
             case CrucibleRecipe crucible -> {
@@ -68,8 +79,66 @@ final class RecipePageRenderer {
                 drawInfusion(g, infusion, x, y);
                 yield true;
             }
-            default -> false;
+            default -> recipe.display().stream().anyMatch(display -> drawDisplay(g, display, x, y));
         };
+    }
+
+    private boolean drawDisplay(GuiGraphicsExtractor g, RecipeDisplay display, int x, int y) {
+        switch (display) {
+            case ShapedCraftingRecipeDisplay shaped -> {
+                header(g, Component.translatable("gui.thaumicunity.recipe.crafting"), x, y);
+                drawGrid(g, x + 6, y + 14);
+                for (int row = 0; row < shaped.height(); row++) {
+                    for (int col = 0; col < shaped.width(); col++) {
+                        item(g, cycle(shaped.ingredients().get(col + row * shaped.width())), x + 6 + col * 18, y + 14 + row * 18);
+                    }
+                }
+                arrow(g, x + 66, y + 34);
+                result(g, first(shaped.result()), x + 104, y + 30);
+                return true;
+            }
+            case ShapelessCraftingRecipeDisplay shapeless -> {
+                header(g, Component.translatable("gui.thaumicunity.recipe.crafting"), x, y);
+                drawGrid(g, x + 6, y + 14);
+                List<SlotDisplay> ingredients = shapeless.ingredients();
+                for (int i = 0; i < ingredients.size() && i < 9; i++) {
+                    item(g, cycle(ingredients.get(i)), x + 6 + (i % 3) * 18, y + 14 + (i / 3) * 18);
+                }
+                g.text(font, Component.translatable("gui.thaumicunity.recipe.shapeless"), x + 6, y + 70, GuiUtil.INK_FADED, false);
+                arrow(g, x + 66, y + 34);
+                result(g, first(shapeless.result()), x + 104, y + 30);
+                return true;
+            }
+            case FurnaceRecipeDisplay furnace -> {
+                header(g, Component.translatable("gui.thaumicunity.recipe.smelting"), x, y);
+                GuiUtil.slot(g, x + 30, y + 26);
+                item(g, cycle(furnace.ingredient()), x + 30, y + 26);
+                g.fill(x + 32, y + 46, x + 44, y + 58, 0xFF4A3A28);
+                g.fill(x + 34, y + 50, x + 42, y + 58, 0xFFE07A1F);
+                arrow(g, x + 66, y + 34);
+                result(g, first(furnace.result()), x + 104, y + 30);
+                return true;
+            }
+            default -> {
+                return false;
+            }
+        }
+    }
+
+    private void drawGrid(GuiGraphicsExtractor g, int x, int y) {
+        for (int i = 0; i < 9; i++) {
+            GuiUtil.slot(g, x + (i % 3) * 18, y + (i / 3) * 18);
+        }
+    }
+
+    private ItemStack first(SlotDisplay display) {
+        return display.resolveForFirstStack(displayContext);
+    }
+
+    /** One of the slot's possible items, changing every second. */
+    private ItemStack cycle(SlotDisplay display) {
+        List<ItemStack> options = display.resolveForStacks(displayContext);
+        return options.isEmpty() ? ItemStack.EMPTY : options.get((int) ((time / 20) % options.size()));
     }
 
     private void drawCrucible(GuiGraphicsExtractor g, CrucibleRecipe recipe, int x, int y) {
@@ -88,9 +157,7 @@ final class RecipePageRenderer {
         header(g, Component.translatable("gui.thaumicunity.recipe.arcane"), x, y);
         int gx = x + 6;
         int gy = y + 14;
-        for (int i = 0; i < 9; i++) {
-            GuiUtil.slot(g, gx + (i % 3) * 18, gy + (i / 3) * 18);
-        }
+        drawGrid(g, gx, gy);
         Optional<ShapedRecipePattern> pattern = recipe.pattern();
         if (pattern.isPresent()) {
             ShapedRecipePattern shaped = pattern.get();

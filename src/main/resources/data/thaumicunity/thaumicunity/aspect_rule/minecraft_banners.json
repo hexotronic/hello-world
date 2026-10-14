@@ -1,0 +1,9 @@
+{
+  "tag": "minecraft:banners",
+  "aspects": {
+    "thaumicunity:pannus": 4,
+    "thaumicunity:ars": 2,
+    "thaumicunity:humanus": 1
+  },
+  "priority": 10
+}

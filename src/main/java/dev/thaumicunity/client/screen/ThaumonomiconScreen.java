@@ -29,6 +29,7 @@ import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.display.SlotDisplayContext;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.jspecify.annotations.Nullable;
 
@@ -424,7 +425,7 @@ public class ThaumonomiconScreen extends Screen {
 
     private void drawEntry(GuiGraphicsExtractor g, int mouseX, int mouseY) {
         Optional<ResearchEntry> found = ResearchManager.entry(access(), entry);
-        if (found.isEmpty()) {
+        if (found.isEmpty() || minecraft.level == null) {
             return;
         }
         ResearchEntry value = found.get();
@@ -491,8 +492,8 @@ public class ThaumonomiconScreen extends Screen {
             recipeIndex = Math.floorMod(recipeIndex, recipes.size());
             int recipeY = bookY + bookH - 30 - RecipePageRenderer.HEIGHT;
             RecipeHolder<?> holder = ClientRecipes.get(recipes.get(recipeIndex));
-            RecipePageRenderer renderer = new RecipePageRenderer(font, access(),
-                    minecraft.level != null ? minecraft.level.getGameTime() : 0, mouseX, mouseY);
+            RecipePageRenderer renderer = new RecipePageRenderer(font, access(), SlotDisplayContext.fromLevel(minecraft.level),
+                    minecraft.level.getGameTime(), mouseX, mouseY);
             if (holder == null || !renderer.draw(g, holder.value(), rightX, recipeY)) {
                 g.text(font, Component.translatable("gui.thaumicunity.book.recipe_missing"), rightX, recipeY, GuiUtil.INK_FADED, false);
             }

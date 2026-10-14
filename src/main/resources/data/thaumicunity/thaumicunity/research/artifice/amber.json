@@ -1,0 +1,40 @@
+{
+  "category": "thaumicunity:artifice",
+  "x": 0,
+  "y": 2,
+  "icon": "thaumicunity:amber",
+  "parents": [
+    "thaumicunity:artifice/arcane_stone"
+  ],
+  "aspects": [
+    "thaumicunity:vinculum",
+    "thaumicunity:hydrargyrum"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.artifice.amber.stage0",
+      "requirements": [
+        {
+          "type": "scan",
+          "target": "item:thaumicunity:amber"
+        },
+        {
+          "type": "scan",
+          "target": "item:thaumicunity:cinnabar"
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.artifice.amber.stage1",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:amber_block",
+        "thaumicunity:amber_from_block",
+        "thaumicunity:quicksilver_from_smelting_cinnabar",
+        "thaumicunity:quicksilver_from_smelting_cinnabar_ore",
+        "thaumicunity:amber_from_smelting_amber_ore"
+      ]
+    }
+  ]
+}

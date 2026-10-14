@@ -1,0 +1,13 @@
+{
+  "kind": "modifier",
+  "primitive": "thaumicunity:numeric",
+  "complexity": 4,
+  "ops": {
+    "power": 2.0,
+    "cost": 2.2,
+    "cooldown": 1.5
+  },
+  "params": {},
+  "applies_to": [],
+  "tier": 2
+}

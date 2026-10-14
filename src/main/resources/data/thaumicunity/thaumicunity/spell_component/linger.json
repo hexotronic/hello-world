@@ -1,0 +1,14 @@
+{
+  "kind": "modifier",
+  "primitive": "thaumicunity:numeric",
+  "complexity": 3,
+  "ops": {
+    "duration": 2.5,
+    "cost": 1.6
+  },
+  "params": {},
+  "applies_to": [
+    "zone"
+  ],
+  "tier": 2
+}

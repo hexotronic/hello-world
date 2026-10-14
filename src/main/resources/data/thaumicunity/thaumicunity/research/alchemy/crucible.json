@@ -1,0 +1,34 @@
+{
+  "category": "thaumicunity:alchemy",
+  "x": 0,
+  "y": 0,
+  "icon": "thaumicunity:crucible",
+  "parents": [
+    "thaumicunity:fundamentals/aspects"
+  ],
+  "aspects": [
+    "thaumicunity:alkimia",
+    "thaumicunity:aqua",
+    "thaumicunity:ignis"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.alchemy.crucible.stage0",
+      "requirements": [
+        {
+          "type": "knowledge",
+          "kind": "observation",
+          "category": "thaumicunity:alchemy",
+          "amount": 1
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.alchemy.crucible.stage1",
+      "requirements": [],
+      "recipes": []
+    }
+  ],
+  "special": true
+}

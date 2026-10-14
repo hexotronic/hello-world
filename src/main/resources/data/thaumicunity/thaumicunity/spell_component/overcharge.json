@@ -1,0 +1,18 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:damage",
+  "aspect": "thaumicunity:potentia",
+  "synergy_of": "thaumicunity:potentia",
+  "complexity": 0,
+  "params": {
+    "damage": 3.0,
+    "knockback": 0.5
+  },
+  "visual": {
+    "color": "#c0ffff",
+    "particle": "thaumicunity:wisp"
+  },
+  "tags": [
+    "synergy"
+  ]
+}

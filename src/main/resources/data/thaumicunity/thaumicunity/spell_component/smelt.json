@@ -1,0 +1,20 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:smelt",
+  "aspect": "thaumicunity:ignis",
+  "cost": {
+    "thaumicunity:ignis": 3,
+    "thaumicunity:ordo": 1
+  },
+  "complexity": 2,
+  "cooldown": 20,
+  "tags": [
+    "world"
+  ],
+  "params": {},
+  "visual": {
+    "color": "#ff9a40",
+    "particle": "thaumicunity:spark",
+    "sound": "thaumicunity:misc.zap"
+  }
+}

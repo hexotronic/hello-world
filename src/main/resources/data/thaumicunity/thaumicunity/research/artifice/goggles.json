@@ -1,0 +1,35 @@
+{
+  "category": "thaumicunity:artifice",
+  "x": 2,
+  "y": 0,
+  "icon": "thaumicunity:goggles_of_revealing",
+  "parents": [
+    "thaumicunity:artifice/arcane_stone",
+    "thaumicunity:fundamentals/thaumometer"
+  ],
+  "aspects": [
+    "thaumicunity:visio",
+    "thaumicunity:sensus"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.artifice.goggles.stage0",
+      "requirements": [
+        {
+          "type": "knowledge",
+          "kind": "observation",
+          "category": "thaumicunity:artifice",
+          "amount": 2
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.artifice.goggles.stage1",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:goggles_of_revealing"
+      ]
+    }
+  ]
+}

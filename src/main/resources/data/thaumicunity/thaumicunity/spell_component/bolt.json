@@ -1,0 +1,19 @@
+{
+  "kind": "medium",
+  "primitive": "thaumicunity:bolt",
+  "complexity": 2,
+  "cost_multiplier": 1.0,
+  "tags": [
+    "ray",
+    "instant"
+  ],
+  "params": {
+    "range": 32.0
+  },
+  "visual": {
+    "particle": "thaumicunity:spark"
+  },
+  "cost": {
+    "thaumicunity:aer": 1
+  }
+}

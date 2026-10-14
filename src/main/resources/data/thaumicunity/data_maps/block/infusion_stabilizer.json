@@ -1,0 +1,12 @@
+{
+  "values": {
+    "#minecraft:candles": 0.5,
+    "minecraft:skeleton_skull": 1.0,
+    "minecraft:wither_skeleton_skull": 1.5,
+    "minecraft:zombie_head": 1.0,
+    "minecraft:creeper_head": 1.0,
+    "minecraft:amethyst_cluster": 0.75,
+    "minecraft:enchanting_table": 2.0,
+    "minecraft:bookshelf": 0.2
+  }
+}

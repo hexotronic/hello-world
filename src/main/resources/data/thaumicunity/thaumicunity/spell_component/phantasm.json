@@ -1,0 +1,23 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:illusion",
+  "aspect": "thaumicunity:imago",
+  "cost": {
+    "thaumicunity:aer": 2,
+    "thaumicunity:ordo": 1
+  },
+  "complexity": 1,
+  "cooldown": 20,
+  "tags": [
+    "neutral"
+  ],
+  "params": {
+    "sound": "minecraft:entity.creeper.primed",
+    "confuse": true
+  },
+  "visual": {
+    "color": "#d0a0ff",
+    "particle": "thaumicunity:spark",
+    "sound": "thaumicunity:misc.zap"
+  }
+}

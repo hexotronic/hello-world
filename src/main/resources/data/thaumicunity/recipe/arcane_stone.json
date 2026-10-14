@@ -1,0 +1,21 @@
+{
+  "type": "thaumicunity:arcane_shaped",
+  "key": {
+    "S": "#c:stones",
+    "A": "minecraft:amethyst_shard"
+  },
+  "pattern": [
+    "SSS",
+    "SAS",
+    "SSS"
+  ],
+  "vis": {
+    "thaumicunity:terra": 2,
+    "thaumicunity:ordo": 2
+  },
+  "result": {
+    "id": "thaumicunity:arcane_stone",
+    "count": 8
+  },
+  "research": "thaumicunity:artifice/arcane_stone"
+}

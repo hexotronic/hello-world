@@ -1,0 +1,17 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:attract_items",
+  "aspect": "thaumicunity:vacuos",
+  "synergy_of": "thaumicunity:vacuos",
+  "complexity": 0,
+  "params": {
+    "radius": 8
+  },
+  "visual": {
+    "color": "#888888",
+    "particle": "thaumicunity:wisp"
+  },
+  "tags": [
+    "synergy"
+  ]
+}

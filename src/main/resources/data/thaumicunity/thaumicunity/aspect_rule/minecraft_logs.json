@@ -1,0 +1,8 @@
+{
+  "tag": "minecraft:logs",
+  "aspects": {
+    "thaumicunity:arbor": 3,
+    "thaumicunity:lignum": 2
+  },
+  "priority": 10
+}

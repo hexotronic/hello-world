@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    "minecraft:redstone",
+    "minecraft:glowstone_dust",
+    "minecraft:bone_meal",
+    "minecraft:amethyst_shard"
+  ],
+  "result": {
+    "id": "thaumicunity:salis_mundus",
+    "count": 2
+  }
+}

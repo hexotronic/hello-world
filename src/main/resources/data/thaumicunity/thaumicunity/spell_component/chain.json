@@ -1,0 +1,22 @@
+{
+  "kind": "medium",
+  "primitive": "thaumicunity:chain",
+  "complexity": 3,
+  "cost_multiplier": 1.4,
+  "tags": [
+    "ray",
+    "instant"
+  ],
+  "params": {
+    "range": 16.0,
+    "jumps": 3,
+    "jump_range": 6.0
+  },
+  "visual": {
+    "particle": "thaumicunity:spark"
+  },
+  "cost": {
+    "thaumicunity:aer": 1,
+    "thaumicunity:ordo": 1
+  }
+}

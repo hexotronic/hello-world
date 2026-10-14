@@ -1,0 +1,7 @@
+{
+  "tag": "minecraft:enchantable/armor",
+  "aspects": {
+    "thaumicunity:tutamen": 2
+  },
+  "priority": 0
+}

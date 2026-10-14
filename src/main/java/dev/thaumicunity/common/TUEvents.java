@@ -19,6 +19,7 @@ import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.repository.Pack;
 import net.minecraft.server.packs.repository.PackSource;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.crafting.RecipeType;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddPackFindersEvent;
@@ -78,8 +79,9 @@ public final class TUEvents {
         }
         ItemAspectsPayload payload = new ItemAspectsPayload(ItemAspects.serverTable());
         event.getRelevantPlayers().forEach(player -> PacketDistributor.sendToPlayer(player, payload));
-        // The Thaumonomicon draws recipe pages on the client.
-        event.sendRecipes(TURecipes.CRUCIBLE.get(), TURecipes.ARCANE_CRAFTING.get(), TURecipes.INFUSION.get());
+        // The Thaumonomicon draws recipe pages on the client, including crafting table and furnace recipes.
+        event.sendRecipes(TURecipes.CRUCIBLE.get(), TURecipes.ARCANE_CRAFTING.get(), TURecipes.INFUSION.get(),
+                RecipeType.CRAFTING, RecipeType.SMELTING);
     }
 
     private static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {

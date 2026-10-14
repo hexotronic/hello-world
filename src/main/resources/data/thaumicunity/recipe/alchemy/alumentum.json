@@ -1,0 +1,13 @@
+{
+  "type": "thaumicunity:crucible",
+  "catalyst": "minecraft:coal",
+  "aspects": {
+    "thaumicunity:potentia": 4,
+    "thaumicunity:ignis": 3,
+    "thaumicunity:exitium": 2
+  },
+  "result": {
+    "id": "thaumicunity:alumentum"
+  },
+  "research": "thaumicunity:alchemy/alchemical_fuels"
+}

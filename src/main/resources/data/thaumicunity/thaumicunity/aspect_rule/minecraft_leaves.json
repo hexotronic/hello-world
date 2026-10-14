@@ -1,0 +1,8 @@
+{
+  "tag": "minecraft:leaves",
+  "aspects": {
+    "thaumicunity:herba": 1,
+    "thaumicunity:arbor": 1
+  },
+  "priority": 10
+}

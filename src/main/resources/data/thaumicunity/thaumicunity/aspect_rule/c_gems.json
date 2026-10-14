@@ -1,0 +1,8 @@
+{
+  "tag": "c:gems",
+  "aspects": {
+    "thaumicunity:vitreus": 3,
+    "thaumicunity:gemma": 2
+  },
+  "priority": 1
+}

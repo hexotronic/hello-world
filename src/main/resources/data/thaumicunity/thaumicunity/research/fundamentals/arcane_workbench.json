@@ -1,0 +1,21 @@
+{
+  "category": "thaumicunity:fundamentals",
+  "x": 2,
+  "y": 0,
+  "icon": "thaumicunity:arcane_workbench",
+  "parents": [
+    "thaumicunity:fundamentals/thaumonomicon"
+  ],
+  "aspects": [
+    "thaumicunity:fabrico",
+    "thaumicunity:praecantatio"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.fundamentals.arcane_workbench.stage0",
+      "requirements": [],
+      "recipes": []
+    }
+  ],
+  "auto_unlock": true
+}

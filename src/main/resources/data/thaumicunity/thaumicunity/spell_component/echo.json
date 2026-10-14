@@ -1,0 +1,15 @@
+{
+  "kind": "modifier",
+  "primitive": "thaumicunity:echo",
+  "complexity": 3,
+  "ops": {
+    "cost": 1.5
+  },
+  "params": {
+    "times": 1,
+    "delay": 20,
+    "decay": 0.75
+  },
+  "applies_to": [],
+  "tier": 2
+}

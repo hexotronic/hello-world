@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "key": {
+    "C": "minecraft:clay_ball",
+    "G": "minecraft:glass"
+  },
+  "pattern": [
+    " C ",
+    "G G",
+    " G "
+  ],
+  "result": {
+    "id": "thaumicunity:phial",
+    "count": 8
+  }
+}

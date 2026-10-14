@@ -1,0 +1,26 @@
+{
+  "type": "thaumicunity:arcane_shapeless",
+  "ingredients": [
+    "thaumicunity:apprentice_focus",
+    "minecraft:shield"
+  ],
+  "vis": {
+    "thaumicunity:terra": 10,
+    "thaumicunity:ordo": 10
+  },
+  "result": {
+    "id": "thaumicunity:apprentice_focus",
+    "components": {
+      "thaumicunity:spell": {
+        "medium": "thaumicunity:self",
+        "effects": [
+          "thaumicunity:ward"
+        ]
+      },
+      "minecraft:item_name": {
+        "translate": "focus.thaumicunity.warding"
+      }
+    }
+  },
+  "research": "thaumicunity:auromancy/foci"
+}

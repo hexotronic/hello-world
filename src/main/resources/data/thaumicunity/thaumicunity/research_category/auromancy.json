@@ -1,0 +1,7 @@
+{
+  "icon": "thaumicunity:basic_caster",
+  "background": "thaumicunity:auromancy",
+  "order": 40,
+  "color": "#4fa3d9",
+  "requires": "thaumicunity:fundamentals/aura"
+}

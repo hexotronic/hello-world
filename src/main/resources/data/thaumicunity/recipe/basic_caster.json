@@ -1,0 +1,22 @@
+{
+  "type": "thaumicunity:arcane_shaped",
+  "key": {
+    "B": "thaumicunity:brass_ingot",
+    "L": "minecraft:leather",
+    "C": "minecraft:amethyst_shard"
+  },
+  "pattern": [
+    "BLB",
+    "LCL",
+    " L "
+  ],
+  "vis": {
+    "thaumicunity:aer": 10,
+    "thaumicunity:ordo": 10,
+    "thaumicunity:ignis": 5
+  },
+  "result": {
+    "id": "thaumicunity:basic_caster"
+  },
+  "research": "thaumicunity:auromancy/casting"
+}

@@ -1,0 +1,11 @@
+{
+  "type": "thaumicunity:crucible",
+  "catalyst": "minecraft:amethyst_shard",
+  "aspects": {
+    "thaumicunity:ignis": 5
+  },
+  "result": {
+    "id": "thaumicunity:ignis_vis_crystal"
+  },
+  "research": "thaumicunity:alchemy/vis_crystals"
+}

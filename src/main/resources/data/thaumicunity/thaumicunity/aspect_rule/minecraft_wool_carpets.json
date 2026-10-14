@@ -1,0 +1,7 @@
+{
+  "tag": "minecraft:wool_carpets",
+  "aspects": {
+    "thaumicunity:pannus": 1
+  },
+  "priority": 10
+}

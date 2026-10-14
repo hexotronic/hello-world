@@ -1,0 +1,14 @@
+{
+  "kind": "modifier",
+  "primitive": "thaumicunity:gravity_well",
+  "complexity": 3,
+  "ops": {
+    "cost": 1.5
+  },
+  "params": {
+    "radius": 4.0,
+    "strength": 0.6
+  },
+  "applies_to": [],
+  "tier": 2
+}

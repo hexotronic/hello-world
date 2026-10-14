@@ -1,0 +1,22 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:exchange",
+  "aspect": "thaumicunity:permutatio",
+  "cost": {
+    "thaumicunity:ordo": 2,
+    "thaumicunity:perditio": 2
+  },
+  "complexity": 2,
+  "cooldown": 10,
+  "tags": [
+    "world"
+  ],
+  "params": {
+    "max_hardness": 25.0
+  },
+  "visual": {
+    "color": "#6a9a6a",
+    "particle": "thaumicunity:spark",
+    "sound": "thaumicunity:misc.zap"
+  }
+}

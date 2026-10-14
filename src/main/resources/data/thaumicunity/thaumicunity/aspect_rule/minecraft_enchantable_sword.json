@@ -1,0 +1,7 @@
+{
+  "tag": "minecraft:enchantable/sword",
+  "aspects": {
+    "thaumicunity:telum": 2
+  },
+  "priority": 0
+}

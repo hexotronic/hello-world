@@ -1,0 +1,33 @@
+{
+  "category": "thaumicunity:fundamentals",
+  "x": 8,
+  "y": 2,
+  "icon": "thaumicunity:research_notes",
+  "parents": [
+    "thaumicunity:fundamentals/research_table"
+  ],
+  "aspects": [
+    "thaumicunity:cognitio",
+    "thaumicunity:lux"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.fundamentals.insight.stage0",
+      "requirements": [
+        {
+          "type": "insight",
+          "aspects": [
+            "thaumicunity:aer",
+            "thaumicunity:ignis"
+          ]
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.fundamentals.insight.stage1",
+      "requirements": [],
+      "recipes": []
+    }
+  ]
+}

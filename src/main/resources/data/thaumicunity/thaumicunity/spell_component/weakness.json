@@ -1,0 +1,23 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:potion",
+  "aspect": "thaumicunity:debilitas",
+  "cost": {
+    "thaumicunity:perditio": 3
+  },
+  "complexity": 1,
+  "cooldown": 20,
+  "tags": [
+    "harmful"
+  ],
+  "params": {
+    "effect": "minecraft:weakness",
+    "duration": 200,
+    "amplifier": 0
+  },
+  "visual": {
+    "color": "#5a5a5a",
+    "particle": "thaumicunity:spark",
+    "sound": "thaumicunity:misc.zap"
+  }
+}

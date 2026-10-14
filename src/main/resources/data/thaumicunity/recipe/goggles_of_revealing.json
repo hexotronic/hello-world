@@ -1,0 +1,20 @@
+{
+  "type": "thaumicunity:arcane_shaped",
+  "key": {
+    "L": "minecraft:leather",
+    "B": "thaumicunity:brass_ingot",
+    "T": "minecraft:glass_pane"
+  },
+  "pattern": [
+    "LBL",
+    "T T"
+  ],
+  "vis": {
+    "thaumicunity:aer": 10,
+    "thaumicunity:ordo": 10
+  },
+  "result": {
+    "id": "thaumicunity:goggles_of_revealing"
+  },
+  "research": "thaumicunity:artifice/goggles"
+}

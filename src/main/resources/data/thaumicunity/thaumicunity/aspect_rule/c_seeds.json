@@ -1,0 +1,8 @@
+{
+  "tag": "c:seeds",
+  "aspects": {
+    "thaumicunity:herba": 1,
+    "thaumicunity:granum": 1
+  },
+  "priority": 1
+}

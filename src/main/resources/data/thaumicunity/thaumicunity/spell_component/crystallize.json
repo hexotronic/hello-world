@@ -1,0 +1,18 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:shield",
+  "aspect": "thaumicunity:vitreus",
+  "synergy_of": "thaumicunity:vitreus",
+  "complexity": 0,
+  "params": {
+    "amount": 2,
+    "duration": 300
+  },
+  "visual": {
+    "color": "#80ffff",
+    "particle": "thaumicunity:wisp"
+  },
+  "tags": [
+    "synergy"
+  ]
+}

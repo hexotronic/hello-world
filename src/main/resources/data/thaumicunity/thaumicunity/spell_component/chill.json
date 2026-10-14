@@ -1,0 +1,19 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:freeze",
+  "aspect": "thaumicunity:gelum",
+  "synergy_of": "thaumicunity:gelum",
+  "complexity": 0,
+  "params": {
+    "freeze": 200,
+    "slow": 2,
+    "amplifier": 2
+  },
+  "visual": {
+    "color": "#e1ffff",
+    "particle": "thaumicunity:wisp"
+  },
+  "tags": [
+    "synergy"
+  ]
+}

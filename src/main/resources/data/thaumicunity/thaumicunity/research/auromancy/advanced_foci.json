@@ -1,0 +1,39 @@
+{
+  "category": "thaumicunity:auromancy",
+  "x": 4,
+  "y": 0,
+  "icon": "thaumicunity:adept_focus",
+  "parents": [
+    "thaumicunity:auromancy/foci",
+    "thaumicunity:infusion/greater_foci"
+  ],
+  "aspects": [
+    "thaumicunity:potentia",
+    "thaumicunity:ignis"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.auromancy.advanced_foci.stage0",
+      "requirements": [
+        {
+          "type": "insight",
+          "aspects": [
+            "thaumicunity:potentia",
+            "thaumicunity:ignis"
+          ]
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.auromancy.advanced_foci.stage1",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:focus/shock",
+        "thaumicunity:focus/steam_burst",
+        "thaumicunity:focus/growth",
+        "thaumicunity:focus/blink"
+      ]
+    }
+  ]
+}

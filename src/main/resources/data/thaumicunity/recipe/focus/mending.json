@@ -1,0 +1,26 @@
+{
+  "type": "thaumicunity:arcane_shapeless",
+  "ingredients": [
+    "thaumicunity:apprentice_focus",
+    "minecraft:glistering_melon_slice"
+  ],
+  "vis": {
+    "thaumicunity:aqua": 10,
+    "thaumicunity:ordo": 10
+  },
+  "result": {
+    "id": "thaumicunity:apprentice_focus",
+    "components": {
+      "thaumicunity:spell": {
+        "medium": "thaumicunity:self",
+        "effects": [
+          "thaumicunity:heal"
+        ]
+      },
+      "minecraft:item_name": {
+        "translate": "focus.thaumicunity.mending"
+      }
+    }
+  },
+  "research": "thaumicunity:auromancy/foci"
+}

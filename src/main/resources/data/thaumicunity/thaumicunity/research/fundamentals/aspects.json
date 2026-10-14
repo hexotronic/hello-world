@@ -1,0 +1,42 @@
+{
+  "category": "thaumicunity:fundamentals",
+  "x": 4,
+  "y": 2,
+  "icon": "thaumicunity:salis_mundus",
+  "parents": [
+    "thaumicunity:fundamentals/thaumometer"
+  ],
+  "aspects": [
+    "thaumicunity:aer",
+    "thaumicunity:terra",
+    "thaumicunity:ignis",
+    "thaumicunity:aqua",
+    "thaumicunity:ordo",
+    "thaumicunity:perditio"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.fundamentals.aspects.stage0",
+      "requirements": [
+        {
+          "type": "scan",
+          "target": "block:minecraft:grass_block"
+        },
+        {
+          "type": "scan",
+          "target": "entity:minecraft:cow"
+        },
+        {
+          "type": "scan",
+          "target": "item:minecraft:iron_ingot"
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.fundamentals.aspects.stage1",
+      "requirements": [],
+      "recipes": []
+    }
+  ]
+}

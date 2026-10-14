@@ -1,0 +1,16 @@
+{
+  "kind": "modifier",
+  "primitive": "thaumicunity:numeric",
+  "complexity": 3,
+  "ops": {
+    "branches": 3,
+    "power": 0.6,
+    "cost": 1.4
+  },
+  "params": {},
+  "applies_to": [
+    "projectile",
+    "ray"
+  ],
+  "tier": 2
+}

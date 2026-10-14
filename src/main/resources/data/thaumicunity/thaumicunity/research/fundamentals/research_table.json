@@ -1,0 +1,33 @@
+{
+  "category": "thaumicunity:fundamentals",
+  "x": 6,
+  "y": 2,
+  "icon": "thaumicunity:research_table",
+  "parents": [
+    "thaumicunity:fundamentals/aspects"
+  ],
+  "aspects": [
+    "thaumicunity:cognitio",
+    "thaumicunity:scientia"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.fundamentals.research_table.stage0",
+      "requirements": [
+        {
+          "type": "obtain",
+          "item": "thaumicunity:research_table",
+          "count": 1
+        }
+      ],
+      "recipes": [
+        "thaumicunity:scribing_tools"
+      ]
+    },
+    {
+      "text": "research.thaumicunity.fundamentals.research_table.stage1",
+      "requirements": [],
+      "recipes": []
+    }
+  ]
+}

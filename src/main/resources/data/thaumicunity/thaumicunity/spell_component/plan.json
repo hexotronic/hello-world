@@ -1,0 +1,19 @@
+{
+  "kind": "medium",
+  "primitive": "thaumicunity:plan",
+  "complexity": 3,
+  "cost_multiplier": 1.6,
+  "tags": [
+    "blocks"
+  ],
+  "params": {
+    "range": 16.0,
+    "size": 3
+  },
+  "visual": {
+    "particle": "thaumicunity:rune"
+  },
+  "cost": {
+    "thaumicunity:ordo": 2
+  }
+}

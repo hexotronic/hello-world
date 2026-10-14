@@ -1,0 +1,16 @@
+{
+  "kind": "medium",
+  "primitive": "thaumicunity:touch",
+  "complexity": 1,
+  "cost_multiplier": 0.8,
+  "tags": [
+    "touch",
+    "instant"
+  ],
+  "params": {
+    "range": 4.0
+  },
+  "visual": {
+    "particle": "thaumicunity:spark"
+  }
+}

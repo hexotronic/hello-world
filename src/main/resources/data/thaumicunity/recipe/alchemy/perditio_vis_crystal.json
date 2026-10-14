@@ -1,0 +1,11 @@
+{
+  "type": "thaumicunity:crucible",
+  "catalyst": "minecraft:amethyst_shard",
+  "aspects": {
+    "thaumicunity:perditio": 5
+  },
+  "result": {
+    "id": "thaumicunity:perditio_vis_crystal"
+  },
+  "research": "thaumicunity:alchemy/vis_crystals"
+}

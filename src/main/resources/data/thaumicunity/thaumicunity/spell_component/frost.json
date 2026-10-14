@@ -1,0 +1,24 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:freeze",
+  "aspect": "thaumicunity:gelum",
+  "cost": {
+    "thaumicunity:aqua": 2,
+    "thaumicunity:perditio": 2
+  },
+  "complexity": 1,
+  "cooldown": 10,
+  "tags": [
+    "harmful"
+  ],
+  "params": {
+    "damage": 2.0,
+    "slow": 4,
+    "amplifier": 1
+  },
+  "visual": {
+    "color": "#a8e4ff",
+    "particle": "thaumicunity:spark",
+    "sound": "thaumicunity:misc.zap"
+  }
+}

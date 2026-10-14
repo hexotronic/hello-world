@@ -1,0 +1,20 @@
+{
+  "kind": "medium",
+  "primitive": "thaumicunity:wave",
+  "complexity": 3,
+  "cost_multiplier": 1.4,
+  "tags": [
+    "area",
+    "cone"
+  ],
+  "params": {
+    "range": 8.0,
+    "angle": 35.0
+  },
+  "visual": {
+    "particle": "thaumicunity:wisp"
+  },
+  "cost": {
+    "thaumicunity:aer": 2
+  }
+}

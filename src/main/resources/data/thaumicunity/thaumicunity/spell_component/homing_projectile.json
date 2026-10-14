@@ -1,0 +1,22 @@
+{
+  "kind": "medium",
+  "primitive": "thaumicunity:projectile",
+  "complexity": 3,
+  "cost_multiplier": 1.25,
+  "tags": [
+    "projectile",
+    "homing"
+  ],
+  "params": {
+    "speed": 1.1,
+    "homing": 0.18,
+    "lifetime": 160
+  },
+  "visual": {
+    "particle": "thaumicunity:spark"
+  },
+  "cost": {
+    "thaumicunity:aer": 1,
+    "thaumicunity:ordo": 1
+  }
+}

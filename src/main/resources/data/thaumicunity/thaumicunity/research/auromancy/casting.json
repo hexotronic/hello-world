@@ -1,0 +1,36 @@
+{
+  "category": "thaumicunity:auromancy",
+  "x": 0,
+  "y": 0,
+  "icon": "thaumicunity:basic_caster",
+  "parents": [
+    "thaumicunity:fundamentals/aura"
+  ],
+  "aspects": [
+    "thaumicunity:auram",
+    "thaumicunity:potentia"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.auromancy.casting.stage0",
+      "requirements": [
+        {
+          "type": "knowledge",
+          "kind": "observation",
+          "category": "thaumicunity:auromancy",
+          "amount": 2
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.auromancy.casting.stage1",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:basic_caster",
+        "thaumicunity:apprentice_focus"
+      ]
+    }
+  ],
+  "special": true
+}

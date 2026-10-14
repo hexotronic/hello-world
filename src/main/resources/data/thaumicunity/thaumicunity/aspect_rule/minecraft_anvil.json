@@ -1,0 +1,9 @@
+{
+  "tag": "minecraft:anvil",
+  "aspects": {
+    "thaumicunity:metallum": 30,
+    "thaumicunity:fabrico": 4,
+    "thaumicunity:tutamen": 2
+  },
+  "priority": 10
+}

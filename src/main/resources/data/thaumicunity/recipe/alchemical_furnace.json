@@ -1,0 +1,21 @@
+{
+  "type": "thaumicunity:arcane_shaped",
+  "key": {
+    "S": "thaumicunity:arcane_stone",
+    "B": "thaumicunity:brass_ingot",
+    "F": "minecraft:furnace"
+  },
+  "pattern": [
+    "SBS",
+    "SFS",
+    "SSS"
+  ],
+  "vis": {
+    "thaumicunity:ignis": 10,
+    "thaumicunity:aqua": 5
+  },
+  "result": {
+    "id": "thaumicunity:alchemical_furnace"
+  },
+  "research": "thaumicunity:alchemy/essentia"
+}

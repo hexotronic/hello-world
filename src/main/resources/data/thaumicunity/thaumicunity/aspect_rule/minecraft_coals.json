@@ -1,0 +1,8 @@
+{
+  "tag": "minecraft:coals",
+  "aspects": {
+    "thaumicunity:potentia": 2,
+    "thaumicunity:ignis": 2
+  },
+  "priority": 5
+}

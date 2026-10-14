@@ -1,0 +1,19 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:potion",
+  "aspect": "thaumicunity:motus",
+  "synergy_of": "thaumicunity:motus",
+  "complexity": 0,
+  "params": {
+    "effect": "minecraft:speed",
+    "duration": 200,
+    "amplifier": 0
+  },
+  "visual": {
+    "color": "#cdccf4",
+    "particle": "thaumicunity:wisp"
+  },
+  "tags": [
+    "synergy"
+  ]
+}
