@@ -1,0 +1,3 @@
+# Paths (relative to assets/thaumicunity/textures, without .png) that tools/gen_textures.py must not overwrite.
+# Add a line here after replacing a generated texture with hand-made art, e.g.
+# item/thaumometer

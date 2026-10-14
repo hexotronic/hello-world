@@ -3,6 +3,8 @@
 #   net.minecraft.world.level.block.Block              -> javap -protected of that class
 #   net.minecraft.world.level.block.Block | use|tick   -> only members whose line matches the regex
 #   grep:<regex>                                       -> every class name on the classpath matching <regex>
+#   file:<regex>                                       -> contents of game jar resources matching <regex>
+#                                                         (JSON minified to one line; at most 12 files)
 #   # comment / blank lines                            -> ignored
 # Requires `./gradlew createMinecraftArtifacts` to have run first.
 # Set PROBE_LIST_ALL=1 to also print every class name on the classpath.
@@ -44,7 +46,22 @@ compact() {
 while IFS= read -r line || [[ -n "${line}" ]]; do
   line="${line%%#*}"
   [[ -z "${line//[[:space:]]/}" ]] && continue
-  if [[ "${line}" == grep:* ]]; then
+  if [[ "${line}" == file:* ]]; then
+    pattern="$(echo "${line#file:}" | xargs)"
+    echo "===== FILES ${pattern}"
+    found=0
+    while IFS= read -r jar; do
+      while IFS= read -r entry; do
+        found=1
+        echo "===== FILE ${entry}"
+        unzip -p "${jar}" "${entry}" \
+          | python3 -c 'import json, sys; print(json.dumps(json.load(sys.stdin), separators=(",", ":")))' 2>/dev/null \
+          || unzip -p "${jar}" "${entry}" | tr '\n' ' '
+        echo
+      done < <(unzip -Z1 "${jar}" 2>/dev/null | grep -E "${pattern}" | head -n 12)
+    done < <(find "${CACHE}/neoformruntime" -name '*.jar' 2>/dev/null)
+    [[ "${found}" == "0" ]] && echo "(no match)"
+  elif [[ "${line}" == grep:* ]]; then
     pattern="$(echo "${line#grep:}" | xargs)"
     echo "===== GREP ${pattern}"
     grep -E "${pattern}" "${ALL_CLASSES}" | grep -v '\$[0-9]' || echo "(no match)"

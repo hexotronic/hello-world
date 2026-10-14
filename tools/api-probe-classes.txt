@@ -1,8 +1,15 @@
 # Classes whose signatures are printed by .github/workflows/api-probe.yml (javap -protected).
 # Syntax: see tools/api-probe.sh. Avoid parentheses in filters.
-net.minecraft.client.gui.Gui | public
-net.minecraft.client.gui.Hud | public
-net.minecraft.world.level.levelgen.feature.configurations.OreConfiguration | public
-net.minecraft.world.level.levelgen.placement.HeightRangePlacement | static
-net.minecraft.world.level.storage.loot.functions.CopyComponentsFunction | static
-net.minecraft.world.level.block.state.properties.BlockStateProperties | FACING|HORIZONTAL
+file:^data/minecraft/worldgen/configured_feature/ore_(iron|diamond_small)\.json$
+file:^data/minecraft/worldgen/placed_feature/ore_(iron_middle|diamond)\.json$
+file:^data/minecraft/loot_table/blocks/(iron_ore|shulker_box|stone)\.json$
+file:^data/minecraft/recipe/(chest|fire_charge|iron_ingot_from_smelting_iron_ore|iron_ingot_from_nuggets)\.json$
+file:^assets/minecraft/items/(iron_ingot|cauldron)\.json$
+file:^assets/minecraft/models/block/(cauldron|cube_all|template_cauldron_full)\.json$
+file:^assets/minecraft/models/item/iron_ingot\.json$
+file:^assets/minecraft/particles/(flame|glow)\.json$
+file:^assets/minecraft/blockstates/(stone|cauldron)\.json$
+file:^data/minecraft/tags/block/stone_ore_replaceables\.json$
+file:^data/minecraft/tags/block/needs_iron_tool\.json$
+file:^pack\.mcmeta$
+grep:levelgen\.feature\.configurations
