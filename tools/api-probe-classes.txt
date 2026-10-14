@@ -1,13 +1,13 @@
 # Classes whose signatures are printed by .github/workflows/api-probe.yml (javap -protected).
 # Syntax: see tools/api-probe.sh. Avoid parentheses in filters.
-net.minecraft.world.item.Item | isBarVisible|getBarWidth|getBarColor|inventoryTick|useOn|InteractionResult use|getDefaultInstance|releaseUsing|getUseDuration|onUseTick|shouldCauseReequipAnimation|isFoil
-net.minecraft.world.item.component.CustomModelData
-net.minecraft.world.item.ItemStack | matches|hashItemAndComponents|OPTIONAL_CODEC|OPTIONAL_STREAM_CODEC|public static final .*CODEC|getOrDefault|copyWithCount|isSameItemSameComponents
-net.minecraft.world.item.context.UseOnContext | public
-net.minecraft.world.entity.player.Inventory | getContainerSize|getItem|getNonEquipmentItems|getSelectedItem|findSlotMatchingItem
-net.minecraft.world.entity.player.Player | isSecondaryUseActive|isShiftKeyDown|getCooldowns
-net.minecraft.world.item.ItemCooldowns | public
-net.minecraft.core.component.DataComponents | CUSTOM_MODEL_DATA|ITEM_NAME|MAX_STACK_SIZE
-net.minecraft.client.color.item.CustomModelDataSource
-net.minecraft.world.item.TooltipFlag | public
-grep:client\.color\.item\.|client\.renderer\.item\.properties\.select\.
+net.minecraft.world.level.block.state.BlockBehaviour | updateShape|neighborChanged|getShape|getCollisionShape|onPlace|useWithoutItem|getAnalogOutputSignal|isSignalSource
+net.minecraft.world.level.block.Block | getStateForPlacement|createBlockStateDefinition|registerDefaultState|defaultBlockState|stateDefinition
+net.minecraft.world.level.block.PipeBlock | public|protected
+net.minecraft.world.level.block.state.properties.BlockStateProperties | NORTH|POWERED|OPEN|ENABLED
+net.minecraft.world.level.block.state.properties.BooleanProperty | public
+net.minecraft.world.level.SignalGetter | hasNeighborSignal
+net.minecraft.world.item.context.BlockPlaceContext | public
+net.minecraft.world.level.LevelReader | getBlockEntity
+net.minecraft.world.level.ScheduledTickAccess
+net.minecraft.world.level.redstone.Orientation | public
+net.minecraft.world.level.block.FenceBlock | updateShape|getStateForPlacement|connectsTo
