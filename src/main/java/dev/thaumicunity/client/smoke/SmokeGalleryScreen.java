@@ -55,8 +55,9 @@ public class SmokeGalleryScreen extends Screen {
                 items.add(item);
             }
         }
-        int columns = 3;
         int rowHeight = 18;
+        int maxRows = Math.max(1, (height - 32) / rowHeight);
+        int columns = Math.max(3, (items.size() + maxRows - 1) / maxRows);
         int rows = (items.size() + columns - 1) / columns;
         int columnWidth = (width - 20) / columns;
         for (int i = 0; i < items.size(); i++) {
