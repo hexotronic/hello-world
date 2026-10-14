@@ -28,9 +28,9 @@ cauldron into a crucible and a lectern into a research table.
 ### Installing
 
 1. Install [NeoForge](https://neoforged.net) 26.3.0.69-beta or newer for Minecraft 26.3.
-2. Download `thaumicunity-<version>.jar` from the latest successful
-   [Build run](https://github.com/hexotronic/hello-world/actions/workflows/build.yml) (artifact `thaumicunity-jar`)
-   or build it yourself (below), and put it in `.minecraft/mods`.
+2. Get `thaumicunity-<version>.jar` from the [releases](https://github.com/hexotronic/hello-world/releases), from
+   the latest successful [Build run](https://github.com/hexotronic/hello-world/actions/workflows/build.yml)
+   (artifact `thaumicunity-jar`, needs a GitHub login) or build it yourself (below), and put it in `.minecraft/mods`.
 
 ### Thaumcraft's look
 
@@ -46,7 +46,12 @@ Requirements: JDK 25. The Gradle wrapper downloads everything else.
 ./gradlew build            # compiles, runs the unit tests, produces build/libs/thaumicunity-<version>.jar
 ./gradlew runClient        # development client
 ./gradlew runGameTestServer  # loads all data on a server and runs the in-game tests
+./gradlew runSmokeClient     # scripted client tour: test world, every device and screen, screenshots, then quits
 ```
+
+CI runs all three on every push; the client tour runs under a virtual display and its screenshots are uploaded as
+the `client-screenshots` artifact. The **Release** workflow (Actions › Release › Run workflow) builds the jar and
+publishes it as a GitHub pre-release.
 
 Generated content is committed. After editing a table in `tools/content/` regenerate it with:
 

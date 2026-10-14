@@ -496,7 +496,9 @@ public class ThaumonomiconScreen extends Screen {
         List<Identifier> recipes = reachedRecipes(value, stage);
         if (!recipes.isEmpty()) {
             recipeIndex = Math.floorMod(recipeIndex, recipes.size());
-            int recipeY = bookY + bookH - 30 - RecipePageRenderer.HEIGHT;
+            // Below the requirements while the entry is in progress; right under "Complete" once it is done.
+            int recipeY = stage < value.stageCount() ? bookY + bookH - 30 - RecipePageRenderer.HEIGHT
+                    : Math.min(top + 20, bookY + bookH - 30 - RecipePageRenderer.HEIGHT);
             RecipeHolder<?> holder = ClientRecipes.get(recipes.get(recipeIndex));
             RecipePageRenderer renderer = new RecipePageRenderer(font, access(), SlotDisplayContext.fromLevel(minecraft.level),
                     minecraft.level.getGameTime(), mouseX, mouseY);

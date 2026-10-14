@@ -101,7 +101,10 @@ public final class ClientSmokeTest {
         menu("09-arcane-workbench", -2);
         menu("10-research-table", 0);
         menu("11-alchemical-furnace", 2);
-        STEPS.add(new Step("back to overview", 5, () -> onServer(player -> look(player, 0, 1.5, -3, 0, 28))));
+        STEPS.add(new Step("back to overview", 5, () -> {
+            closeScreen();
+            onServer(player -> look(player, 0, 1.5, -3, 0, 28));
+        }));
         STEPS.add(new Step("screenshot overview", 60, () -> screenshot("12-workshop-later")));
         STEPS.add(new Step("finish", 60, ClientSmokeTest::finish));
     }

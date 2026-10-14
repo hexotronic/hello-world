@@ -160,8 +160,18 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
         return result;
     }
 
+    private Component actionsHeader() {
+        return menu.paper().is(TUTags.Items.RESEARCH_PAPER) ? Component.translatable("gui.thaumicunity.research_table.choose")
+                : Component.translatable("gui.thaumicunity.research_table.need_paper");
+    }
+
+    /** Top of the action list, below the (wrapped) header. */
+    private int rowsTop() {
+        return topPos + BOARD_Y + 4 + font.split(actionsHeader(), BOARD_W - 8).size() * font.lineHeight + 4;
+    }
+
     private int listRows() {
-        return (BOARD_H - 24) / ROW_H;
+        return Math.max(1, (topPos + BOARD_Y + BOARD_H - 2 - rowsTop()) / ROW_H);
     }
 
     // --- drawing
@@ -275,11 +285,9 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
         int x = leftPos + BOARD_X + 4;
         int y = topPos + BOARD_Y + 4;
         boolean hasPaper = menu.paper().is(TUTags.Items.RESEARCH_PAPER);
-        Component header = hasPaper ? Component.translatable("gui.thaumicunity.research_table.choose")
-                : Component.translatable("gui.thaumicunity.research_table.need_paper");
-        g.textWithWordWrap(font, header, x, y, BOARD_W - 8, hasPaper ? GuiUtil.INK : GuiUtil.INK_FADED);
+        g.textWithWordWrap(font, actionsHeader(), x, y, BOARD_W - 8, hasPaper ? GuiUtil.INK : GuiUtil.INK_FADED);
         List<Action> actions = actions();
-        int rowsY = topPos + BOARD_Y + 24;
+        int rowsY = rowsTop();
         int rows = listRows();
         listScroll = Math.max(0, Math.min(listScroll, Math.max(0, actions.size() - rows)));
         for (int i = 0; i < rows && listScroll + i < actions.size(); i++) {
@@ -328,6 +336,10 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
             g.text(font, name, x, ry, GuiUtil.opaque(e.getValue().color()), false);
             g.text(font, Component.translatable("gui.thaumicunity.research_table.points", obs, theory), x, ry + 9, GuiUtil.INK_FADED, false);
             row++;
+        }
+        if (row == 0) {
+            g.textWithWordWrap(font, Component.translatable("gui.thaumicunity.research_table.no_knowledge"), x, y + 12,
+                    imageWidth - PALETTE_X - 8, GuiUtil.INK_FADED);
         }
     }
 
@@ -397,7 +409,7 @@ public class ResearchTableScreen extends AbstractContainerScreen<ResearchTableMe
             }
         } else if (event.button() == 0 && menu.paper().is(TUTags.Items.RESEARCH_PAPER)) {
             int x = leftPos + BOARD_X + 4;
-            int rowsY = topPos + BOARD_Y + 24;
+            int rowsY = rowsTop();
             if (GuiUtil.inside(mx, my, x - 2, rowsY - 1, BOARD_W - 4, listRows() * ROW_H)) {
                 int row = (int) (my - rowsY + 1) / ROW_H;
                 List<Action> actions = actions();

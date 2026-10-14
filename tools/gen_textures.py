@@ -772,8 +772,9 @@ def blocks():
     d.ellipse([4, 4, 11, 11], outline=shade(BRASS, 1.2))
     save(ped_top, "block/arcane_pedestal_top")
 
-    # Warded jar: clear glass with brass bands; transparent pixels make it a cutout model.
-    jar = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    # Warded jar: faintly tinted glass with brass bands; the partly transparent pixels make it a translucent model,
+    # so the essentia inside (drawn by WardedJarRenderer) shows through.
+    jar = Image.new("RGBA", (16, 16), (214, 238, 244, 56))
     d = ImageDraw.Draw(jar)
     d.rectangle([0, 0, 15, 15], outline=(196, 226, 232, 255))
     d.line([1, 1, 1, 14], fill=(236, 250, 252, 255))

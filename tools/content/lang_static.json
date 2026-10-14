@@ -43,6 +43,7 @@
   "gui.thaumicunity.research_table.choose": "Choose a puzzle to write on the paper:",
   "gui.thaumicunity.research_table.knowledge": "Knowledge",
   "gui.thaumicunity.research_table.need_paper": "Put scribing tools in the upper slot and paper in the lower one.",
+  "gui.thaumicunity.research_table.no_knowledge": "None yet. Scan things with the thaumometer to make observations.",
   "gui.thaumicunity.research_table.no_aspects": "Scan things with a thaumometer to gain aspect points.",
   "gui.thaumicunity.research_table.nothing": "Your research asks for no puzzles right now. Keep reading the Thaumonomicon.",
   "gui.thaumicunity.research_table.points": "%s obs. / %s theory",

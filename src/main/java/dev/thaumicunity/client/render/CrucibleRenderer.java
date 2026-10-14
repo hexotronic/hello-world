@@ -1,6 +1,8 @@
 package dev.thaumicunity.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import dev.thaumicunity.common.aspect.AspectList;
+import dev.thaumicunity.common.aspect.Aspects;
 import dev.thaumicunity.common.blockentity.CrucibleBlockEntity;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
@@ -8,6 +10,7 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.util.ARGB;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
@@ -46,10 +49,41 @@ public class CrucibleRenderer implements BlockEntityRenderer<CrucibleBlockEntity
         state.level = (float) crucible.water() / CrucibleBlockEntity.MAX_WATER;
         state.boiling = crucible.isBoiling();
         // Essentia colours the water more strongly the more of it there is.
-        int total = crucible.essentia().total();
-        float strength = total == 0 ? 0f : Math.min(1f, 0.35f + total / 200f);
-        state.color = ARGB.srgbLerp(strength, ARGB.opaque(WATER), ARGB.opaque(crucible.color()));
+        AspectList essentia = crucible.essentia();
+        int total = essentia.total();
+        if (total == 0 || crucible.getLevel() == null) {
+            state.color = ARGB.opaque(WATER);
+        } else {
+            float strength = Math.min(1f, 0.45f + total / 150f);
+            state.color = ARGB.srgbLerp(strength, ARGB.opaque(WATER), ARGB.opaque(tone(essentia, crucible.getLevel().registryAccess())));
+        }
         state.time = crucible.getLevel() == null ? 0 : crucible.getLevel().getGameTime() + partialTick;
+    }
+
+    /**
+     * Colour of a mix of essentia. Amounts are weighted by their square so the main ingredient sets the tone, and
+     * the result is saturated, since a plain average of many aspect colours is a muddy grey.
+     */
+    static int tone(AspectList essentia, RegistryAccess access) {
+        double r = 0, g = 0, b = 0, weight = 0;
+        for (var e : essentia.asMap().entrySet()) {
+            int c = Aspects.color(access, e.getKey());
+            double w = (double) e.getValue() * e.getValue();
+            r += ((c >> 16) & 0xFF) * w;
+            g += ((c >> 8) & 0xFF) * w;
+            b += (c & 0xFF) * w;
+            weight += w;
+        }
+        r /= weight;
+        g /= weight;
+        b /= weight;
+        double grey = (r + g + b) / 3;
+        double k = 1.8;
+        return (channel(grey + (r - grey) * k) << 16) | (channel(grey + (g - grey) * k) << 8) | channel(grey + (b - grey) * k);
+    }
+
+    private static int channel(double value) {
+        return (int) Math.max(0, Math.min(255, Math.round(value)));
     }
 
     @Override
