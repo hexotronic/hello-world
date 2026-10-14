@@ -59,8 +59,7 @@ public final class TUBlocks {
 
     /** Left behind by the portable hole focus; restores the original block after a while. */
     public static final DeferredBlock<PhasedSpaceBlock> PHASED_SPACE = BLOCKS.registerBlock("phased_space",
-            PhasedSpaceBlock::new, p -> p.noCollision().noOcclusion().noLootTable().strength(-1.0f, 3600000.0f)
-                    .pushReaction(net.minecraft.world.level.material.PushReaction.BLOCK));
+            PhasedSpaceBlock::new, p -> p.noCollision().noOcclusion().noLootTable().strength(-1.0f, 3600000.0f));
 
     public static final DeferredBlock<Block> ARCANE_STONE = BLOCKS.registerSimpleBlock("arcane_stone",
             p -> p.mapColor(MapColor.STONE).strength(2.0f, 10.0f).requiresCorrectToolForDrops());
