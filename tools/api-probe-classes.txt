@@ -1,5 +1,21 @@
 # Classes whose signatures are printed by .github/workflows/api-probe.yml (javap -protected).
 # Syntax: see tools/api-probe.sh. Avoid parentheses in filters.
-file:^assets/minecraft/models/block/(block|cube|cube_bottom_top|cube_all)\.json$
-file:^assets/minecraft/models/item/generated\.json$
-file:^assets/minecraft/items/(lantern|chest)\.json$
+net.minecraft.client.gui.screens.worldselection.WorldOpenFlows | public
+net.minecraft.world.level.LevelSettings | public
+net.minecraft.world.level.levelgen.WorldOptions | public
+net.minecraft.world.level.levelgen.presets.WorldPresets | public
+net.minecraft.world.level.levelgen.presets.WorldPreset | public
+net.minecraft.world.level.levelgen.WorldDimensions | public
+net.minecraft.world.level.gamerules.GameRules | public GameRules|public static
+net.minecraft.world.level.WorldDataConfiguration | public
+net.minecraft.client.Screenshot | public
+net.minecraft.client.Minecraft | stop|getMainRenderTarget|gameDirectory|isWindowActive|getWindow|options
+net.minecraft.server.level.ServerPlayer | teleportTo|setYRot|connection
+net.minecraft.world.level.block.state.BlockBehaviour$BlockStateBase | useWithoutItem|useItemOn
+net.minecraft.client.gui.screens.TitleScreen | public
+net.minecraft.server.MinecraftServer | overworld|getPlayerList|execute|isReady|getCommands|createCommandSourceStack
+net.minecraft.commands.Commands | performPrefixedCommand
+net.minecraft.commands.CommandSourceStack | withPermission|withSuppressedOutput
+net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen | public
+grep:GameRules$|gamerules\.GameRules
+grep:\.Screenshot$
