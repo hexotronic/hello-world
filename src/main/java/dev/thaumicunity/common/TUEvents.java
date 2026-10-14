@@ -29,6 +29,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.TagsUpdatedEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
@@ -42,6 +43,8 @@ public final class TUEvents {
         modBus.addListener(TUEvents::addPacks);
         NeoForge.EVENT_BUS.addListener(TUEvents::addReloadListeners);
         NeoForge.EVENT_BUS.addListener(TUEvents::onTagsUpdated);
+        // On the first load the server does not exist yet when tags update; compute aspects once it has started.
+        NeoForge.EVENT_BUS.addListener((ServerStartedEvent e) -> ItemAspects.recompute(e.getServer()));
         NeoForge.EVENT_BUS.addListener(TUEvents::onDatapackSync);
         NeoForge.EVENT_BUS.addListener(TUEvents::onLogin);
         NeoForge.EVENT_BUS.addListener(TUEvents::onCrafted);
@@ -60,6 +63,7 @@ public final class TUEvents {
         event.addListener(ThaumicUnity.id("aspect_rules"), new AspectRuleLoader());
     }
 
+    /** Recomputes item aspects after /reload, once tags, recipes, data maps and aspect rules are all fresh. */
     private static void onTagsUpdated(TagsUpdatedEvent event) {
         if (event instanceof TagsUpdatedEvent.ServerDataLoad) {
             var server = ServerLifecycleHooks.getCurrentServer();

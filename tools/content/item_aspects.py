@@ -130,7 +130,7 @@ ITEM_ASPECTS = {
     "minecraft:phantom_membrane": "volatus 3 somnium 2 exanimis 1",
     "minecraft:nautilus_shell": "aqua 2 tutamen 2 piscis 1",
     "minecraft:heart_of_the_sea": "aqua 6 praecantatio 3 cognitio 2",
-    "minecraft:scute": "tutamen 2 bestia 1 aqua 1",
+    "minecraft:turtle_scute": "tutamen 2 bestia 1 aqua 1",
     "minecraft:armadillo_scute": "tutamen 2 bestia 1 terra 1",
     "minecraft:shulker_shell": "tutamen 3 alienis 2 levitas 1",
     "minecraft:prismarine_shard": "aqua 1 vitreus 1 ordo 1",

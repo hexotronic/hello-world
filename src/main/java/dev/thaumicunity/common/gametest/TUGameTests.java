@@ -25,6 +25,7 @@ import dev.thaumicunity.core.research.InsightPuzzle;
 import dev.thaumicunity.core.spell.CompiledSpell;
 import dev.thaumicunity.core.spell.SpellNode;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
@@ -32,14 +33,19 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -204,8 +210,15 @@ public final class TUGameTests {
         BlockPos table = new BlockPos(0, 1, 0);
         helper.setBlock(table, Blocks.CRAFTING_TABLE);
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(TUItems.SALIS_MUNDUS.get()));
-        helper.useItemOnBlock(player, TUItems.SALIS_MUNDUS.get(), table);
-        helper.succeedWhen(() -> helper.assertBlockPresent(TUBlocks.ARCANE_WORKBENCH.get(), table));
+        ItemStack salis = new ItemStack(TUItems.SALIS_MUNDUS.get(), 2);
+        player.setItemInHand(InteractionHand.MAIN_HAND, salis);
+        BlockPos absolute = helper.absolutePos(table);
+        UseOnContext context = new UseOnContext(player, InteractionHand.MAIN_HAND,
+                new BlockHitResult(Vec3.atCenterOf(absolute), Direction.UP, absolute, false));
+        InteractionResult result = TUItems.SALIS_MUNDUS.get().useOn(context);
+        helper.assertTrue(result.consumesAction(), "Salis Mundus should act on a crafting table, got " + result);
+        helper.assertBlockPresent(TUBlocks.ARCANE_WORKBENCH.get(), table);
+        helper.assertValueEqual(salis.getCount(), 1, "Salis Mundus should be used up");
+        helper.succeed();
     }
 }
