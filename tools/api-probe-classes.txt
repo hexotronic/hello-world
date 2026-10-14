@@ -11,4 +11,3 @@ net.minecraft.core.component.DataComponents | CUSTOM_MODEL_DATA|ITEM_NAME|MAX_ST
 net.minecraft.client.color.item.CustomModelDataSource
 net.minecraft.world.item.TooltipFlag | public
 grep:client\.color\.item\.|client\.renderer\.item\.properties\.select\.
-file:copper_nugget
