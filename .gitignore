@@ -42,3 +42,6 @@ repo/
 # Python
 __pycache__/
 *.pyc
+
+# Personal resource pack built by tools/import_thaumcraft_textures.py (contains Thaumcraft art; never commit)
+thaumic-unity-thaumcraft-textures.zip

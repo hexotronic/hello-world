@@ -19,6 +19,26 @@ art**, and records where each mechanic comes from in [INVENTORY.md](INVENTORY.md
 If the rights holders grant permission in the future, their assets could be added as a separate, optional
 resource pack with the licence terms they specify; the mod's resource paths are stable for that purpose.
 
+## Using Thaumcraft's textures on your own computer
+
+`tools/import_thaumcraft_textures.py` builds a personal resource pack from **your own copy** of a Thaumcraft jar
+(Thaumcraft 4 for 1.7.10 or Thaumcraft 6 for 1.12.2):
+
+```sh
+pip install pillow
+python3 tools/import_thaumcraft_textures.py path/to/Thaumcraft-1.12.2-6.1.BETA26.jar
+```
+
+It writes `thaumic-unity-thaumcraft-textures.zip`; copy that to `.minecraft/resourcepacks` and enable it in
+Options › Resource Packs. Nothing from Thaumcraft passes through this repository or the mod jar: the script runs on
+your machine and reads only the jar you give it. The pack is for your own use; do not upload or share it.
+
+* Matching: known Thaumcraft 4 and 6 file names first, then any texture of the same kind (item or block) whose name
+  contains every word of the Thaumic Unity name. `--list` prints every texture in the jar, and `--map extra.json`
+  adds or corrects matches, for example `{"item/thaumometer": ["items/scanner.png"]}`.
+* Aspect glyphs, vis crystals and similar grey textures are tinted with the aspect colour, as Thaumcraft does in code.
+* Textures without a match keep Thaumic Unity's own art. The output zip is listed in `.gitignore`.
+
 ## Where Thaumic Unity's art comes from
 
 * `tools/gen_textures.py` generates every texture procedurally (Pillow): item sprites from character templates and

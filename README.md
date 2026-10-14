@@ -25,6 +25,19 @@ Craft **Salis Mundus** (redstone, glowstone dust, bone meal, amethyst shard) and
 **Thaumonomicon**; it explains everything else. Salis Mundus also turns a crafting table into an arcane workbench, a
 cauldron into a crucible and a lectern into a research table.
 
+### Installing
+
+1. Install [NeoForge](https://neoforged.net) 26.3.0.69-beta or newer for Minecraft 26.3.
+2. Download `thaumicunity-<version>.jar` from the latest successful
+   [Build run](https://github.com/hexotronic/hello-world/actions/workflows/build.yml) (artifact `thaumicunity-jar`)
+   or build it yourself (below), and put it in `.minecraft/mods`.
+
+### Thaumcraft's look
+
+Thaumic Unity ships with its own art. If you own Thaumcraft, `tools/import_thaumcraft_textures.py` turns your jar
+into a personal resource pack that gives Thaumic Unity Thaumcraft's textures; see
+[Using Thaumcraft's textures](docs/ASSETS_AND_LICENSING.md#using-thaumcrafts-textures-on-your-own-computer).
+
 ## Building
 
 Requirements: JDK 25. The Gradle wrapper downloads everything else.
@@ -58,6 +71,7 @@ the mod.
 
 ## Licensing
 
-No assets, code or text from Thaumcraft or its addons are included; see
+No assets, code or text from Thaumcraft or its addons are included (the texture importer reads your own jar on your
+own computer); see
 [docs/ASSETS_AND_LICENSING.md](docs/ASSETS_AND_LICENSING.md). The mod licence in `gradle.properties` is still the MDK
 default (All Rights Reserved) until the project owner chooses one.
