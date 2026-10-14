@@ -18,8 +18,6 @@ public final class TUTags {
         public static final TagKey<Block> INFUSION_STABILIZERS = tag("infusion_stabilizers");
         /** Blocks spells and taint never change. */
         public static final TagKey<Block> MAGIC_IMMUNE = tag("magic_immune");
-        /** Blocks Salis Mundus can transform (bookshelf, crafting table, cauldron…). */
-        public static final TagKey<Block> SALIS_TRANSMUTABLE = tag("salis_transmutable");
 
         private Blocks() {
         }
@@ -32,8 +30,6 @@ public final class TUTags {
     public static final class Items {
         /** Items that can cast spells (wands, staves, casters). */
         public static final TagKey<Item> CASTING_INSTRUMENTS = tag("casting_instruments");
-        /** Items that can be imprinted with a spell. */
-        public static final TagKey<Item> FOCI = tag("foci");
         /** Items that let the wearer see aspects and aura (goggles of revealing, revealing helmets). */
         public static final TagKey<Item> REVEALING = tag("revealing");
         /** Paper that can be written on at the research table. */

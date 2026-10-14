@@ -2,6 +2,7 @@ package dev.thaumicunity.common.blockentity;
 
 import dev.thaumicunity.common.registry.TUBlockEntities;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.Containers;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
@@ -25,6 +26,16 @@ public class ArcanePedestalBlockEntity extends SyncedBlockEntity {
             item = ItemStack.EMPTY;
         }
         markForSync();
+    }
+
+    /** Drops the held item when the pedestal is broken. */
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level != null && !item.isEmpty()) {
+            Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, item);
+            item = ItemStack.EMPTY;
+        }
     }
 
     @Override

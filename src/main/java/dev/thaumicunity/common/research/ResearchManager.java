@@ -224,10 +224,16 @@ public final class ResearchManager {
         if (!player.isCreative()) {
             consume(player, k, requirements);
         }
-        k.setStage(id, stage + 1);
+        int next = stage + 1;
+        // A last stage without requirements is the entry's closing text: reaching it completes the entry, so the
+        // recipes it reveals become craftable at once.
+        if (next == entry.stageCount() - 1 && effectiveRequirements(entry, entry.stages().get(next)).isEmpty()) {
+            next = entry.stageCount();
+        }
+        k.setStage(id, next);
         sync(player);
         player.level().playSound(null, player.blockPosition(), TUSounds.RESEARCH.get(), SoundSource.PLAYERS, 0.8f, 1.0f);
-        if (stage + 1 >= entry.stageCount()) {
+        if (next >= entry.stageCount()) {
             player.sendSystemMessage(Component.translatable("message.thaumicunity.research.complete",
                     Component.translatable(ResearchEntry.titleKey(id))).withStyle(ChatFormatting.GOLD));
             NeoForge.EVENT_BUS.post(new ResearchCompletedEvent(player, id));

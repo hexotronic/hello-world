@@ -1,8 +1,11 @@
 # Classes whose signatures are printed by .github/workflows/api-probe.yml (javap -protected).
 # Syntax: see tools/api-probe.sh. Avoid parentheses in filters.
-file:^data/minecraft/worldgen/[a-z_/]+/ore_(iron|diamond_small)\.json$
-file:^data/minecraft/neoforge/biome_modifier/.*\.json$
-file:^version\.json$
-file:^data/minecraft/datapacks/[a-z_]+/pack\.mcmeta$
-grep:Ore(Configuration|Feature|VeinRule)
-grep:levelgen\.feature\.[a-z]+\.[A-Z]
+grep:crafting\.display\.
+net.minecraft.world.item.crafting.display.RecipeDisplay
+net.minecraft.world.item.crafting.display.ShapedCraftingRecipeDisplay
+net.minecraft.world.item.crafting.display.ShapelessCraftingRecipeDisplay
+net.minecraft.world.item.crafting.display.FurnaceRecipeDisplay
+net.minecraft.world.item.crafting.display.SlotDisplay | public
+net.minecraft.world.item.crafting.display.SlotDisplayContext
+net.minecraft.world.item.crafting.Recipe | display
+file:^data/minecraft/recipe/(glistering_melon_slice|lightning_rod)\.json$

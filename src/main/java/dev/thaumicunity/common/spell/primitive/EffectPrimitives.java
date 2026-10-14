@@ -8,6 +8,7 @@ import dev.thaumicunity.api.spell.SpellPrimitive;
 import dev.thaumicunity.api.spell.SpellTarget;
 import dev.thaumicunity.common.aura.AuraManager;
 import dev.thaumicunity.common.registry.TUAttachments;
+import dev.thaumicunity.common.registry.TUTags;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -486,7 +487,11 @@ public final class EffectPrimitives {
                 : ctx.level().damageSources().magic();
     }
 
+    /** Whether a spell may change the block at {@code pos}: protected spawn/claims and magic-immune blocks are off limits. */
     static boolean mayEdit(SpellContext ctx, BlockPos pos) {
+        if (ctx.level().getBlockState(pos).is(TUTags.Blocks.MAGIC_IMMUNE)) {
+            return false;
+        }
         if (ctx.caster() instanceof Player player) {
             return ctx.level().mayInteract(player, pos) && player.mayBuild();
         }

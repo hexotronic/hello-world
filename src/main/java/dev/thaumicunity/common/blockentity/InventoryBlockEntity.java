@@ -1,6 +1,7 @@
 package dev.thaumicunity.common.blockentity;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.Containers;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -30,6 +31,15 @@ public abstract class InventoryBlockEntity extends SyncedBlockEntity {
 
     public SimpleContainer inventory() {
         return inventory;
+    }
+
+    /** Drops the inventory when the block is broken or replaced. */
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level != null) {
+            Containers.dropContents(level, pos, inventory);
+        }
     }
 
     public boolean stillValid(Player player) {
