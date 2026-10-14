@@ -1,5 +1,5 @@
 {
-  "tag": "minecraft:sand",
+  "tag": "#minecraft:sand",
   "aspects": {
     "thaumicunity:terra": 1,
     "thaumicunity:pulvis": 1

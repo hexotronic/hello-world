@@ -16,13 +16,13 @@ weighted towards systems players interact with most.
 
 | Category | Existing | New (target) | Total (target) | Implemented now |
 |---|---:|---:|---:|---|
-| Aspects | 67 | 116 | **183** | **183** (data, validated by unit tests) + optional TC6 pair datapack |
-| Research categories | 8 | 12 | 20 | 8 (data) |
-| Research entries | ≈ 520 | ≈ 2 600 | ≈ 3 100 | phase 3 starter tree (data) |
-| Items | ≈ 900 | ≈ 4 500 | ≈ 5 400 | 39 |
+| Aspects | 67 | 116 | **183** | **183** (data, validated by unit tests) + optional TC6 pair datapack; explicit aspects for 183 items, 65 creatures, 31 tag rules, the rest derived from recipes |
+| Research categories | 8 | 12 | 20 | 5 (fundamentals, alchemy, artifice, infusion, auromancy) |
+| Research entries | ≈ 520 | ≈ 2 600 | ≈ 3 100 | 26 (phase 3 starter tree, original text) |
+| Items | ≈ 900 | ≈ 4 500 | ≈ 5 400 | 43 (29 items + 14 block items) |
 | Blocks | ≈ 450 | ≈ 2 200 | ≈ 2 650 | 14 |
 | Devices (block entities) | ≈ 180 | ≈ 900 | ≈ 1 080 | 7 (crucible, arcane workbench, research table, runic matrix, arcane pedestal, warded jar, alchemical furnace) |
-| Recipes (arcane, crucible, infusion, rituals) | ≈ 1 100 | ≈ 5 500 | ≈ 6 600 | phase 3 starter set (data) |
+| Recipes (arcane, crucible, infusion, rituals) | ≈ 1 100 | ≈ 5 500 | ≈ 6 600 | 54 (9 arcane, 12 crucible, 3 infusion, 11 focus archetypes, 19 crafting and smelting) |
 | **Spell components** | ≈ 72 | **≈ 650** (10×) | ≈ 720 | see §2 |
 | Golem parts and behaviours | ≈ 95 | ≈ 475 | ≈ 570 | 0 (phase 5) |
 | Armor sets | ≈ 14 | ≈ 60 | ≈ 74 | 0 (phase 4/5) |
@@ -39,10 +39,10 @@ weighted towards systems players interact with most.
 
 | Part | Existing | Target | Java primitives now | JSON components now |
 |---|---:|---:|---:|---|
-| Mediums | ≈ 16 | 80 | 12 (touch, bolt, beam, chain, self, burst, wave, ground wave, plan, projectile incl. homing, zone incl. cloud/rune/mine/delay/aura, targeted zone) | phase 3 core set |
-| Effects | ≈ 45 | 500 | 26 (damage, drain, potion, heal, shield, dispel, ignite, extinguish, freeze, break, place, exchange, push, teleport, light, lightning, explosion, grow, smelt, transmute, summon, experience, aura, warp, attract items, illusion) | phase 3 core set |
-| Modifiers | ≈ 11 | 140 | 5 behaviours (numeric, echo, vampiric, gravity well, reveal) + any numeric modifier in JSON | phase 3 core set |
-| Aspect synergies | 0 | 120 | automatic (compound aspect of two carried effects) | phase 3 core set |
+| Mediums | ≈ 16 | 80 | 12 (touch, bolt, beam, chain, self, burst, wave, ground wave, plan, projectile incl. homing, zone incl. cloud/rune/mine/delay/aura, targeted zone) | 16 |
+| Effects | ≈ 45 | 500 | 26 (damage, drain, potion, heal, shield, dispel, ignite, extinguish, freeze, break, place, exchange, push, teleport, light, lightning, explosion, grow, smelt, transmute, summon, experience, aura, warp, attract items, illusion) | 38 |
+| Modifiers | ≈ 11 | 140 | 5 behaviours (numeric, echo, vampiric, gravity well, reveal) + any numeric modifier in JSON | 12 |
+| Aspect synergies | 0 | 120 | automatic (compound aspect of two carried effects) | 14 |
 | Forbidden / eldritch spells | ≈ 3 | 40 | warp cost supported by the compiler | phase 6 |
 
 Hundreds of components are cheap because a component is a JSON file that configures a Java primitive. Phase 6
@@ -55,13 +55,13 @@ focus workbench GUI and the per-component visuals.
 |---|---|---|
 | 1 | Research and inventory of every source mod | **Done** — [INVENTORY.md](INVENTORY.md) (with a verification backlog) |
 | 2 | Architecture: packages, registries, data formats, aspect system, API | **Done** — [ARCHITECTURE.md](ARCHITECTURE.md), [DESIGN_DECISIONS.md](DESIGN_DECISIONS.md) |
-| 3 | Core systems: aspects, research, aura/vis, crucible, arcane crafting, infusion, spell framework | **In progress** — Minecraft-independent core complete with 45 unit tests; NeoForge layer written; screens and art in progress |
+| 3 | Core systems: aspects, research, aura/vis, crucible, arcane crafting, infusion, spell framework | **Done** — Minecraft-independent core with 45 unit tests; NeoForge layer, client screens, 258 generated textures, all phase 3 data; in-game tests run in CI |
 | 4 | Migration of all existing content (items, blocks, devices, wands, foci, tools, armor, flora, ores, basic mobs) | Not started |
 | 5 | New content: devices, golems, armor, worldgen, mobs, bosses, dimensions, endgame | Not started |
 | 6 | Spell expansion to ≈720 components, focus workbench, synergies, forbidden magic | Framework done; catalogue not started |
 | 7 | Integrations (JEI, EMI, REI, Jade, Curios, KubeJS, CraftTweaker, Create, Mekanism, AE2, RS, Botania, Ars Nouveau, Iron's Spells, Blood Magic, Tinkers', Farmer's Delight) and API docs | Not started |
 | 8 | Visual polish: animated Thaumonomicon, GUIs, models, particles and shaders, sound, balancing, configs | Not started |
-| 9 | Testing: single player, dedicated server, large packs, performance | CI build + unit tests in place |
+| 9 | Testing: single player, dedicated server, large packs, performance | CI: build, 45 unit tests, 7 in-game tests on a dedicated server |
 
 ## 4. Phase 3 deliverables in detail
 
@@ -82,10 +82,18 @@ focus workbench GUI and the per-component visuals.
 
 ## 5. Next steps (exact continuation point)
 
-1. Finish phase 3 client side: `client/ThaumicUnityClient`, `client/screen/ThaumonomiconScreen`,
-   `ArcaneWorkbenchScreen`, `ResearchTableScreen`, `AlchemicalFurnaceScreen`, `client/particle/MagicParticle`,
-   aspect tooltip, aura HUD layer.
-2. Phase 3 data: blockstates/models/item models, textures (generated by `tools/gen_textures.py`), loot tables,
-   tags, starter research tree, starter recipes, core spell components, en_us.json.
-3. Then phase 4, starting with wands (rods/caps as datapack registries), the TC4/TC6 foci archetypes, essentia
-   tubes and the alembic.
+Phase 3 is complete. Continue with **phase 4, migration of existing content**, in this order:
+
+1. `common/wand/` — wands: rods and caps as datapack registries (`thaumicunity:wand_rod`, `thaumicunity:wand_cap`),
+   `WandItem` storing vis per primal (data component), recharge from the aura and from vis crystals, the wand
+   recharge pedestal; wands cast the same foci as gauntlets (D4).
+2. `common/essentia/` — essentia tubes, valves, filters and buffers, the alembic on the alchemical furnace, the
+   centrifuge and the essentia mirror.
+3. TC4/TC6 focus archetypes as data (`tools/content/spells.py`): the remaining classic foci (portable hole, primal,
+   warding, equal trade with presets, …) and their research.
+4. Tools, weapons and armour (thaumium, void metal, robes, fortress) with their research.
+5. Flora and ores: greatwood and silverwood trees, cinderpearl, shimmerleaf, vishroom, crystal clusters; nodes for
+   the hybrid aura (D2).
+
+Each step adds its content tables in `tools/content/`, its textures to `tools/gen_textures.py`, its research to
+`tools/content/research.py` and an in-game test.

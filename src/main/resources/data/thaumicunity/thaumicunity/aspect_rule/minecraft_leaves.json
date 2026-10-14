@@ -1,5 +1,5 @@
 {
-  "tag": "minecraft:leaves",
+  "tag": "#minecraft:leaves",
   "aspects": {
     "thaumicunity:herba": 1,
     "thaumicunity:arbor": 1

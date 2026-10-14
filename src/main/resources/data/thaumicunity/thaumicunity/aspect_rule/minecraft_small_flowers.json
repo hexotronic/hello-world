@@ -1,5 +1,5 @@
 {
-  "tag": "minecraft:small_flowers",
+  "tag": "#minecraft:small_flowers",
   "aspects": {
     "thaumicunity:flos": 1,
     "thaumicunity:herba": 1

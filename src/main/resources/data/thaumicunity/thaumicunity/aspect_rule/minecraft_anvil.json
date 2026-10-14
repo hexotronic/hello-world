@@ -1,5 +1,5 @@
 {
-  "tag": "minecraft:anvil",
+  "tag": "#minecraft:anvil",
   "aspects": {
     "thaumicunity:metallum": 30,
     "thaumicunity:fabrico": 4,

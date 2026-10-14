@@ -1,5 +1,5 @@
 {
-  "tag": "minecraft:decorated_pot_sherds",
+  "tag": "#minecraft:decorated_pot_sherds",
   "aspects": {
     "thaumicunity:terra": 1,
     "thaumicunity:ars": 2,

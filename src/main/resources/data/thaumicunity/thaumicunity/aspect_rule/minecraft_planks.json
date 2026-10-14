@@ -1,5 +1,5 @@
 {
-  "tag": "minecraft:planks",
+  "tag": "#minecraft:planks",
   "aspects": {
     "thaumicunity:arbor": 1,
     "thaumicunity:lignum": 1

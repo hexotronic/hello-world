@@ -1,5 +1,5 @@
 {
-  "tag": "minecraft:candles",
+  "tag": "#minecraft:candles",
   "aspects": {
     "thaumicunity:lux": 1,
     "thaumicunity:ignis": 1,

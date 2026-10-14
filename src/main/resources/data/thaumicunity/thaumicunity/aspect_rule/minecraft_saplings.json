@@ -1,5 +1,5 @@
 {
-  "tag": "minecraft:saplings",
+  "tag": "#minecraft:saplings",
   "aspects": {
     "thaumicunity:herba": 2,
     "thaumicunity:arbor": 1,

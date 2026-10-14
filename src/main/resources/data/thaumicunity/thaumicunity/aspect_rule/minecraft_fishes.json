@@ -1,5 +1,5 @@
 {
-  "tag": "minecraft:fishes",
+  "tag": "#minecraft:fishes",
   "aspects": {
     "thaumicunity:piscis": 2,
     "thaumicunity:caro": 1

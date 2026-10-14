@@ -1,5 +1,5 @@
 {
-  "tag": "minecraft:beds",
+  "tag": "#minecraft:beds",
   "aspects": {
     "thaumicunity:pannus": 3,
     "thaumicunity:somnium": 2,

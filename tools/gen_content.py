@@ -393,7 +393,7 @@ def gen_item_aspects(lang):
     clean_dir(rules_dir)
     for tag, text, priority in item_aspects.TAG_RULES:
         name = tag.replace(":", "_").replace("/", "_")
-        rule = {"tag": tag, "aspects": parse_aspects(text, tag), "priority": priority}
+        rule = {"tag": "#" + tag, "aspects": parse_aspects(text, tag), "priority": priority}
         write_json(os.path.join(rules_dir, name + ".json"), rule)
     print(f"item aspects: {len(item_map)}, entity aspects: {len(entity_map)}, tag rules: {len(item_aspects.TAG_RULES)}")
 

@@ -1,5 +1,5 @@
 {
-  "tag": "minecraft:music_discs",
+  "tag": "#minecraft:music_discs",
   "aspects": {
     "thaumicunity:sonus": 4,
     "thaumicunity:harmonia": 2,

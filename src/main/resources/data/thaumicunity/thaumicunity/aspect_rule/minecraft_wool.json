@@ -1,5 +1,5 @@
 {
-  "tag": "minecraft:wool",
+  "tag": "#minecraft:wool",
   "aspects": {
     "thaumicunity:pannus": 2,
     "thaumicunity:bestia": 1

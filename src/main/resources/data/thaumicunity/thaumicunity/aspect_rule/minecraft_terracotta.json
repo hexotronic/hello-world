@@ -1,5 +1,5 @@
 {
-  "tag": "minecraft:terracotta",
+  "tag": "#minecraft:terracotta",
   "aspects": {
     "thaumicunity:terra": 2,
     "thaumicunity:ignis": 1,

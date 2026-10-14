@@ -1,5 +1,5 @@
 {
-  "tag": "minecraft:enchantable/mining",
+  "tag": "#minecraft:enchantable/mining",
   "aspects": {
     "thaumicunity:perfodio": 2
   },

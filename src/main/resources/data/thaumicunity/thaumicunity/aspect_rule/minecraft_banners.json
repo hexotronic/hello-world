@@ -1,5 +1,5 @@
 {
-  "tag": "minecraft:banners",
+  "tag": "#minecraft:banners",
   "aspects": {
     "thaumicunity:pannus": 4,
     "thaumicunity:ars": 2,

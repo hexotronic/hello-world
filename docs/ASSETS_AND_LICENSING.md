@@ -21,13 +21,16 @@ resource pack with the licence terms they specify; the mod's resource paths are 
 
 ## Where Thaumic Unity's art comes from
 
-* `tools/gen_textures.py` generates every texture procedurally (Pillow): aspect glyphs, item and block textures,
-  GUI backgrounds in a parchment-and-brass style, particle sprites. The generator is deterministic, so the output
-  can be regenerated and tweaked by changing palettes and shape parameters instead of hand-editing pixels.
-* Hand-made textures can replace any generated file; the generator never overwrites files listed in
+* `tools/gen_textures.py` generates every texture procedurally (Pillow): item sprites from character templates and
+  palettes, block textures from noise and patterns, a rune glyph for each of the 183 aspects, particle sprites,
+  research map backgrounds and the logo. The generator is deterministic, so the output can be regenerated and
+  tweaked by changing palettes and shapes instead of hand-editing pixels.
+* Screens (workbench, research table, furnace, Thaumonomicon) are drawn in code in a parchment-and-brass style, so
+  they need no background textures.
+* Hand-made textures can replace any generated file; the generator never overwrites paths listed in
   `tools/texture_overrides.txt`.
-* Sounds: until original recordings exist, `sounds.json` maps Thaumic Unity sound events onto vanilla sound
-  files (allowed: the files stay in the player's own game installation). Resource packs can retarget them.
+* Sounds: until original recordings exist, `sounds.json` forwards each Thaumic Unity sound event to a vanilla sound
+  event (the sound files stay in the player's own game installation). Resource packs can retarget them.
 
 ## Licence of this project
 
