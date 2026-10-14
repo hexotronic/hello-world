@@ -55,13 +55,13 @@ focus workbench GUI and the per-component visuals.
 |---|---|---|
 | 1 | Research and inventory of every source mod | **Done** — [INVENTORY.md](INVENTORY.md) (with a verification backlog) |
 | 2 | Architecture: packages, registries, data formats, aspect system, API | **Done** — [ARCHITECTURE.md](ARCHITECTURE.md), [DESIGN_DECISIONS.md](DESIGN_DECISIONS.md) |
-| 3 | Core systems: aspects, research, aura/vis, crucible, arcane crafting, infusion, spell framework | **Done** — Minecraft-independent core with 45 unit tests; NeoForge layer, client screens, 258 generated textures, all phase 3 data; in-game tests run in CI |
+| 3 | Core systems: aspects, research, aura/vis, crucible, arcane crafting, infusion, spell framework | **Done** — Minecraft-independent core with 47 unit tests; NeoForge layer, client screens, 258 generated textures, all phase 3 data; in-game tests run in CI |
 | 4 | Migration of all existing content (items, blocks, devices, wands, foci, tools, armor, flora, ores, basic mobs) | Not started |
 | 5 | New content: devices, golems, armor, worldgen, mobs, bosses, dimensions, endgame | Not started |
 | 6 | Spell expansion to ≈720 components, focus workbench, synergies, forbidden magic | Framework done; catalogue not started |
 | 7 | Integrations (JEI, EMI, REI, Jade, Curios, KubeJS, CraftTweaker, Create, Mekanism, AE2, RS, Botania, Ars Nouveau, Iron's Spells, Blood Magic, Tinkers', Farmer's Delight) and API docs | Not started |
 | 8 | Visual polish: animated Thaumonomicon, GUIs, models, particles and shaders, sound, balancing, configs | Not started |
-| 9 | Testing: single player, dedicated server, large packs, performance | CI: build, 45 unit tests, 7 in-game tests on a dedicated server |
+| 9 | Testing: single player, dedicated server, large packs, performance | CI: build, 47 unit tests, 7 in-game tests on a dedicated server |
 
 ## 4. Phase 3 deliverables in detail
 

@@ -58,4 +58,36 @@ class AspectInheritanceTest {
                 1.0, 64);
         assertEquals(64, inheritance.aspectsOf("huge").get("metallum"));
     }
+
+    @Test
+    void cycleFedFromOutsideResolvesEveryMember() {
+        // a is made from iron or from b; b only from a. Whichever is asked first, both get values.
+        var recipes = List.of(
+                new AspectInheritance.RecipeView("a_from_iron", "a", 1, List.of(List.of("iron_ingot"))),
+                new AspectInheritance.RecipeView("a_from_b", "a", 1, List.of(List.of("b"))),
+                new AspectInheritance.RecipeView("b_from_a", "b", 1, List.of(List.of("a"), List.of("stick"))));
+        var askB = new AspectInheritance(explicit, recipes, 1.0, 64);
+        assertEquals(Map.of("metallum", 4, "arbor", 1), askB.aspectsOf("b").asMap());
+        var askA = new AspectInheritance(explicit, recipes, 1.0, 64);
+        assertEquals(Map.of("metallum", 4), askA.aspectsOf("a").asMap());
+        assertEquals(Map.of("metallum", 4, "arbor", 1), askA.aspectsOf("b").asMap());
+    }
+
+    @Test
+    void denseRedyeingCyclesResolveQuickly() {
+        // Sixteen colours, each craftable from any colour plus its dye (like wool, beds, candles); one colour also
+        // from plain planks. A resolver that re-explores cycles takes exponential time here.
+        java.util.List<AspectInheritance.RecipeView> recipes = new java.util.ArrayList<>();
+        java.util.List<String> colours = java.util.stream.IntStream.range(0, 16).mapToObj(i -> "colour_" + i).toList();
+        for (String colour : colours) {
+            recipes.add(new AspectInheritance.RecipeView("dye_" + colour, colour, 1, List.of(colours, List.of("stick"))));
+        }
+        recipes.add(new AspectInheritance.RecipeView("plain", "colour_0", 1, List.of(List.of("oak_planks"))));
+        var inheritance = new AspectInheritance(explicit, recipes, 1.0, 64);
+        Map<String, AspectAmounts> all = org.junit.jupiter.api.Assertions.assertTimeoutPreemptively(
+                java.time.Duration.ofSeconds(2), inheritance::resolveAll);
+        assertEquals(16, all.size());
+        assertEquals(Map.of("arbor", 2), all.get("colour_0").asMap());
+        assertEquals(Map.of("arbor", 3), all.get("colour_7").asMap());
+    }
 }
