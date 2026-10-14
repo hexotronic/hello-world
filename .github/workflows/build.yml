@@ -27,6 +27,17 @@ jobs:
       - name: Build and test
         run: ./gradlew build --stacktrace
 
+      # Starts a dedicated server with the mod, which loads every data file (registries, recipes, tags, loot,
+      # data maps, world generation) and runs the in-game tests in data/thaumicunity/test_instance.
+      - name: Game tests
+        timeout-minutes: 20
+        run: |
+          set -o pipefail
+          ./gradlew runGameTestServer --stacktrace 2>&1 | tee gametest.log
+      - name: Game test problems
+        if: failure()
+        run: grep -nE "ERROR|WARN.*thaumicunity|Exception|failed|FAILED|Couldn't|Failed to" gametest.log | grep -v "DEBUG" | head -n 200 || true
+
       - name: Upload mod jar
         if: success()
         uses: actions/upload-artifact@v4

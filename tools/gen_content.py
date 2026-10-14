@@ -722,6 +722,31 @@ def gen_research(lang):
     print(f"research categories: {len(research.CATEGORIES)}, entries: {len(research.ENTRIES)}")
 
 
+# ---------------------------------------------------------------------------------------------------------- game tests
+
+# Test functions registered by dev.thaumicunity.common.gametest.TUGameTests -> ticks they may take.
+GAME_TESTS = {
+    "registries_loaded": 20,
+    "foci_compile": 20,
+    "item_aspects": 20,
+    "crucible_and_infusion": 20,
+    "world_data": 20,
+    "insight_puzzles_solvable": 20,
+    "salis_mundus": 40,
+}
+
+
+@generator
+def gen_game_tests(lang):
+    out = os.path.join(DATA, NS, "test_instance")
+    clean_dir(out)
+    for name, ticks in GAME_TESTS.items():
+        write_json(os.path.join(out, name + ".json"), {
+            "type": "minecraft:function", "environment": "minecraft:default", "function": rid(name),
+            "max_ticks": ticks, "required": True, "setup_ticks": 1, "structure": "minecraft:empty"})
+    print(f"game tests: {len(GAME_TESTS)}")
+
+
 def main():
     lang = {}
     for gen in GENERATORS:

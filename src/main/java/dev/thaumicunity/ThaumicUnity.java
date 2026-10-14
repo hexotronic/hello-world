@@ -6,6 +6,7 @@ import dev.thaumicunity.common.aura.AuraManager;
 import dev.thaumicunity.common.network.TUNetwork;
 import dev.thaumicunity.common.config.TUClientConfig;
 import dev.thaumicunity.common.config.TUConfig;
+import dev.thaumicunity.common.gametest.TUGameTests;
 import dev.thaumicunity.common.registry.TUAttachments;
 import dev.thaumicunity.common.registry.TUBlockEntities;
 import dev.thaumicunity.common.registry.TUBlocks;
@@ -55,6 +56,7 @@ public final class ThaumicUnity {
         TUCreativeTabs.init(modBus);
         TUSpellPrimitives.init(modBus);
         TUBiomeModifiers.init(modBus);
+        TUGameTests.init(modBus);
         TUNetwork.init(modBus);
 
         TUEvents.init(modBus);

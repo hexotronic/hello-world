@@ -14,20 +14,22 @@ import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.Identifier;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Spell components of one registry access (server or client) together with a memoising compiler. Rebuilt whenever
- * the registry access changes (new world, new server connection).
+ * Spell components of one registry access (server or client) together with a memoising compiler. A new world or
+ * server connection has a new registry access and so gets its own library.
  */
 public final class SpellLibrary {
-    private static volatile SpellLibrary cached;
+    /** One library per registry access (client and integrated server each have their own); weak keys free old worlds. */
+    private static final Map<RegistryAccess, SpellLibrary> LIBRARIES = Collections.synchronizedMap(new WeakHashMap<>());
 
-    private final RegistryAccess access;
     private final Map<Identifier, SpellComponent> components;
     private final SpellCompiler compiler;
     private final Map<CacheKey, CompiledSpell> compiled = new ConcurrentHashMap<>();
@@ -36,7 +38,6 @@ public final class SpellLibrary {
     }
 
     private SpellLibrary(RegistryAccess access) {
-        this.access = access;
         Map<Identifier, SpellComponent> map = new HashMap<>();
         List<SpellComponentSpec> specs = new ArrayList<>();
         Optional<Registry<SpellComponent>> registry = access.lookup(TURegistries.SPELL_COMPONENT);
@@ -53,17 +54,12 @@ public final class SpellLibrary {
     }
 
     public static SpellLibrary get(RegistryAccess access) {
-        SpellLibrary current = cached;
-        if (current == null || current.access != access) {
-            current = new SpellLibrary(access);
-            cached = current;
-        }
-        return current;
+        return LIBRARIES.computeIfAbsent(access, SpellLibrary::new);
     }
 
     /** Drops the cache (config or data reload). */
     public static void invalidate() {
-        cached = null;
+        LIBRARIES.clear();
     }
 
     public Optional<SpellComponent> component(Identifier id) {
