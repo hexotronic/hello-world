@@ -1,28 +1,18 @@
 # Classes whose signatures are printed by .github/workflows/api-probe.yml (javap -protected).
 # Syntax: see tools/api-probe.sh. Avoid parentheses in filters.
-net.minecraft.client.Minecraft | RenderTarget|LevelStorageSource|WorldOpenFlows|IntegratedServer|setScreen|getOverlay|getLevelSource|getAtlasManager|getModelManager|getBlockRenderer|getTextureManager|MaterialSet|getResourceManager
-net.minecraft.world.level.LevelSettings$DifficultySettings
-net.minecraft.client.renderer.GameRenderer | RenderTarget|mainRenderTarget
-net.minecraft.client.renderer.SubmitNodeCollector
-net.minecraft.client.renderer.OrderedSubmitNodeCollector
-net.minecraft.client.renderer.SubmitNodeCollector$CustomGeometryRenderer
-net.minecraft.client.renderer.rendertype.RenderTypes | public static
-net.minecraft.client.renderer.Sheets | public static
-net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider$Context
-net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState
-net.minecraft.client.resources.model.MaterialSet
-net.minecraft.client.resources.model.Material
-net.minecraft.client.renderer.texture.TextureAtlas | public static
-net.minecraft.client.renderer.texture.TextureAtlasSprite | getU|getV|contents|atlasLocation
-net.minecraft.data.AtlasIds | public static
-com.mojang.blaze3d.vertex.VertexConsumer
-com.mojang.blaze3d.vertex.PoseStack$Pose | public
-net.minecraft.util.ARGB | public static int
-net.neoforged.neoforge.client.event.ClientTickEvent$Post
-net.neoforged.neoforge.client.event.ScreenEvent$Opening | public
-net.minecraft.client.player.LocalPlayer | connection|getInventory
-net.minecraft.client.gui.screens.inventory.InventoryScreen | public
-net.minecraft.client.renderer.LevelRenderer | hasRenderedAllSections|countRenderedSections|isSectionCompiled
-net.minecraft.client.Options | gui|renderDistance|pauseOnLostFocus|onboard|guiScale
-grep:AtlasIds|\.Sheets$|rendertype\.RenderTypes$|ModelFeatureRenderer|CustomGeometry
-grep:client\.renderer\.texture\.atlas|SpriteGetter|MaterialSet|AtlasManager
+net.minecraft.client.Minecraft | creen|verlay|public .*gui|public .*level|public .*player|stop|gameRenderer|levelRenderer
+net.minecraft.client.gui.Gui | public
+net.minecraft.client.player.LocalPlayer | closeContainer|clientSideCloseContainer
+net.minecraft.world.entity.player.Player | getAbilities|onUpdateAbilities|containerMenu|inventoryMenu|getInventory|closeContainer
+net.minecraft.server.level.ServerPlayer | level|openMenu|serverLevel
+net.minecraft.world.entity.Entity | public .* level|getUUID
+net.minecraft.world.entity.player.Inventory | add|setItem|clearContent|setSelected
+net.minecraft.util.thread.BlockableEventLoop | public
+net.minecraft.client.gui.screens.Screen | font|width|height|minecraft|title|extractRenderState|extractBackground|isPauseScreen|onClose
+net.minecraft.world.entity.item.ItemEntity | ItemEntity
+net.minecraft.world.level.block.Block | UPDATE_ALL|UPDATE_CLIENTS
+net.minecraft.world.level.Level | setBlock|getBlockEntity
+net.minecraft.client.gui.Font | plainSubstrByWidth|width
+net.minecraft.server.players.PlayerList | getPlayer
+net.minecraft.world.entity.player.Abilities | flying|mayfly
+grep:client\.gui\.(Gui|Hud|ScreenManager|GuiManager)|client\.gui\.hud\.|screens\.Overlay$|LoadingOverlay$
