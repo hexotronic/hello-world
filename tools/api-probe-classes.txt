@@ -1,12 +1,21 @@
 # Classes whose signatures are printed by .github/workflows/api-probe.yml (javap -protected).
 # Syntax: see tools/api-probe.sh. Avoid parentheses in filters.
-net.neoforged.neoforge.event.AddPackFindersEvent | public
-net.minecraft.server.packs.repository.Pack | public static|public net
-net.minecraft.server.packs.PackLocationInfo
-net.minecraft.server.packs.PackSelectionConfig
-net.minecraft.server.packs.repository.PackSource | public static
-net.minecraft.server.packs.PathPackResources$PathResourcesSupplier
-net.minecraft.server.packs.repository.RepositorySource
-com.mojang.blaze3d.platform.NativeImage | public
-net.neoforged.fml.loading.FMLPaths | public
-grep:server\.packs\.repository\.Pack\$|PackType$|resources\.PackResources$
+net.minecraft.world.item.Item$Properties | sword|pickaxe|axe|shovel|hoe|humanoidArmor|attributes|enchantable|repairable|durability|tool|spear|fireResistant
+net.minecraft.world.item.ToolMaterial
+net.minecraft.world.item.equipment.ArmorMaterial
+net.minecraft.world.item.equipment.ArmorType | public static final
+net.minecraft.world.item.equipment.EquipmentAssets | public static
+net.minecraft.world.item.equipment.EquipmentAsset | public
+net.minecraft.world.item.AxeItem | AxeItem
+net.minecraft.world.item.ShovelItem | ShovelItem
+net.minecraft.world.item.HoeItem | HoeItem
+net.minecraft.world.item.component.ItemAttributeModifiers | public
+net.minecraft.world.item.component.ItemAttributeModifiers$Builder | public
+net.minecraft.world.entity.ai.attributes.AttributeModifier | public
+net.minecraft.world.entity.ai.attributes.Attributes | STEP_HEIGHT|MOVEMENT_SPEED|ARMOR|ATTACK_DAMAGE
+net.minecraft.world.entity.EquipmentSlotGroup | public static final
+net.minecraft.world.entity.LivingEntity | getItemBySlot|hurtAndBreak
+net.minecraft.world.item.ItemStack | isDamaged|getDamageValue|setDamageValue|hurtAndBreak
+net.minecraft.tags.ItemTags | REPAIRS|IRON_TOOL_MATERIALS|DIAMOND_TOOL
+net.minecraft.tags.BlockTags | INCORRECT_FOR
+grep:item\.equipment\.|EquipmentClientInfo
