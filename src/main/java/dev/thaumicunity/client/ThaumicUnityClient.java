@@ -11,6 +11,7 @@ import dev.thaumicunity.client.screen.ArcaneWorkbenchScreen;
 import dev.thaumicunity.client.screen.GuiUtil;
 import dev.thaumicunity.client.screen.ResearchTableScreen;
 import dev.thaumicunity.client.smoke.ClientSmokeTest;
+import dev.thaumicunity.client.thaumcraft.ThaumcraftTextures;
 import dev.thaumicunity.common.aspect.ItemAspects;
 import dev.thaumicunity.common.item.ClientBridge;
 import dev.thaumicunity.common.network.AuraSnapshotPayload;
@@ -53,6 +54,7 @@ public final class ThaumicUnityClient {
         modBus.addListener(ThaumicUnityClient::registerPayloadHandlers);
         modBus.addListener(ThaumicUnityClient::registerGuiLayers);
         modBus.addListener(ThaumicUnityClient::registerReloadListeners);
+        modBus.addListener(ThaumcraftTextures::addPackFinders);
 
         NeoForge.EVENT_BUS.addListener(AspectTooltips::onTooltip);
         NeoForge.EVENT_BUS.addListener((RecipesReceivedEvent event) -> ClientRecipes.set(event.getRecipeMap()));

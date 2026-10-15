@@ -30,71 +30,18 @@ from PIL import Image
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "tools", "content"))
 import aspects as aspect_table  # noqa: E402
+from thaumcraft_import import KNOWN, NOISE, TINTED_CRYSTALS  # noqa: E402
 
 # Minecraft 26.3 resource pack format (version.json: pack_version.resource_major).
 RESOURCE_PACK_FORMAT = 97
 TC_TEXTURES = "assets/thaumcraft/textures/"
 
 # Thaumic Unity texture -> Thaumcraft candidates (relative to assets/thaumcraft/textures/), best first.
-KNOWN = {
-    "item/thaumonomicon": ["items/thaumonomicon.png", "items/thaumonomiconcheat.png"],
-    "item/thaumometer": ["items/thaumometer.png", "items/scanner.png"],
-    "item/goggles_of_revealing": ["items/goggles.png", "items/goggles_revealing.png"],
-    "item/scribing_tools": ["items/scribing_tools.png", "items/scribingtools.png", "items/inkwell.png"],
-    "item/research_notes": ["items/researchnotes.png", "items/research_notes.png", "items/notes.png"],
-    "item/salis_mundus": ["items/salis_mundus.png", "items/salismundus.png"],
-    "item/phial": ["items/phial.png", "items/phial_empty.png", "items/essentia_phial.png"],
-    "item/quicksilver": ["items/quicksilver.png"],
-    "item/amber": ["items/amber.png", "items/amberalt.png"],
-    "item/cinnabar": ["items/cinnabar.png", "items/cluster_cinnabar.png", "items/cinnibar.png"],
-    "item/alumentum": ["items/alumentum.png"],
-    "item/nitor": ["items/nitor.png", "items/nitor/nitor_yellow.png", "items/nitor_yellow.png"],
-    "item/tallow": ["items/tallow.png"],
-    "item/enchanted_fabric": ["items/fabric.png", "items/enchantedfabric.png", "items/clothic.png"],
-    "item/thaumium_ingot": ["items/ingot_thaumium.png", "items/thaumiumingot.png"],
-    "item/thaumium_nugget": ["items/nugget_thaumium.png", "items/nuggetthaumium.png"],
-    "item/brass_ingot": ["items/ingot_brass.png", "items/brassingot.png"],
-    "item/brass_nugget": ["items/nugget_brass.png", "items/nuggetbrass.png"],
-    "item/basic_caster": ["items/caster_basic.png", "items/casters_basic.png", "items/caster.png"],
-    "item/thaumium_caster": ["items/caster_thaumium.png", "items/casters_thaumium.png"],
-    "item/apprentice_focus": ["items/focus_1.png", "items/focus_blank.png", "items/focus_fire.png"],
-    "item/adept_focus": ["items/focus_2.png", "items/focus_frost.png"],
-    "item/archmage_focus": ["items/focus_3.png", "items/focus_primal.png"],
-    "block/arcane_stone": ["blocks/arcane_stone.png", "blocks/arcanestone.png", "blocks/es_1.png"],
-    "block/arcane_stone_bricks": ["blocks/arcane_stone_brick.png", "blocks/arcane_brick.png", "blocks/es_2.png"],
-    "block/thaumium_block": ["blocks/metal_thaumium.png", "blocks/thaumiumblock.png"],
-    "block/brass_block": ["blocks/metal_brass.png", "blocks/brassblock.png"],
-    "block/amber_block": ["blocks/amber_block.png", "blocks/amberblock.png"],
-    "block/cinnabar_ore": ["blocks/ore_cinnabar.png", "blocks/cinnibar.png", "blocks/cinnabar.png"],
-    "block/amber_ore": ["blocks/ore_amber.png", "blocks/amberore.png"],
-    "block/crucible_side": ["blocks/crucible_side.png", "blocks/crucible1.png", "blocks/crucible3.png"],
-    "block/crucible_top": ["blocks/crucible_top.png", "blocks/crucible4.png"],
-    "block/crucible_inner": ["blocks/crucible_inner.png", "blocks/crucible2.png"],
-    "block/crucible_bottom": ["blocks/crucible_bottom.png", "blocks/crucible5.png"],
-    "block/warded_jar_side": ["blocks/jar_side.png", "blocks/jar_side_warded.png"],
-    "block/warded_jar_lid": ["blocks/jar_top.png", "blocks/jar_top_warded.png"],
-    "block/arcane_pedestal_side": ["blocks/pedestal_side.png", "blocks/pedestal_arcane_side.png"],
-    "block/arcane_pedestal_top": ["blocks/pedestal_top.png", "blocks/pedestal_arcane_top.png"],
-    "block/runic_matrix": ["blocks/infusion_matrix.png", "blocks/infusionmatrix.png", "blocks/matrix.png"],
-    "block/alchemical_furnace_side": ["blocks/al_furnace_front_off.png", "blocks/al_furnace_front.png",
-                                      "blocks/smelter_front.png", "blocks/smelter_side.png"],
-    "block/alchemical_furnace_top": ["blocks/al_furnace_top.png", "blocks/smelter_top.png"],
-    "block/arcane_workbench_top": ["blocks/arcane_workbench_top.png", "blocks/worktable_top.png"],
-    "block/arcane_workbench_side": ["blocks/arcane_workbench_side.png", "blocks/worktable_side.png"],
-    "block/arcane_workbench_bottom": ["blocks/arcane_workbench_bottom.png", "blocks/worktable_bottom.png"],
-    "block/research_table_top": ["blocks/research_table_top.png", "blocks/restable_top.png"],
-    "block/research_table_side": ["blocks/research_table_side.png", "blocks/restable_side.png"],
-}
 
 # Thaumcraft textures that are grey and tinted in code: target -> (candidates, colour).
 PRIMAL_COLOURS = {row[0]: row[1] for row in aspect_table.PRIMALS}
-TINTED = {
-    f"item/{primal}_vis_crystal": (["items/crystal_essence.png", "items/vis_crystal.png", "items/shard.png"], colour)
-    for primal, colour in PRIMAL_COLOURS.items()
-}
+TINTED = {f"item/{primal}_vis_crystal": (TINTED_CRYSTALS, colour) for primal, colour in PRIMAL_COLOURS.items()}
 
-# Words that say nothing about which texture is meant.
-NOISE = {"item", "block", "of", "the", "basic"}
 
 
 def tokens(name):
@@ -104,6 +51,8 @@ def tokens(name):
 def fuzzy(target, pngs):
     """Shortest texture of the same kind (item or block) whose file name contains every word of the target's name."""
     kind, name = target.split("/", 1)
+    if kind not in ("item", "block"):
+        return None
     folders = (kind + "/", kind + "s/")
     words = tokens(name)
     if not words:

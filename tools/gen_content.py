@@ -26,6 +26,7 @@ import item_aspects  # noqa: E402
 import recipes  # noqa: E402
 import research  # noqa: E402
 import spells  # noqa: E402
+import thaumcraft_import  # noqa: E402
 import wands  # noqa: E402
 import world  # noqa: E402
 
@@ -863,6 +864,32 @@ def gen_research(lang):
         if name not in shown:
             raise SystemExit(f"arcane recipe {name} is not shown in any research entry")
     print(f"research categories: {len(research.CATEGORIES)}, entries: {len(research.ENTRIES)}")
+
+
+# ---------------------------------------------------------------------------------------------------------- Thaumcraft textures
+
+@generator
+def gen_thaumcraft_import(lang):
+    """Mapping the client uses to build a resource pack from the player's own Thaumcraft jar (no Thaumcraft file is
+    part of this project). Every target must be a texture Thaumic Unity has, so the pack only ever replaces."""
+    textures = os.path.join(ASSETS, "textures")
+    for target in thaumcraft_import.KNOWN:
+        if not os.path.exists(os.path.join(textures, target + ".png")):
+            raise SystemExit(f"thaumcraft_import: {target} is not a Thaumic Unity texture")
+    primals = {row[0]: row[1] for row in aspects.PRIMALS}
+    data = {
+        "version": 1,
+        "pack_format": 97,
+        "known": thaumcraft_import.KNOWN,
+        "tinted": {f"item/{p}_vis_crystal": {"candidates": thaumcraft_import.TINTED_CRYSTALS, "color": f"#{c:06x}"}
+                   for p, c in primals.items()},
+        "aspects": {row[0]: f"#{row[1]:06x}" for row in aspects.ALL},
+        "noise": thaumcraft_import.NOISE,
+    }
+    write_json(os.path.join(ASSETS, "thaumcraft_import.json"), data)
+    lang[f"pack.{NS}.thaumcraft_textures"] = "Thaumcraft textures"
+    lang[f"pack.{NS}.thaumcraft_textures.description"] = "From your own Thaumcraft jar, for your own game only"
+    print(f"thaumcraft texture map: {len(thaumcraft_import.KNOWN)} textures, {len(data['aspects'])} aspect glyphs")
 
 
 # ---------------------------------------------------------------------------------------------------------- game tests

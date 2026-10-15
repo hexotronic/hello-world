@@ -706,6 +706,8 @@
   "message.thaumicunity.wand.no_vis": "The wand holds too little vis, and you carry no vis crystals to make up for it",
   "pack.thaumicunity.modern_combinations": "Thaumic Unity: Modern Combinations",
   "pack.thaumicunity.modern_combinations.description": "Thaumcraft 6 component pairs for shared aspects",
+  "pack.thaumicunity.thaumcraft_textures": "Thaumcraft textures",
+  "pack.thaumicunity.thaumcraft_textures.description": "From your own Thaumcraft jar, for your own game only",
   "requirement.thaumicunity.craft": "Craft %s",
   "requirement.thaumicunity.dimension": "Visit %s",
   "requirement.thaumicunity.insight": "Solve an insight puzzle: %s",

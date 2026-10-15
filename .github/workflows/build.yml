@@ -77,8 +77,13 @@ jobs:
           printf '%s\n' onboardAccessibility:false pauseOnLostFocus:false renderDistance:6 simulationDistance:5 \
             guiScale:2 tutorialStep:none joinedFirstServer:true skipMultiplayerWarning:true narrator:0 \
             soundCategory_master:0.0 > run/smoke/options.txt
+          # A stand-in "Thaumcraft jar" (generated checkerboards, no Thaumcraft file) exercises the texture loader.
+          mkdir -p run/smoke/thaumicunity
+          python3 tools/ci/make_fake_thaumcraft_jar.py run/smoke/thaumicunity/fake-thaumcraft.jar
           set -o pipefail
           xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew runSmokeClient --stacktrace 2>&1 | tee smoke.log
+          grep "Using Thaumcraft textures from fake-thaumcraft.jar" smoke.log
+          ls run/smoke/thaumicunity/thaumcraft-pack/assets/thaumicunity/textures/*/
 
       - name: Smoke test report
         if: always()

@@ -36,8 +36,10 @@ cauldron into a crucible and a lectern into a research table.
 
 ### Thaumcraft's look
 
-Thaumic Unity ships with its own art. If you own Thaumcraft, `tools/import_thaumcraft_textures.py` turns your jar
-into a personal resource pack that gives Thaumic Unity Thaumcraft's textures; see
+Thaumic Unity ships with its own art. If you own Thaumcraft, put your Thaumcraft jar (Thaumcraft 4 for 1.7.10 or
+Thaumcraft 6 for 1.12.2) into `.minecraft/thaumicunity/` and restart: the game converts its textures into a resource
+pack on your computer and uses them in place of Thaumic Unity's (items, blocks, aspect glyphs, research
+backgrounds). Nothing from Thaumcraft is part of this repository or the mod jar. See
 [Using Thaumcraft's textures](docs/ASSETS_AND_LICENSING.md#using-thaumcrafts-textures-on-your-own-computer).
 
 ## Building
