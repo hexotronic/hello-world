@@ -1,13 +1,12 @@
 # Classes whose signatures are printed by .github/workflows/api-probe.yml (javap -protected).
 # Syntax: see tools/api-probe.sh. Avoid parentheses in filters.
-net.minecraft.world.level.block.state.BlockBehaviour | updateShape|neighborChanged|getShape|getCollisionShape|onPlace|useWithoutItem|getAnalogOutputSignal|isSignalSource
-net.minecraft.world.level.block.Block | getStateForPlacement|createBlockStateDefinition|registerDefaultState|defaultBlockState|stateDefinition
-net.minecraft.world.level.block.PipeBlock | public|protected
-net.minecraft.world.level.block.state.properties.BlockStateProperties | NORTH|POWERED|OPEN|ENABLED
-net.minecraft.world.level.block.state.properties.BooleanProperty | public
-net.minecraft.world.level.SignalGetter | hasNeighborSignal
-net.minecraft.world.item.context.BlockPlaceContext | public
-net.minecraft.world.level.LevelReader | getBlockEntity
-net.minecraft.world.level.ScheduledTickAccess
-net.minecraft.world.level.redstone.Orientation | public
-net.minecraft.world.level.block.FenceBlock | updateShape|getStateForPlacement|connectsTo
+net.neoforged.neoforge.event.AddPackFindersEvent | public
+net.minecraft.server.packs.repository.Pack | public static|public net
+net.minecraft.server.packs.PackLocationInfo
+net.minecraft.server.packs.PackSelectionConfig
+net.minecraft.server.packs.repository.PackSource | public static
+net.minecraft.server.packs.PathPackResources$PathResourcesSupplier
+net.minecraft.server.packs.repository.RepositorySource
+com.mojang.blaze3d.platform.NativeImage | public
+net.neoforged.fml.loading.FMLPaths | public
+grep:server\.packs\.repository\.Pack\$|PackType$|resources\.PackResources$
