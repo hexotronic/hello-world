@@ -1,21 +1,16 @@
 # Classes whose signatures are printed by .github/workflows/api-probe.yml (javap -protected).
 # Syntax: see tools/api-probe.sh. Avoid parentheses in filters.
-net.minecraft.world.item.Item$Properties | sword|pickaxe|axe|shovel|hoe|humanoidArmor|attributes|enchantable|repairable|durability|tool|spear|fireResistant
-net.minecraft.world.item.ToolMaterial
-net.minecraft.world.item.equipment.ArmorMaterial
-net.minecraft.world.item.equipment.ArmorType | public static final
-net.minecraft.world.item.equipment.EquipmentAssets | public static
-net.minecraft.world.item.equipment.EquipmentAsset | public
-net.minecraft.world.item.AxeItem | AxeItem
-net.minecraft.world.item.ShovelItem | ShovelItem
-net.minecraft.world.item.HoeItem | HoeItem
-net.minecraft.world.item.component.ItemAttributeModifiers | public
-net.minecraft.world.item.component.ItemAttributeModifiers$Builder | public
-net.minecraft.world.entity.ai.attributes.AttributeModifier | public
-net.minecraft.world.entity.ai.attributes.Attributes | STEP_HEIGHT|MOVEMENT_SPEED|ARMOR|ATTACK_DAMAGE
-net.minecraft.world.entity.EquipmentSlotGroup | public static final
-net.minecraft.world.entity.LivingEntity | getItemBySlot|hurtAndBreak
-net.minecraft.world.item.ItemStack | isDamaged|getDamageValue|setDamageValue|hurtAndBreak
-net.minecraft.tags.ItemTags | REPAIRS|IRON_TOOL_MATERIALS|DIAMOND_TOOL
-net.minecraft.tags.BlockTags | INCORRECT_FOR
-grep:item\.equipment\.|EquipmentClientInfo
+net.neoforged.neoforge.event.entity.living.LivingDamageEvent$Post | public
+net.minecraft.world.item.Item | hurtEnemy|postHurtEnemy|inventoryTick|isValidRepairItem|getDefaultAttributeModifiers
+net.minecraft.world.entity.player.Inventory | getContainerSize|getItem|EQUIPMENT_SLOT_MAPPING|getNonEquipmentItems
+net.minecraft.world.item.Item$Properties | equippable|component|stacksTo|rarity
+net.minecraft.world.item.equipment.Equippable | public static
+net.minecraft.sounds.SoundEvents | ARMOR_EQUIP_IRON|ARMOR_EQUIP_LEATHER|ARMOR_EQUIP_NETHERITE|ARMOR_EQUIP_GENERIC
+file:assets/minecraft/equipment/iron\.json
+file:assets/minecraft/equipment/leather\.json
+file:assets/minecraft/items/iron_sword\.json
+file:assets/minecraft/items/iron_chestplate\.json
+file:assets/minecraft/models/item/iron_sword\.json
+file:assets/minecraft/models/item/iron_chestplate\.json
+file:data/minecraft/tags/item/enchantable/durability\.json
+file:data/minecraft/tags/item/enchantable/sword\.json
