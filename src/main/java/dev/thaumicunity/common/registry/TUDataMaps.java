@@ -43,6 +43,12 @@ public final class TUDataMaps {
             .builder(ThaumicUnity.id("alchemical_fuel"), Registries.ITEM, Codec.intRange(1, 1_000_000))
             .build();
 
+    /** Share of spell vis cost (in percent) an item spares whoever wears it (robes, goggles). */
+    public static final DataMapType<Item, Integer> VIS_DISCOUNT = DataMapType
+            .builder(ThaumicUnity.id("vis_discount"), Registries.ITEM, Codec.intRange(0, 100))
+            .synced(Codec.intRange(0, 100), false)
+            .build();
+
     private TUDataMaps() {
     }
 
@@ -56,5 +62,6 @@ public final class TUDataMaps {
         event.register(AURA_PROFILE);
         event.register(INFUSION_STABILIZER);
         event.register(ALCHEMICAL_FUEL);
+        event.register(VIS_DISCOUNT);
     }
 }

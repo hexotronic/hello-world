@@ -2,6 +2,7 @@ package dev.thaumicunity;
 
 import com.mojang.logging.LogUtils;
 import dev.thaumicunity.common.TUEvents;
+import dev.thaumicunity.common.equipment.EquipmentEffects;
 import dev.thaumicunity.common.aura.AuraManager;
 import dev.thaumicunity.common.network.TUNetwork;
 import dev.thaumicunity.common.config.TUClientConfig;
@@ -60,6 +61,7 @@ public final class ThaumicUnity {
         TUNetwork.init(modBus);
 
         TUEvents.init(modBus);
+        EquipmentEffects.init();
         AuraManager.init();
         SpellScheduler.init();
     }

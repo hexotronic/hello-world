@@ -302,6 +302,118 @@
     "gui/research/auromancy": [
       "gui/gui_researchback.png",
       "gui/gui_research_back_5.png"
+    ],
+    "item/void_metal_ingot": [
+      "items/ingot_void.png",
+      "items/voidingot.png",
+      "items/void_ingot.png"
+    ],
+    "item/void_metal_nugget": [
+      "items/nugget_void.png",
+      "items/voidnugget.png",
+      "items/void_nugget.png"
+    ],
+    "item/thaumium_pickaxe": [
+      "items/thaumium_pick.png",
+      "items/thaumiumpick.png"
+    ],
+    "item/thaumium_helmet": [
+      "items/thaumium_helm.png",
+      "items/thaumiumhelm.png"
+    ],
+    "item/thaumium_chestplate": [
+      "items/thaumium_chest.png",
+      "items/thaumiumchest.png"
+    ],
+    "item/thaumium_leggings": [
+      "items/thaumium_legs.png",
+      "items/thaumiumlegs.png"
+    ],
+    "item/void_pickaxe": [
+      "items/void_pick.png",
+      "items/voidpick.png"
+    ],
+    "item/void_helmet": [
+      "items/void_helm.png",
+      "items/voidhelm.png"
+    ],
+    "item/void_chestplate": [
+      "items/void_chest.png",
+      "items/voidchest.png"
+    ],
+    "item/void_leggings": [
+      "items/void_legs.png",
+      "items/voidlegs.png"
+    ],
+    "item/thaumaturge_chestplate": [
+      "items/cloth_chest.png",
+      "items/robeupper.png",
+      "items/clothchest.png"
+    ],
+    "item/thaumaturge_leggings": [
+      "items/cloth_legs.png",
+      "items/robelegs.png",
+      "items/clothlegs.png"
+    ],
+    "item/thaumaturge_boots": [
+      "items/cloth_boots.png",
+      "items/robeboots.png",
+      "items/clothboots.png"
+    ],
+    "item/traveller_boots": [
+      "items/traveler_boots.png",
+      "items/bootstraveler.png",
+      "items/boots_traveler.png"
+    ],
+    "entity/equipment/humanoid/thaumium": [
+      "models/armor/thaumium_1.png",
+      "entity/armor/thaumium_1.png",
+      "models/thaumium_1.png"
+    ],
+    "entity/equipment/humanoid_leggings/thaumium": [
+      "models/armor/thaumium_2.png",
+      "entity/armor/thaumium_2.png",
+      "models/thaumium_2.png"
+    ],
+    "entity/equipment/humanoid/void": [
+      "models/armor/void_1.png",
+      "entity/armor/void_1.png",
+      "models/void_1.png"
+    ],
+    "entity/equipment/humanoid_leggings/void": [
+      "models/armor/void_2.png",
+      "entity/armor/void_2.png",
+      "models/void_2.png"
+    ],
+    "entity/equipment/humanoid/thaumaturge": [
+      "models/armor/robes_1.png",
+      "entity/armor/robes_1.png",
+      "models/robes_1.png"
+    ],
+    "entity/equipment/humanoid_leggings/thaumaturge": [
+      "models/armor/robes_2.png",
+      "entity/armor/robes_2.png",
+      "models/robes_2.png"
+    ],
+    "item/fortress_helmet": [
+      "items/thaumium_fortress_helm.png",
+      "items/fortresshelm.png",
+      "items/fortress_helm.png"
+    ],
+    "item/fortress_chestplate": [
+      "items/thaumium_fortress_chest.png",
+      "items/fortresschest.png",
+      "items/fortress_chest.png"
+    ],
+    "item/fortress_leggings": [
+      "items/thaumium_fortress_legs.png",
+      "items/fortresslegs.png",
+      "items/fortress_legs.png"
+    ],
+    "entity/equipment/humanoid/traveller": [
+      "models/armor/bootstraveler.png",
+      "entity/armor/bootstraveler.png",
+      "models/bootstraveler.png"
     ]
   },
   "tinted": {

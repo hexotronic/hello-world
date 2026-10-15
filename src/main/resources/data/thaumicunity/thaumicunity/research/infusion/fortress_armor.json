@@ -1,0 +1,36 @@
+{
+  "category": "thaumicunity:infusion",
+  "x": 4,
+  "y": 2,
+  "icon": "thaumicunity:fortress_chestplate",
+  "parents": [
+    "thaumicunity:infusion/runic_matrix",
+    "thaumicunity:artifice/thaumium_equipment"
+  ],
+  "aspects": [
+    "thaumicunity:tutamen",
+    "thaumicunity:metallum"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.infusion.fortress_armor.stage0",
+      "requirements": [
+        {
+          "type": "obtain",
+          "item": "thaumicunity:thaumium_chestplate",
+          "count": 1
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.infusion.fortress_armor.stage1",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:infusion/fortress_helmet",
+        "thaumicunity:infusion/fortress_chestplate",
+        "thaumicunity:infusion/fortress_leggings"
+      ]
+    }
+  ]
+}

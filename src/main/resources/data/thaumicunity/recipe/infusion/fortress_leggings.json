@@ -1,0 +1,21 @@
+{
+  "type": "thaumicunity:infusion",
+  "central": "thaumicunity:thaumium_leggings",
+  "components": [
+    "thaumicunity:thaumium_ingot",
+    "minecraft:gold_ingot",
+    "thaumicunity:thaumium_ingot",
+    "minecraft:gold_ingot",
+    "minecraft:emerald"
+  ],
+  "essentia": {
+    "thaumicunity:tutamen": 20,
+    "thaumicunity:metallum": 20,
+    "thaumicunity:praecantatio": 10
+  },
+  "instability": 4,
+  "result": {
+    "id": "thaumicunity:fortress_leggings"
+  },
+  "research": "thaumicunity:infusion/fortress_armor"
+}

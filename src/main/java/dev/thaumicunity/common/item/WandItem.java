@@ -87,7 +87,7 @@ public class WandItem extends Item {
         if (spell == null) {
             return InteractionResult.FAIL;
         }
-        int[] cost = Wands.cost(server.registryAccess(), wand, spell.cost());
+        int[] cost = Wands.cost(player, wand, spell.cost());
         if (!Wands.pay(player, wand, cost)) {
             Casting.fizzle(server, player, wand, "message.thaumicunity.wand.no_vis");
             return InteractionResult.FAIL;

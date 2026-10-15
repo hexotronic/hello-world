@@ -1,0 +1,14 @@
+{
+  "layers": {
+    "humanoid": [
+      {
+        "texture": "thaumicunity:thaumium"
+      }
+    ],
+    "humanoid_leggings": [
+      {
+        "texture": "thaumicunity:thaumium"
+      }
+    ]
+  }
+}

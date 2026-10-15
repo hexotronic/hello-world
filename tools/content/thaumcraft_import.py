@@ -91,3 +91,8 @@ TINTED_CRYSTALS = ["items/crystal_essence.png", "items/vis_crystal.png", "items/
 # Words that say nothing about which texture is meant.
 NOISE = ["item", "block", "of", "the", "basic", "gui", "research"]
 
+
+# Tools, weapons and armour keep their Thaumcraft names next to the rest of their table.
+from equipment import THAUMCRAFT_TEXTURES as _EQUIPMENT_TEXTURES  # noqa: E402
+
+KNOWN.update(_EQUIPMENT_TEXTURES)

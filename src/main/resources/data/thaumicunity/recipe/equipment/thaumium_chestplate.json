@@ -1,0 +1,19 @@
+{
+  "type": "thaumicunity:arcane_shaped",
+  "key": {
+    "#": "thaumicunity:thaumium_ingot"
+  },
+  "pattern": [
+    "# #",
+    "###",
+    "###"
+  ],
+  "vis": {
+    "thaumicunity:ordo": 5,
+    "thaumicunity:terra": 5
+  },
+  "result": {
+    "id": "thaumicunity:thaumium_chestplate"
+  },
+  "research": "thaumicunity:artifice/thaumium_equipment"
+}

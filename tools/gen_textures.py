@@ -1238,6 +1238,335 @@ def essentia_transport():
     save(cbottom, "block/centrifuge_bottom")
 
 
+# ---------------------------------------------------------------------------------------------------------- equipment
+
+T_HELMET = [
+    "................",
+    "................",
+    "................",
+    "....OOOOOOOO....",
+    "...O55444443O...",
+    "..O5444x443332O.",
+    "..O44OOOOOO32O..",
+    "..O43O....O32O..",
+    "..O43O....O21O..",
+    "..O32O....O21O..",
+    "..OOOO....OOOO..",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+]
+
+T_CHESTPLATE = [
+    "................",
+    "..OOOO....OOOO..",
+    ".O5443OOOOO432O.",
+    ".O44433444333 2O",
+    ".O4333444433332O",
+    ".OOO334x44333OOO",
+    "...O34444333O...",
+    "...O34444332O...",
+    "...O34444332O...",
+    "...O33444332O...",
+    "...O33333322O...",
+    "...O22222211O...",
+    "...OOOOOOOOOO...",
+    "................",
+    "................",
+    "................",
+]
+
+T_LEGGINGS = [
+    "................",
+    "................",
+    "...OOOOOOOOOO...",
+    "...O54xxxx32O...",
+    "...O44444332O...",
+    "...O443OO332O...",
+    "...O43O..O32O...",
+    "...O43O..O32O...",
+    "...O43O..O32O...",
+    "...O33O..O21O...",
+    "...O32O..O21O...",
+    "...O32O..O21O...",
+    "...OOOO..OOOO...",
+    "................",
+    "................",
+    "................",
+]
+
+T_BOOTS = [
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "...OOOO..OOOO...",
+    "...O54O..O43O...",
+    "...O43O..O32O...",
+    "...O43O..O32O...",
+    "..O443O.O432O...",
+    ".O4433O.O3322O..",
+    ".OxxxxO.OxxxxO..",
+    ".OOOOOO.OOOOOO..",
+    "................",
+    "................",
+    "................",
+]
+
+# Boots of the Traveller: leather with a fur cuff and a white wing.
+T_TRAVELLER_BOOTS = [
+    "................",
+    "................",
+    "................",
+    "............ww..",
+    "...ffff..ffffww.",
+    "...ffff..ffffw..",
+    "...O43O..O32Ow..",
+    "...O43O..O32O...",
+    "...O43O..O32O...",
+    "..O443O.O432O...",
+    ".O4433O.O3322O..",
+    ".O1111O.O1111O..",
+    ".OOOOOO.OOOOOO..",
+    "................",
+    "................",
+    "................",
+]
+
+# Thaumaturge's robe and leggings: cloth with a gold trim.
+T_ROBE = [
+    "................",
+    "..OOOO....OOOO..",
+    ".O5443OOOO4432O.",
+    ".O4433xOOx4332O.",
+    ".O443333x33332O.",
+    ".OOO3333x333OOO.",
+    "...O3333x332O...",
+    "...O4333x332O...",
+    "...O4333x332O...",
+    "...O3333x332O...",
+    "..O33333x3322O..",
+    "..O33333x3322O..",
+    "..O22222x2211O..",
+    "..OxxxxxxxxxxO..",
+    "..OOOOOOOOOOOO..",
+    "................",
+]
+
+T_ROBE_LEGS = [
+    "................",
+    "................",
+    "...OOOOOOOOOO...",
+    "...OxxxxxxxxO...",
+    "...O44444332O...",
+    "...O443OO332O...",
+    "...O43O..O32O...",
+    "...O43O..O32O...",
+    "...O43O..O32O...",
+    "...O33O..O21O...",
+    "...O32O..O21O...",
+    "...OxxO..OxxO...",
+    "...OOOO..OOOO...",
+    "................",
+    "................",
+    "................",
+]
+
+EQUIPMENT_SETS = {
+    # id: (main colour, trim colour, cloth?)
+    "thaumium": (THAUMIUM, BRASS, False),
+    "void": (rgb(0x2E1F46), rgb(0x9A6AE0), False),
+    "thaumaturge": (rgb(0x4A2A78), rgb(0xE8C04A), True),
+    "traveller": (rgb(0x8A5A32), rgb(0xE8DCC0), True),
+    "fortress": (rgb(0x55407F), rgb(0xE0B84A), False),
+}
+
+
+def tool_sprite(kind, head, handle, accent):
+    """A 16x16 tool or weapon: a wooden handle along the diagonal and a head drawn from simple shapes."""
+    img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    px = img.load()
+
+    def put(x, y, color):
+        if 0 <= x < 16 and 0 <= y < 16:
+            px[x, y] = color
+
+    def handle_band(x_from, x_to):
+        for x in range(x_from, x_to + 1):
+            put(x, 15 - x, handle["d"])
+            put(x, 16 - x, handle["b"])
+
+    if kind == "sword":
+        for x in range(6, 15):
+            put(x, 15 - x, head["5"] if x > 8 else head["4"])
+            put(x, 16 - x, head["3"] if x > 8 else head["2"])
+        put(14, 0, head["4"])
+        put(15, 0, head["5"])
+        for i in range(5):
+            put(3 + i, 8 + i, accent["4"] if i == 2 else accent["3"])
+        handle_band(2, 4)
+        put(1, 14, accent["4"])
+        put(1, 15, accent["2"])
+        put(2, 15, accent["3"])
+    elif kind == "pickaxe":
+        handle_band(2, 10)
+        for y in range(16):
+            for x in range(16):
+                d = math.hypot(x - 2.5, y - 12.5)
+                if 9.2 <= d <= 11.2 and x >= 3 and y <= 12 and x - y > -9 and x - y < 13:
+                    shade_key = "5" if d < 9.9 and (x + y) < 15 else "4" if d < 10.4 else "2"
+                    put(x, y, head[shade_key])
+    elif kind == "axe":
+        handle_band(2, 13)
+        blade = {1: (8, 9), 2: (7, 10), 3: (6, 11), 4: (6, 10), 5: (7, 9), 6: (8, 8)}
+        for y, (x_from, x_to) in blade.items():
+            for x in range(x_from, x_to + 1):
+                put(x, y, head["5"] if x + y <= 9 or x == x_from else head["4"] if x + y <= 12 else head["2"])
+        for x, y in ((13, 4), (14, 4), (13, 5)):
+            put(x, y, head["3"])
+    elif kind == "shovel":
+        handle_band(2, 9)
+        for y in range(16):
+            for x in range(16):
+                if abs((x - 11.5) + (y - 4.5)) <= 3.6 and abs((x - 11.5) - (y - 4.5)) <= 2.6:
+                    light = (x - y) < 6
+                    put(x, y, head["5"] if light and x + y < 15 else head["4"] if light else head["2"])
+        put(9, 6, accent["3"])
+    elif kind == "hoe":
+        handle_band(2, 11)
+        for x, y, key in ((6, 2, "5"), (7, 2, "5"), (8, 2, "4"), (9, 2, "4"), (10, 2, "4"), (11, 3, "3"),
+                          (7, 3, "4"), (8, 3, "3"), (9, 3, "3"), (10, 3, "3"), (5, 3, "4"), (5, 4, "3"), (6, 3, "4")):
+            put(x, y, head[key])
+    else:
+        raise ValueError(kind)
+    return outline(img, head["O"])
+
+
+def face(img, noise, x0, y0, w, h, palette, rows=None, edge=True):
+    """Fills one face of an armour model (u, v, width, height) with noisy shading, darker along its lowest row."""
+    px = img.load()
+    for y in range(y0, y0 + h):
+        if rows is not None and (y - y0) not in rows:
+            continue
+        for x in range(x0, x0 + w):
+            n = noise[y % len(noise)][x % len(noise[0])]
+            key = "4" if n > 0.72 else "2" if n < 0.28 else "3"
+            if edge and rows is not None and y - y0 == max(rows):
+                key = "1"
+            px[x, y] = palette[key]
+
+
+def box(img, noise, u, v, w, h, d, palette, rows=None, faces=("top", "right", "front", "left", "back")):
+    """Paints a model box laid out like vanilla's (u, v origin; width, height, depth); rows limits the side faces
+    to some rows counted from the top."""
+    spec = {
+        "top": (u + d, v, w, d), "bottom": (u + d + w, v, w, d),
+        "right": (u, v + d, d, h), "front": (u + d, v + d, w, h),
+        "left": (u + d + w, v + d, d, h), "back": (u + d + w + d, v + d, w, h),
+    }
+    for name in faces:
+        x0, y0, fw, fh = spec[name]
+        face(img, noise, x0, y0, fw, fh, palette, None if name in ("top", "bottom") else rows)
+
+
+def armor_layers(set_id, pieces):
+    main, trim, cloth = EQUIPMENT_SETS[set_id]
+    palette = ramp(main, 0.4)
+    trims = ramp(trim, 0.5)
+    r = rng("armor_" + set_id)
+    noise = value_noise(r, 64, 8 if cloth else 12)
+    outer = Image.new("RGBA", (64, 32), (0, 0, 0, 0))
+    inner = Image.new("RGBA", (64, 32), (0, 0, 0, 0))
+    o = outer.load()
+    if pieces["helmet"]:
+        box(outer, noise, 0, 0, 8, 8, 8, palette, rows=range(0, 6), faces=("top", "right", "left", "back"))
+        box(outer, noise, 0, 0, 8, 8, 8, palette, rows=range(0, 3), faces=("front",))
+        for y in range(11, 14):
+            o[8, y] = palette["2"]
+            o[15, y] = palette["2"]
+        for x in range(8, 16):
+            o[x, 10] = trims["4"]
+        for x in range(0, 32):
+            if o[x, 13][3]:
+                o[x, 13] = trims["3"]
+    if pieces["chestplate"]:
+        box(outer, noise, 16, 16, 8, 12, 4, palette)
+        sleeve = range(0, 12) if cloth else range(0, 5)
+        box(outer, noise, 40, 16, 4, 12, 4, palette, rows=sleeve)
+        for x in range(16, 40):
+            o[x, 20] = trims["4"]
+        for x in range(40, 56):
+            o[x, 20 + len(sleeve) - 1] = trims["3"]
+        if cloth:
+            for y in range(21, 32):
+                o[23, y] = trims["3"]
+                o[24, y] = trims["4"]
+            for x in range(16, 40):
+                o[x, 31] = trims["3"]
+        else:
+            o[23, 23] = trims["5"]
+            o[24, 23] = trims["4"]
+            o[23, 24] = trims["3"]
+            o[24, 24] = trims["2"]
+    if pieces["boots"]:
+        start = 5 if set_id == "traveller" else 7
+        box(outer, noise, 0, 16, 4, 12, 4, palette, rows=range(start, 12), faces=("right", "front", "left", "back"))
+        box(outer, noise, 0, 16, 4, 12, 4, palette, faces=("bottom",))
+        for x in range(0, 16):
+            o[x, 20 + start] = trims["4"]
+            if set_id == "traveller":
+                o[x, 21 + start] = trims["3"]
+        if set_id == "traveller":
+            for x, y in ((0, 26), (1, 25), (2, 25), (1, 26), (8, 26), (9, 25), (10, 25), (9, 26)):
+                o[x, y] = (246, 246, 240, 255)
+    if pieces["leggings"]:
+        i = inner.load()
+        box(inner, noise, 16, 16, 8, 12, 4, palette, rows=range(6, 12), faces=("right", "front", "left", "back"))
+        legs = range(0, 12) if cloth else range(0, 10)
+        box(inner, noise, 0, 16, 4, 12, 4, palette, rows=legs, faces=("top", "right", "front", "left", "back"))
+        for x in range(16, 40):
+            if i[x, 26][3]:
+                i[x, 26] = trims["4"]
+        for x in range(0, 16):
+            i[x, 20 + len(legs) - 1] = trims["3"]
+        save(inner, f"entity/equipment/humanoid_leggings/{set_id}")
+    if pieces["helmet"] or pieces["chestplate"] or pieces["boots"]:
+        save(outer, f"entity/equipment/humanoid/{set_id}")
+
+
+def equipment():
+    sys.path.insert(0, os.path.join(ROOT, "tools", "content"))
+    import equipment as table  # noqa: E402
+    handle = ramp_as(WOOD, "abcde")
+    for material, spec in table.TOOL_MATERIALS.items():
+        head = ramp(rgb(spec[6]) if material != "void" else rgb(0x3A2858), 0.3)
+        accent = ramp(BRASS if material == "thaumium" else rgb(0x9A6AE0))
+        for kind in table.TOOL_KINDS:
+            save(tool_sprite(kind, head, handle, accent), f"item/{material}_{kind}")
+    templates = {"helmet": T_HELMET, "chestplate": T_CHESTPLATE, "leggings": T_LEGGINGS, "boots": T_BOOTS}
+    for set_id, spec in table.ARMOR_SETS.items():
+        main, trim, cloth = EQUIPMENT_SETS[set_id]
+        palette = dict(ramp(main if set_id != "void" else rgb(0x3A2858), 0.3))
+        palette["x"] = shade(trim, 1.05) + (255,)
+        palette[" "] = palette["3"]
+        palette["f"] = shade(trim, 1.0) + (255,)
+        palette["w"] = (246, 246, 240, 255)
+        for piece in table.PIECES:
+            if spec[0][piece]:
+                rows = T_TRAVELLER_BOOTS if set_id == "traveller" else templates[piece]
+                if set_id == "thaumaturge":
+                    rows = {"chestplate": T_ROBE, "leggings": T_ROBE_LEGS}.get(piece, rows)
+                save(template(rows, palette), f"item/{set_id}_{piece}")
+        armor_layers(set_id, spec[0])
+    void = ramp(rgb(0x3A2858), 0.3)
+    void["5"] = shade(rgb(0x9A6AE0), 1.1) + (255,)
+    save(template(T_INGOT, void), "item/void_metal_ingot")
+    save(template(T_NUGGET, void), "item/void_metal_nugget")
+
+
 # ---------------------------------------------------------------------------------------------------------- misc
 
 def liquids():
@@ -1268,6 +1597,7 @@ def main():
     liquids()
     wands()
     essentia_transport()
+    equipment()
     logo()
     print(f"Wrote {len(WRITTEN)} textures ({len(OVERRIDES)} overridden paths skipped)")
 

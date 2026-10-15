@@ -930,6 +930,165 @@
       "thaumicunity:machina": 4,
       "thaumicunity:permutatio": 4,
       "thaumicunity:perditio": 2
+    },
+    "thaumicunity:void_metal_ingot": {
+      "thaumicunity:metallum": 4,
+      "thaumicunity:vacuos": 4,
+      "thaumicunity:alienis": 2
+    },
+    "thaumicunity:void_metal_nugget": {
+      "thaumicunity:vacuos": 1
+    },
+    "thaumicunity:traveller_boots": {
+      "thaumicunity:tutamen": 2,
+      "thaumicunity:iter": 4,
+      "thaumicunity:motus": 4,
+      "thaumicunity:pannus": 2,
+      "thaumicunity:bestia": 2
+    },
+    "thaumicunity:fortress_helmet": {
+      "thaumicunity:metallum": 15,
+      "thaumicunity:praecantatio": 10,
+      "thaumicunity:tutamen": 8,
+      "thaumicunity:aurum": 2
+    },
+    "thaumicunity:fortress_chestplate": {
+      "thaumicunity:metallum": 30,
+      "thaumicunity:praecantatio": 20,
+      "thaumicunity:tutamen": 12,
+      "thaumicunity:aurum": 4
+    },
+    "thaumicunity:fortress_leggings": {
+      "thaumicunity:metallum": 26,
+      "thaumicunity:praecantatio": 17,
+      "thaumicunity:tutamen": 10,
+      "thaumicunity:aurum": 4
+    },
+    "thaumicunity:thaumium_sword": {
+      "thaumicunity:metallum": 6,
+      "thaumicunity:praecantatio": 4,
+      "thaumicunity:arbor": 1,
+      "thaumicunity:telum": 3
+    },
+    "thaumicunity:thaumium_pickaxe": {
+      "thaumicunity:metallum": 9,
+      "thaumicunity:praecantatio": 6,
+      "thaumicunity:arbor": 1,
+      "thaumicunity:perfodio": 3
+    },
+    "thaumicunity:thaumium_axe": {
+      "thaumicunity:metallum": 9,
+      "thaumicunity:praecantatio": 6,
+      "thaumicunity:arbor": 1,
+      "thaumicunity:instrumentum": 2,
+      "thaumicunity:telum": 1
+    },
+    "thaumicunity:thaumium_shovel": {
+      "thaumicunity:metallum": 3,
+      "thaumicunity:praecantatio": 2,
+      "thaumicunity:arbor": 1,
+      "thaumicunity:perfodio": 2
+    },
+    "thaumicunity:thaumium_hoe": {
+      "thaumicunity:metallum": 6,
+      "thaumicunity:praecantatio": 4,
+      "thaumicunity:arbor": 1,
+      "thaumicunity:messis": 2
+    },
+    "thaumicunity:void_sword": {
+      "thaumicunity:metallum": 6,
+      "thaumicunity:vacuos": 6,
+      "thaumicunity:alienis": 3,
+      "thaumicunity:arbor": 1,
+      "thaumicunity:telum": 3
+    },
+    "thaumicunity:void_pickaxe": {
+      "thaumicunity:metallum": 9,
+      "thaumicunity:vacuos": 9,
+      "thaumicunity:alienis": 4,
+      "thaumicunity:arbor": 1,
+      "thaumicunity:perfodio": 3
+    },
+    "thaumicunity:void_axe": {
+      "thaumicunity:metallum": 9,
+      "thaumicunity:vacuos": 9,
+      "thaumicunity:alienis": 4,
+      "thaumicunity:arbor": 1,
+      "thaumicunity:instrumentum": 2,
+      "thaumicunity:telum": 1
+    },
+    "thaumicunity:void_shovel": {
+      "thaumicunity:metallum": 3,
+      "thaumicunity:vacuos": 3,
+      "thaumicunity:alienis": 1,
+      "thaumicunity:arbor": 1,
+      "thaumicunity:perfodio": 2
+    },
+    "thaumicunity:void_hoe": {
+      "thaumicunity:metallum": 6,
+      "thaumicunity:vacuos": 6,
+      "thaumicunity:alienis": 3,
+      "thaumicunity:arbor": 1,
+      "thaumicunity:messis": 2
+    },
+    "thaumicunity:thaumium_helmet": {
+      "thaumicunity:metallum": 15,
+      "thaumicunity:praecantatio": 11,
+      "thaumicunity:tutamen": 2
+    },
+    "thaumicunity:thaumium_chestplate": {
+      "thaumicunity:metallum": 24,
+      "thaumicunity:praecantatio": 18,
+      "thaumicunity:tutamen": 4
+    },
+    "thaumicunity:thaumium_leggings": {
+      "thaumicunity:metallum": 21,
+      "thaumicunity:praecantatio": 15,
+      "thaumicunity:tutamen": 3
+    },
+    "thaumicunity:thaumium_boots": {
+      "thaumicunity:metallum": 12,
+      "thaumicunity:praecantatio": 9,
+      "thaumicunity:tutamen": 2
+    },
+    "thaumicunity:void_helmet": {
+      "thaumicunity:metallum": 15,
+      "thaumicunity:vacuos": 15,
+      "thaumicunity:alienis": 7,
+      "thaumicunity:tutamen": 2
+    },
+    "thaumicunity:void_chestplate": {
+      "thaumicunity:metallum": 24,
+      "thaumicunity:vacuos": 24,
+      "thaumicunity:alienis": 12,
+      "thaumicunity:tutamen": 4
+    },
+    "thaumicunity:void_leggings": {
+      "thaumicunity:metallum": 21,
+      "thaumicunity:vacuos": 21,
+      "thaumicunity:alienis": 10,
+      "thaumicunity:tutamen": 3
+    },
+    "thaumicunity:void_boots": {
+      "thaumicunity:metallum": 12,
+      "thaumicunity:vacuos": 12,
+      "thaumicunity:alienis": 6,
+      "thaumicunity:tutamen": 2
+    },
+    "thaumicunity:thaumaturge_chestplate": {
+      "thaumicunity:pannus": 18,
+      "thaumicunity:praecantatio": 12,
+      "thaumicunity:tutamen": 4
+    },
+    "thaumicunity:thaumaturge_leggings": {
+      "thaumicunity:pannus": 15,
+      "thaumicunity:praecantatio": 10,
+      "thaumicunity:tutamen": 3
+    },
+    "thaumicunity:thaumaturge_boots": {
+      "thaumicunity:pannus": 9,
+      "thaumicunity:praecantatio": 6,
+      "thaumicunity:tutamen": 2
     }
   }
 }

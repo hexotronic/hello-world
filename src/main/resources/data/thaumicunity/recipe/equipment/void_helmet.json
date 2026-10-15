@@ -1,0 +1,19 @@
+{
+  "type": "thaumicunity:arcane_shaped",
+  "key": {
+    "#": "thaumicunity:void_metal_ingot"
+  },
+  "pattern": [
+    "###",
+    "# #"
+  ],
+  "vis": {
+    "thaumicunity:perditio": 8,
+    "thaumicunity:ordo": 6,
+    "thaumicunity:terra": 4
+  },
+  "result": {
+    "id": "thaumicunity:void_helmet"
+  },
+  "research": "thaumicunity:alchemy/void_metal"
+}

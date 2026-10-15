@@ -4,6 +4,7 @@ import dev.thaumicunity.common.aspect.Aspects;
 import dev.thaumicunity.common.aura.AuraManager;
 import dev.thaumicunity.common.aura.ChunkAura;
 import dev.thaumicunity.common.config.TUConfig;
+import dev.thaumicunity.common.equipment.EquipmentEffects;
 import dev.thaumicunity.common.registry.TUDataComponents;
 import dev.thaumicunity.common.registry.TUItems;
 import dev.thaumicunity.common.registry.TURegistries;
@@ -109,6 +110,18 @@ public final class Wands {
         for (int i = 0; i < 6; i++) {
             double plain = primalCost.get(Aspects.PRIMALS.get(i).toString());
             out[i] = plain <= 0 ? 0 : (int) Math.ceil(plain * WandVis.SCALE * costFactor(registries, wand, i) - 1.0e-6);
+        }
+        return out;
+    }
+
+    /** What a spell costs this caster with this wand: the wand's own factors, less what the caster's robes spare. */
+    public static int[] cost(Player caster, ItemStack wand, AspectAmounts primalCost) {
+        int[] out = cost(caster.level().registryAccess(), wand, primalCost);
+        double factor = EquipmentEffects.costFactor(caster);
+        if (factor < 1.0) {
+            for (int i = 0; i < 6; i++) {
+                out[i] = (int) Math.ceil(out[i] * factor - 1.0e-6);
+            }
         }
         return out;
     }

@@ -1,0 +1,22 @@
+{
+  "type": "thaumicunity:infusion",
+  "central": "minecraft:leather_boots",
+  "components": [
+    "thaumicunity:enchanted_fabric",
+    "minecraft:feather",
+    "thaumicunity:aer_vis_crystal",
+    "thaumicunity:enchanted_fabric",
+    "minecraft:sugar",
+    "thaumicunity:aer_vis_crystal"
+  ],
+  "essentia": {
+    "thaumicunity:iter": 16,
+    "thaumicunity:motus": 16,
+    "thaumicunity:aer": 8
+  },
+  "instability": 2,
+  "result": {
+    "id": "thaumicunity:traveller_boots"
+  },
+  "research": "thaumicunity:infusion/travellers_boots"
+}

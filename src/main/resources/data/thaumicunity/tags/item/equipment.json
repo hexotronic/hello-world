@@ -1,0 +1,29 @@
+{
+  "values": [
+    "thaumicunity:thaumium_sword",
+    "thaumicunity:thaumium_pickaxe",
+    "thaumicunity:thaumium_axe",
+    "thaumicunity:thaumium_shovel",
+    "thaumicunity:thaumium_hoe",
+    "thaumicunity:void_sword",
+    "thaumicunity:void_pickaxe",
+    "thaumicunity:void_axe",
+    "thaumicunity:void_shovel",
+    "thaumicunity:void_hoe",
+    "thaumicunity:thaumium_helmet",
+    "thaumicunity:thaumium_chestplate",
+    "thaumicunity:thaumium_leggings",
+    "thaumicunity:thaumium_boots",
+    "thaumicunity:void_helmet",
+    "thaumicunity:void_chestplate",
+    "thaumicunity:void_leggings",
+    "thaumicunity:void_boots",
+    "thaumicunity:thaumaturge_chestplate",
+    "thaumicunity:thaumaturge_leggings",
+    "thaumicunity:thaumaturge_boots",
+    "thaumicunity:traveller_boots",
+    "thaumicunity:fortress_helmet",
+    "thaumicunity:fortress_chestplate",
+    "thaumicunity:fortress_leggings"
+  ]
+}

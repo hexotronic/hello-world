@@ -5,6 +5,7 @@ import dev.thaumicunity.common.aspect.AspectList;
 import dev.thaumicunity.common.aspect.Aspects;
 import dev.thaumicunity.common.aspect.ItemAspects;
 import dev.thaumicunity.common.config.TUConfig;
+import dev.thaumicunity.common.equipment.EquipmentEffects;
 import dev.thaumicunity.common.item.FocusItem;
 import dev.thaumicunity.common.recipe.ArcaneCraftingRecipe;
 import dev.thaumicunity.common.recipe.CrucibleInput;
@@ -12,9 +13,11 @@ import dev.thaumicunity.common.recipe.InfusionInput;
 import dev.thaumicunity.common.registry.TUBlocks;
 import dev.thaumicunity.common.registry.TUDataComponents;
 import dev.thaumicunity.common.registry.TUDataMaps;
+import dev.thaumicunity.common.registry.TUEquipment;
 import dev.thaumicunity.common.registry.TUItems;
 import dev.thaumicunity.common.registry.TURecipes;
 import dev.thaumicunity.common.registry.TURegistries;
+import dev.thaumicunity.common.registry.TUTags;
 import dev.thaumicunity.common.research.ResearchEntry;
 import dev.thaumicunity.common.research.ResearchRequirement;
 import dev.thaumicunity.common.research.ResearchStage;
@@ -82,6 +85,7 @@ public final class TUGameTests {
         test("wands", TUGameTests::wands);
         test("essentia_transport", TUGameTests::essentiaTransport);
         test("portable_hole", TUGameTests::portableHole);
+        test("equipment", TUGameTests::equipment);
     }
 
     private TUGameTests() {
@@ -407,5 +411,83 @@ public final class TUGameTests {
                 helper.assertBlockPresent(Blocks.STONE, new BlockPos(3, 1, z));
             }
         });
+    }
+
+    private static void equipment(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        RegistryAccess access = level.registryAccess();
+        // Java registrations and the generated table agree: the tag thaumicunity:equipment holds exactly the items
+        // TUEquipment registers, and each of them can be made.
+        java.util.Set<net.minecraft.world.item.Item> registered = new java.util.HashSet<>();
+        TUEquipment.ALL.values().forEach(item -> registered.add(item.get()));
+        for (net.minecraft.world.item.Item item : BuiltInRegistries.ITEM) {
+            boolean tagged = new ItemStack(item).is(TUTags.Items.EQUIPMENT);
+            helper.assertTrue(tagged == registered.contains(item),
+                    BuiltInRegistries.ITEM.getKey(item) + (tagged ? " is tagged as equipment but not registered by TUEquipment"
+                            : " is registered by TUEquipment but missing from the equipment tag"));
+        }
+        java.util.Set<net.minecraft.world.item.Item> crafted = new java.util.HashSet<>();
+        for (RecipeHolder<?> holder : recipes(helper).getRecipes()) {
+            if (holder.value() instanceof ArcaneCraftingRecipe arcane) {
+                crafted.add(arcane.result().create().getItem());
+            } else if (holder.value() instanceof dev.thaumicunity.common.recipe.InfusionRecipe infusion) {
+                crafted.add(infusion.result().create().getItem());
+            }
+        }
+        for (var e : TUEquipment.ALL.entrySet()) {
+            ItemStack stack = new ItemStack(e.getValue().get());
+            helper.assertTrue(stack.getMaxDamage() > 0, e.getKey() + " should wear out");
+            helper.assertTrue(crafted.contains(stack.getItem()), e.getKey() + " has no arcane or infusion recipe");
+        }
+        for (String recipe : List.of("infusion/travellers_boots", "alchemy/void_metal_ingot")) {
+            helper.assertTrue(recipes(helper).byKey(ResourceKey.create(Registries.RECIPE, ThaumicUnity.id(recipe))).isPresent(),
+                    "missing recipe " + recipe);
+        }
+
+        // Tiers: thaumium digs like diamond, void metal like netherite.
+        helper.assertTrue(new ItemStack(TUEquipment.get("thaumium_pickaxe").get()).isCorrectToolForDrops(Blocks.DIAMOND_ORE.defaultBlockState()),
+                "a thaumium pickaxe should mine diamond ore");
+        helper.assertTrue(new ItemStack(TUEquipment.get("void_pickaxe").get()).isCorrectToolForDrops(Blocks.OBSIDIAN.defaultBlockState()),
+                "a void metal pickaxe should mine obsidian");
+        helper.assertValueEqual(new ItemStack(TUEquipment.get("thaumium_sword").get()).getMaxDamage(), 500, "thaumium sword durability");
+
+        // Boots of the Traveller: armour plus a full block of step height.
+        var boots = new ItemStack(TUEquipment.get("traveller_boots").get())
+                .getOrDefault(net.minecraft.core.component.DataComponents.ATTRIBUTE_MODIFIERS,
+                        net.minecraft.world.item.component.ItemAttributeModifiers.EMPTY);
+        helper.assertTrue(Math.abs(boots.compute(net.minecraft.world.entity.ai.attributes.Attributes.STEP_HEIGHT, 0.6,
+                net.minecraft.world.entity.EquipmentSlot.FEET) - 1.0) < 1.0e-6, "traveller boots should step a full block");
+        helper.assertTrue(boots.compute(net.minecraft.world.entity.ai.attributes.Attributes.ARMOR, 0.0,
+                net.minecraft.world.entity.EquipmentSlot.FEET) >= 2.0, "traveller boots should still be armour");
+
+        // Robes and goggles spare vis: 5 + 4 + 3 + 5 percent.
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, new ItemStack(TUItems.GOGGLES_OF_REVEALING.get()));
+        player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.CHEST, new ItemStack(TUEquipment.get("thaumaturge_chestplate").get()));
+        player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.LEGS, new ItemStack(TUEquipment.get("thaumaturge_leggings").get()));
+        player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.FEET, new ItemStack(TUEquipment.get("thaumaturge_boots").get()));
+        helper.assertValueEqual(EquipmentEffects.visDiscount(player), 17, "vis discount of robes and goggles");
+        ItemStack wand = Wands.create(access, ThaumicUnity.id("wood"), ThaumicUnity.id("iron"));
+        AspectAmounts fire = AspectAmounts.of(Aspects.IGNIS.toString(), 10);
+        int ignis = Aspects.PRIMALS.indexOf(Aspects.IGNIS);
+        helper.assertValueEqual(Wands.cost(player, wand, fire)[ignis], (int) Math.ceil(1100 * 0.83 - 1.0e-6),
+                "Ignis cost with iron caps, robes and goggles");
+
+        // Void metal mends itself; thaumium does not.
+        ItemStack voidSword = new ItemStack(TUEquipment.get("void_sword").get());
+        voidSword.setDamageValue(10);
+        ItemStack thaumiumSword = new ItemStack(TUEquipment.get("thaumium_sword").get());
+        thaumiumSword.setDamageValue(10);
+        player.setItemInHand(InteractionHand.MAIN_HAND, voidSword);
+        player.getInventory().setItem(9, thaumiumSword);
+        helper.assertValueEqual(EquipmentEffects.selfRepair(player), 1, "items mended");
+        helper.assertValueEqual(player.getMainHandItem().getDamageValue(), 9, "void sword damage after mending");
+        helper.assertValueEqual(player.getInventory().getItem(9).getDamageValue(), 10, "thaumium sword damage after mending");
+
+        // A void blade weakens what it hits.
+        var pig = helper.spawn(net.minecraft.world.entity.EntityType.PIG, new BlockPos(1, 1, 1));
+        helper.assertTrue(EquipmentEffects.weaken(pig, player), "a void sword hit should weaken");
+        helper.assertTrue(pig.hasEffect(net.minecraft.world.effect.MobEffects.WEAKNESS), "the pig should be weakened");
+        helper.succeed();
     }
 }

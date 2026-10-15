@@ -57,6 +57,7 @@ public final class ThaumicUnityClient {
         modBus.addListener(ThaumcraftTextures::addPackFinders);
 
         NeoForge.EVENT_BUS.addListener(AspectTooltips::onTooltip);
+        NeoForge.EVENT_BUS.addListener(EquipmentTooltips::onTooltip);
         NeoForge.EVENT_BUS.addListener((RecipesReceivedEvent event) -> ClientRecipes.set(event.getRecipeMap()));
         NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut event) -> {
             ClientRecipes.clear();

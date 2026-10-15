@@ -13,12 +13,13 @@ spell system, written from scratch with original code, text and art.
 | System | Contents |
 |---|---|
 | Aspects | 183 aspects (primal, Thaumcraft 4/6, addon and new ones) as a datapack registry; item aspects from explicit data, tag rules and recipe inheritance; optional Thaumcraft 6 combinations datapack |
-| Research | Thaumonomicon with 5 categories and 26 entries; staged requirements (scan, craft, obtain, knowledge, insight puzzles, …); unified, classic or modern research mode |
+| Research | Thaumonomicon with 5 categories and 40 entries; staged requirements (scan, craft, obtain, knowledge, insight puzzles, …); unified, classic or modern research mode |
 | Aura | Per-chunk vis and flux with biome profiles and primal attunement, cheap bounded simulation, aura HUD |
 | Crafting | Crucible, arcane workbench, alchemical furnace and warded jars, runic matrix infusion with a stability model |
 | Essentia | Suction-driven tubes and valves, essentia buffer, centrifuge; labelled jars pull their aspect |
 | Spells | 81 spell components (mediums, effects, synergies, modifiers) on 44 Java primitives; caster's gauntlets; 3 focus tiers; 17 focus archetypes |
 | Wands | Rods and caps as data (7 rods, 5 caps, 35 combinations); per-primal vis storage, fixed foci, vis crystals, aura recharge and a recharge pedestal |
+| Equipment | Thaumium and void metal tools and weapons; thaumium, void metal and infused fortress armour; thaumaturge's robes that spare spell vis; Boots of the Traveller. Void metal mends itself and its blades weaken |
 | World | Cinnabar and amber ores (switchable), arcane stone, metals |
 
 ## Playing

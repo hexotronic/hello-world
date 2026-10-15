@@ -416,3 +416,11 @@ ENTRIES = {
                 "more flux it leaves. Cast where the aura is strong, move on before it is drained, and give "
                 "overworked places time to recover."))]),
 }
+
+# Tools, weapons and armour (phase 4.4) keep their entries next to the rest of their table.
+from equipment import RESEARCH as _EQUIPMENT_RESEARCH  # noqa: E402
+
+for _entry in _EQUIPMENT_RESEARCH:
+    if _entry in ENTRIES:
+        raise SystemExit(f"research entry {_entry} is defined twice")
+ENTRIES.update(_EQUIPMENT_RESEARCH)

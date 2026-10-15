@@ -8,6 +8,7 @@ import dev.thaumicunity.common.blockentity.CrucibleBlockEntity;
 import dev.thaumicunity.common.blockentity.WandPedestalBlockEntity;
 import dev.thaumicunity.common.blockentity.WardedJarBlockEntity;
 import dev.thaumicunity.common.registry.TUBlocks;
+import dev.thaumicunity.common.registry.TUEquipment;
 import dev.thaumicunity.common.registry.TUItems;
 import dev.thaumicunity.common.research.ResearchManager;
 import dev.thaumicunity.common.wand.Wands;
@@ -22,6 +23,8 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Difficulty;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -108,6 +111,8 @@ public final class ClientSmokeTest {
             onServer(player -> look(player, 0, 1.5, -3, 0, 28));
         }));
         STEPS.add(new Step("screenshot overview", 60, () -> screenshot("12-workshop-later")));
+        STEPS.add(new Step("look at armour stands", 5, () -> onServer(player -> look(player, 0, 1.2, 7, 0, 8))));
+        STEPS.add(new Step("screenshot equipment", 40, () -> screenshot("13-equipment")));
         STEPS.add(new Step("finish", 60, ClientSmokeTest::finish));
     }
 
@@ -192,6 +197,12 @@ public final class ClientSmokeTest {
         // Wands on recharge pedestals.
         wandPedestal(level, 4, "blaze", "gold");
         wandPedestal(level, -4, "ice", "thaumium");
+        // Armour stands wearing each set, behind the materials.
+        armorStand(level, -4, "thaumium_helmet", "thaumium_chestplate", "thaumium_leggings", "thaumium_boots");
+        armorStand(level, -2, "void_helmet", "void_chestplate", "void_leggings", "void_boots");
+        armorStand(level, 0, "fortress_helmet", "fortress_chestplate", "fortress_leggings", "traveller_boots");
+        armorStand(level, 2, null, "thaumaturge_chestplate", "thaumaturge_leggings", "thaumaturge_boots");
+        armorStand(level, 4, null, null, null, "traveller_boots");
         // Materials.
         List<Block> materials = List.of(TUBlocks.ARCANE_STONE.get(), TUBlocks.ARCANE_STONE_BRICKS.get(),
                 TUBlocks.THAUMIUM_BLOCK.get(), TUBlocks.BRASS_BLOCK.get(), TUBlocks.AMBER_BLOCK.get(),
@@ -263,6 +274,27 @@ public final class ClientSmokeTest {
             pedestal.setItem(Wands.create(level.registryAccess(), ThaumicUnity.id(rod), ThaumicUnity.id(cap)));
         } else {
             fail("build workshop", "no wand pedestal block entity at x" + dx);
+        }
+    }
+
+    /** An armour stand at origin + (dx, 0, 11) facing the workshop, wearing the named pieces (null: nothing). */
+    private static void armorStand(ServerLevel level, int dx, String head, String chest, String legs, String feet) {
+        ArmorStand stand = new ArmorStand(level, origin.getX() + dx + 0.5, origin.getY(), origin.getZ() + 11.5);
+        stand.setYRot(180.0f);
+        stand.setYBodyRot(180.0f);
+        stand.setYHeadRot(180.0f);
+        String[] pieces = {head, chest, legs, feet};
+        EquipmentSlot[] slots = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
+        for (int i = 0; i < 4; i++) {
+            if (pieces[i] != null) {
+                stand.setItemSlot(slots[i], new ItemStack(TUEquipment.get(pieces[i]).get()));
+            }
+        }
+        if (head == null) {
+            stand.setItemSlot(EquipmentSlot.HEAD, new ItemStack(TUItems.GOGGLES_OF_REVEALING.get()));
+        }
+        if (!level.addFreshEntity(stand)) {
+            fail("build workshop", "armour stand at x" + dx + " was not added");
         }
     }
 

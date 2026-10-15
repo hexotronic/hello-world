@@ -18,14 +18,14 @@ weighted towards systems players interact with most.
 |---|---:|---:|---:|---|
 | Aspects | 67 | 116 | **183** | **183** (data, validated by unit tests) + optional TC6 pair datapack; explicit aspects for 183 items, 65 creatures, 31 tag rules, the rest derived from recipes |
 | Research categories | 8 | 12 | 20 | 5 (fundamentals, alchemy, artifice, infusion, auromancy) |
-| Research entries | ≈ 520 | ≈ 2 600 | ≈ 3 100 | 26 (phase 3 starter tree, original text) |
-| Items | ≈ 900 | ≈ 4 500 | ≈ 5 400 | 43 (29 items + 14 block items) |
-| Blocks | ≈ 450 | ≈ 2 200 | ≈ 2 650 | 14 |
+| Research entries | ≈ 520 | ≈ 2 600 | ≈ 3 100 | 40 (phase 3 starter tree and phase 4 entries, original text) |
+| Items | ≈ 900 | ≈ 4 500 | ≈ 5 400 | 87 (68 items + 19 block items; one wand item covers 35 rod and cap combinations) |
+| Blocks | ≈ 450 | ≈ 2 200 | ≈ 2 650 | 20 |
 | Devices (block entities) | ≈ 180 | ≈ 900 | ≈ 1 080 | 7 (crucible, arcane workbench, research table, runic matrix, arcane pedestal, warded jar, alchemical furnace) |
-| Recipes (arcane, crucible, infusion, rituals) | ≈ 1 100 | ≈ 5 500 | ≈ 6 600 | 54 (9 arcane, 12 crucible, 3 infusion, 11 focus archetypes, 19 crafting and smelting) |
+| Recipes (arcane, crucible, infusion, rituals) | ≈ 1 100 | ≈ 5 500 | ≈ 6 600 | 139 (75 arcane, 13 crucible, 13 infusion, 17 focus archetypes, 21 crafting and smelting) |
 | **Spell components** | ≈ 72 | **≈ 650** (10×) | ≈ 720 | see §2 |
 | Golem parts and behaviours | ≈ 95 | ≈ 475 | ≈ 570 | 0 (phase 5) |
-| Armor sets | ≈ 14 | ≈ 60 | ≈ 74 | 0 (phase 4/5) |
+| Armor sets | ≈ 14 | ≈ 60 | ≈ 74 | 5 (thaumium, void metal, fortress, thaumaturge's robes, Boots of the Traveller) |
 | Baubles / trinkets | ≈ 40 | ≈ 200 | ≈ 240 | 0 (phase 5) |
 | Mobs | ≈ 60 | ≈ 240 | ≈ 300 | 0 (phase 4/5) |
 | Bosses | 6 | 24 | 30 | 0 (phase 5) |
@@ -56,7 +56,7 @@ focus workbench GUI and the per-component visuals.
 | 1 | Research and inventory of every source mod | **Done** — [INVENTORY.md](INVENTORY.md) (with a verification backlog) |
 | 2 | Architecture: packages, registries, data formats, aspect system, API | **Done** — [ARCHITECTURE.md](ARCHITECTURE.md), [DESIGN_DECISIONS.md](DESIGN_DECISIONS.md) |
 | 3 | Core systems: aspects, research, aura/vis, crucible, arcane crafting, infusion, spell framework | **Done** — Minecraft-independent core with 47 unit tests; NeoForge layer, client screens, 258 generated textures, all phase 3 data; in-game tests run in CI |
-| 4 | Migration of all existing content (items, blocks, devices, wands, foci, tools, armor, flora, ores, basic mobs) | In progress — steps 1–3 done (wands, essentia transport, classic foci) |
+| 4 | Migration of all existing content (items, blocks, devices, wands, foci, tools, armor, flora, ores, basic mobs) | In progress — steps 1–4 done (wands, essentia transport, classic foci, tools and armour) |
 | 5 | New content: devices, golems, armor, worldgen, mobs, bosses, dimensions, endgame | Not started |
 | 6 | Spell expansion to ≈720 components, focus workbench, synergies, forbidden magic | Framework done; catalogue not started |
 | 7 | Integrations (JEI, EMI, REI, Jade, Curios, KubeJS, CraftTweaker, Create, Mekanism, AE2, RS, Botania, Ars Nouveau, Iron's Spells, Blood Magic, Tinkers', Farmer's Delight) and API docs | Not started |
@@ -82,7 +82,7 @@ focus workbench GUI and the per-component visuals.
 
 ## 5. Next steps (exact continuation point)
 
-Phase 3 is complete. **Phase 4, migration of existing content**, continues with step 4:
+Phase 3 is complete. **Phase 4, migration of existing content**, continues with step 5:
 
 1. ~~`common/wand/` — wands~~ **done**: rods and caps are datapack registries (`thaumicunity:wand_rod`,
    `thaumicunity:wand_cap`, tables in `tools/content/wands.py`); `WandItem` stores vis per primal, casts its fixed
@@ -98,7 +98,13 @@ Phase 3 is complete. **Phase 4, migration of existing content**, continues with 
 3. ~~Classic focus archetypes~~ **done**: Smelting, Telekinesis, Equal Trade, Portable Hole (new `phase` primitive;
    the opened blocks are kept in `phased_space` block entities, so holes close even across restarts), Primal and
    Thunderhead, with two Auromancy entries; game test `portable_hole`. 17 focus archetypes in all.
-4. Tools, weapons and armour (thaumium, void metal, robes, fortress) with their research.
+4. ~~Tools, weapons and armour~~ **done** (`tools/content/equipment.py`, `TUEquipment`, `EquipmentEffects`):
+   thaumium and void metal swords, pickaxes, axes, shovels and hoes; thaumium, void metal and infused thaumium
+   fortress armour; thaumaturge's robes; Boots of the Traveller (step height and speed). Void metal is made in the
+   crucible, mends itself (tag `thaumicunity:self_repairing`) and its blades weaken (tag `thaumicunity:weakening`);
+   worn robes and goggles spare spell vis (data map `thaumicunity:vis_discount`, capped by `maxVisDiscount`). Each
+   set has an equipment asset and generated 64×32 worn textures; five research entries; game test `equipment`.
+   Still to come: fortress masks, crimson and primal armour, elemental tools, bone bows (with later steps).
 5. Flora and ores: greatwood and silverwood trees, cinderpearl, shimmerleaf, vishroom, crystal clusters; nodes for
    the hybrid aura (D2).
 

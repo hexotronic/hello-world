@@ -1,0 +1,13 @@
+{
+  "type": "thaumicunity:crucible",
+  "catalyst": "thaumicunity:thaumium_ingot",
+  "aspects": {
+    "thaumicunity:vacuos": 6,
+    "thaumicunity:alienis": 4,
+    "thaumicunity:tenebrae": 2
+  },
+  "result": {
+    "id": "thaumicunity:void_metal_ingot"
+  },
+  "research": "thaumicunity:alchemy/void_metal"
+}

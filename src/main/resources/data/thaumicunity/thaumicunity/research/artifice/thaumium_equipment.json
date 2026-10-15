@@ -1,0 +1,42 @@
+{
+  "category": "thaumicunity:artifice",
+  "x": 2,
+  "y": 2,
+  "icon": "thaumicunity:thaumium_sword",
+  "parents": [
+    "thaumicunity:artifice/arcane_stone",
+    "thaumicunity:alchemy/metallurgy"
+  ],
+  "aspects": [
+    "thaumicunity:metallum",
+    "thaumicunity:tutamen"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.artifice.thaumium_equipment.stage0",
+      "requirements": [
+        {
+          "type": "obtain",
+          "item": "thaumicunity:thaumium_ingot",
+          "count": 3
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.artifice.thaumium_equipment.stage1",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:equipment/thaumium_sword",
+        "thaumicunity:equipment/thaumium_pickaxe",
+        "thaumicunity:equipment/thaumium_axe",
+        "thaumicunity:equipment/thaumium_shovel",
+        "thaumicunity:equipment/thaumium_hoe",
+        "thaumicunity:equipment/thaumium_helmet",
+        "thaumicunity:equipment/thaumium_chestplate",
+        "thaumicunity:equipment/thaumium_leggings",
+        "thaumicunity:equipment/thaumium_boots"
+      ]
+    }
+  ]
+}

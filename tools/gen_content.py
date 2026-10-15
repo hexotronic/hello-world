@@ -22,6 +22,7 @@ sys.path.insert(0, os.path.join(ROOT, "tools", "content"))
 import aspects  # noqa: E402
 import aspect_lore  # noqa: E402
 import blocks  # noqa: E402
+import equipment  # noqa: E402
 import item_aspects  # noqa: E402
 import recipes  # noqa: E402
 import research  # noqa: E402
@@ -195,8 +196,13 @@ def clean_tree(path):
 # Simple items from every table: name -> (English name, item tags).
 SIMPLE_ITEMS = dict(blocks.ITEMS)
 SIMPLE_ITEMS.update({name: (english_name, []) for name, english_name in wands.ITEMS.items()})
+SIMPLE_ITEMS.update(equipment.ITEMS)
+
+EQUIPMENT_TOOLS = equipment.tools()
+EQUIPMENT_ARMOR = equipment.armor()
 
 ITEM_IDS = {rid("wand")}
+ITEM_IDS |= {rid(name) for name in EQUIPMENT_TOOLS} | {rid(name) for name in EQUIPMENT_ARMOR}
 for _name, _spec in blocks.BLOCKS.items():
     if _spec["model"] != "invisible":
         ITEM_IDS.add(rid(_name))
@@ -395,6 +401,7 @@ def gen_blocks_items(lang):
             item_tags.setdefault(tag, []).append(rid(name))
 
     gen_wand_item(item_models, item_defs, lang)
+    gen_equipment_items(item_models, item_defs, item_tags, lang)
 
     for kind in ("block", "item"):
         for namespace in ("minecraft", "c", NS):
@@ -428,6 +435,100 @@ def gen_blocks_items(lang):
     write_json(os.path.join(ASSETS, "sounds.json"), sounds_json)
     print(f"blocks: {len(blocks.BLOCKS)}, items: {len(SIMPLE_ITEMS) + 1}, block tags: {len(block_tags)}, "
           f"item tags: {len(item_tags)}")
+
+
+# ---------------------------------------------------------------------------------------------------------- equipment
+
+def gen_equipment_items(item_models, item_defs, item_tags, lang):
+    """Tools, weapons and armour (tools/content/equipment.py): models, names and tags, the equipment assets that
+    dress a wearer, and the data map of vis discounts."""
+    every = []
+    for name, (material, kind, english_name) in EQUIPMENT_TOOLS.items():
+        write_json(os.path.join(item_models, name + ".json"),
+                   {"parent": "minecraft:item/handheld", "textures": {"layer0": f"{NS}:item/{name}"}})
+        every.append((name, english_name, kind))
+    for name, (set_id, piece, english_name) in EQUIPMENT_ARMOR.items():
+        write_json(os.path.join(item_models, name + ".json"),
+                   {"parent": "minecraft:item/generated", "textures": {"layer0": f"{NS}:item/{name}"}})
+        every.append((name, english_name, piece))
+    for name, english_name, kind in every:
+        write_json(os.path.join(item_defs, name + ".json"),
+                   {"model": {"type": "minecraft:model", "model": f"{NS}:item/{name}"}})
+        lang[f"item.{NS}.{name}"] = english_name
+        for tag in equipment.KIND_TAGS[kind] + [f"{NS}:equipment"]:
+            item_tags.setdefault(tag, []).append(rid(name))
+    for name in equipment.SELF_REPAIRING:
+        item_tags.setdefault(f"{NS}:self_repairing", []).append(rid(name))
+    for name in equipment.WEAKENING:
+        item_tags.setdefault(f"{NS}:weakening", []).append(rid(name))
+    for set_id, (tag, values) in equipment.REPAIR_TAGS.items():
+        if values is not None:
+            for value in values:
+                check_item(value, f"repair tag {tag}")
+            item_tags.setdefault(tag, []).extend(values)
+    for name in [*equipment.SELF_REPAIRING, *equipment.WEAKENING]:
+        if name not in EQUIPMENT_TOOLS and name not in EQUIPMENT_ARMOR:
+            raise SystemExit(f"equipment: {name} is not a tool or armour piece")
+
+    # How a set looks when worn: one texture for helmet, chestplate and boots, one for leggings.
+    assets_dir = os.path.join(ASSETS, "equipment")
+    clean_dir(assets_dir)
+    for set_id, spec in equipment.ARMOR_SETS.items():
+        pieces = spec[0]
+        layers = {}
+        if pieces["helmet"] or pieces["chestplate"] or pieces["boots"]:
+            layers["humanoid"] = [{"texture": rid(set_id)}]
+        if pieces["leggings"]:
+            layers["humanoid_leggings"] = [{"texture": rid(set_id)}]
+        write_json(os.path.join(assets_dir, set_id + ".json"), {"layers": layers})
+
+    for item in equipment.VIS_DISCOUNT:
+        check_item(item, "vis discount")
+    write_json(os.path.join(DATA, NS, "data_maps", "item", "vis_discount.json"), {"values": equipment.VIS_DISCOUNT})
+    lang[f"tooltip.{NS}.vis_discount"] = "Vis discount: %s%%"
+    print(f"equipment: {len(EQUIPMENT_TOOLS)} tools, {len(EQUIPMENT_ARMOR)} armour pieces, "
+          f"{len(equipment.ARMOR_SETS)} equipment assets")
+
+
+def equipment_recipes():
+    """Arcane recipes for every tool and armour piece made from an ingot or cloth."""
+    arcane = {}
+    for name, (material, kind, _) in EQUIPMENT_TOOLS.items():
+        spec = equipment.TOOL_MATERIALS[material]
+        arcane[f"equipment/{name}"] = (equipment.TOOL_PATTERNS[kind], {"#": spec[1], "S": "minecraft:stick"},
+                                       rid(name), 1, spec[8], spec[7])
+    for name, (set_id, piece, _) in EQUIPMENT_ARMOR.items():
+        spec = equipment.ARMOR_SETS[set_id]
+        if spec[8] is None:
+            continue
+        arcane[f"equipment/{name}"] = (equipment.ARMOR_PATTERNS[piece], {"#": spec[1]}, rid(name), 1, spec[8], spec[7])
+    return arcane
+
+
+def aspect_pairs(text):
+    words = text.split()
+    return [(words[i], int(words[i + 1])) for i in range(0, len(words), 2)]
+
+
+def equipment_aspects():
+    """Aspects of tools and armour from what they are made of (three quarters of it, as recipes pass aspects on) and
+    what they are for. Infused pieces have theirs written out in equipment.ITEM_ASPECTS."""
+    out = {}
+    made = [(name, equipment.TOOL_PATTERNS[kind], {"#": equipment.TOOL_MATERIALS[material][1], "S": "minecraft:stick"},
+             kind) for name, (material, kind, _) in EQUIPMENT_TOOLS.items()]
+    made += [(name, equipment.ARMOR_PATTERNS[piece], {"#": equipment.ARMOR_SETS[set_id][1]}, piece)
+             for name, (set_id, piece, _) in EQUIPMENT_ARMOR.items() if equipment.ARMOR_SETS[set_id][8] is not None]
+    for name, pattern, key, kind in made:
+        total = Counter()
+        for symbol, item in key.items():
+            count = sum(row.count(symbol) for row in pattern)
+            for aspect, amount in aspect_pairs(equipment.MATERIAL_ASPECTS[item]):
+                total[aspect] += amount * count
+        result_aspects = Counter({a: max(1, n * 3 // 4) for a, n in total.items()})
+        for aspect, amount in aspect_pairs(equipment.KIND_ASPECTS[kind]):
+            result_aspects[aspect] += amount
+        out[rid(name)] = " ".join(f"{a} {n}" for a, n in result_aspects.items())
+    return out
 
 
 # ---------------------------------------------------------------------------------------------------------- wands
@@ -483,10 +584,23 @@ def wand_recipes():
 
 
 WAND_ARCANE, WAND_INFUSION = wand_recipes()
-ARCANE = dict(recipes.ARCANE)
-ARCANE.update(WAND_ARCANE)
-INFUSION = dict(recipes.INFUSION)
-INFUSION.update(WAND_INFUSION)
+
+
+def merged(*tables):
+    out = {}
+    for table in tables:
+        for key, value in table.items():
+            if key in out:
+                raise SystemExit(f"recipe {key} is defined twice")
+            out[key] = value
+    return out
+
+
+ARCANE = merged(recipes.ARCANE, WAND_ARCANE, equipment_recipes())
+INFUSION = merged(recipes.INFUSION, WAND_INFUSION, equipment.INFUSION)
+CRUCIBLE = merged(recipes.CRUCIBLE, equipment.CRUCIBLE)
+SHAPED = merged(recipes.SHAPED, equipment.SHAPED)
+SHAPELESS = merged(recipes.SHAPELESS, equipment.SHAPELESS)
 
 
 @generator
@@ -521,10 +635,11 @@ def gen_wand_parts(lang):
 def gen_item_aspects(lang):
     item_map = {}
     all_aspects = dict(item_aspects.ITEM_ASPECTS)
-    for item, text in wands.ITEM_ASPECTS.items():
-        if item in all_aspects:
-            raise SystemExit(f"item aspects: {item} is defined twice")
-        all_aspects[item] = text
+    for table in (wands.ITEM_ASPECTS, equipment.ITEM_ASPECTS, equipment_aspects()):
+        for item, text in table.items():
+            if item in all_aspects:
+                raise SystemExit(f"item aspects: {item} is defined twice")
+            all_aspects[item] = text
     for item, text in all_aspects.items():
         check_item(item, "item aspects")
         item_map[item] = parse_aspects(text, item)
@@ -684,8 +799,8 @@ def result(item, count=1, components=None):
 
 
 def recipe_ids():
-    ids = set(recipes.SHAPELESS) | set(recipes.SHAPED) | set(recipes.SMELTING) | set(ARCANE)
-    ids |= set(recipes.CRUCIBLE) | set(INFUSION)
+    ids = set(SHAPELESS) | set(SHAPED) | set(recipes.SMELTING) | set(ARCANE)
+    ids |= set(CRUCIBLE) | set(INFUSION)
     ids |= {f"focus/{name}" for name in spells.FOCUS_ARCHETYPES}
     return ids
 
@@ -709,12 +824,12 @@ def gen_recipes(lang):
             raise SystemExit(f"{where}: unknown research gate {entry}")
         return rid(entry)
 
-    for name, (ingredients, item, count) in recipes.SHAPELESS.items():
+    for name, (ingredients, item, count) in SHAPELESS.items():
         write_json(os.path.join(out, name + ".json"), {
             "type": "minecraft:crafting_shapeless",
             "ingredients": [ingredient(i, name) for i in ingredients],
             "result": result(item, count)})
-    for name, (pattern, key, item, count) in recipes.SHAPED.items():
+    for name, (pattern, key, item, count) in SHAPED.items():
         write_json(os.path.join(out, name + ".json"), {
             "type": "minecraft:crafting_shaped",
             "key": {k: ingredient(v, name) for k, v in key.items()},
@@ -738,7 +853,7 @@ def gen_recipes(lang):
         data["result"] = result(item, count, extra[0] if extra else None)
         data["research"] = gate(entry, name)
         write_json(os.path.join(out, name + ".json"), data)
-    for name, (catalyst, aspect_text, item, count, entry) in recipes.CRUCIBLE.items():
+    for name, (catalyst, aspect_text, item, count, entry) in CRUCIBLE.items():
         write_json(os.path.join(out, name + ".json"), {
             "type": f"{NS}:crucible", "catalyst": ingredient(catalyst, name),
             "aspects": parse_aspects(aspect_text, name), "result": result(item, count), "research": gate(entry, name)})
@@ -906,6 +1021,7 @@ GAME_TESTS = {
     "wands": 20,
     "essentia_transport": 300,
     "portable_hole": 120,
+    "equipment": 60,
 }
 
 

@@ -42,6 +42,7 @@ public final class TUConfig {
     public static final ModConfigSpec.DoubleValue WAND_AURA_RECHARGE;
     public static final ModConfigSpec.DoubleValue WAND_PEDESTAL_RECHARGE;
     public static final ModConfigSpec.IntValue VIS_CRYSTAL_VALUE;
+    public static final ModConfigSpec.IntValue MAX_VIS_DISCOUNT;
     public static final ModConfigSpec.DoubleValue SPELL_COST_SCALE;
     public static final ModConfigSpec.DoubleValue SPELL_POWER_SCALE;
     public static final ModConfigSpec.BooleanValue SPELL_GRIEFING;
@@ -54,6 +55,10 @@ public final class TUConfig {
     public static final ModConfigSpec.IntValue CRUCIBLE_CAPACITY;
     public static final ModConfigSpec.DoubleValue INFUSION_INSTABILITY_SCALE;
     public static final ModConfigSpec.IntValue INFUSION_RANGE;
+
+    // --- equipment
+    public static final ModConfigSpec.IntValue SELF_REPAIR_INTERVAL;
+    public static final ModConfigSpec.IntValue WEAKNESS_DURATION;
 
     // --- world
     public static final ModConfigSpec.BooleanValue WORLDGEN_ENABLED;
@@ -114,6 +119,8 @@ public final class TUConfig {
                 .defineInRange("wandPedestalRecharge", 2.0, 0.0, 1000.0);
         VIS_CRYSTAL_VALUE = b.comment("Vis of its primal a wand gains from eating one vis crystal")
                 .defineInRange("visCrystalValue", 10, 0, 1000);
+        MAX_VIS_DISCOUNT = b.comment("Most of a spell's vis cost (in percent) worn robes and goggles can spare together")
+                .defineInRange("maxVisDiscount", 50, 0, 100);
         SPELL_COST_SCALE = b.comment("Multiplier on every spell's vis cost").defineInRange("costScale", 1.0, 0.0, 100.0);
         SPELL_POWER_SCALE = b.comment("Multiplier on every spell's power (damage, healing, duration)")
                 .defineInRange("powerScale", 1.0, 0.0, 100.0);
@@ -133,6 +140,13 @@ public final class TUConfig {
                 .defineInRange("infusionInstabilityScale", 1.0, 0.0, 10.0);
         INFUSION_RANGE = b.comment("Horizontal range in blocks in which the runic matrix finds pedestals and jars")
                 .defineInRange("infusionRange", 8, 3, 16);
+        b.pop();
+
+        b.comment("Tools, weapons and armour").push("equipment");
+        SELF_REPAIR_INTERVAL = b.comment("Ticks between the points of durability void metal mends by itself (0: never)")
+                .defineInRange("selfRepairInterval", 20, 0, 12000);
+        WEAKNESS_DURATION = b.comment("Ticks of Weakness a hit with a void metal blade leaves (0: none)")
+                .defineInRange("weaknessDuration", 60, 0, 1200);
         b.pop();
 
         b.push("world");

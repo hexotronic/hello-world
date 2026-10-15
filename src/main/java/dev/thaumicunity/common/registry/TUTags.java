@@ -34,6 +34,16 @@ public final class TUTags {
         public static final TagKey<Item> REVEALING = tag("revealing");
         /** Paper that can be written on at the research table. */
         public static final TagKey<Item> RESEARCH_PAPER = tag("research_paper");
+        /** Every Thaumic Unity tool, weapon and armour piece. */
+        public static final TagKey<Item> EQUIPMENT = tag("equipment");
+        /** Items that slowly mend themselves while carried or worn (void metal). */
+        public static final TagKey<Item> SELF_REPAIRING = tag("self_repairing");
+        /** Weapons whose hits leave the target weakened (void metal). */
+        public static final TagKey<Item> WEAKENING = tag("weakening");
+        /** Repair materials of the equipment sets. */
+        public static final TagKey<Item> REPAIRS_THAUMIUM = tag("repairs_thaumium");
+        public static final TagKey<Item> REPAIRS_VOID_METAL = tag("repairs_void_metal");
+        public static final TagKey<Item> REPAIRS_THAUMATURGE = tag("repairs_thaumaturge");
 
         private Items() {
         }

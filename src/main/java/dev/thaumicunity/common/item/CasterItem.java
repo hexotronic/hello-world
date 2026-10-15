@@ -3,6 +3,7 @@ package dev.thaumicunity.common.item;
 import dev.thaumicunity.common.aspect.Aspects;
 import dev.thaumicunity.common.aura.AuraManager;
 import dev.thaumicunity.common.config.TUConfig;
+import dev.thaumicunity.common.equipment.EquipmentEffects;
 import dev.thaumicunity.common.registry.TUDataComponents;
 import dev.thaumicunity.common.spell.Casting;
 import dev.thaumicunity.core.spell.CompiledSpell;
@@ -57,7 +58,7 @@ public class CasterItem extends Item {
         if (spell == null) {
             return InteractionResult.FAIL;
         }
-        if (!player.isCreative() && !payVis(server, player.blockPosition(), spell)) {
+        if (!player.isCreative() && !payVis(server, player.blockPosition(), spell, EquipmentEffects.costFactor(player))) {
             Casting.fizzle(server, player, caster, "message.thaumicunity.caster.no_vis");
             return InteractionResult.FAIL;
         }
@@ -65,14 +66,14 @@ public class CasterItem extends Item {
         return InteractionResult.SUCCESS;
     }
 
-    /** Pays a spell's primal cost from the aura; all-or-nothing. */
-    private boolean payVis(ServerLevel level, BlockPos pos, CompiledSpell spell) {
+    /** Pays a spell's primal cost (times {@code factor}, what worn robes leave of it) from the aura; all-or-nothing. */
+    private boolean payVis(ServerLevel level, BlockPos pos, CompiledSpell spell, double factor) {
         if (TUConfig.AURA_MODE.get() == TUConfig.AuraModeOption.NODES) {
             return false;
         }
         double[] cost = new double[6];
         for (int i = 0; i < 6; i++) {
-            cost[i] = spell.cost().get(Aspects.PRIMALS.get(i).toString()) * efficiency;
+            cost[i] = spell.cost().get(Aspects.PRIMALS.get(i).toString()) * efficiency * factor;
         }
         var attunement = AuraManager.attunementAt(level, pos);
         double total = 0;

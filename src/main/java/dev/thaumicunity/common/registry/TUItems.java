@@ -114,6 +114,7 @@ public final class TUItems {
     }
 
     public static void init(IEventBus modBus) {
+        TUEquipment.bootstrap();
         ITEMS.register(modBus);
     }
 }
