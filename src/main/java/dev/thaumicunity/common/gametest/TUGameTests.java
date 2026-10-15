@@ -485,7 +485,7 @@ public final class TUGameTests {
         helper.assertValueEqual(player.getInventory().getItem(9).getDamageValue(), 10, "thaumium sword damage after mending");
 
         // A void blade weakens what it hits.
-        var pig = helper.spawn(net.minecraft.world.entity.EntityType.PIG, new BlockPos(1, 1, 1));
+        var pig = helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, new BlockPos(1, 1, 1));
         helper.assertTrue(EquipmentEffects.weaken(pig, player), "a void sword hit should weaken");
         helper.assertTrue(pig.hasEffect(net.minecraft.world.effect.MobEffects.WEAKNESS), "the pig should be weakened");
         helper.succeed();
