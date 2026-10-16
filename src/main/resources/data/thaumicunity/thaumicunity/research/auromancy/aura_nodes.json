@@ -1,0 +1,31 @@
+{
+  "category": "thaumicunity:auromancy",
+  "x": 4,
+  "y": -4,
+  "icon": "thaumicunity:thaumometer",
+  "parents": [
+    "thaumicunity:auromancy/wands",
+    "thaumicunity:fundamentals/aura"
+  ],
+  "aspects": [
+    "thaumicunity:auram",
+    "thaumicunity:potentia"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.auromancy.aura_nodes.stage0",
+      "requirements": [
+        {
+          "type": "scan",
+          "target": "block:thaumicunity:aura_node"
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.auromancy.aura_nodes.stage1",
+      "requirements": [],
+      "recipes": []
+    }
+  ]
+}

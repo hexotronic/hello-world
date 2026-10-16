@@ -1,0 +1,22 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:experience",
+  "aspect": "thaumicunity:cognitio",
+  "cost": {
+    "thaumicunity:ordo": 3,
+    "thaumicunity:ignis": 2
+  },
+  "complexity": 2,
+  "cooldown": 100,
+  "tags": [
+    "beneficial"
+  ],
+  "params": {
+    "amount": 4
+  },
+  "visual": {
+    "color": "#ffc0ff",
+    "particle": "thaumicunity:spark",
+    "sound": "thaumicunity:misc.zap"
+  }
+}

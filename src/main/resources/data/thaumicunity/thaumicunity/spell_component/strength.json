@@ -1,0 +1,24 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:potion",
+  "aspect": "thaumicunity:fortitudo",
+  "cost": {
+    "thaumicunity:ignis": 2,
+    "thaumicunity:terra": 2
+  },
+  "complexity": 2,
+  "cooldown": 40,
+  "tags": [
+    "beneficial"
+  ],
+  "params": {
+    "effect": "minecraft:strength",
+    "duration": 600,
+    "amplifier": 0
+  },
+  "visual": {
+    "color": "#d04a2e",
+    "particle": "thaumicunity:spark",
+    "sound": "thaumicunity:misc.zap"
+  }
+}

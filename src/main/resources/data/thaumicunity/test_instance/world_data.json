@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:function",
+  "environment": "minecraft:default",
+  "function": "thaumicunity:world_data",
+  "max_ticks": 20,
+  "required": true,
+  "setup_ticks": 1,
+  "structure": "minecraft:empty"
+}

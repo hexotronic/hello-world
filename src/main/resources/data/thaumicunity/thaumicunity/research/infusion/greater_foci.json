@@ -1,0 +1,36 @@
+{
+  "category": "thaumicunity:infusion",
+  "x": 2,
+  "y": 2,
+  "icon": "thaumicunity:adept_focus",
+  "parents": [
+    "thaumicunity:infusion/runic_matrix",
+    "thaumicunity:auromancy/foci"
+  ],
+  "aspects": [
+    "thaumicunity:praecantatio",
+    "thaumicunity:cognitio"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.infusion.greater_foci.stage0",
+      "requirements": [
+        {
+          "type": "knowledge",
+          "kind": "theory",
+          "category": "thaumicunity:auromancy",
+          "amount": 1
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.infusion.greater_foci.stage1",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:infusion/adept_focus",
+        "thaumicunity:infusion/archmage_focus"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "type": "thaumicunity:crucible",
+  "catalyst": "minecraft:rotten_flesh",
+  "aspects": {
+    "thaumicunity:ignis": 2,
+    "thaumicunity:corpus": 2
+  },
+  "result": {
+    "id": "thaumicunity:tallow",
+    "count": 2
+  },
+  "research": "thaumicunity:alchemy/alchemical_fuels"
+}

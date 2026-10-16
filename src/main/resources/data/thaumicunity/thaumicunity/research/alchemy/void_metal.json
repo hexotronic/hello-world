@@ -1,0 +1,47 @@
+{
+  "category": "thaumicunity:alchemy",
+  "x": 6,
+  "y": 2,
+  "icon": "thaumicunity:void_metal_ingot",
+  "parents": [
+    "thaumicunity:alchemy/vis_crystals",
+    "thaumicunity:artifice/thaumium_equipment"
+  ],
+  "aspects": [
+    "thaumicunity:vacuos",
+    "thaumicunity:alienis"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.alchemy.void_metal.stage0",
+      "requirements": [
+        {
+          "type": "insight",
+          "aspects": [
+            "thaumicunity:vacuos",
+            "thaumicunity:alienis"
+          ]
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.alchemy.void_metal.stage1",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:alchemy/void_metal_ingot",
+        "thaumicunity:void_metal_nugget",
+        "thaumicunity:void_metal_ingot_from_nuggets",
+        "thaumicunity:equipment/void_sword",
+        "thaumicunity:equipment/void_pickaxe",
+        "thaumicunity:equipment/void_axe",
+        "thaumicunity:equipment/void_shovel",
+        "thaumicunity:equipment/void_hoe",
+        "thaumicunity:equipment/void_helmet",
+        "thaumicunity:equipment/void_chestplate",
+        "thaumicunity:equipment/void_leggings",
+        "thaumicunity:equipment/void_boots"
+      ]
+    }
+  ]
+}

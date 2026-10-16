@@ -1,0 +1,19 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:potion",
+  "aspect": "thaumicunity:venenum",
+  "synergy_of": "thaumicunity:venenum",
+  "complexity": 0,
+  "params": {
+    "effect": "minecraft:wither",
+    "duration": 60,
+    "amplifier": 0
+  },
+  "visual": {
+    "color": "#89f000",
+    "particle": "thaumicunity:wisp"
+  },
+  "tags": [
+    "synergy"
+  ]
+}

@@ -1,0 +1,320 @@
+{
+  "values": {
+    "minecraft:player": {
+      "thaumicunity:humanus": 6,
+      "thaumicunity:cognitio": 4,
+      "thaumicunity:victus": 4
+    },
+    "minecraft:villager": {
+      "thaumicunity:humanus": 4,
+      "thaumicunity:cognitio": 2,
+      "thaumicunity:lucrum": 2
+    },
+    "minecraft:wandering_trader": {
+      "thaumicunity:humanus": 4,
+      "thaumicunity:lucrum": 4,
+      "thaumicunity:iter": 2
+    },
+    "minecraft:iron_golem": {
+      "thaumicunity:metallum": 6,
+      "thaumicunity:tutamen": 4,
+      "thaumicunity:animatus": 2
+    },
+    "minecraft:snow_golem": {
+      "thaumicunity:nix": 4,
+      "thaumicunity:gelum": 2,
+      "thaumicunity:animatus": 2
+    },
+    "minecraft:zombie": {
+      "thaumicunity:exanimis": 4,
+      "thaumicunity:corpus": 2,
+      "thaumicunity:humanus": 1
+    },
+    "minecraft:husk": {
+      "thaumicunity:exanimis": 4,
+      "thaumicunity:corpus": 2,
+      "thaumicunity:pulvis": 2
+    },
+    "minecraft:drowned": {
+      "thaumicunity:exanimis": 4,
+      "thaumicunity:corpus": 2,
+      "thaumicunity:aqua": 2
+    },
+    "minecraft:skeleton": {
+      "thaumicunity:exanimis": 4,
+      "thaumicunity:ossum": 3,
+      "thaumicunity:telum": 1
+    },
+    "minecraft:stray": {
+      "thaumicunity:exanimis": 4,
+      "thaumicunity:ossum": 3,
+      "thaumicunity:gelum": 2
+    },
+    "minecraft:bogged": {
+      "thaumicunity:exanimis": 4,
+      "thaumicunity:ossum": 2,
+      "thaumicunity:venenum": 2
+    },
+    "minecraft:wither_skeleton": {
+      "thaumicunity:exanimis": 4,
+      "thaumicunity:ossum": 3,
+      "thaumicunity:infernus": 2,
+      "thaumicunity:mortuus": 2
+    },
+    "minecraft:creeper": {
+      "thaumicunity:herba": 2,
+      "thaumicunity:exitium": 4,
+      "thaumicunity:ignis": 2
+    },
+    "minecraft:spider": {
+      "thaumicunity:bestia": 3,
+      "thaumicunity:tenebrae": 2,
+      "thaumicunity:vinculum": 2
+    },
+    "minecraft:cave_spider": {
+      "thaumicunity:bestia": 2,
+      "thaumicunity:tenebrae": 2,
+      "thaumicunity:venenum": 3
+    },
+    "minecraft:enderman": {
+      "thaumicunity:alienis": 4,
+      "thaumicunity:iter": 3,
+      "thaumicunity:tenebrae": 2
+    },
+    "minecraft:endermite": {
+      "thaumicunity:alienis": 2,
+      "thaumicunity:insectum": 2
+    },
+    "minecraft:shulker": {
+      "thaumicunity:alienis": 3,
+      "thaumicunity:tutamen": 3,
+      "thaumicunity:levitas": 2
+    },
+    "minecraft:ender_dragon": {
+      "thaumicunity:draco": 16,
+      "thaumicunity:alienis": 12,
+      "thaumicunity:potentia": 8
+    },
+    "minecraft:wither": {
+      "thaumicunity:mortuus": 12,
+      "thaumicunity:exitium": 10,
+      "thaumicunity:infernus": 8
+    },
+    "minecraft:warden": {
+      "thaumicunity:sonus": 10,
+      "thaumicunity:tenebrae": 10,
+      "thaumicunity:sensus": 6,
+      "thaumicunity:bellum": 6
+    },
+    "minecraft:blaze": {
+      "thaumicunity:ignis": 6,
+      "thaumicunity:infernus": 4,
+      "thaumicunity:volatus": 2
+    },
+    "minecraft:ghast": {
+      "thaumicunity:infernus": 4,
+      "thaumicunity:volatus": 4,
+      "thaumicunity:sonus": 2,
+      "thaumicunity:spiritus": 2
+    },
+    "minecraft:magma_cube": {
+      "thaumicunity:limus": 3,
+      "thaumicunity:ignis": 3,
+      "thaumicunity:magma": 2
+    },
+    "minecraft:slime": {
+      "thaumicunity:limus": 4,
+      "thaumicunity:victus": 1
+    },
+    "minecraft:piglin": {
+      "thaumicunity:humanus": 2,
+      "thaumicunity:infernus": 3,
+      "thaumicunity:aurum": 2
+    },
+    "minecraft:hoglin": {
+      "thaumicunity:bestia": 4,
+      "thaumicunity:infernus": 2,
+      "thaumicunity:fortitudo": 2
+    },
+    "minecraft:strider": {
+      "thaumicunity:bestia": 2,
+      "thaumicunity:magma": 2,
+      "thaumicunity:iter": 2
+    },
+    "minecraft:witch": {
+      "thaumicunity:humanus": 3,
+      "thaumicunity:alkimia": 4,
+      "thaumicunity:venenum": 2
+    },
+    "minecraft:evoker": {
+      "thaumicunity:humanus": 3,
+      "thaumicunity:vocatio": 4,
+      "thaumicunity:praecantatio": 3
+    },
+    "minecraft:vindicator": {
+      "thaumicunity:humanus": 3,
+      "thaumicunity:bellum": 3,
+      "thaumicunity:telum": 2
+    },
+    "minecraft:pillager": {
+      "thaumicunity:humanus": 3,
+      "thaumicunity:bellum": 2,
+      "thaumicunity:telum": 2
+    },
+    "minecraft:ravager": {
+      "thaumicunity:bestia": 6,
+      "thaumicunity:bellum": 4,
+      "thaumicunity:fortitudo": 4
+    },
+    "minecraft:vex": {
+      "thaumicunity:spiritus": 3,
+      "thaumicunity:volatus": 2,
+      "thaumicunity:telum": 2
+    },
+    "minecraft:phantom": {
+      "thaumicunity:volatus": 4,
+      "thaumicunity:somnium": 3,
+      "thaumicunity:exanimis": 2
+    },
+    "minecraft:guardian": {
+      "thaumicunity:piscis": 3,
+      "thaumicunity:aqua": 3,
+      "thaumicunity:vigil": 2
+    },
+    "minecraft:elder_guardian": {
+      "thaumicunity:piscis": 6,
+      "thaumicunity:aqua": 6,
+      "thaumicunity:vigil": 4,
+      "thaumicunity:tutamen": 4
+    },
+    "minecraft:breeze": {
+      "thaumicunity:aer": 6,
+      "thaumicunity:ventus": 4,
+      "thaumicunity:motus": 3
+    },
+    "minecraft:cow": {
+      "thaumicunity:bestia": 3,
+      "thaumicunity:fames": 2,
+      "thaumicunity:victus": 2
+    },
+    "minecraft:mooshroom": {
+      "thaumicunity:bestia": 3,
+      "thaumicunity:fungus": 3,
+      "thaumicunity:victus": 2
+    },
+    "minecraft:pig": {
+      "thaumicunity:bestia": 3,
+      "thaumicunity:fames": 2
+    },
+    "minecraft:sheep": {
+      "thaumicunity:bestia": 3,
+      "thaumicunity:pannus": 2
+    },
+    "minecraft:chicken": {
+      "thaumicunity:avis": 3,
+      "thaumicunity:volatus": 1
+    },
+    "minecraft:rabbit": {
+      "thaumicunity:bestia": 2,
+      "thaumicunity:velocitas": 2
+    },
+    "minecraft:horse": {
+      "thaumicunity:bestia": 4,
+      "thaumicunity:iter": 3,
+      "thaumicunity:velocitas": 2
+    },
+    "minecraft:wolf": {
+      "thaumicunity:bestia": 4,
+      "thaumicunity:venatio": 3
+    },
+    "minecraft:cat": {
+      "thaumicunity:bestia": 3,
+      "thaumicunity:sensus": 2
+    },
+    "minecraft:fox": {
+      "thaumicunity:bestia": 3,
+      "thaumicunity:fallacia": 2
+    },
+    "minecraft:bee": {
+      "thaumicunity:insectum": 3,
+      "thaumicunity:volatus": 1,
+      "thaumicunity:flos": 2
+    },
+    "minecraft:parrot": {
+      "thaumicunity:avis": 3,
+      "thaumicunity:sonus": 2
+    },
+    "minecraft:bat": {
+      "thaumicunity:bestia": 2,
+      "thaumicunity:tenebrae": 2,
+      "thaumicunity:volatus": 2
+    },
+    "minecraft:squid": {
+      "thaumicunity:piscis": 2,
+      "thaumicunity:aqua": 2,
+      "thaumicunity:tenebrae": 1
+    },
+    "minecraft:glow_squid": {
+      "thaumicunity:piscis": 2,
+      "thaumicunity:aqua": 2,
+      "thaumicunity:lux": 2
+    },
+    "minecraft:dolphin": {
+      "thaumicunity:piscis": 2,
+      "thaumicunity:aqua": 3,
+      "thaumicunity:cognitio": 1
+    },
+    "minecraft:turtle": {
+      "thaumicunity:bestia": 2,
+      "thaumicunity:aqua": 2,
+      "thaumicunity:tutamen": 2
+    },
+    "minecraft:axolotl": {
+      "thaumicunity:bestia": 2,
+      "thaumicunity:aqua": 2,
+      "thaumicunity:regeneratio": 2
+    },
+    "minecraft:frog": {
+      "thaumicunity:bestia": 2,
+      "thaumicunity:aqua": 1,
+      "thaumicunity:lutum": 1
+    },
+    "minecraft:allay": {
+      "thaumicunity:spiritus": 3,
+      "thaumicunity:volatus": 2,
+      "thaumicunity:sonus": 2
+    },
+    "minecraft:sniffer": {
+      "thaumicunity:bestia": 4,
+      "thaumicunity:odor": 3,
+      "thaumicunity:tempus": 2
+    },
+    "minecraft:camel": {
+      "thaumicunity:bestia": 4,
+      "thaumicunity:iter": 3,
+      "thaumicunity:pulvis": 1
+    },
+    "minecraft:armadillo": {
+      "thaumicunity:bestia": 2,
+      "thaumicunity:tutamen": 3
+    },
+    "minecraft:goat": {
+      "thaumicunity:bestia": 3,
+      "thaumicunity:terra": 2
+    },
+    "minecraft:panda": {
+      "thaumicunity:bestia": 4,
+      "thaumicunity:herba": 2,
+      "thaumicunity:pax": 1
+    },
+    "minecraft:polar_bear": {
+      "thaumicunity:bestia": 4,
+      "thaumicunity:gelum": 2,
+      "thaumicunity:fortitudo": 2
+    },
+    "minecraft:llama": {
+      "thaumicunity:bestia": 3,
+      "thaumicunity:iter": 2
+    }
+  }
+}

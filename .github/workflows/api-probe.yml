@@ -1,0 +1,40 @@
+# Porting aid: prints the public signatures of the Minecraft / NeoForge classes listed in
+# tools/api-probe-classes.txt for the Minecraft version pinned in gradle.properties.
+# Run it after bumping minecraft_version to see what moved before fixing compile errors.
+name: API probe
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'tools/api-probe-classes.txt'
+      - 'tools/api-probe.sh'
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Prepare Minecraft artifacts
+        run: ./gradlew createMinecraftArtifacts --stacktrace
+
+      - name: Print signatures
+        env:
+          PROBE_LIST_ALL: '1'
+          PROBE_COMPACT: '1'
+        run: bash tools/api-probe.sh tools/api-probe-classes.txt | tee api-probe.txt
+
+      - name: Upload probe output
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-probe
+          path: api-probe.txt
+          retention-days: 3

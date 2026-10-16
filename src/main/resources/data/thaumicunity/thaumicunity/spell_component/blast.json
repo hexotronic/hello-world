@@ -1,0 +1,23 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:explosion",
+  "aspect": "thaumicunity:perditio",
+  "cost": {
+    "thaumicunity:ignis": 4,
+    "thaumicunity:perditio": 4
+  },
+  "complexity": 4,
+  "cooldown": 60,
+  "tags": [
+    "harmful"
+  ],
+  "params": {
+    "power": 2.0,
+    "grief": false
+  },
+  "visual": {
+    "color": "#ff7030",
+    "particle": "thaumicunity:spark",
+    "sound": "thaumicunity:misc.zap"
+  }
+}

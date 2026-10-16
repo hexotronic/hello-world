@@ -1,0 +1,34 @@
+{
+  "category": "thaumicunity:alchemy",
+  "x": 4,
+  "y": 3,
+  "icon": "thaumicunity:enchanted_fabric",
+  "parents": [
+    "thaumicunity:alchemy/metallurgy"
+  ],
+  "aspects": [
+    "thaumicunity:pannus",
+    "thaumicunity:praecantatio"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.alchemy.enchanted_fabric.stage0",
+      "requirements": [
+        {
+          "type": "knowledge",
+          "kind": "observation",
+          "category": "thaumicunity:alchemy",
+          "amount": 1
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.alchemy.enchanted_fabric.stage1",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:alchemy/enchanted_fabric"
+      ]
+    }
+  ]
+}

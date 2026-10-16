@@ -1,0 +1,20 @@
+{
+  "type": "thaumicunity:infusion",
+  "central": "minecraft:quartz",
+  "components": [
+    "minecraft:amethyst_shard",
+    "thaumicunity:ordo_vis_crystal",
+    "minecraft:amethyst_shard",
+    "thaumicunity:ordo_vis_crystal"
+  ],
+  "essentia": {
+    "thaumicunity:ordo": 16,
+    "thaumicunity:vitreus": 8,
+    "thaumicunity:praecantatio": 8
+  },
+  "instability": 2,
+  "result": {
+    "id": "thaumicunity:quartz_wand_core"
+  },
+  "research": "thaumicunity:auromancy/elemental_cores"
+}

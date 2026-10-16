@@ -1,0 +1,32 @@
+{
+  "type": "thaumicunity:arcane_shapeless",
+  "ingredients": [
+    "thaumicunity:archmage_focus",
+    "minecraft:nether_star"
+  ],
+  "vis": {
+    "thaumicunity:aer": 25,
+    "thaumicunity:ignis": 25,
+    "thaumicunity:ordo": 25
+  },
+  "result": {
+    "id": "thaumicunity:archmage_focus",
+    "components": {
+      "thaumicunity:spell": {
+        "medium": "thaumicunity:homing_projectile",
+        "effects": [
+          "thaumicunity:light",
+          "thaumicunity:shock"
+        ],
+        "modifiers": [
+          "thaumicunity:split",
+          "thaumicunity:power"
+        ]
+      },
+      "minecraft:item_name": {
+        "translate": "focus.thaumicunity.starfall"
+      }
+    }
+  },
+  "research": "thaumicunity:auromancy/master_foci"
+}

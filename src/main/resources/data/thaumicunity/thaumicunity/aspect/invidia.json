@@ -1,0 +1,8 @@
+{
+  "color": "#00ba00",
+  "components": [
+    "thaumicunity:sensus",
+    "thaumicunity:fames"
+  ],
+  "origin": "addon:forbidden_magic"
+}

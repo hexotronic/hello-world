@@ -1,0 +1,20 @@
+{
+  "type": "thaumicunity:infusion",
+  "central": "thaumicunity:silverwood_log",
+  "components": [
+    "thaumicunity:shimmerleaf",
+    "thaumicunity:ordo_vis_crystal",
+    "thaumicunity:quicksilver",
+    "thaumicunity:aer_vis_crystal"
+  ],
+  "essentia": {
+    "thaumicunity:praecantatio": 16,
+    "thaumicunity:ordo": 16,
+    "thaumicunity:sano": 8
+  },
+  "instability": 3,
+  "result": {
+    "id": "thaumicunity:silverwood_wand_core"
+  },
+  "research": "thaumicunity:auromancy/silverwood_rod"
+}

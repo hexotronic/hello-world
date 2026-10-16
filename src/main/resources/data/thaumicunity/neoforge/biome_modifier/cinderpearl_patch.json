@@ -1,0 +1,8 @@
+{
+  "type": "thaumicunity:add_features",
+  "biomes": "#thaumicunity:cinderpearl_biomes",
+  "features": [
+    "thaumicunity:cinderpearl_patch"
+  ],
+  "step": "vegetal_decoration"
+}

@@ -1,0 +1,17 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:damage",
+  "aspect": "thaumicunity:vapor",
+  "synergy_of": "thaumicunity:vapor",
+  "complexity": 0,
+  "params": {
+    "damage": 3.0
+  },
+  "visual": {
+    "color": "#e0f0ff",
+    "particle": "thaumicunity:wisp"
+  },
+  "tags": [
+    "synergy"
+  ]
+}

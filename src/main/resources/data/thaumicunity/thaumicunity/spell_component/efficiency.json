@@ -1,0 +1,12 @@
+{
+  "kind": "modifier",
+  "primitive": "thaumicunity:numeric",
+  "complexity": 1,
+  "ops": {
+    "power": 0.9,
+    "cost": 0.75
+  },
+  "params": {},
+  "applies_to": [],
+  "tier": 1
+}

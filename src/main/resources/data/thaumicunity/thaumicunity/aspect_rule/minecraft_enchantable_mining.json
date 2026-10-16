@@ -1,0 +1,7 @@
+{
+  "tag": "#minecraft:enchantable/mining",
+  "aspects": {
+    "thaumicunity:perfodio": 2
+  },
+  "priority": 0
+}

@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:smelting",
+  "cookingtime": 200,
+  "experience": 0.7,
+  "ingredient": "thaumicunity:cinnabar_ore",
+  "result": {
+    "id": "thaumicunity:quicksilver"
+  }
+}

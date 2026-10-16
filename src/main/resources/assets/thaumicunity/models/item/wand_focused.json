@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "thaumicunity:item/wand_rod",
+    "layer1": "thaumicunity:item/wand_caps",
+    "layer2": "thaumicunity:item/wand_focus"
+  }
+}

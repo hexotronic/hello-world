@@ -1,0 +1,20 @@
+{
+  "type": "thaumicunity:arcane_shaped",
+  "key": {
+    "S": "thaumicunity:arcane_stone",
+    "B": "thaumicunity:brass_ingot"
+  },
+  "pattern": [
+    "SSS",
+    " B ",
+    "SSS"
+  ],
+  "vis": {
+    "thaumicunity:ordo": 5
+  },
+  "result": {
+    "id": "thaumicunity:arcane_pedestal",
+    "count": 2
+  },
+  "research": "thaumicunity:infusion/runic_matrix"
+}

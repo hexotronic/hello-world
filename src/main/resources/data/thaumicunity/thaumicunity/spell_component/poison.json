@@ -1,0 +1,24 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:potion",
+  "aspect": "thaumicunity:venenum",
+  "cost": {
+    "thaumicunity:aqua": 2,
+    "thaumicunity:perditio": 2
+  },
+  "complexity": 1,
+  "cooldown": 20,
+  "tags": [
+    "harmful"
+  ],
+  "params": {
+    "effect": "minecraft:poison",
+    "duration": 140,
+    "amplifier": 0
+  },
+  "visual": {
+    "color": "#89f000",
+    "particle": "thaumicunity:spark",
+    "sound": "thaumicunity:misc.zap"
+  }
+}

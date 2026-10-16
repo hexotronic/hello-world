@@ -1,0 +1,8 @@
+{
+  "tag": "#minecraft:small_flowers",
+  "aspects": {
+    "thaumicunity:flos": 1,
+    "thaumicunity:herba": 1
+  },
+  "priority": 10
+}

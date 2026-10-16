@@ -1,0 +1,70 @@
+{
+  "category": "thaumicunity:auromancy",
+  "x": 2,
+  "y": -4,
+  "icon": "thaumicunity:blaze_wand_core",
+  "parents": [
+    "thaumicunity:auromancy/wands",
+    "thaumicunity:infusion/runic_matrix"
+  ],
+  "aspects": [
+    "thaumicunity:praecantatio",
+    "thaumicunity:potentia"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.auromancy.elemental_cores.stage0",
+      "requirements": [
+        {
+          "type": "knowledge",
+          "kind": "theory",
+          "category": "thaumicunity:auromancy",
+          "amount": 1
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.auromancy.elemental_cores.stage1",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:infusion/reed_wand_core",
+        "thaumicunity:infusion/obsidian_wand_core",
+        "thaumicunity:infusion/blaze_wand_core",
+        "thaumicunity:infusion/ice_wand_core",
+        "thaumicunity:infusion/quartz_wand_core",
+        "thaumicunity:infusion/bone_wand_core",
+        "thaumicunity:wand/reed_iron",
+        "thaumicunity:wand/reed_copper",
+        "thaumicunity:wand/reed_gold",
+        "thaumicunity:wand/reed_brass",
+        "thaumicunity:wand/reed_thaumium",
+        "thaumicunity:wand/obsidian_iron",
+        "thaumicunity:wand/obsidian_copper",
+        "thaumicunity:wand/obsidian_gold",
+        "thaumicunity:wand/obsidian_brass",
+        "thaumicunity:wand/obsidian_thaumium",
+        "thaumicunity:wand/blaze_iron",
+        "thaumicunity:wand/blaze_copper",
+        "thaumicunity:wand/blaze_gold",
+        "thaumicunity:wand/blaze_brass",
+        "thaumicunity:wand/blaze_thaumium",
+        "thaumicunity:wand/ice_iron",
+        "thaumicunity:wand/ice_copper",
+        "thaumicunity:wand/ice_gold",
+        "thaumicunity:wand/ice_brass",
+        "thaumicunity:wand/ice_thaumium",
+        "thaumicunity:wand/quartz_iron",
+        "thaumicunity:wand/quartz_copper",
+        "thaumicunity:wand/quartz_gold",
+        "thaumicunity:wand/quartz_brass",
+        "thaumicunity:wand/quartz_thaumium",
+        "thaumicunity:wand/bone_iron",
+        "thaumicunity:wand/bone_copper",
+        "thaumicunity:wand/bone_gold",
+        "thaumicunity:wand/bone_brass",
+        "thaumicunity:wand/bone_thaumium"
+      ]
+    }
+  ]
+}

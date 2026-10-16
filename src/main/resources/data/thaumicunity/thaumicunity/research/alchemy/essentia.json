@@ -1,0 +1,36 @@
+{
+  "category": "thaumicunity:alchemy",
+  "x": 2,
+  "y": 0,
+  "icon": "thaumicunity:warded_jar",
+  "parents": [
+    "thaumicunity:alchemy/crucible"
+  ],
+  "aspects": [
+    "thaumicunity:vacuos",
+    "thaumicunity:vinculum"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.alchemy.essentia.stage0",
+      "requirements": [
+        {
+          "type": "knowledge",
+          "kind": "observation",
+          "category": "thaumicunity:alchemy",
+          "amount": 2
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.alchemy.essentia.stage1",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:warded_jar",
+        "thaumicunity:alchemical_furnace",
+        "thaumicunity:phial"
+      ]
+    }
+  ]
+}

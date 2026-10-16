@@ -1,0 +1,17 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:damage",
+  "aspect": "thaumicunity:pressura",
+  "synergy_of": "thaumicunity:pressura",
+  "complexity": 0,
+  "params": {
+    "damage": 4.0
+  },
+  "visual": {
+    "color": "#9090b0",
+    "particle": "thaumicunity:wisp"
+  },
+  "tags": [
+    "synergy"
+  ]
+}

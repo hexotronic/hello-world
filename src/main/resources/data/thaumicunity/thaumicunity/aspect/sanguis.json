@@ -1,0 +1,8 @@
+{
+  "color": "#8b0000",
+  "components": [
+    "thaumicunity:victus",
+    "thaumicunity:corpus"
+  ],
+  "origin": "addon:blood_magic"
+}

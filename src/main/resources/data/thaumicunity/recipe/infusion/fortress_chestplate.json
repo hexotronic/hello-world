@@ -1,0 +1,22 @@
+{
+  "type": "thaumicunity:infusion",
+  "central": "thaumicunity:thaumium_chestplate",
+  "components": [
+    "thaumicunity:thaumium_ingot",
+    "minecraft:gold_ingot",
+    "thaumicunity:thaumium_ingot",
+    "minecraft:gold_ingot",
+    "thaumicunity:thaumium_ingot",
+    "minecraft:emerald"
+  ],
+  "essentia": {
+    "thaumicunity:tutamen": 24,
+    "thaumicunity:metallum": 24,
+    "thaumicunity:praecantatio": 12
+  },
+  "instability": 4,
+  "result": {
+    "id": "thaumicunity:fortress_chestplate"
+  },
+  "research": "thaumicunity:infusion/fortress_armor"
+}

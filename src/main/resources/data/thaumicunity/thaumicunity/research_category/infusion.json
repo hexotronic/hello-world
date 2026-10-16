@@ -1,0 +1,7 @@
+{
+  "icon": "thaumicunity:runic_matrix",
+  "background": "thaumicunity:infusion",
+  "order": 30,
+  "color": "#9b59d0",
+  "requires": "thaumicunity:alchemy/metallurgy"
+}

@@ -1,0 +1,41 @@
+{
+  "category": "thaumicunity:auromancy",
+  "x": 4,
+  "y": -2,
+  "icon": "thaumicunity:thaumium_wand_cap",
+  "parents": [
+    "thaumicunity:auromancy/wand_caps",
+    "thaumicunity:alchemy/metallurgy"
+  ],
+  "aspects": [
+    "thaumicunity:praecantatio",
+    "thaumicunity:metallum"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.auromancy.thaumium_caps.stage0",
+      "requirements": [
+        {
+          "type": "knowledge",
+          "kind": "theory",
+          "category": "thaumicunity:auromancy",
+          "amount": 1
+        },
+        {
+          "type": "obtain",
+          "item": "thaumicunity:thaumium_ingot",
+          "count": 1
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.auromancy.thaumium_caps.stage1",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:wand/thaumium_cap",
+        "thaumicunity:wand/wood_thaumium"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "type": "thaumicunity:arcane_shaped",
+  "key": {
+    "C": "thaumicunity:brass_wand_cap",
+    "R": "minecraft:stick"
+  },
+  "pattern": [
+    "  C",
+    " R ",
+    "C  "
+  ],
+  "vis": {
+    "thaumicunity:aer": 5,
+    "thaumicunity:terra": 5,
+    "thaumicunity:ignis": 5,
+    "thaumicunity:aqua": 5,
+    "thaumicunity:ordo": 5,
+    "thaumicunity:perditio": 5
+  },
+  "result": {
+    "id": "thaumicunity:wand",
+    "components": {
+      "thaumicunity:wand_parts": {
+        "rod": "thaumicunity:wood",
+        "cap": "thaumicunity:brass"
+      },
+      "minecraft:custom_model_data": {
+        "colors": [
+          9136702,
+          13214778
+        ]
+      },
+      "minecraft:item_name": {
+        "translate": "item.thaumicunity.wand.parts",
+        "with": [
+          {
+            "translate": "wand_cap.thaumicunity.brass"
+          },
+          {
+            "translate": "wand_rod.thaumicunity.wood"
+          }
+        ]
+      }
+    }
+  },
+  "research": "thaumicunity:auromancy/wand_caps"
+}

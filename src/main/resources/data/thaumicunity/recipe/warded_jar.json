@@ -1,0 +1,20 @@
+{
+  "type": "thaumicunity:arcane_shaped",
+  "key": {
+    "G": "minecraft:glass",
+    "B": "#minecraft:wooden_slabs"
+  },
+  "pattern": [
+    "GBG",
+    "G G",
+    "GGG"
+  ],
+  "vis": {
+    "thaumicunity:aqua": 5,
+    "thaumicunity:ordo": 5
+  },
+  "result": {
+    "id": "thaumicunity:warded_jar"
+  },
+  "research": "thaumicunity:alchemy/essentia"
+}

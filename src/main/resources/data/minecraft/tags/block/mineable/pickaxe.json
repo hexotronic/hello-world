@@ -1,0 +1,25 @@
+{
+  "values": [
+    "thaumicunity:crucible",
+    "thaumicunity:runic_matrix",
+    "thaumicunity:arcane_pedestal",
+    "thaumicunity:wand_pedestal",
+    "thaumicunity:essentia_tube",
+    "thaumicunity:essentia_valve",
+    "thaumicunity:centrifuge",
+    "thaumicunity:alchemical_furnace",
+    "thaumicunity:arcane_stone",
+    "thaumicunity:arcane_stone_bricks",
+    "thaumicunity:thaumium_block",
+    "thaumicunity:brass_block",
+    "thaumicunity:amber_block",
+    "thaumicunity:cinnabar_ore",
+    "thaumicunity:amber_ore",
+    "thaumicunity:aer_crystal_cluster",
+    "thaumicunity:terra_crystal_cluster",
+    "thaumicunity:ignis_crystal_cluster",
+    "thaumicunity:aqua_crystal_cluster",
+    "thaumicunity:ordo_crystal_cluster",
+    "thaumicunity:perditio_crystal_cluster"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "color": "#eeee00",
+  "components": [
+    "thaumicunity:perfodio",
+    "thaumicunity:lucrum"
+  ],
+  "origin": "addon:gregtech"
+}

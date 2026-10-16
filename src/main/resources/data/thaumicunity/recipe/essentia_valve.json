@@ -1,0 +1,14 @@
+{
+  "type": "thaumicunity:arcane_shapeless",
+  "ingredients": [
+    "thaumicunity:essentia_tube",
+    "minecraft:lever"
+  ],
+  "vis": {
+    "thaumicunity:ordo": 1
+  },
+  "result": {
+    "id": "thaumicunity:essentia_valve"
+  },
+  "research": "thaumicunity:alchemy/essentia_tubes"
+}

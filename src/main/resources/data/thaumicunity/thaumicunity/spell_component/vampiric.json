@@ -1,0 +1,13 @@
+{
+  "kind": "modifier",
+  "primitive": "thaumicunity:vampiric",
+  "complexity": 3,
+  "ops": {
+    "cost": 1.4
+  },
+  "params": {
+    "amount": 1.0
+  },
+  "applies_to": [],
+  "tier": 2
+}

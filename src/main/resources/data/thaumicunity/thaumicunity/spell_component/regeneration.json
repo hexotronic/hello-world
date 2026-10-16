@@ -1,0 +1,24 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:potion",
+  "aspect": "thaumicunity:regeneratio",
+  "cost": {
+    "thaumicunity:aqua": 3,
+    "thaumicunity:ordo": 3
+  },
+  "complexity": 3,
+  "cooldown": 60,
+  "tags": [
+    "beneficial"
+  ],
+  "params": {
+    "effect": "minecraft:regeneration",
+    "duration": 200,
+    "amplifier": 1
+  },
+  "visual": {
+    "color": "#ff7a9c",
+    "particle": "thaumicunity:spark",
+    "sound": "thaumicunity:misc.zap"
+  }
+}

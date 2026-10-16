@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/cross",
+  "textures": {
+    "cross": "thaumicunity:block/ignis_crystal_cluster"
+  }
+}

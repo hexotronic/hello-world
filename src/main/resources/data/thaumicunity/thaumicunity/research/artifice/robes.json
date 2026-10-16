@@ -1,0 +1,36 @@
+{
+  "category": "thaumicunity:artifice",
+  "x": 4,
+  "y": 2,
+  "icon": "thaumicunity:thaumaturge_chestplate",
+  "parents": [
+    "thaumicunity:artifice/goggles",
+    "thaumicunity:alchemy/enchanted_fabric"
+  ],
+  "aspects": [
+    "thaumicunity:pannus",
+    "thaumicunity:praecantatio"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.artifice.robes.stage0",
+      "requirements": [
+        {
+          "type": "obtain",
+          "item": "thaumicunity:enchanted_fabric",
+          "count": 4
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.artifice.robes.stage1",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:equipment/thaumaturge_chestplate",
+        "thaumicunity:equipment/thaumaturge_leggings",
+        "thaumicunity:equipment/thaumaturge_boots"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "category": "thaumicunity:auromancy",
+  "x": 2,
+  "y": -2,
+  "icon": "thaumicunity:gold_wand_cap",
+  "parents": [
+    "thaumicunity:auromancy/wands"
+  ],
+  "aspects": [
+    "thaumicunity:metallum",
+    "thaumicunity:instrumentum"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.auromancy.wand_caps.stage0",
+      "requirements": [
+        {
+          "type": "craft",
+          "item": "thaumicunity:wand"
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.auromancy.wand_caps.stage1",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:wand/copper_cap",
+        "thaumicunity:wand/gold_cap",
+        "thaumicunity:wand/brass_cap",
+        "thaumicunity:wand/wood_copper",
+        "thaumicunity:wand/wood_gold",
+        "thaumicunity:wand/wood_brass"
+      ]
+    }
+  ]
+}

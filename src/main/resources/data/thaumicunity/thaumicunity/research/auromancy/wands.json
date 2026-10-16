@@ -1,0 +1,35 @@
+{
+  "category": "thaumicunity:auromancy",
+  "x": 0,
+  "y": -2,
+  "icon": "thaumicunity:wand",
+  "parents": [
+    "thaumicunity:auromancy/casting"
+  ],
+  "aspects": [
+    "thaumicunity:auram",
+    "thaumicunity:instrumentum"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.auromancy.wands.stage0",
+      "requirements": [
+        {
+          "type": "knowledge",
+          "kind": "observation",
+          "category": "thaumicunity:auromancy",
+          "amount": 1
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.auromancy.wands.stage1",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:wand/iron_cap",
+        "thaumicunity:wand/wood_iron"
+      ]
+    }
+  ]
+}

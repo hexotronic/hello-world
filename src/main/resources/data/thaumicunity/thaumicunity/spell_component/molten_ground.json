@@ -1,0 +1,17 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:place",
+  "aspect": "thaumicunity:magma",
+  "synergy_of": "thaumicunity:magma",
+  "complexity": 0,
+  "params": {
+    "block": "minecraft:magma_block"
+  },
+  "visual": {
+    "color": "#ff7a20",
+    "particle": "thaumicunity:wisp"
+  },
+  "tags": [
+    "synergy"
+  ]
+}

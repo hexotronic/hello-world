@@ -1,0 +1,9 @@
+{
+  "tag": "#minecraft:terracotta",
+  "aspects": {
+    "thaumicunity:terra": 2,
+    "thaumicunity:ignis": 1,
+    "thaumicunity:ars": 1
+  },
+  "priority": 10
+}

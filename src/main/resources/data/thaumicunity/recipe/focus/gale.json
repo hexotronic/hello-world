@@ -1,0 +1,25 @@
+{
+  "type": "thaumicunity:arcane_shapeless",
+  "ingredients": [
+    "thaumicunity:apprentice_focus",
+    "minecraft:feather"
+  ],
+  "vis": {
+    "thaumicunity:aer": 15
+  },
+  "result": {
+    "id": "thaumicunity:apprentice_focus",
+    "components": {
+      "thaumicunity:spell": {
+        "medium": "thaumicunity:wave",
+        "effects": [
+          "thaumicunity:gust"
+        ]
+      },
+      "minecraft:item_name": {
+        "translate": "focus.thaumicunity.gale"
+      }
+    }
+  },
+  "research": "thaumicunity:auromancy/foci"
+}

@@ -1,0 +1,20 @@
+{
+  "type": "thaumicunity:infusion",
+  "central": "minecraft:obsidian",
+  "components": [
+    "minecraft:flint",
+    "thaumicunity:terra_vis_crystal",
+    "minecraft:flint",
+    "thaumicunity:terra_vis_crystal"
+  ],
+  "essentia": {
+    "thaumicunity:terra": 16,
+    "thaumicunity:tutamen": 8,
+    "thaumicunity:praecantatio": 8
+  },
+  "instability": 2,
+  "result": {
+    "id": "thaumicunity:obsidian_wand_core"
+  },
+  "research": "thaumicunity:auromancy/elemental_cores"
+}

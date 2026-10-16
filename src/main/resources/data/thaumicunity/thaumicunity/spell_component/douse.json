@@ -1,0 +1,21 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:extinguish",
+  "aspect": "thaumicunity:aqua",
+  "cost": {
+    "thaumicunity:aqua": 2
+  },
+  "complexity": 1,
+  "cooldown": 10,
+  "tags": [
+    "world"
+  ],
+  "params": {
+    "radius": 2
+  },
+  "visual": {
+    "color": "#3cd4fc",
+    "particle": "thaumicunity:spark",
+    "sound": "thaumicunity:misc.zap"
+  }
+}

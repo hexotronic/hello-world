@@ -1,0 +1,20 @@
+{
+  "type": "thaumicunity:arcane_shaped",
+  "key": {
+    "#": "thaumicunity:thaumium_ingot",
+    "S": "minecraft:stick"
+  },
+  "pattern": [
+    "#",
+    "S",
+    "S"
+  ],
+  "vis": {
+    "thaumicunity:ordo": 3,
+    "thaumicunity:terra": 3
+  },
+  "result": {
+    "id": "thaumicunity:thaumium_shovel"
+  },
+  "research": "thaumicunity:artifice/thaumium_equipment"
+}

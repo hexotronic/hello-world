@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    "thaumicunity:amber_block"
+  ],
+  "result": {
+    "id": "thaumicunity:amber",
+    "count": 9
+  }
+}

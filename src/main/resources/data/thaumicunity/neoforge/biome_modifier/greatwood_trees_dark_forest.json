@@ -1,0 +1,8 @@
+{
+  "type": "thaumicunity:add_features",
+  "biomes": "minecraft:dark_forest",
+  "features": [
+    "thaumicunity:greatwood_trees_dark_forest"
+  ],
+  "step": "vegetal_decoration"
+}

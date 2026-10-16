@@ -1,0 +1,22 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:lightning",
+  "aspect": "thaumicunity:fulgur",
+  "cost": {
+    "thaumicunity:aer": 4,
+    "thaumicunity:ignis": 4,
+    "thaumicunity:ordo": 2
+  },
+  "complexity": 4,
+  "cooldown": 100,
+  "tags": [
+    "harmful",
+    "weather"
+  ],
+  "params": {},
+  "visual": {
+    "color": "#f0f0ff",
+    "particle": "thaumicunity:spark",
+    "sound": "thaumicunity:misc.zap"
+  }
+}

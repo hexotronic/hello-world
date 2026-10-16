@@ -1,0 +1,23 @@
+{
+  "category": "thaumicunity:artifice",
+  "x": 0,
+  "y": 0,
+  "icon": "thaumicunity:arcane_stone",
+  "parents": [
+    "thaumicunity:fundamentals/arcane_workbench"
+  ],
+  "aspects": [
+    "thaumicunity:saxum",
+    "thaumicunity:praecantatio"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.artifice.arcane_stone.stage0",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:arcane_stone",
+        "thaumicunity:arcane_stone_bricks"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:potion",
+  "aspect": "thaumicunity:tenebrae",
+  "cost": {
+    "thaumicunity:perditio": 2,
+    "thaumicunity:aer": 1
+  },
+  "complexity": 1,
+  "cooldown": 20,
+  "tags": [
+    "harmful"
+  ],
+  "params": {
+    "effect": "minecraft:blindness",
+    "duration": 80,
+    "amplifier": 0
+  },
+  "visual": {
+    "color": "#222222",
+    "particle": "thaumicunity:spark",
+    "sound": "thaumicunity:misc.zap"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "tag": "#minecraft:beds",
+  "aspects": {
+    "thaumicunity:pannus": 3,
+    "thaumicunity:somnium": 2,
+    "thaumicunity:domus": 1
+  },
+  "priority": 10
+}

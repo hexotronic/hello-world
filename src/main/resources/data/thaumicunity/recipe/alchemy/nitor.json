@@ -1,0 +1,13 @@
+{
+  "type": "thaumicunity:crucible",
+  "catalyst": "minecraft:glowstone_dust",
+  "aspects": {
+    "thaumicunity:lux": 4,
+    "thaumicunity:potentia": 2,
+    "thaumicunity:ignis": 2
+  },
+  "result": {
+    "id": "thaumicunity:nitor"
+  },
+  "research": "thaumicunity:alchemy/alchemical_fuels"
+}

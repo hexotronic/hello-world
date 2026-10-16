@@ -1,0 +1,32 @@
+{
+  "category": "thaumicunity:fundamentals",
+  "x": 8,
+  "y": 0,
+  "icon": "minecraft:writable_book",
+  "parents": [
+    "thaumicunity:fundamentals/insight"
+  ],
+  "aspects": [
+    "thaumicunity:scientia",
+    "thaumicunity:memoria"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.fundamentals.theory.stage0",
+      "requirements": [
+        {
+          "type": "knowledge",
+          "kind": "theory",
+          "category": "thaumicunity:fundamentals",
+          "amount": 1
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.fundamentals.theory.stage1",
+      "requirements": [],
+      "recipes": []
+    }
+  ]
+}

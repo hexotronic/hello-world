@@ -1,0 +1,20 @@
+{
+  "type": "thaumicunity:infusion",
+  "central": "thaumicunity:basic_caster",
+  "components": [
+    "thaumicunity:thaumium_ingot",
+    "thaumicunity:thaumium_ingot",
+    "thaumicunity:thaumium_ingot",
+    "thaumicunity:thaumium_ingot"
+  ],
+  "essentia": {
+    "thaumicunity:praecantatio": 16,
+    "thaumicunity:potentia": 8,
+    "thaumicunity:instrumentum": 8
+  },
+  "instability": 3,
+  "result": {
+    "id": "thaumicunity:thaumium_caster"
+  },
+  "research": "thaumicunity:infusion/thaumium_caster"
+}

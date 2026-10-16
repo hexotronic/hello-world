@@ -1,0 +1,22 @@
+{
+  "kind": "medium",
+  "primitive": "thaumicunity:beam",
+  "complexity": 3,
+  "cost_multiplier": 1.3,
+  "tags": [
+    "ray",
+    "instant",
+    "piercing"
+  ],
+  "params": {
+    "range": 24.0,
+    "pierce": 5
+  },
+  "visual": {
+    "particle": "thaumicunity:spark"
+  },
+  "cost": {
+    "thaumicunity:aer": 1,
+    "thaumicunity:potentia": 1
+  }
+}

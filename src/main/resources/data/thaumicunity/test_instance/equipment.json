@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:function",
+  "environment": "minecraft:default",
+  "function": "thaumicunity:equipment",
+  "max_ticks": 60,
+  "required": true,
+  "setup_ticks": 1,
+  "structure": "minecraft:empty"
+}

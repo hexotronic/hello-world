@@ -1,0 +1,19 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:push",
+  "aspect": "thaumicunity:tempestas",
+  "synergy_of": "thaumicunity:tempestas",
+  "complexity": 0,
+  "params": {
+    "strength": 2.2,
+    "mode": "away",
+    "lift": 0.4
+  },
+  "visual": {
+    "color": "#ffffff",
+    "particle": "thaumicunity:wisp"
+  },
+  "tags": [
+    "synergy"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "color": "#eec2b3",
+  "components": [
+    "thaumicunity:cognitio",
+    "thaumicunity:perditio"
+  ],
+  "origin": "addon:gregtech"
+}

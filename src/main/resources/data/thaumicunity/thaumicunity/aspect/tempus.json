@@ -1,0 +1,8 @@
+{
+  "color": "#b68cff",
+  "components": [
+    "thaumicunity:vacuos",
+    "thaumicunity:ordo"
+  ],
+  "origin": "addon:magic_bees"
+}

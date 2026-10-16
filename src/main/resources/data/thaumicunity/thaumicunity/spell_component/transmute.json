@@ -1,0 +1,21 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:transmute",
+  "aspect": "thaumicunity:permutatio",
+  "cost": {
+    "thaumicunity:aqua": 2,
+    "thaumicunity:aer": 2,
+    "thaumicunity:ordo": 2
+  },
+  "complexity": 3,
+  "cooldown": 40,
+  "tags": [
+    "world"
+  ],
+  "params": {},
+  "visual": {
+    "color": "#578357",
+    "particle": "thaumicunity:spark",
+    "sound": "thaumicunity:misc.zap"
+  }
+}

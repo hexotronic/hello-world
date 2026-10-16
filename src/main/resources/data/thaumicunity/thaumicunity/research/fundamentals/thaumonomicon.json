@@ -1,0 +1,23 @@
+{
+  "category": "thaumicunity:fundamentals",
+  "x": 0,
+  "y": 0,
+  "icon": "thaumicunity:thaumonomicon",
+  "parents": [],
+  "aspects": [
+    "thaumicunity:praecantatio",
+    "thaumicunity:cognitio"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.fundamentals.thaumonomicon.stage0",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:salis_mundus",
+        "thaumicunity:thaumonomicon"
+      ]
+    }
+  ],
+  "special": true,
+  "auto_unlock": true
+}

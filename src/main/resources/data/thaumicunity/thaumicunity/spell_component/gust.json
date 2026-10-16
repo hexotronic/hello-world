@@ -1,0 +1,22 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:push",
+  "aspect": "thaumicunity:aer",
+  "cost": {
+    "thaumicunity:aer": 2
+  },
+  "complexity": 1,
+  "cooldown": 10,
+  "tags": [
+    "neutral"
+  ],
+  "params": {
+    "strength": 1.4,
+    "mode": "away"
+  },
+  "visual": {
+    "color": "#ffff7e",
+    "particle": "thaumicunity:spark",
+    "sound": "thaumicunity:misc.zap"
+  }
+}

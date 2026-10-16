@@ -1,0 +1,23 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:dispel",
+  "aspect": "thaumicunity:sano",
+  "cost": {
+    "thaumicunity:ordo": 3,
+    "thaumicunity:aqua": 3
+  },
+  "complexity": 2,
+  "cooldown": 40,
+  "tags": [
+    "beneficial"
+  ],
+  "params": {
+    "harmful": true,
+    "beneficial": false
+  },
+  "visual": {
+    "color": "#ffe0e8",
+    "particle": "thaumicunity:spark",
+    "sound": "thaumicunity:misc.zap"
+  }
+}

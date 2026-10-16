@@ -1,0 +1,19 @@
+{
+  "type": "thaumicunity:arcane_shaped",
+  "key": {
+    "B": "thaumicunity:brass_nugget",
+    "G": "minecraft:glass"
+  },
+  "pattern": [
+    "BGB"
+  ],
+  "vis": {
+    "thaumicunity:aqua": 1,
+    "thaumicunity:ordo": 1
+  },
+  "result": {
+    "id": "thaumicunity:essentia_tube",
+    "count": 8
+  },
+  "research": "thaumicunity:alchemy/essentia_tubes"
+}

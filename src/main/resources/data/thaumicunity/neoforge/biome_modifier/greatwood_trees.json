@@ -1,0 +1,8 @@
+{
+  "type": "thaumicunity:add_features",
+  "biomes": "#minecraft:is_forest",
+  "features": [
+    "thaumicunity:greatwood_trees"
+  ],
+  "step": "vegetal_decoration"
+}

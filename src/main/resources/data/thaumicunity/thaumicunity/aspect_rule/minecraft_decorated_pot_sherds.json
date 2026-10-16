@@ -1,0 +1,9 @@
+{
+  "tag": "#minecraft:decorated_pot_sherds",
+  "aspects": {
+    "thaumicunity:terra": 1,
+    "thaumicunity:ars": 2,
+    "thaumicunity:memoria": 2
+  },
+  "priority": 10
+}

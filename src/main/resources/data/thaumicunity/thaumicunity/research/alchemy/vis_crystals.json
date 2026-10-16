@@ -1,0 +1,40 @@
+{
+  "category": "thaumicunity:alchemy",
+  "x": 4,
+  "y": 1,
+  "icon": "thaumicunity:ignis_vis_crystal",
+  "parents": [
+    "thaumicunity:alchemy/essentia",
+    "thaumicunity:alchemy/metallurgy"
+  ],
+  "aspects": [
+    "thaumicunity:vitreus",
+    "thaumicunity:auram"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.alchemy.vis_crystals.stage0",
+      "requirements": [
+        {
+          "type": "knowledge",
+          "kind": "theory",
+          "category": "thaumicunity:alchemy",
+          "amount": 1
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.alchemy.vis_crystals.stage1",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:alchemy/aer_vis_crystal",
+        "thaumicunity:alchemy/terra_vis_crystal",
+        "thaumicunity:alchemy/ignis_vis_crystal",
+        "thaumicunity:alchemy/aqua_vis_crystal",
+        "thaumicunity:alchemy/ordo_vis_crystal",
+        "thaumicunity:alchemy/perditio_vis_crystal"
+      ]
+    }
+  ]
+}

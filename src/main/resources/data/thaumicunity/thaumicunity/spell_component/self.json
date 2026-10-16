@@ -1,0 +1,13 @@
+{
+  "kind": "medium",
+  "primitive": "thaumicunity:self",
+  "complexity": 1,
+  "cost_multiplier": 0.8,
+  "tags": [
+    "self"
+  ],
+  "params": {},
+  "visual": {
+    "particle": "thaumicunity:wisp"
+  }
+}

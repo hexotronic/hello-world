@@ -1,0 +1,19 @@
+{
+  "type": "thaumicunity:arcane_shaped",
+  "key": {
+    "N": "minecraft:copper_nugget"
+  },
+  "pattern": [
+    "NNN",
+    "N N"
+  ],
+  "vis": {
+    "thaumicunity:ordo": 3,
+    "thaumicunity:perditio": 3
+  },
+  "result": {
+    "id": "thaumicunity:copper_wand_cap",
+    "count": 2
+  },
+  "research": "thaumicunity:auromancy/wand_caps"
+}

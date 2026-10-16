@@ -1,0 +1,37 @@
+{
+  "category": "thaumicunity:infusion",
+  "x": 0,
+  "y": 0,
+  "icon": "thaumicunity:runic_matrix",
+  "parents": [
+    "thaumicunity:alchemy/metallurgy",
+    "thaumicunity:artifice/arcane_stone"
+  ],
+  "aspects": [
+    "thaumicunity:praecantatio",
+    "thaumicunity:ordo"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.infusion.runic_matrix.stage0",
+      "requirements": [
+        {
+          "type": "knowledge",
+          "kind": "theory",
+          "category": "thaumicunity:infusion",
+          "amount": 1
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.infusion.runic_matrix.stage1",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:runic_matrix",
+        "thaumicunity:arcane_pedestal"
+      ]
+    }
+  ],
+  "special": true
+}

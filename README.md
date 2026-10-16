@@ -1,90 +1,87 @@
-# Welcome to GitHub
+# Thaumic Unity
 
-Welcome to GitHub—where millions of developers work together on software. Ready to get started? Let’s learn how this all works by building and publishing your first GitHub Pages website!
+A NeoForge mod for **Minecraft 26.3** that brings the magic of Thaumcraft (every version) and its major addons into
+one mod, then expands it: aspects, research, aura and vis, alchemy, arcane crafting, infusion and a data-driven
+spell system, written from scratch with original code, text and art.
 
-## Repositories
+> **Status: alpha, phase 4 of 9 under way.** Core systems work end to end (scan → research → crucible / arcane workbench /
+> infusion → caster's gauntlet and foci). Later phases add the migrated content, golems, worldgen, dimensions,
+> integrations and polish. See [docs/PLAN.md](docs/PLAN.md) for the plan, feature counts and exact next steps.
 
-Right now, we’re in your first GitHub **repository**. A repository is like a folder or storage space for your project. Your project's repository contains all its files such as code, documentation, images, and more. It also tracks every change that you—or your collaborators—make to each file, so you can always go back to previous versions of your project if you make any mistakes.
+## What is in this version
 
-This repository contains three important files: The HTML code for your first website on GitHub, the CSS stylesheet that decorates your website with colors and fonts, and the **README** file. It also contains an image folder, with one image file.
+| System | Contents |
+|---|---|
+| Aspects | 183 aspects (primal, Thaumcraft 4/6, addon and new ones) as a datapack registry; item aspects from explicit data, tag rules and recipe inheritance; optional Thaumcraft 6 combinations datapack |
+| Research | Thaumonomicon with 5 categories and 45 entries; staged requirements (scan, craft, obtain, knowledge, insight puzzles, …); unified, classic or modern research mode |
+| Aura | Per-chunk vis and flux with biome profiles and primal attunement, cheap bounded simulation, aura HUD |
+| Crafting | Crucible, arcane workbench, alchemical furnace and warded jars, runic matrix infusion with a stability model |
+| Essentia | Suction-driven tubes and valves, essentia buffer, centrifuge; labelled jars pull their aspect |
+| Spells | 81 spell components (mediums, effects, synergies, modifiers) on 44 Java primitives; caster's gauntlets; 3 focus tiers; 17 focus archetypes |
+| Wands | Rods and caps as data (9 rods, 5 caps, 45 combinations); per-primal vis storage, fixed foci, vis crystals, aura recharge and a recharge pedestal |
+| Equipment | Thaumium and void metal tools and weapons; thaumium, void metal and infused fortress armour; thaumaturge's robes that spare spell vis; Boots of the Traveller. Void metal mends itself and its blades weaken |
+| World | Greatwood and silverwood trees, shimmerleaf, cinderpearl and vishroom, primal crystal clusters in caves, aura nodes (six types, four modifiers) that feed the aura and recharge wands; cinnabar and amber ores; all switchable |
 
-## Describe your project
+## Playing
 
-You are currently viewing your project's **README** file. **_README_** files are like cover pages or elevator pitches for your project. They are written in plain text or [Markdown language](https://guides.github.com/features/mastering-markdown/), and usually include a paragraph describing the project, directions on how to use it, who authored it, and more.
+Craft **Salis Mundus** (redstone, glowstone dust, bone meal, amethyst shard) and use it on a bookshelf to get the
+**Thaumonomicon**; it explains everything else. Salis Mundus also turns a crafting table into an arcane workbench, a
+cauldron into a crucible and a lectern into a research table.
 
-[Learn more about READMEs](https://help.github.com/en/articles/about-readmes)
+### Installing
 
-## Your first website
+1. Install [NeoForge](https://neoforged.net) 26.3.0.69-beta or newer for Minecraft 26.3.
+2. Get `thaumicunity-<version>.jar` from the [releases](https://github.com/hexotronic/hello-world/releases), from
+   the latest successful [Build run](https://github.com/hexotronic/hello-world/actions/workflows/build.yml)
+   (artifact `thaumicunity-jar`, needs a GitHub login) or build it yourself (below), and put it in `.minecraft/mods`.
 
-**GitHub Pages** is a free and easy way to create a website using the code that lives in your GitHub repositories. You can use GitHub Pages to build a portfolio of your work, create a personal website, or share a fun project that you coded with the world. GitHub Pages is automatically enabled in this repository, but when you create new repositories in the future, the steps to launch a GitHub Pages website will be slightly different.
+### Thaumcraft's look
 
-[Learn more about GitHub Pages](https://pages.github.com/)
+Thaumic Unity ships with its own art. If you own Thaumcraft, put your Thaumcraft jar (Thaumcraft 4 for 1.7.10 or
+Thaumcraft 6 for 1.12.2) into `.minecraft/thaumicunity/` and restart: the game converts its textures into a resource
+pack on your computer and uses them in place of Thaumic Unity's (items, blocks, aspect glyphs, research
+backgrounds). Nothing from Thaumcraft is part of this repository or the mod jar. See
+[Using Thaumcraft's textures](docs/ASSETS_AND_LICENSING.md#using-thaumcrafts-textures-on-your-own-computer).
 
-## Rename this repository to publish your site
+## Building
 
-We've already set-up a GitHub Pages website for you, based on your personal username. This repository is called `hello-world`, but you'll rename it to: `username.github.io`, to match your website's URL address. If the first part of the repository doesn’t exactly match your username, it won’t work, so make sure to get it right.
+Requirements: JDK 25. The Gradle wrapper downloads everything else.
 
-Let's get started! To update this repository’s name, click the `Settings` tab on this page. This will take you to your repository’s settings page. 
-
-![repo-settings-image](https://user-images.githubusercontent.com/18093541/63130482-99e6ad80-bf88-11e9-99a1-d3cf1660b47e.png)
-
-Under the **Repository Name** heading, type: `username.github.io`, where username is your username on GitHub. Then click **Rename**—and that’s it. When you’re done, click your repository name or browser’s back button to return to this page.
-
-<img width="1039" alt="rename_screenshot" src="https://user-images.githubusercontent.com/18093541/63129466-956cc580-bf85-11e9-92d8-b028dd483fa5.png">
-
-Once you click **Rename**, your website will automatically be published at: https://your-username.github.io/. The HTML file—called `index.html`—is rendered as the home page and you'll be making changes to this file in the next step.
-
-Congratulations! You just launched your first GitHub Pages website. It's now live to share with the entire world
-
-## Making your first edit
-
-When you make any change to any file in your project, you’re making a **commit**. If you fix a typo, update a filename, or edit your code, you can add it to GitHub as a commit. Your commits represent your project’s entire history—and they’re all saved in your project’s repository.
-
-With each commit, you have the opportunity to write a **commit message**, a short, meaningful comment describing the change you’re making to a file. So you always know exactly what changed, no matter when you return to a commit.
-
-## Practice: Customize your first GitHub website by writing HTML code
-
-Want to edit the site you just published? Let’s practice commits by introducing yourself in your `index.html` file. Don’t worry about getting it right the first time—you can always build on your introduction later.
-
-Let’s start with this template:
-
-```
-<p>Hello World! I’m [username]. This is my website!</p>
-```
-
-To add your introduction, copy our template and click the edit pencil icon at the top right hand corner of the `index.html` file.
-
-<img width="997" alt="edit-this-file" src="https://user-images.githubusercontent.com/18093541/63131820-0794d880-bf8d-11e9-8b3d-c096355e9389.png">
-
-
-Delete this placeholder line:
-
-```
-<p>Welcome to your first GitHub Pages website!</p>
+```sh
+./gradlew build            # compiles, runs the unit tests, produces build/libs/thaumicunity-<version>.jar
+./gradlew runClient        # development client
+./gradlew runGameTestServer  # loads all data on a server and runs the in-game tests
+./gradlew runSmokeClient     # scripted client tour: test world, every device and screen, screenshots, then quits
 ```
 
-Then, paste the template to line 15 and fill in the blanks.
+CI runs all three on every push; the client tour runs under a virtual display and its screenshots are uploaded as
+the `client-screenshots` artifact. The **Release** workflow (Actions › Release › Run workflow) builds the jar and
+publishes it as a GitHub pre-release.
 
-<img width="1032" alt="edit-githuboctocat-index" src="https://user-images.githubusercontent.com/18093541/63132339-c3a2d300-bf8e-11e9-8222-59c2702f6c42.png">
+Generated content is committed. After editing a table in `tools/content/` regenerate it with:
 
+```sh
+python3 tools/gen_content.py    # data and asset JSON, language file (validates every table)
+python3 tools/gen_textures.py   # textures (requires Pillow)
+```
 
-When you’re done, scroll down to the `Commit changes` section near the bottom of the edit page. Add a short message explaining your change, like "Add my introduction", then click `Commit changes`.
+## Repository layout
 
+| Path | What |
+|---|---|
+| `src/main/java/dev/thaumicunity/core` | Minecraft-independent logic (aspect graph, research graph and insight puzzles, spell compiler, aura simulation, infusion stability, aspect inheritance) with JUnit tests |
+| `src/main/java/dev/thaumicunity/api` | Public API for addons: events, spell primitive interfaces, facade |
+| `src/main/java/dev/thaumicunity/common` | Server and shared game code: registries, blocks, items, devices, research, aura, spells |
+| `src/main/java/dev/thaumicunity/client` | Screens, HUD, tooltips, renderers, particles |
+| `tools/` | Content tables and generators, CI API probe |
+| `docs/` | [Plan](docs/PLAN.md), [inventory of source mods](docs/INVENTORY.md), [architecture](docs/ARCHITECTURE.md), [design decisions](docs/DESIGN_DECISIONS.md), [assets and licensing](docs/ASSETS_AND_LICENSING.md) |
 
-<img width="1030" alt="add-my-username" src="https://user-images.githubusercontent.com/18093541/63131801-efbd5480-bf8c-11e9-9806-89273f027d16.png">
+`index.html`, `styles.css` and `images/` are the repository's original GitHub Pages starter files and are not part of
+the mod.
 
-Once you click `Commit changes`, your changes will automatically be published on your GitHub Pages website. Refresh the page to see your new changes live in action.
+## Licensing
 
-:tada: You just made your first commit! :tada:
-
-## Extra Credit: Keep on building!
-
-Change the placeholder Octocat gif on your GitHub Pages website by [creating your own personal Octocat emoji](https://myoctocat.com/build-your-octocat/) or [choose a different Octocat gif from our logo library here](https://octodex.github.com/). Add that image to line 12 of your `index.html` file, in place of the `<img src=` link.
-
-Want to add even more code and fun styles to your GitHub Pages website? [Follow these instructions](https://github.com/github/personal-website) to build a fully-fledged static website.
-
-![octocat](./images/create-octocat.png)
-
-## Everything you need to know about GitHub
-
-Getting started is the hardest part. If there’s anything you’d like to know as you get started with GitHub, try searching [GitHub Help](https://help.github.com). Our documentation has tutorials on everything from changing your repository settings to configuring GitHub from your command line.
+No assets, code or text from Thaumcraft or its addons are included (the texture importer reads your own jar on your
+own computer); see
+[docs/ASSETS_AND_LICENSING.md](docs/ASSETS_AND_LICENSING.md). The mod licence in `gradle.properties` is still the MDK
+default (All Rights Reserved) until the project owner chooses one.

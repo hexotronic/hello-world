@@ -1,0 +1,20 @@
+{
+  "type": "thaumicunity:infusion",
+  "central": "thaumicunity:thaumium_helmet",
+  "components": [
+    "thaumicunity:thaumium_ingot",
+    "minecraft:gold_ingot",
+    "thaumicunity:thaumium_ingot",
+    "minecraft:emerald"
+  ],
+  "essentia": {
+    "thaumicunity:tutamen": 16,
+    "thaumicunity:metallum": 16,
+    "thaumicunity:praecantatio": 8
+  },
+  "instability": 3,
+  "result": {
+    "id": "thaumicunity:fortress_helmet"
+  },
+  "research": "thaumicunity:infusion/fortress_armor"
+}

@@ -1,0 +1,24 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:potion",
+  "aspect": "thaumicunity:velocitas",
+  "cost": {
+    "thaumicunity:aer": 3,
+    "thaumicunity:ordo": 1
+  },
+  "complexity": 2,
+  "cooldown": 40,
+  "tags": [
+    "beneficial"
+  ],
+  "params": {
+    "effect": "minecraft:speed",
+    "duration": 600,
+    "amplifier": 1
+  },
+  "visual": {
+    "color": "#e6e6a0",
+    "particle": "thaumicunity:spark",
+    "sound": "thaumicunity:misc.zap"
+  }
+}

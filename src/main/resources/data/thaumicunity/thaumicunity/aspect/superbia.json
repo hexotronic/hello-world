@@ -1,0 +1,8 @@
+{
+  "color": "#9639ff",
+  "components": [
+    "thaumicunity:volatus",
+    "thaumicunity:vacuos"
+  ],
+  "origin": "addon:forbidden_magic"
+}

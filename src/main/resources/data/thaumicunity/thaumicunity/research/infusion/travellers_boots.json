@@ -1,0 +1,34 @@
+{
+  "category": "thaumicunity:infusion",
+  "x": 4,
+  "y": 0,
+  "icon": "thaumicunity:traveller_boots",
+  "parents": [
+    "thaumicunity:infusion/stability"
+  ],
+  "aspects": [
+    "thaumicunity:iter",
+    "thaumicunity:motus"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.infusion.travellers_boots.stage0",
+      "requirements": [
+        {
+          "type": "knowledge",
+          "kind": "observation",
+          "category": "thaumicunity:infusion",
+          "amount": 2
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.infusion.travellers_boots.stage1",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:infusion/travellers_boots"
+      ]
+    }
+  ]
+}

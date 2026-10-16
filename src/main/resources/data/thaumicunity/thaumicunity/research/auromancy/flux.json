@@ -1,0 +1,32 @@
+{
+  "category": "thaumicunity:auromancy",
+  "x": 0,
+  "y": 2,
+  "icon": "thaumicunity:perditio_vis_crystal",
+  "parents": [
+    "thaumicunity:auromancy/casting"
+  ],
+  "aspects": [
+    "thaumicunity:vitium",
+    "thaumicunity:auram"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.auromancy.flux.stage0",
+      "requirements": [
+        {
+          "type": "knowledge",
+          "kind": "observation",
+          "category": "thaumicunity:auromancy",
+          "amount": 1
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.auromancy.flux.stage1",
+      "requirements": [],
+      "recipes": []
+    }
+  ]
+}

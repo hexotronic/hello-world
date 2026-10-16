@@ -1,0 +1,19 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:potion",
+  "aspect": "thaumicunity:acidum",
+  "synergy_of": "thaumicunity:acidum",
+  "complexity": 0,
+  "params": {
+    "effect": "minecraft:weakness",
+    "duration": 160,
+    "amplifier": 1
+  },
+  "visual": {
+    "color": "#b0e040",
+    "particle": "thaumicunity:wisp"
+  },
+  "tags": [
+    "synergy"
+  ]
+}

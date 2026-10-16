@@ -1,0 +1,20 @@
+{
+  "type": "thaumicunity:arcane_shaped",
+  "key": {
+    "N": "minecraft:gold_nugget",
+    "A": "minecraft:amethyst_shard"
+  },
+  "pattern": [
+    " N ",
+    "NAN",
+    " N "
+  ],
+  "vis": {
+    "thaumicunity:ordo": 5,
+    "thaumicunity:aer": 5
+  },
+  "result": {
+    "id": "thaumicunity:apprentice_focus"
+  },
+  "research": "thaumicunity:auromancy/casting"
+}

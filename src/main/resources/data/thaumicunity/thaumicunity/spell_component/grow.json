@@ -1,0 +1,23 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:grow",
+  "aspect": "thaumicunity:herba",
+  "cost": {
+    "thaumicunity:terra": 2,
+    "thaumicunity:aqua": 2
+  },
+  "complexity": 2,
+  "cooldown": 20,
+  "tags": [
+    "world"
+  ],
+  "params": {
+    "times": 1,
+    "radius": 1
+  },
+  "visual": {
+    "color": "#56c000",
+    "particle": "thaumicunity:spark",
+    "sound": "thaumicunity:misc.zap"
+  }
+}

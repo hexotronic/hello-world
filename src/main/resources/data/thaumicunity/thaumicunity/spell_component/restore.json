@@ -1,0 +1,22 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:aura",
+  "aspect": "thaumicunity:auram",
+  "cost": {
+    "thaumicunity:ordo": 2
+  },
+  "complexity": 2,
+  "cooldown": 200,
+  "tags": [
+    "world"
+  ],
+  "params": {
+    "vis": 8,
+    "flux": -2
+  },
+  "visual": {
+    "color": "#ffc0ff",
+    "particle": "thaumicunity:spark",
+    "sound": "thaumicunity:misc.zap"
+  }
+}

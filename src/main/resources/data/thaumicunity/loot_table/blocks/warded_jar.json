@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "modifier": {
+            "type": "minecraft:copy_components",
+            "include": [
+              "thaumicunity:essentia"
+            ],
+            "source": "block_entity"
+          },
+          "name": "thaumicunity:warded_jar"
+        }
+      ],
+      "rolls": 1
+    }
+  ],
+  "random_sequence": "thaumicunity:blocks/warded_jar"
+}

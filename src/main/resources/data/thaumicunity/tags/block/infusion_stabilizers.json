@@ -1,0 +1,12 @@
+{
+  "values": [
+    "#minecraft:candles",
+    "minecraft:skeleton_skull",
+    "minecraft:wither_skeleton_skull",
+    "minecraft:zombie_head",
+    "minecraft:creeper_head",
+    "minecraft:amethyst_cluster",
+    "minecraft:enchanting_table",
+    "minecraft:bookshelf"
+  ]
+}

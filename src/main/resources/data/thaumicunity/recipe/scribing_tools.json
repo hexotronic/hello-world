@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    "minecraft:feather",
+    "minecraft:glass_bottle",
+    "minecraft:ink_sac"
+  ],
+  "result": {
+    "id": "thaumicunity:scribing_tools"
+  }
+}

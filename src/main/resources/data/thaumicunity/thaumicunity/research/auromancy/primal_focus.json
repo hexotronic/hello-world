@@ -1,0 +1,36 @@
+{
+  "category": "thaumicunity:auromancy",
+  "x": 6,
+  "y": 2,
+  "icon": "thaumicunity:archmage_focus",
+  "parents": [
+    "thaumicunity:auromancy/master_foci",
+    "thaumicunity:auromancy/classic_foci"
+  ],
+  "aspects": [
+    "thaumicunity:potentia",
+    "thaumicunity:aer"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.auromancy.primal_focus.stage0",
+      "requirements": [
+        {
+          "type": "knowledge",
+          "kind": "theory",
+          "category": "thaumicunity:auromancy",
+          "amount": 3
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.auromancy.primal_focus.stage1",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:focus/primal",
+        "thaumicunity:focus/thunderhead"
+      ]
+    }
+  ]
+}

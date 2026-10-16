@@ -1,0 +1,7 @@
+{
+  "icon": "thaumicunity:arcane_workbench",
+  "background": "thaumicunity:artifice",
+  "order": 20,
+  "color": "#b0703c",
+  "requires": "thaumicunity:fundamentals/thaumometer"
+}

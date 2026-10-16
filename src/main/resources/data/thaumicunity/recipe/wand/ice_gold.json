@@ -1,0 +1,47 @@
+{
+  "type": "thaumicunity:arcane_shaped",
+  "key": {
+    "C": "thaumicunity:gold_wand_cap",
+    "R": "thaumicunity:ice_wand_core"
+  },
+  "pattern": [
+    "  C",
+    " R ",
+    "C  "
+  ],
+  "vis": {
+    "thaumicunity:aer": 9,
+    "thaumicunity:terra": 9,
+    "thaumicunity:ignis": 9,
+    "thaumicunity:aqua": 9,
+    "thaumicunity:ordo": 9,
+    "thaumicunity:perditio": 9
+  },
+  "result": {
+    "id": "thaumicunity:wand",
+    "components": {
+      "thaumicunity:wand_parts": {
+        "rod": "thaumicunity:ice",
+        "cap": "thaumicunity:gold"
+      },
+      "minecraft:custom_model_data": {
+        "colors": [
+          12117750,
+          15913276
+        ]
+      },
+      "minecraft:item_name": {
+        "translate": "item.thaumicunity.wand.parts",
+        "with": [
+          {
+            "translate": "wand_cap.thaumicunity.gold"
+          },
+          {
+            "translate": "wand_rod.thaumicunity.ice"
+          }
+        ]
+      }
+    }
+  },
+  "research": "thaumicunity:auromancy/elemental_cores"
+}

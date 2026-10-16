@@ -1,0 +1,28 @@
+{
+  "type": "thaumicunity:arcane_shapeless",
+  "ingredients": [
+    "thaumicunity:adept_focus",
+    "minecraft:bone_meal",
+    "minecraft:wheat_seeds"
+  ],
+  "vis": {
+    "thaumicunity:terra": 15,
+    "thaumicunity:aqua": 10
+  },
+  "result": {
+    "id": "thaumicunity:adept_focus",
+    "components": {
+      "thaumicunity:spell": {
+        "medium": "thaumicunity:plan",
+        "effects": [
+          "thaumicunity:grow",
+          "thaumicunity:harvest"
+        ]
+      },
+      "minecraft:item_name": {
+        "translate": "focus.thaumicunity.growth"
+      }
+    }
+  },
+  "research": "thaumicunity:auromancy/advanced_foci"
+}

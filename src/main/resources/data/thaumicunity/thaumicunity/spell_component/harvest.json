@@ -1,0 +1,23 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:break",
+  "aspect": "thaumicunity:meto",
+  "cost": {
+    "thaumicunity:terra": 2,
+    "thaumicunity:aer": 1
+  },
+  "complexity": 2,
+  "cooldown": 6,
+  "tags": [
+    "world"
+  ],
+  "params": {
+    "max_hardness": 0.6,
+    "radius": 1
+  },
+  "visual": {
+    "color": "#c8d46a",
+    "particle": "thaumicunity:spark",
+    "sound": "thaumicunity:misc.zap"
+  }
+}

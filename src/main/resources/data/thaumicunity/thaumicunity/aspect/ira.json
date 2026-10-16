@@ -1,0 +1,8 @@
+{
+  "color": "#870404",
+  "components": [
+    "thaumicunity:telum",
+    "thaumicunity:ignis"
+  ],
+  "origin": "addon:forbidden_magic"
+}

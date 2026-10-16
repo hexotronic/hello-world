@@ -1,0 +1,9 @@
+{
+  "pack": {
+    "description": {
+      "translate": "pack.thaumicunity.modern_combinations.description"
+    },
+    "min_format": 121,
+    "max_format": 121
+  }
+}

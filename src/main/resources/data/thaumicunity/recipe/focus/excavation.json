@@ -1,0 +1,26 @@
+{
+  "type": "thaumicunity:arcane_shapeless",
+  "ingredients": [
+    "thaumicunity:apprentice_focus",
+    "minecraft:iron_pickaxe"
+  ],
+  "vis": {
+    "thaumicunity:terra": 10,
+    "thaumicunity:perditio": 5
+  },
+  "result": {
+    "id": "thaumicunity:apprentice_focus",
+    "components": {
+      "thaumicunity:spell": {
+        "medium": "thaumicunity:bolt",
+        "effects": [
+          "thaumicunity:break"
+        ]
+      },
+      "minecraft:item_name": {
+        "translate": "focus.thaumicunity.excavation"
+      }
+    }
+  },
+  "research": "thaumicunity:auromancy/foci"
+}

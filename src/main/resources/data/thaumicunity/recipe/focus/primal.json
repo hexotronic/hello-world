@@ -1,0 +1,42 @@
+{
+  "type": "thaumicunity:arcane_shapeless",
+  "ingredients": [
+    "thaumicunity:archmage_focus",
+    "minecraft:nether_star",
+    "thaumicunity:aer_vis_crystal",
+    "thaumicunity:terra_vis_crystal",
+    "thaumicunity:ignis_vis_crystal",
+    "thaumicunity:aqua_vis_crystal",
+    "thaumicunity:ordo_vis_crystal",
+    "thaumicunity:perditio_vis_crystal"
+  ],
+  "vis": {
+    "thaumicunity:aer": 30,
+    "thaumicunity:terra": 30,
+    "thaumicunity:ignis": 30,
+    "thaumicunity:aqua": 30,
+    "thaumicunity:ordo": 30,
+    "thaumicunity:perditio": 30
+  },
+  "result": {
+    "id": "thaumicunity:archmage_focus",
+    "components": {
+      "thaumicunity:spell": {
+        "medium": "thaumicunity:projectile",
+        "effects": [
+          "thaumicunity:fire",
+          "thaumicunity:frost",
+          "thaumicunity:shock",
+          "thaumicunity:gust"
+        ],
+        "modifiers": [
+          "thaumicunity:power"
+        ]
+      },
+      "minecraft:item_name": {
+        "translate": "focus.thaumicunity.primal"
+      }
+    }
+  },
+  "research": "thaumicunity:auromancy/primal_focus"
+}

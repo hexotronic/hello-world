@@ -1,0 +1,25 @@
+{
+  "kind": "effect",
+  "primitive": "thaumicunity:summon",
+  "aspect": "thaumicunity:vocatio",
+  "cost": {
+    "thaumicunity:aer": 4,
+    "thaumicunity:terra": 4,
+    "thaumicunity:aqua": 2
+  },
+  "complexity": 5,
+  "cooldown": 400,
+  "tags": [
+    "summon"
+  ],
+  "params": {
+    "entity": "minecraft:wolf",
+    "count": 1,
+    "lifetime": 1200
+  },
+  "visual": {
+    "color": "#c0c0d0",
+    "particle": "thaumicunity:spark",
+    "sound": "thaumicunity:misc.zap"
+  }
+}

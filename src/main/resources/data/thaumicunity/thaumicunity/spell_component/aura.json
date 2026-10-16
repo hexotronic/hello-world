@@ -1,0 +1,23 @@
+{
+  "kind": "medium",
+  "primitive": "thaumicunity:zone",
+  "complexity": 5,
+  "cost_multiplier": 2.2,
+  "tags": [
+    "zone",
+    "self"
+  ],
+  "params": {
+    "radius": 3.0,
+    "duration": 200,
+    "interval": 20,
+    "trigger": "pulse",
+    "follow_source": true
+  },
+  "visual": {
+    "particle": "thaumicunity:wisp"
+  },
+  "cost": {
+    "thaumicunity:auram": 1
+  }
+}

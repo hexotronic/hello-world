@@ -1,0 +1,14 @@
+# Classes whose signatures are printed by .github/workflows/api-probe.yml (javap -protected).
+# Syntax: see tools/api-probe.sh. Avoid parentheses in filters.
+net.minecraft.core.registries.Registries | FEATURE|PLACED|TRUNK|FOLIAGE|DECORATOR|PLACEMENT
+net.minecraft.core.registries.BuiltInRegistries | FEATURE|TRUNK|FOLIAGE|DECORATOR|PLACEMENT
+net.minecraft.world.level.block.SaplingBlock
+net.minecraft.world.level.block.grower.TreeGrower
+grep:levelgen\.feature\.[A-Za-z]*Tree[A-Za-z]*$|levelgen\.feature\.Features$|levelgen\.feature\.[A-Za-z]*Feature$
+grep:LightCoords|LightTexture|Lightmap|FULL_BRIGHT
+net.minecraft.client.renderer.state.level.CameraRenderState | public
+net.minecraft.world.level.levelgen.placement.PlacedFeature | public
+net.minecraft.world.level.levelgen.feature.treedecorators.TreeDecorator | public|protected
+file:data/minecraft/worldgen/[a-z_]+/(fancy_oak|flower_default|brown_mushroom|birch)\.json
+file:assets/minecraft/blockstates/oak_sapling\.json
+file:assets/minecraft/models/item/oak_sapling\.json

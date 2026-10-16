@@ -1,0 +1,12 @@
+{
+  "type": "thaumicunity:crucible",
+  "catalyst": "minecraft:copper_ingot",
+  "aspects": {
+    "thaumicunity:metallum": 2,
+    "thaumicunity:ordo": 2
+  },
+  "result": {
+    "id": "thaumicunity:brass_ingot"
+  },
+  "research": "thaumicunity:alchemy/metallurgy"
+}

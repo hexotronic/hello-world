@@ -1,0 +1,8 @@
+{
+  "color": "#c0c0c0",
+  "components": [
+    "thaumicunity:metallum",
+    "thaumicunity:iter"
+  ],
+  "origin": "addon:gregtech"
+}

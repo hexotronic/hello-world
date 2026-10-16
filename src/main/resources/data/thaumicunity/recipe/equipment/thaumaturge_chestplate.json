@@ -1,0 +1,20 @@
+{
+  "type": "thaumicunity:arcane_shaped",
+  "key": {
+    "#": "thaumicunity:enchanted_fabric"
+  },
+  "pattern": [
+    "# #",
+    "###",
+    "###"
+  ],
+  "vis": {
+    "thaumicunity:aer": 5,
+    "thaumicunity:ordo": 5,
+    "thaumicunity:ignis": 3
+  },
+  "result": {
+    "id": "thaumicunity:thaumaturge_chestplate"
+  },
+  "research": "thaumicunity:artifice/robes"
+}

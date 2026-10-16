@@ -1,0 +1,47 @@
+{
+  "type": "thaumicunity:arcane_shaped",
+  "key": {
+    "C": "thaumicunity:thaumium_wand_cap",
+    "R": "thaumicunity:quartz_wand_core"
+  },
+  "pattern": [
+    "  C",
+    " R ",
+    "C  "
+  ],
+  "vis": {
+    "thaumicunity:aer": 11,
+    "thaumicunity:terra": 11,
+    "thaumicunity:ignis": 11,
+    "thaumicunity:aqua": 11,
+    "thaumicunity:ordo": 11,
+    "thaumicunity:perditio": 11
+  },
+  "result": {
+    "id": "thaumicunity:wand",
+    "components": {
+      "thaumicunity:wand_parts": {
+        "rod": "thaumicunity:quartz",
+        "cap": "thaumicunity:thaumium"
+      },
+      "minecraft:custom_model_data": {
+        "colors": [
+          15591134,
+          7690424
+        ]
+      },
+      "minecraft:item_name": {
+        "translate": "item.thaumicunity.wand.parts",
+        "with": [
+          {
+            "translate": "wand_cap.thaumicunity.thaumium"
+          },
+          {
+            "translate": "wand_rod.thaumicunity.quartz"
+          }
+        ]
+      }
+    }
+  },
+  "research": "thaumicunity:auromancy/elemental_cores"
+}

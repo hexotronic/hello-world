@@ -1,0 +1,24 @@
+{
+  "kind": "medium",
+  "primitive": "thaumicunity:targeted_zone",
+  "complexity": 4,
+  "cost_multiplier": 2.0,
+  "tags": [
+    "zone",
+    "area"
+  ],
+  "params": {
+    "range": 24.0,
+    "radius": 2.5,
+    "duration": 100,
+    "interval": 20,
+    "trigger": "pulse"
+  },
+  "visual": {
+    "particle": "thaumicunity:wisp"
+  },
+  "cost": {
+    "thaumicunity:aqua": 1,
+    "thaumicunity:aer": 1
+  }
+}

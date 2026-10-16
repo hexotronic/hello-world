@@ -1,0 +1,34 @@
+{
+  "category": "thaumicunity:auromancy",
+  "x": 6,
+  "y": 0,
+  "icon": "thaumicunity:archmage_focus",
+  "parents": [
+    "thaumicunity:auromancy/advanced_foci"
+  ],
+  "aspects": [
+    "thaumicunity:lux",
+    "thaumicunity:radio"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.auromancy.master_foci.stage0",
+      "requirements": [
+        {
+          "type": "knowledge",
+          "kind": "theory",
+          "category": "thaumicunity:auromancy",
+          "amount": 2
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.auromancy.master_foci.stage1",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:focus/starfall"
+      ]
+    }
+  ]
+}

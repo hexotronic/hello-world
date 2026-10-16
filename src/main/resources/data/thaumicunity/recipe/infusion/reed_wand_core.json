@@ -1,0 +1,20 @@
+{
+  "type": "thaumicunity:infusion",
+  "central": "minecraft:sugar_cane",
+  "components": [
+    "minecraft:feather",
+    "thaumicunity:aer_vis_crystal",
+    "minecraft:feather",
+    "thaumicunity:aer_vis_crystal"
+  ],
+  "essentia": {
+    "thaumicunity:aer": 16,
+    "thaumicunity:motus": 8,
+    "thaumicunity:praecantatio": 8
+  },
+  "instability": 2,
+  "result": {
+    "id": "thaumicunity:reed_wand_core"
+  },
+  "research": "thaumicunity:auromancy/elemental_cores"
+}

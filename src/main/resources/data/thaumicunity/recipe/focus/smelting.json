@@ -1,0 +1,26 @@
+{
+  "type": "thaumicunity:arcane_shapeless",
+  "ingredients": [
+    "thaumicunity:apprentice_focus",
+    "minecraft:furnace"
+  ],
+  "vis": {
+    "thaumicunity:ignis": 15,
+    "thaumicunity:ordo": 5
+  },
+  "result": {
+    "id": "thaumicunity:apprentice_focus",
+    "components": {
+      "thaumicunity:spell": {
+        "medium": "thaumicunity:bolt",
+        "effects": [
+          "thaumicunity:smelt"
+        ]
+      },
+      "minecraft:item_name": {
+        "translate": "focus.thaumicunity.smelting"
+      }
+    }
+  },
+  "research": "thaumicunity:auromancy/classic_foci"
+}

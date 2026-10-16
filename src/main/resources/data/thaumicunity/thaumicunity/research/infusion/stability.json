@@ -1,0 +1,33 @@
+{
+  "category": "thaumicunity:infusion",
+  "x": 2,
+  "y": 0,
+  "icon": "minecraft:candle",
+  "parents": [
+    "thaumicunity:infusion/runic_matrix"
+  ],
+  "aspects": [
+    "thaumicunity:ordo",
+    "thaumicunity:vitreus"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.infusion.stability.stage0",
+      "requirements": [
+        {
+          "type": "insight",
+          "aspects": [
+            "thaumicunity:ordo",
+            "thaumicunity:vitreus"
+          ]
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.infusion.stability.stage1",
+      "requirements": [],
+      "recipes": []
+    }
+  ]
+}

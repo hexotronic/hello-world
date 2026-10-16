@@ -1,0 +1,9 @@
+{
+  "item": "thaumicunity:copper_wand_cap",
+  "cost": 1.1,
+  "color": "#d9824b",
+  "primal_cost": {
+    "thaumicunity:ordo": 1.0,
+    "thaumicunity:perditio": 1.0
+  }
+}

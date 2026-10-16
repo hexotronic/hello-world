@@ -1,0 +1,6 @@
+{
+  "type": "thaumicunity:tree_with_node",
+  "tree": "thaumicunity:silverwood_tree",
+  "node_chance": 0.5,
+  "node_type": "pure"
+}

@@ -1,0 +1,30 @@
+{
+  "category": "thaumicunity:fundamentals",
+  "x": 6,
+  "y": 4,
+  "icon": "thaumicunity:aer_vis_crystal",
+  "parents": [
+    "thaumicunity:fundamentals/aspects"
+  ],
+  "aspects": [
+    "thaumicunity:auram",
+    "thaumicunity:vitium"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.fundamentals.aura.stage0",
+      "requirements": [
+        {
+          "type": "scan",
+          "target": "item:minecraft:amethyst_shard"
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.fundamentals.aura.stage1",
+      "requirements": [],
+      "recipes": []
+    }
+  ]
+}

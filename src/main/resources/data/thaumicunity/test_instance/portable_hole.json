@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:function",
+  "environment": "minecraft:default",
+  "function": "thaumicunity:portable_hole",
+  "max_ticks": 120,
+  "required": true,
+  "setup_ticks": 1,
+  "structure": "minecraft:empty"
+}

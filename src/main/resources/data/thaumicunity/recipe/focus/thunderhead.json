@@ -1,0 +1,28 @@
+{
+  "type": "thaumicunity:arcane_shapeless",
+  "ingredients": [
+    "thaumicunity:archmage_focus",
+    "minecraft:lightning_rod",
+    "minecraft:trident"
+  ],
+  "vis": {
+    "thaumicunity:aer": 25,
+    "thaumicunity:ignis": 25,
+    "thaumicunity:ordo": 10
+  },
+  "result": {
+    "id": "thaumicunity:archmage_focus",
+    "components": {
+      "thaumicunity:spell": {
+        "medium": "thaumicunity:bolt",
+        "effects": [
+          "thaumicunity:lightning"
+        ]
+      },
+      "minecraft:item_name": {
+        "translate": "focus.thaumicunity.thunderhead"
+      }
+    }
+  },
+  "research": "thaumicunity:auromancy/primal_focus"
+}

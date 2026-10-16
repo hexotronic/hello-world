@@ -1,0 +1,8 @@
+{
+  "type": "thaumicunity:add_features",
+  "biomes": "#minecraft:is_overworld",
+  "features": [
+    "thaumicunity:crystal_clusters"
+  ],
+  "step": "underground_decoration"
+}

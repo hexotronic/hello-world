@@ -1,0 +1,44 @@
+{
+  "category": "thaumicunity:alchemy",
+  "x": 0,
+  "y": 2,
+  "icon": "thaumicunity:thaumium_ingot",
+  "parents": [
+    "thaumicunity:alchemy/crucible"
+  ],
+  "aspects": [
+    "thaumicunity:metallum",
+    "thaumicunity:praecantatio"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.alchemy.metallurgy.stage0",
+      "requirements": [
+        {
+          "type": "insight",
+          "aspects": [
+            "thaumicunity:metallum",
+            "thaumicunity:vitreus"
+          ]
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.alchemy.metallurgy.stage1",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:alchemy/thaumium_ingot",
+        "thaumicunity:alchemy/brass_ingot",
+        "thaumicunity:thaumium_block",
+        "thaumicunity:thaumium_ingot_from_block",
+        "thaumicunity:thaumium_nugget",
+        "thaumicunity:thaumium_ingot_from_nuggets",
+        "thaumicunity:brass_block",
+        "thaumicunity:brass_ingot_from_block",
+        "thaumicunity:brass_nugget",
+        "thaumicunity:brass_ingot_from_nuggets"
+      ]
+    }
+  ]
+}

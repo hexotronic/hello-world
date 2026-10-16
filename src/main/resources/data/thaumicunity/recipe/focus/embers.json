@@ -1,0 +1,26 @@
+{
+  "type": "thaumicunity:arcane_shapeless",
+  "ingredients": [
+    "thaumicunity:apprentice_focus",
+    "minecraft:blaze_powder"
+  ],
+  "vis": {
+    "thaumicunity:ignis": 10,
+    "thaumicunity:ordo": 5
+  },
+  "result": {
+    "id": "thaumicunity:apprentice_focus",
+    "components": {
+      "thaumicunity:spell": {
+        "medium": "thaumicunity:projectile",
+        "effects": [
+          "thaumicunity:fire"
+        ]
+      },
+      "minecraft:item_name": {
+        "translate": "focus.thaumicunity.embers"
+      }
+    }
+  },
+  "research": "thaumicunity:auromancy/foci"
+}

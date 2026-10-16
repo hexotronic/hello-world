@@ -1,0 +1,30 @@
+{
+  "category": "thaumicunity:alchemy",
+  "x": 6,
+  "y": -2,
+  "icon": "thaumicunity:ignis_crystal_cluster",
+  "parents": [
+    "thaumicunity:alchemy/vis_crystals"
+  ],
+  "aspects": [
+    "thaumicunity:vitreus",
+    "thaumicunity:auram"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.alchemy.crystal_clusters.stage0",
+      "requirements": [
+        {
+          "type": "scan",
+          "target": "item_tag:thaumicunity:crystal_clusters"
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.alchemy.crystal_clusters.stage1",
+      "requirements": [],
+      "recipes": []
+    }
+  ]
+}
