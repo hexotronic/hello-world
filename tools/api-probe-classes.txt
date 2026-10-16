@@ -1,16 +1,21 @@
 # Classes whose signatures are printed by .github/workflows/api-probe.yml (javap -protected).
 # Syntax: see tools/api-probe.sh. Avoid parentheses in filters.
-net.neoforged.neoforge.event.entity.living.LivingDamageEvent$Post | public
-net.minecraft.world.item.Item | hurtEnemy|postHurtEnemy|inventoryTick|isValidRepairItem|getDefaultAttributeModifiers
-net.minecraft.world.entity.player.Inventory | getContainerSize|getItem|EQUIPMENT_SLOT_MAPPING|getNonEquipmentItems
-net.minecraft.world.item.Item$Properties | equippable|component|stacksTo|rarity
-net.minecraft.world.item.equipment.Equippable | public static
-net.minecraft.sounds.SoundEvents | ARMOR_EQUIP_IRON|ARMOR_EQUIP_LEATHER|ARMOR_EQUIP_NETHERITE|ARMOR_EQUIP_GENERIC
-file:assets/minecraft/equipment/iron\.json
-file:assets/minecraft/equipment/leather\.json
-file:assets/minecraft/items/iron_sword\.json
-file:assets/minecraft/items/iron_chestplate\.json
-file:assets/minecraft/models/item/iron_sword\.json
-file:assets/minecraft/models/item/iron_chestplate\.json
-file:data/minecraft/tags/item/enchantable/durability\.json
-file:data/minecraft/tags/item/enchantable/sword\.json
+grep:LeavesBlock|SaplingBlock|TreeGrower|FlowerBlock|VegetationBlock|MushroomBlock|AmethystClusterBlock|TreeDecorator$|FlowerPotBlock|RotatedPillarBlock
+net.minecraft.world.level.block.SaplingBlock | SaplingBlock|CODEC
+net.minecraft.world.level.block.grower.TreeGrower | public
+net.minecraft.world.level.block.TintedParticleLeavesBlock | TintedParticleLeavesBlock
+net.minecraft.world.level.block.UntintedParticleLeavesBlock | UntintedParticleLeavesBlock
+net.minecraft.world.level.block.FlowerBlock | FlowerBlock
+net.minecraft.world.level.block.MushroomBlock | MushroomBlock|canSurvive|growMushroom
+net.minecraft.world.level.block.AmethystClusterBlock | AmethystClusterBlock|FACING|WATERLOGGED
+net.minecraft.world.level.block.VegetationBlock | VegetationBlock|mayPlaceOn|canSurvive
+net.minecraft.world.level.block.state.BlockBehaviour$Properties | lightLevel|noCollision|instabreak|randomTicks|ignitedByLava|offsetType|replaceable|sound|mapColor|isViewBlocking|isSuffocating|noOcclusion|emissiveRendering
+net.minecraft.world.level.levelgen.feature.Feature | place|Feature
+net.minecraft.world.level.levelgen.feature.FeaturePlaceContext | public
+net.minecraft.world.level.WorldGenLevel | public
+net.minecraft.client.renderer.LightTexture | FULL
+file:data/minecraft/worldgen/configured_feature/(fancy_oak|flower_default|brown_mushroom_normal)\.json
+file:data/minecraft/worldgen/placed_feature/(trees_plains|flower_default|brown_mushroom_normal)\.json
+file:assets/minecraft/blockstates/(oak_log|amethyst_cluster)\.json
+file:assets/minecraft/models/block/(leaves|oak_leaves|cross)\.json
+file:data/minecraft/loot_table/blocks/oak_leaves\.json
