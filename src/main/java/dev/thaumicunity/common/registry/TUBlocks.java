@@ -80,6 +80,7 @@ public final class TUBlocks {
     }
 
     public static void init(IEventBus modBus) {
+        TUFlora.bootstrap();
         BLOCKS.register(modBus);
     }
 }

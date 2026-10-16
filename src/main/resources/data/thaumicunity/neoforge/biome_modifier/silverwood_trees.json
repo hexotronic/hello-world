@@ -1,0 +1,8 @@
+{
+  "type": "thaumicunity:add_features",
+  "biomes": "#thaumicunity:silverwood_biomes",
+  "features": [
+    "thaumicunity:silverwood_trees"
+  ],
+  "step": "vegetal_decoration"
+}

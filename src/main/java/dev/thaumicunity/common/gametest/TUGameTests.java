@@ -4,6 +4,9 @@ import dev.thaumicunity.ThaumicUnity;
 import dev.thaumicunity.common.aspect.AspectList;
 import dev.thaumicunity.common.aspect.Aspects;
 import dev.thaumicunity.common.aspect.ItemAspects;
+import dev.thaumicunity.common.aura.node.NodeModifier;
+import dev.thaumicunity.common.aura.node.NodeType;
+import dev.thaumicunity.common.blockentity.AuraNodeBlockEntity;
 import dev.thaumicunity.common.config.TUConfig;
 import dev.thaumicunity.common.equipment.EquipmentEffects;
 import dev.thaumicunity.common.item.FocusItem;
@@ -14,6 +17,7 @@ import dev.thaumicunity.common.registry.TUBlocks;
 import dev.thaumicunity.common.registry.TUDataComponents;
 import dev.thaumicunity.common.registry.TUDataMaps;
 import dev.thaumicunity.common.registry.TUEquipment;
+import dev.thaumicunity.common.registry.TUFlora;
 import dev.thaumicunity.common.registry.TUItems;
 import dev.thaumicunity.common.registry.TURecipes;
 import dev.thaumicunity.common.registry.TURegistries;
@@ -56,6 +60,7 @@ import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.IEventBus;
@@ -86,6 +91,7 @@ public final class TUGameTests {
         test("essentia_transport", TUGameTests::essentiaTransport);
         test("portable_hole", TUGameTests::portableHole);
         test("equipment", TUGameTests::equipment);
+        test("flora_and_nodes", TUGameTests::floraAndNodes);
     }
 
     private TUGameTests() {
@@ -488,6 +494,73 @@ public final class TUGameTests {
         var pig = helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, new BlockPos(1, 1, 1));
         helper.assertTrue(EquipmentEffects.weaken(pig, player), "a void sword hit should weaken");
         helper.assertTrue(pig.hasEffect(net.minecraft.world.effect.MobEffects.WEAKNESS), "the pig should be weakened");
+        helper.succeed();
+    }
+
+    private static void floraAndNodes(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        RegistryAccess access = level.registryAccess();
+        // The generated world generation data loads.
+        Registry<net.minecraft.world.level.levelgen.feature.Feature> features = registry(helper, Registries.FEATURE);
+        for (String name : List.of("greatwood_tree", "silverwood_tree", "silverwood_tree_with_node", "crystal_clusters",
+                "aura_node", "shimmerleaf_patch", "cinderpearl_patch", "vishroom_patch")) {
+            helper.assertTrue(features.containsKey(ThaumicUnity.id(name)), "missing feature " + name);
+        }
+        Registry<net.minecraft.world.level.levelgen.placement.PlacedFeature> placed = registry(helper, Registries.PLACED_FEATURE);
+        for (String name : List.of("greatwood_trees", "silverwood_trees", "crystal_clusters", "aura_nodes", "cinderpearl_patch")) {
+            helper.assertTrue(placed.containsKey(ThaumicUnity.id(name)), "missing placed feature " + name);
+        }
+        helper.assertValueEqual(Wands.rod(access, ThaumicUnity.id("greatwood")).map(WandRod::capacity).orElse(0), 50, "greatwood rod capacity");
+        helper.assertValueEqual(Wands.rod(access, ThaumicUnity.id("silverwood")).map(WandRod::capacity).orElse(0), 100, "silverwood rod capacity");
+
+        // Saplings grow their trees (well above the test, where there is room).
+        for (var sapling : List.of(TUFlora.GREATWOOD_SAPLING, TUFlora.SILVERWOOD_SAPLING)) {
+            int x = sapling == TUFlora.GREATWOOD_SAPLING ? 1 : 14;
+            BlockPos ground = helper.absolutePos(new BlockPos(x, 40, 1));
+            level.setBlock(ground, Blocks.DIRT.defaultBlockState(), 3);
+            BlockState state = sapling.get().defaultBlockState();
+            level.setBlock(ground.above(), state, 3);
+            helper.assertTrue(sapling.get().growTree(level, ground.above(), state, level.getRandom()), sapling.getId() + " should grow");
+            helper.assertTrue(level.getBlockState(ground.above()).is(net.minecraft.tags.BlockTags.LOGS), sapling.getId() + " should grow a trunk");
+        }
+
+        // Plants grow only on their ground.
+        helper.setBlock(new BlockPos(3, 1, 1), Blocks.SAND);
+        BlockPos onSand = helper.absolutePos(new BlockPos(3, 2, 1));
+        helper.assertTrue(TUFlora.CINDERPEARL.get().defaultBlockState().canSurvive(level, onSand), "cinderpearl should root in sand");
+        helper.assertFalse(TUFlora.SHIMMERLEAF.get().defaultBlockState().canSurvive(level, onSand), "shimmerleaf should not grow in sand");
+
+        // Crystal clusters break into vis crystals of their primal; the feature grows them on stone.
+        List<ItemStack> drops = net.minecraft.world.level.block.Block.getDrops(TUFlora.CRYSTAL_CLUSTERS.get("ignis").get().defaultBlockState(),
+                level, helper.absolutePos(new BlockPos(5, 1, 1)), null);
+        helper.assertTrue(drops.stream().anyMatch(d -> d.is(TUItems.VIS_CRYSTALS.get("ignis").get())), "an Ignis cluster should drop Ignis crystals");
+        helper.setBlock(new BlockPos(5, 1, 3), Blocks.STONE);
+        BlockPos clusterPos = helper.absolutePos(new BlockPos(5, 2, 3));
+        features.getValue(ThaumicUnity.id("crystal_clusters")).place(level, level.getChunkSource().getGenerator(), level.getRandom(), clusterPos);
+        helper.assertTrue(level.getBlockState(clusterPos).getBlock() instanceof dev.thaumicunity.common.block.VisCrystalClusterBlock,
+                "the cluster feature should grow a cluster on the stone");
+
+        // Aura nodes: wands draw from them; they refill, feed a weak aura and (pure) wash out flux.
+        helper.setBlock(new BlockPos(1, 2, 3), TUFlora.AURA_NODE.get());
+        BlockPos nodePos = helper.absolutePos(new BlockPos(1, 2, 3));
+        if (!(level.getBlockEntity(nodePos) instanceof AuraNodeBlockEntity node)) {
+            throw helper.assertionException("no aura node block entity");
+        }
+        node.initialize(NodeType.PURE, NodeModifier.NONE, new double[] {10, 10, 10, 10, 10, 10});
+        helper.assertValueEqual(node.aspects().size(), 6, "aspects a scan of the node teaches");
+        ItemStack wand = Wands.create(access, ThaumicUnity.id("wood"), ThaumicUnity.id("iron"));
+        helper.assertValueEqual(node.drawInto(level, wand), 6 * 500, "vis a wand draws from a node in one use");
+        helper.assertValueEqual(Wands.vis(wand).get(0), 500, "Aer in the wand after drawing");
+        helper.assertTrue(Math.abs(node.vis(0) - 5) < 1.0e-6, "Aer left in the node after drawing");
+        var aura = dev.thaumicunity.common.aura.AuraManager.auraAt(level, nodePos);
+        aura.setVis(aura.base() * 0.5);
+        aura.setFlux(2.0);
+        double visBefore = aura.vis();
+        node.pulse(level);
+        aura = dev.thaumicunity.common.aura.AuraManager.auraAt(level, nodePos);
+        helper.assertTrue(aura.vis() > visBefore, "a node should feed a weak aura");
+        helper.assertTrue(aura.flux() < 2.0, "a pure node should wash out flux");
+        helper.assertTrue(node.vis(0) > 5, "a node should refill");
         helper.succeed();
     }
 }

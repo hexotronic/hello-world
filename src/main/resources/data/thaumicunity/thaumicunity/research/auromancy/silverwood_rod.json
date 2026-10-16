@@ -1,0 +1,40 @@
+{
+  "category": "thaumicunity:auromancy",
+  "x": 4,
+  "y": -6,
+  "icon": "thaumicunity:silverwood_wand_core",
+  "parents": [
+    "thaumicunity:auromancy/greatwood_rod",
+    "thaumicunity:auromancy/aura_nodes",
+    "thaumicunity:infusion/runic_matrix"
+  ],
+  "aspects": [
+    "thaumicunity:ordo",
+    "thaumicunity:sano"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.auromancy.silverwood_rod.stage0",
+      "requirements": [
+        {
+          "type": "obtain",
+          "item": "thaumicunity:silverwood_log",
+          "count": 1
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.auromancy.silverwood_rod.stage1",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:infusion/silverwood_wand_core",
+        "thaumicunity:wand/silverwood_iron",
+        "thaumicunity:wand/silverwood_copper",
+        "thaumicunity:wand/silverwood_gold",
+        "thaumicunity:wand/silverwood_brass",
+        "thaumicunity:wand/silverwood_thaumium"
+      ]
+    }
+  ]
+}

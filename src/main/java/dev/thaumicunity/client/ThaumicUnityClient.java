@@ -4,6 +4,7 @@ import dev.thaumicunity.ThaumicUnity;
 import dev.thaumicunity.client.hud.AuraHud;
 import dev.thaumicunity.client.particle.MagicParticle;
 import dev.thaumicunity.client.render.ArcanePedestalRenderer;
+import dev.thaumicunity.client.render.AuraNodeRenderer;
 import dev.thaumicunity.client.render.CrucibleRenderer;
 import dev.thaumicunity.client.render.WardedJarRenderer;
 import dev.thaumicunity.client.screen.AlchemicalFurnaceScreen;
@@ -83,6 +84,7 @@ public final class ThaumicUnityClient {
         event.registerBlockEntityRenderer(TUBlockEntities.WAND_PEDESTAL.get(), ArcanePedestalRenderer::new);
         event.registerBlockEntityRenderer(TUBlockEntities.CRUCIBLE.get(), CrucibleRenderer::new);
         event.registerBlockEntityRenderer(TUBlockEntities.WARDED_JAR.get(), WardedJarRenderer::new);
+        event.registerBlockEntityRenderer(TUBlockEntities.AURA_NODE.get(), AuraNodeRenderer::new);
     }
 
     private static void registerScreens(RegisterMenuScreensEvent event) {

@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/cross",
+  "textures": {
+    "cross": "thaumicunity:block/ordo_crystal_cluster"
+  }
+}

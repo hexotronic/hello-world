@@ -96,3 +96,8 @@ NOISE = ["item", "block", "of", "the", "basic", "gui", "research"]
 from equipment import THAUMCRAFT_TEXTURES as _EQUIPMENT_TEXTURES  # noqa: E402
 
 KNOWN.update(_EQUIPMENT_TEXTURES)
+
+# Flora and wand cores from trees.
+from flora import THAUMCRAFT_TEXTURES as _FLORA_TEXTURES  # noqa: E402
+
+KNOWN.update(_FLORA_TEXTURES)

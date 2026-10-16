@@ -146,3 +146,11 @@ ITEM_TAGS = {
     "thaumicunity:research_paper": ["minecraft:paper"],
     "thaumicunity:casting_instruments": ["thaumicunity:wand"],
 }
+
+# Flora, crystal clusters and aura nodes (phase 4.5) keep their entries next to the rest of their table.
+from flora import blocks as _flora_blocks  # noqa: E402
+
+for _name, _spec in _flora_blocks().items():
+    if _name in BLOCKS:
+        raise SystemExit(f"block {_name} is defined twice")
+    BLOCKS[_name] = _spec

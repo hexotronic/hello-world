@@ -881,6 +881,17 @@
       "thaumicunity:praecantatio": 3,
       "thaumicunity:metallum": 1
     },
+    "thaumicunity:greatwood_wand_core": {
+      "thaumicunity:arbor": 4,
+      "thaumicunity:praecantatio": 4,
+      "thaumicunity:instrumentum": 2
+    },
+    "thaumicunity:silverwood_wand_core": {
+      "thaumicunity:arbor": 4,
+      "thaumicunity:praecantatio": 8,
+      "thaumicunity:ordo": 4,
+      "thaumicunity:sano": 2
+    },
     "thaumicunity:reed_wand_core": {
       "thaumicunity:aer": 4,
       "thaumicunity:herba": 2,
@@ -1089,6 +1100,92 @@
       "thaumicunity:pannus": 9,
       "thaumicunity:praecantatio": 6,
       "thaumicunity:tutamen": 2
+    },
+    "thaumicunity:greatwood_log": {
+      "thaumicunity:arbor": 4,
+      "thaumicunity:praecantatio": 1,
+      "thaumicunity:lignum": 2
+    },
+    "thaumicunity:greatwood_planks": {
+      "thaumicunity:arbor": 1,
+      "thaumicunity:lignum": 1
+    },
+    "thaumicunity:greatwood_leaves": {
+      "thaumicunity:herba": 1,
+      "thaumicunity:arbor": 1
+    },
+    "thaumicunity:greatwood_sapling": {
+      "thaumicunity:herba": 2,
+      "thaumicunity:arbor": 2,
+      "thaumicunity:praecantatio": 1
+    },
+    "thaumicunity:silverwood_log": {
+      "thaumicunity:arbor": 4,
+      "thaumicunity:praecantatio": 2,
+      "thaumicunity:ordo": 2,
+      "thaumicunity:sano": 1
+    },
+    "thaumicunity:silverwood_planks": {
+      "thaumicunity:arbor": 1,
+      "thaumicunity:praecantatio": 1
+    },
+    "thaumicunity:silverwood_leaves": {
+      "thaumicunity:herba": 1,
+      "thaumicunity:praecantatio": 1,
+      "thaumicunity:ordo": 1
+    },
+    "thaumicunity:silverwood_sapling": {
+      "thaumicunity:herba": 2,
+      "thaumicunity:arbor": 1,
+      "thaumicunity:praecantatio": 2,
+      "thaumicunity:ordo": 1
+    },
+    "thaumicunity:shimmerleaf": {
+      "thaumicunity:herba": 2,
+      "thaumicunity:praecantatio": 3,
+      "thaumicunity:aer": 1,
+      "thaumicunity:hydrargyrum": 2
+    },
+    "thaumicunity:cinderpearl": {
+      "thaumicunity:herba": 2,
+      "thaumicunity:ignis": 4,
+      "thaumicunity:potentia": 1
+    },
+    "thaumicunity:vishroom": {
+      "thaumicunity:herba": 2,
+      "thaumicunity:praecantatio": 2,
+      "thaumicunity:mortuus": 1,
+      "thaumicunity:venenum": 1
+    },
+    "thaumicunity:aer_crystal_cluster": {
+      "thaumicunity:aer": 6,
+      "thaumicunity:vitreus": 2,
+      "thaumicunity:auram": 1
+    },
+    "thaumicunity:terra_crystal_cluster": {
+      "thaumicunity:terra": 6,
+      "thaumicunity:vitreus": 2,
+      "thaumicunity:auram": 1
+    },
+    "thaumicunity:ignis_crystal_cluster": {
+      "thaumicunity:ignis": 6,
+      "thaumicunity:vitreus": 2,
+      "thaumicunity:auram": 1
+    },
+    "thaumicunity:aqua_crystal_cluster": {
+      "thaumicunity:aqua": 6,
+      "thaumicunity:vitreus": 2,
+      "thaumicunity:auram": 1
+    },
+    "thaumicunity:ordo_crystal_cluster": {
+      "thaumicunity:ordo": 6,
+      "thaumicunity:vitreus": 2,
+      "thaumicunity:auram": 1
+    },
+    "thaumicunity:perditio_crystal_cluster": {
+      "thaumicunity:perditio": 6,
+      "thaumicunity:vitreus": 2,
+      "thaumicunity:auram": 1
     }
   }
 }

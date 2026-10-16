@@ -16,15 +16,18 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-/** Smoke test page showing every Thaumic Unity item with its name, or every aspect glyph, for one screenshot. */
+/** Smoke test page showing the Thaumic Unity items with their names (in two halves), or every aspect glyph. */
 public class SmokeGalleryScreen extends Screen {
     public enum Page { ITEMS, ASPECTS }
 
     private final Page page;
+    /** Which half of the items to show (0 or 1); the aspect page ignores it. */
+    private final int part;
 
-    public SmokeGalleryScreen(Page page) {
-        super(Component.literal("Thaumic Unity " + page.name().toLowerCase(java.util.Locale.ROOT)));
+    public SmokeGalleryScreen(Page page, int part) {
+        super(Component.literal("Thaumic Unity " + page.name().toLowerCase(java.util.Locale.ROOT) + (part > 0 ? " (2)" : "")));
         this.page = page;
+        this.part = part;
     }
 
     private RegistryAccess access() {
@@ -49,12 +52,14 @@ public class SmokeGalleryScreen extends Screen {
     }
 
     private void drawItems(GuiGraphicsExtractor g) {
-        List<Item> items = new ArrayList<>();
+        List<Item> all = new ArrayList<>();
         for (Item item : BuiltInRegistries.ITEM) {
             if (BuiltInRegistries.ITEM.getKey(item).getNamespace().equals(ThaumicUnity.MOD_ID)) {
-                items.add(item);
+                all.add(item);
             }
         }
+        int half = (all.size() + 1) / 2;
+        List<Item> items = part == 0 ? all.subList(0, half) : all.subList(half, all.size());
         int rowHeight = 18;
         int maxRows = Math.max(1, (height - 32) / rowHeight);
         int columns = Math.max(3, (items.size() + maxRows - 1) / maxRows);

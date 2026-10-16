@@ -414,6 +414,76 @@
       "models/armor/bootstraveler.png",
       "entity/armor/bootstraveler.png",
       "models/bootstraveler.png"
+    ],
+    "block/greatwood_log": [
+      "blocks/greatwood_side.png",
+      "blocks/greatwoodside.png",
+      "blocks/log_greatwood.png"
+    ],
+    "block/greatwood_log_top": [
+      "blocks/greatwood_top.png",
+      "blocks/greatwoodtop.png",
+      "blocks/log_greatwood_top.png"
+    ],
+    "block/greatwood_planks": [
+      "blocks/greatwood_planks.png",
+      "blocks/planks_greatwood.png",
+      "blocks/greatwoodplanks.png"
+    ],
+    "block/greatwood_leaves": [
+      "blocks/greatwood_leaves.png",
+      "blocks/greatwoodleaves.png",
+      "blocks/leaves_greatwood.png"
+    ],
+    "block/greatwood_sapling": [
+      "blocks/greatwood_sapling.png",
+      "blocks/greatwoodsapling.png",
+      "blocks/sapling_greatwood.png"
+    ],
+    "block/silverwood_log": [
+      "blocks/silverwood_side.png",
+      "blocks/silverwoodside.png",
+      "blocks/log_silverwood.png"
+    ],
+    "block/silverwood_log_top": [
+      "blocks/silverwood_top.png",
+      "blocks/silverwoodtop.png",
+      "blocks/log_silverwood_top.png"
+    ],
+    "block/silverwood_planks": [
+      "blocks/silverwood_planks.png",
+      "blocks/planks_silverwood.png",
+      "blocks/silverwoodplanks.png"
+    ],
+    "block/silverwood_leaves": [
+      "blocks/silverwood_leaves.png",
+      "blocks/silverwoodleaves.png",
+      "blocks/leaves_silverwood.png"
+    ],
+    "block/silverwood_sapling": [
+      "blocks/silverwood_sapling.png",
+      "blocks/silverwoodsapling.png",
+      "blocks/sapling_silverwood.png"
+    ],
+    "block/shimmerleaf": [
+      "blocks/shimmerleaf.png",
+      "blocks/flower_shimmerleaf.png"
+    ],
+    "block/cinderpearl": [
+      "blocks/cinderpearl.png",
+      "blocks/flower_cinderpearl.png"
+    ],
+    "block/vishroom": [
+      "blocks/vishroom.png",
+      "blocks/flower_vishroom.png"
+    ],
+    "item/greatwood_wand_core": [
+      "items/wand_rod_greatwood.png",
+      "items/rod_greatwood.png"
+    ],
+    "item/silverwood_wand_core": [
+      "items/wand_rod_silverwood.png",
+      "items/rod_silverwood.png"
     ]
   },
   "tinted": {

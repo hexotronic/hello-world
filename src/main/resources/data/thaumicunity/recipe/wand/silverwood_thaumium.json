@@ -1,0 +1,47 @@
+{
+  "type": "thaumicunity:arcane_shaped",
+  "key": {
+    "C": "thaumicunity:thaumium_wand_cap",
+    "R": "thaumicunity:silverwood_wand_core"
+  },
+  "pattern": [
+    "  C",
+    " R ",
+    "C  "
+  ],
+  "vis": {
+    "thaumicunity:aer": 14,
+    "thaumicunity:terra": 14,
+    "thaumicunity:ignis": 14,
+    "thaumicunity:aqua": 14,
+    "thaumicunity:ordo": 14,
+    "thaumicunity:perditio": 14
+  },
+  "result": {
+    "id": "thaumicunity:wand",
+    "components": {
+      "thaumicunity:wand_parts": {
+        "rod": "thaumicunity:silverwood",
+        "cap": "thaumicunity:thaumium"
+      },
+      "minecraft:custom_model_data": {
+        "colors": [
+          14541804,
+          7690424
+        ]
+      },
+      "minecraft:item_name": {
+        "translate": "item.thaumicunity.wand.parts",
+        "with": [
+          {
+            "translate": "wand_cap.thaumicunity.thaumium"
+          },
+          {
+            "translate": "wand_rod.thaumicunity.silverwood"
+          }
+        ]
+      }
+    }
+  },
+  "research": "thaumicunity:auromancy/silverwood_rod"
+}

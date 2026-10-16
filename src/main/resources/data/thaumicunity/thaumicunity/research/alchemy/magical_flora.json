@@ -1,0 +1,35 @@
+{
+  "category": "thaumicunity:alchemy",
+  "x": 6,
+  "y": 0,
+  "icon": "thaumicunity:shimmerleaf",
+  "parents": [
+    "thaumicunity:alchemy/crucible"
+  ],
+  "aspects": [
+    "thaumicunity:herba",
+    "thaumicunity:praecantatio"
+  ],
+  "stages": [
+    {
+      "text": "research.thaumicunity.alchemy.magical_flora.stage0",
+      "requirements": [
+        {
+          "type": "scan",
+          "target": "item_tag:thaumicunity:magical_plants"
+        }
+      ],
+      "recipes": []
+    },
+    {
+      "text": "research.thaumicunity.alchemy.magical_flora.stage1",
+      "requirements": [],
+      "recipes": [
+        "thaumicunity:quicksilver_from_shimmerleaf",
+        "thaumicunity:blaze_powder_from_cinderpearl",
+        "thaumicunity:greatwood_planks",
+        "thaumicunity:silverwood_planks"
+      ]
+    }
+  ]
+}

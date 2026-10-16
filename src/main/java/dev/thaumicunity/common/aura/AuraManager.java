@@ -229,6 +229,19 @@ public final class AuraManager {
         chunk.markUnsaved();
     }
 
+    /** Removes up to {@code amount} flux at a position (pure aura nodes, purifying devices). */
+    public static void reduceFlux(Level level, BlockPos pos, double amount) {
+        if (amount <= 0) {
+            return;
+        }
+        LevelChunk chunk = level.getChunkAt(pos);
+        ChunkAura aura = ensureInitialized(level, chunk);
+        if (aura.flux() > 0) {
+            aura.setFlux(Math.max(0, aura.flux() - amount));
+            chunk.markUnsaved();
+        }
+    }
+
     public static PrimalAttunement attunementAt(Level level, BlockPos pos) {
         return auraAt(level, pos).attunement();
     }

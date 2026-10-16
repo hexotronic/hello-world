@@ -11,6 +11,8 @@ PRIMALS = ("aer", "terra", "ignis", "aqua", "ordo", "perditio")
 # id: (English adjective, rod item, capacity, affinity primal or None, colour, research entry)
 RODS = {
     "wood": ("Wooden", "minecraft:stick", 30, None, 0x8B6A3E, "auromancy/wands"),
+    "greatwood": ("Greatwood", "thaumicunity:greatwood_wand_core", 50, None, 0x6B4A2E, "auromancy/greatwood_rod"),
+    "silverwood": ("Silverwood", "thaumicunity:silverwood_wand_core", 100, None, 0xDDE3EC, "auromancy/silverwood_rod"),
     "reed": ("Reed", "thaumicunity:reed_wand_core", 75, "aer", 0xC9D98C, "auromancy/elemental_cores"),
     "obsidian": ("Obsidian", "thaumicunity:obsidian_wand_core", 75, "terra", 0x40305E, "auromancy/elemental_cores"),
     "blaze": ("Blazing", "thaumicunity:blaze_wand_core", 75, "ignis", 0xF2A23A, "auromancy/elemental_cores"),
@@ -31,6 +33,8 @@ CAPS = {
 
 # Items. Cores are infused from a vanilla material; caps are worked from nuggets at the arcane workbench.
 ITEMS = {
+    "greatwood_wand_core": "Greatwood Wand Core",
+    "silverwood_wand_core": "Silverwood Wand Core",
     "reed_wand_core": "Reed Wand Core",
     "obsidian_wand_core": "Obsidian Wand Core",
     "blaze_wand_core": "Blazing Wand Core",
@@ -88,6 +92,8 @@ ITEM_ASPECTS = {
     "thaumicunity:gold_wand_cap": "aurum 2 instrumentum 1",
     "thaumicunity:brass_wand_cap": "instrumentum 2 machina 1",
     "thaumicunity:thaumium_wand_cap": "praecantatio 3 metallum 1",
+    "thaumicunity:greatwood_wand_core": "arbor 4 praecantatio 4 instrumentum 2",
+    "thaumicunity:silverwood_wand_core": "arbor 4 praecantatio 8 ordo 4 sano 2",
     "thaumicunity:reed_wand_core": "aer 4 herba 2 praecantatio 2",
     "thaumicunity:obsidian_wand_core": "terra 4 tutamen 2 praecantatio 2",
     "thaumicunity:blaze_wand_core": "ignis 4 potentia 2 praecantatio 2",

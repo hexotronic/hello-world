@@ -23,6 +23,7 @@ import aspects  # noqa: E402
 import aspect_lore  # noqa: E402
 import blocks  # noqa: E402
 import equipment  # noqa: E402
+import flora  # noqa: E402
 import item_aspects  # noqa: E402
 import recipes  # noqa: E402
 import research  # noqa: E402
@@ -318,6 +319,71 @@ def gen_tube_models(name, spec, blockstates, block_models):
     write_json(os.path.join(blockstates, name + ".json"), {"multipart": parts})
 
 
+FLORA_MODELS = ("log", "leaves", "cross", "cluster")
+
+FACING_ROTATIONS = {"up": {}, "down": {"x": 180}, "north": {"x": 90}, "south": {"x": 90, "y": 180},
+                    "west": {"x": 90, "y": 270}, "east": {"x": 90, "y": 90}}
+
+
+def gen_flora_models(name, model, blockstates, block_models, item_models, item_defs):
+    """Block states and models of logs, leaves, crossed plants and crystal clusters (flora.py)."""
+    texture = f"{NS}:block/{name}"
+    item_model = f"{NS}:block/{name}"
+    if model == "log":
+        write_json(os.path.join(blockstates, name + ".json"), {"variants": {
+            "axis=x": {"model": f"{NS}:block/{name}_horizontal", "x": 90, "y": 90},
+            "axis=y": {"model": f"{NS}:block/{name}"},
+            "axis=z": {"model": f"{NS}:block/{name}_horizontal", "x": 90}}})
+        textures = {"end": texture + "_top", "side": texture}
+        write_json(os.path.join(block_models, name + ".json"), {"parent": "minecraft:block/cube_column", "textures": textures})
+        write_json(os.path.join(block_models, name + "_horizontal.json"),
+                   {"parent": "minecraft:block/cube_column_horizontal", "textures": textures})
+    elif model == "leaves":
+        write_json(os.path.join(blockstates, name + ".json"), {"variants": {"": {"model": f"{NS}:block/{name}"}}})
+        # cube_all rather than vanilla's tinted leaves model: the texture already has its colour.
+        write_json(os.path.join(block_models, name + ".json"), {"parent": "minecraft:block/cube_all", "textures": {"all": texture}})
+    elif model in ("cross", "cluster"):
+        if model == "cross":
+            write_json(os.path.join(blockstates, name + ".json"), {"variants": {"": {"model": f"{NS}:block/{name}"}}})
+        else:
+            write_json(os.path.join(blockstates, name + ".json"), {"variants": {
+                f"facing={facing}": dict({"model": f"{NS}:block/{name}"}, **rotation)
+                for facing, rotation in FACING_ROTATIONS.items()}})
+        write_json(os.path.join(block_models, name + ".json"), {"parent": "minecraft:block/cross", "textures": {"cross": texture}})
+        # The item shows the flat texture, like vanilla saplings and flowers.
+        write_json(os.path.join(item_models, name + ".json"),
+                   {"parent": "minecraft:item/generated", "textures": {"layer0": texture}})
+        item_model = f"{NS}:item/{name}"
+    write_json(os.path.join(item_defs, name + ".json"), {"model": {"type": "minecraft:model", "model": item_model}})
+
+
+def leaves_loot(block_id, sapling):
+    """Vanilla oak leaves' loot with our sapling and without apples."""
+    keep = {"type": "minecraft:any_of", "terms": ["minecraft:tool/can_shear", "minecraft:tool/can_silk_touch"]}
+    entries = [{"type": "minecraft:alternatives", "children": [
+        {"type": "minecraft:item", "condition": keep, "name": block_id},
+        {"type": "minecraft:item", "condition": {"type": "minecraft:all_of", "terms": [
+            {"type": "minecraft:survives_explosion"},
+            {"type": "minecraft:table_bonus", "chances": [0.05, 0.0625, 0.083333336, 0.1], "enchantment": "minecraft:fortune"}]},
+         "name": sapling}]}]
+    sticks = {"condition": {"type": "minecraft:inverted", "term": keep}, "rolls": 1, "entries": [
+        {"type": "minecraft:item", "name": "minecraft:stick",
+         "condition": {"type": "minecraft:table_bonus", "chances": [0.02, 0.022222223, 0.025, 0.033333335, 0.1],
+                       "enchantment": "minecraft:fortune"},
+         "modifier": [{"type": "minecraft:set_count", "count": {"type": "minecraft:uniform", "min": 1, "max": 2}},
+                      {"type": "minecraft:explosion_decay"}]}]}
+    return entries, [sticks]
+
+
+def cluster_loot(block_id, item):
+    return [{"type": "minecraft:alternatives", "children": [
+        {"type": "minecraft:item", "condition": "minecraft:tool/can_silk_touch", "name": block_id},
+        {"type": "minecraft:item", "name": item,
+         "modifier": [{"type": "minecraft:set_count", "count": {"type": "minecraft:uniform", "min": 1, "max": 2}},
+                      {"type": "minecraft:apply_bonus", "enchantment": "minecraft:fortune", "formula": "minecraft:ore_drops"},
+                      {"type": "minecraft:explosion_decay"}]}]}]
+
+
 @generator
 def gen_blocks_items(lang):
     blockstates = os.path.join(ASSETS, "blockstates")
@@ -343,9 +409,11 @@ def gen_blocks_items(lang):
             gen_tube_models(name, spec, blockstates, block_models)
             write_json(os.path.join(item_defs, name + ".json"),
                        {"model": {"type": "minecraft:model", "model": f"{NS}:block/{name}_inventory"}})
+        elif model in FLORA_MODELS:
+            gen_flora_models(name, model, blockstates, block_models, item_models, item_defs)
         else:
             write_json(os.path.join(blockstates, name + ".json"), {"variants": {"": {"model": f"{NS}:block/{name}"}}})
-        if model in ("tube", "valve"):
+        if model in ("tube", "valve") or model in FLORA_MODELS:
             pass
         elif model == "cube":
             data = {"parent": "minecraft:block/cube_all", "textures": {"all": f"{NS}:block/{name}"}}
@@ -357,7 +425,7 @@ def gen_blocks_items(lang):
             data = custom_model(model.split(":", 1)[1], spec["textures"])
         else:
             raise SystemExit(f"{name}: unknown model kind {model}")
-        if model not in ("tube", "valve"):
+        if model not in ("tube", "valve") and model not in FLORA_MODELS:
             write_json(os.path.join(block_models, name + ".json"), data)
             write_json(os.path.join(item_defs, name + ".json"),
                        {"model": {"type": "minecraft:model", "model": f"{NS}:block/{name}"}})
@@ -380,16 +448,24 @@ def gen_blocks_items(lang):
                                "formula": "minecraft:ore_drops"},
                               {"type": "minecraft:explosion_decay"}],
                  "name": drop}]}]
+        elif loot_kind.startswith("leaves:"):
+            entries, extra_pools = leaves_loot(block_id, loot_kind.split(":", 1)[1])
+        elif loot_kind.startswith("cluster:"):
+            entries = cluster_loot(block_id, loot_kind.split(":", 1)[1])
         else:
             raise SystemExit(f"{name}: unknown loot kind {loot_kind}")
+        pools = [{"entries": entries, "rolls": 1}]
+        if loot_kind.startswith("leaves:"):
+            pools += extra_pools
         write_json(os.path.join(loot, name + ".json"),
-                   {"type": "minecraft:block", "pools": [{"entries": entries, "rolls": 1}],
-                    "random_sequence": f"{NS}:blocks/{name}"})
+                   {"type": "minecraft:block", "pools": pools, "random_sequence": f"{NS}:blocks/{name}"})
 
         for tag in spec["tags"]:
             block_tags.setdefault(tag, []).append(block_id)
             if tag in blocks.MIRRORED_ITEM_TAGS:
                 item_tags.setdefault(tag, []).append(block_id)
+        for tag in spec.get("item_tags", []):
+            item_tags.setdefault(tag, []).append(block_id)
 
     for name, (english_name, tags) in SIMPLE_ITEMS.items():
         write_json(os.path.join(item_models, name + ".json"),
@@ -402,6 +478,8 @@ def gen_blocks_items(lang):
 
     gen_wand_item(item_models, item_defs, lang)
     gen_equipment_items(item_models, item_defs, item_tags, lang)
+    for tag, values in flora.SOIL_TAGS.items():
+        block_tags.setdefault(tag, []).extend(values)
 
     for kind in ("block", "item"):
         for namespace in ("minecraft", "c", NS):
@@ -596,11 +674,11 @@ def merged(*tables):
     return out
 
 
-ARCANE = merged(recipes.ARCANE, WAND_ARCANE, equipment_recipes())
-INFUSION = merged(recipes.INFUSION, WAND_INFUSION, equipment.INFUSION)
+ARCANE = merged(recipes.ARCANE, WAND_ARCANE, equipment_recipes(), flora.ARCANE)
+INFUSION = merged(recipes.INFUSION, WAND_INFUSION, equipment.INFUSION, flora.INFUSION)
 CRUCIBLE = merged(recipes.CRUCIBLE, equipment.CRUCIBLE)
 SHAPED = merged(recipes.SHAPED, equipment.SHAPED)
-SHAPELESS = merged(recipes.SHAPELESS, equipment.SHAPELESS)
+SHAPELESS = merged(recipes.SHAPELESS, equipment.SHAPELESS, flora.SHAPELESS)
 
 
 @generator
@@ -635,7 +713,7 @@ def gen_wand_parts(lang):
 def gen_item_aspects(lang):
     item_map = {}
     all_aspects = dict(item_aspects.ITEM_ASPECTS)
-    for table in (wands.ITEM_ASPECTS, equipment.ITEM_ASPECTS, equipment_aspects()):
+    for table in (wands.ITEM_ASPECTS, equipment.ITEM_ASPECTS, equipment_aspects(), flora.ITEM_ASPECTS):
         for item, text in table.items():
             if item in all_aspects:
                 raise SystemExit(f"item aspects: {item} is defined twice")
@@ -709,6 +787,92 @@ def gen_world(lang):
         "step": "underground_ores",
     })
     print(f"aura profiles: {len(profiles)}, ore features: {len(ores)}")
+    gen_flora_world(features, placed, modifiers, lang)
+
+
+def flora_placement(kind):
+    name = kind[0]
+    if name == "tree":
+        _, chance, sapling = kind
+        return [{"type": "minecraft:rarity_filter", "chance": chance},
+                {"type": "minecraft:in_square"},
+                {"type": "minecraft:surface_water_depth_filter", "max_water_depth": 0},
+                {"type": "minecraft:heightmap", "heightmap": "OCEAN_FLOOR"},
+                {"type": "minecraft:block_predicate_filter",
+                 "predicate": {"type": "minecraft:would_survive", "state": rid(sapling)}},
+                {"type": "minecraft:biome"}]
+    if name == "patch":
+        _, chance, tries = kind
+        spread = {"type": "minecraft:trapezoid", "max": 7, "min": -7, "plateau": 0}
+        return [{"type": "minecraft:rarity_filter", "chance": chance},
+                {"type": "minecraft:in_square"},
+                {"type": "minecraft:heightmap", "heightmap": "MOTION_BLOCKING"},
+                {"type": "minecraft:biome"},
+                {"type": "minecraft:count", "count": tries},
+                {"type": "minecraft:offset", "x": spread, "y": {"type": "minecraft:trapezoid", "max": 3, "min": -3, "plateau": 0},
+                 "z": spread},
+                {"type": "minecraft:block_predicate_filter",
+                 "predicate": {"type": "minecraft:matching_block_tag", "tag": "minecraft:air"}}]
+    if name == "underground":
+        _, count, low, high = kind
+        return [{"type": "minecraft:count", "count": count},
+                {"type": "minecraft:in_square"},
+                {"type": "minecraft:height_range", "height": {"type": "minecraft:uniform",
+                                                              "min_inclusive": {"absolute": low},
+                                                              "max_inclusive": {"absolute": high}}},
+                {"type": "minecraft:biome"}]
+    if name == "surface":
+        return [{"type": "minecraft:rarity_filter", "chance": kind[1]},
+                {"type": "minecraft:in_square"},
+                {"type": "minecraft:heightmap", "heightmap": "MOTION_BLOCKING"},
+                {"type": "minecraft:biome"}]
+    raise SystemExit(f"unknown placement kind {name}")
+
+
+def gen_flora_world(features, placed, modifiers, lang):
+    """Trees, plant patches, crystal clusters and aura nodes (flora.py)."""
+    leaf_state = {"distance": "7", "persistent": "false", "waterlogged": "false"}
+    for name, spec in flora.TREES.items():
+        check_item(spec["log"], name)
+        check_item(spec["leaves"], name)
+        write_json(os.path.join(features, name + ".json"), {
+            "type": "minecraft:tree",
+            "below_trunk_provider": "minecraft:soil_beneath_tree",
+            "decorators": [],
+            "foliage_placer": spec["foliage"],
+            "foliage_provider": {"id": spec["leaves"], "properties": leaf_state},
+            "ignore_vines": True,
+            "minimum_size": spec["size"],
+            "trunk_placer": spec["trunk"],
+            "trunk_provider": {"id": spec["log"], "properties": {"axis": "y"}}})
+    # Silverwood in the wild often hides a pure node among its leaves.
+    write_json(os.path.join(features, "silverwood_tree_with_node.json"), {
+        "type": f"{NS}:tree_with_node", "tree": rid("silverwood_tree"), "node_chance": 0.5, "node_type": "pure"})
+    for plant in flora.PLANTS:
+        write_json(os.path.join(features, plant + "_patch.json"),
+                   {"type": "minecraft:simple_block", "to_place": {"id": rid(plant)}})
+    write_json(os.path.join(features, "crystal_clusters.json"), {"type": f"{NS}:crystal_clusters", "tries": 24, "spread": 4})
+    write_json(os.path.join(features, "aura_node.json"), {"type": f"{NS}:aura_node", "min_height": 2, "max_height": 7})
+    known_features = set(flora.TREES) | {"silverwood_tree_with_node", "crystal_clusters", "aura_node"}
+    known_features |= {plant + "_patch" for plant in flora.PLANTS}
+    for name, (feature, biomes, step, kind) in flora.PLACED.items():
+        if feature not in known_features:
+            raise SystemExit(f"placed feature {name}: unknown feature {feature}")
+        write_json(os.path.join(placed, name + ".json"), {"feature": rid(feature), "placement": flora_placement(kind)})
+        write_json(os.path.join(modifiers, name + ".json"), {
+            "type": f"{NS}:add_features", "biomes": biomes, "features": [rid(name)], "step": step})
+    biome_tags = os.path.join(DATA, NS, "tags", "worldgen", "biome")
+    clean_dir(biome_tags)
+    for tag, values in flora.BIOME_TAGS.items():
+        # Common (c:) tags come from NeoForge; do not fail if a version lacks one.
+        entries = [{"id": v, "required": False} if v.startswith("#c:") else v for v in values]
+        write_json(tag_file(tag, "worldgen/biome"), {"values": entries})
+    for key, english_name in flora.NODE_TYPES.items():
+        lang[f"node.{NS}.type.{key}"] = english_name
+    for key, english_name in flora.NODE_MODIFIERS.items():
+        lang[f"node.{NS}.modifier.{key}"] = english_name
+    lang.update(flora.LANG)
+    print(f"flora features: {len(known_features)}, placed: {len(flora.PLACED)}")
 
 
 # ---------------------------------------------------------------------------------------------------------- spells
@@ -1022,6 +1186,7 @@ GAME_TESTS = {
     "essentia_transport": 300,
     "portable_hole": 120,
     "equipment": 60,
+    "flora_and_nodes": 60,
 }
 
 

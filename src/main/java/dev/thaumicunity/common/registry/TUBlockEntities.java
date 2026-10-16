@@ -2,6 +2,7 @@ package dev.thaumicunity.common.registry;
 
 import dev.thaumicunity.ThaumicUnity;
 import dev.thaumicunity.common.blockentity.AlchemicalFurnaceBlockEntity;
+import dev.thaumicunity.common.blockentity.AuraNodeBlockEntity;
 import dev.thaumicunity.common.blockentity.ArcanePedestalBlockEntity;
 import dev.thaumicunity.common.blockentity.ArcaneWorkbenchBlockEntity;
 import dev.thaumicunity.common.blockentity.CentrifugeBlockEntity;
@@ -52,6 +53,9 @@ public final class TUBlockEntities {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<AlchemicalFurnaceBlockEntity>> ALCHEMICAL_FURNACE =
             TYPES.register("alchemical_furnace", () -> new BlockEntityType<>(AlchemicalFurnaceBlockEntity::new,
                     Set.of(TUBlocks.ALCHEMICAL_FURNACE.get())));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<AuraNodeBlockEntity>> AURA_NODE =
+            TYPES.register("aura_node", () -> new BlockEntityType<>(AuraNodeBlockEntity::new, Set.of(TUFlora.AURA_NODE.get())));
 
     private TUBlockEntities() {
     }

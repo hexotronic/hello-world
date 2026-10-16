@@ -81,7 +81,7 @@ public final class TUItems {
     public static final Map<String, DeferredItem<Item>> WAND_CAPS = new LinkedHashMap<>();
 
     static {
-        for (String core : List.of("reed", "obsidian", "blaze", "ice", "quartz", "bone")) {
+        for (String core : List.of("greatwood", "silverwood", "reed", "obsidian", "blaze", "ice", "quartz", "bone")) {
             WAND_CORES.put(core, ITEMS.registerSimpleItem(core + "_wand_core", p -> p.rarity(Rarity.UNCOMMON)));
         }
         for (String cap : List.of("iron", "copper", "gold", "brass", "thaumium")) {

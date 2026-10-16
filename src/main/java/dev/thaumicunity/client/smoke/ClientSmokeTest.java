@@ -3,12 +3,17 @@ package dev.thaumicunity.client.smoke;
 import dev.thaumicunity.ThaumicUnity;
 import dev.thaumicunity.client.screen.ThaumonomiconScreen;
 import dev.thaumicunity.common.aspect.Aspects;
+import dev.thaumicunity.common.aura.node.NodeModifier;
+import dev.thaumicunity.common.aura.node.NodeType;
+import dev.thaumicunity.common.block.MagicSaplingBlock;
 import dev.thaumicunity.common.blockentity.ArcanePedestalBlockEntity;
+import dev.thaumicunity.common.blockentity.AuraNodeBlockEntity;
 import dev.thaumicunity.common.blockentity.CrucibleBlockEntity;
 import dev.thaumicunity.common.blockentity.WandPedestalBlockEntity;
 import dev.thaumicunity.common.blockentity.WardedJarBlockEntity;
 import dev.thaumicunity.common.registry.TUBlocks;
 import dev.thaumicunity.common.registry.TUEquipment;
+import dev.thaumicunity.common.registry.TUFlora;
 import dev.thaumicunity.common.registry.TUItems;
 import dev.thaumicunity.common.research.ResearchManager;
 import dev.thaumicunity.common.wand.Wands;
@@ -34,6 +39,7 @@ import net.minecraft.world.level.LevelSettings;
 import net.minecraft.world.level.WorldDataConfiguration;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.WorldOptions;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
 import net.minecraft.world.phys.BlockHitResult;
@@ -95,9 +101,11 @@ public final class ClientSmokeTest {
         STEPS.add(new Step("dissolve items in crucible", 60, () -> onServer(ClientSmokeTest::dissolve)));
         STEPS.add(new Step("look into crucible", 20, () -> onServer(player -> look(player, -4, 2.2, 1.2, 0, 55))));
         STEPS.add(new Step("screenshot crucible", 40, () -> screenshot("02-crucible-and-jars")));
-        STEPS.add(new Step("open item gallery", 10, () -> setScreen(new SmokeGalleryScreen(SmokeGalleryScreen.Page.ITEMS))));
+        STEPS.add(new Step("open item gallery", 10, () -> setScreen(new SmokeGalleryScreen(SmokeGalleryScreen.Page.ITEMS, 0))));
         STEPS.add(new Step("screenshot items", 20, () -> screenshot("03-items")));
-        STEPS.add(new Step("open aspect gallery", 5, () -> setScreen(new SmokeGalleryScreen(SmokeGalleryScreen.Page.ASPECTS))));
+        STEPS.add(new Step("open item gallery, second half", 5, () -> setScreen(new SmokeGalleryScreen(SmokeGalleryScreen.Page.ITEMS, 1))));
+        STEPS.add(new Step("screenshot more items", 20, () -> screenshot("03b-items")));
+        STEPS.add(new Step("open aspect gallery", 5, () -> setScreen(new SmokeGalleryScreen(SmokeGalleryScreen.Page.ASPECTS, 0))));
         STEPS.add(new Step("screenshot aspects", 20, () -> screenshot("04-aspects")));
         book("05-thaumonomicon-map", "fundamentals", null);
         book("06-entry-crucible-recipes", "alchemy", "alchemy/alchemical_fuels");
@@ -113,6 +121,8 @@ public final class ClientSmokeTest {
         STEPS.add(new Step("screenshot overview", 60, () -> screenshot("12-workshop-later")));
         STEPS.add(new Step("look at armour stands", 5, () -> onServer(player -> look(player, 0, 1.2, 7, 0, 8))));
         STEPS.add(new Step("screenshot equipment", 40, () -> screenshot("13-equipment")));
+        STEPS.add(new Step("look at flora", 5, () -> onServer(player -> look(player, 0, 1.5, 4, 0, -12))));
+        STEPS.add(new Step("screenshot flora", 40, () -> screenshot("14-flora-and-node")));
         STEPS.add(new Step("finish", 60, ClientSmokeTest::finish));
     }
 
@@ -203,12 +213,30 @@ public final class ClientSmokeTest {
         armorStand(level, 0, "fortress_helmet", "fortress_chestplate", "fortress_leggings", "traveller_boots");
         armorStand(level, 2, null, "thaumaturge_chestplate", "thaumaturge_leggings", "thaumaturge_boots");
         armorStand(level, 4, null, null, null, "traveller_boots");
+        // Flora: an aura node over the middle stand, plants beside the stands, two trees grown from saplings.
+        place(level, 0, 3, 11, TUFlora.AURA_NODE.get());
+        if (level.getBlockEntity(origin.offset(0, 3, 11)) instanceof AuraNodeBlockEntity node) {
+            node.initialize(NodeType.PURE, NodeModifier.BRIGHT, new double[] {20, 12, 8, 16, 24, 6});
+        } else {
+            fail("build workshop", "no aura node block entity");
+        }
+        place(level, -5, 0, 10, TUFlora.SHIMMERLEAF.get());
+        place(level, -6, 0, 10, TUFlora.VISHROOM.get());
+        level.setBlock(origin.offset(5, -1, 10), Blocks.SAND.defaultBlockState(), Block.UPDATE_ALL);
+        place(level, 5, 0, 10, TUFlora.CINDERPEARL.get());
+        growTree(level, -5, TUFlora.GREATWOOD_SAPLING.get());
+        growTree(level, 5, TUFlora.SILVERWOOD_SAPLING.get());
         // Materials.
         List<Block> materials = List.of(TUBlocks.ARCANE_STONE.get(), TUBlocks.ARCANE_STONE_BRICKS.get(),
                 TUBlocks.THAUMIUM_BLOCK.get(), TUBlocks.BRASS_BLOCK.get(), TUBlocks.AMBER_BLOCK.get(),
                 TUBlocks.CINNABAR_ORE.get(), TUBlocks.AMBER_ORE.get());
         for (int i = 0; i < materials.size(); i++) {
             place(level, i - 3, 0, 9, materials.get(i));
+        }
+        // A crystal cluster of each primal on top of the material blocks.
+        int clusterX = -3;
+        for (var cluster : TUFlora.CRYSTAL_CLUSTERS.values()) {
+            place(level, clusterX++, 1, 9, cluster.get());
         }
         // Player: all research, every item, thaumometer in hand for the aura display.
         ResearchManager.allIds(level.registryAccess()).forEach(id -> ResearchManager.setComplete(player, id, true));
@@ -274,6 +302,16 @@ public final class ClientSmokeTest {
             pedestal.setItem(Wands.create(level.registryAccess(), ThaumicUnity.id(rod), ThaumicUnity.id(cap)));
         } else {
             fail("build workshop", "no wand pedestal block entity at x" + dx);
+        }
+    }
+
+    /** Grows a tree from a sapling at origin + (dx, 0, 16), beyond the workshop. */
+    private static void growTree(ServerLevel level, int dx, MagicSaplingBlock sapling) {
+        BlockPos pos = origin.offset(dx, 0, 16);
+        BlockState state = sapling.defaultBlockState();
+        level.setBlock(pos, state, Block.UPDATE_ALL);
+        if (!sapling.growTree(level, pos, state, level.getRandom())) {
+            fail("build workshop", "the sapling at x" + dx + " did not grow");
         }
     }
 

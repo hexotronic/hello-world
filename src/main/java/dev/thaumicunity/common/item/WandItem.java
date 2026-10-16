@@ -2,10 +2,12 @@ package dev.thaumicunity.common.item;
 
 import dev.thaumicunity.common.aspect.Aspect;
 import dev.thaumicunity.common.aspect.Aspects;
+import dev.thaumicunity.common.blockentity.AuraNodeBlockEntity;
 import dev.thaumicunity.common.config.TUConfig;
 import dev.thaumicunity.common.registry.TUDataComponents;
 import dev.thaumicunity.common.registry.TUSounds;
 import dev.thaumicunity.common.spell.Casting;
+import dev.thaumicunity.common.spell.SpellFx;
 import dev.thaumicunity.common.util.TUUtil;
 import dev.thaumicunity.common.wand.WandCap;
 import dev.thaumicunity.common.wand.WandFocus;
@@ -15,6 +17,7 @@ import dev.thaumicunity.common.wand.WandVis;
 import dev.thaumicunity.common.wand.Wands;
 import dev.thaumicunity.core.spell.CompiledSpell;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.chat.Component;
@@ -34,6 +37,7 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Locale;
@@ -58,6 +62,8 @@ public class WandItem extends Item {
     /** A carried wand does not take the aura below this share of its base level. */
     private static final double CARRIED_FLOOR = 0.6;
     private static final int BAR_COLOR = 0xB98AF0;
+    /** Ticks between draws from an aura node. */
+    private static final int NODE_DRAW_COOLDOWN = 10;
 
     public WandItem(Properties properties) {
         super(properties);
@@ -126,10 +132,14 @@ public class WandItem extends Item {
         return InteractionResult.PASS;
     }
 
-    /** A wand awakens blocks like Salis Mundus, paying with vis instead of salt. */
+    /** A wand draws vis from aura nodes, and awakens blocks like Salis Mundus, paying with vis instead of salt. */
     @Override
     public InteractionResult useOn(UseOnContext context) {
         Player player = context.getPlayer();
+        if (player != null && TUConfig.WANDS_ENABLED.get()
+                && context.getLevel().getBlockEntity(context.getClickedPos()) instanceof AuraNodeBlockEntity node) {
+            return drawFromNode(context, player, node);
+        }
         if (player == null || player.isSecondaryUseActive() || !TUConfig.WANDS_ENABLED.get()
                 || !SalisMundusItem.canAwaken(context.getLevel().getBlockState(context.getClickedPos()))) {
             return InteractionResult.PASS;
@@ -144,6 +154,26 @@ public class WandItem extends Item {
             }
             SalisMundusItem.awaken(server, context.getClickedPos());
         }
+        return InteractionResult.SUCCESS;
+    }
+
+    private static InteractionResult drawFromNode(UseOnContext context, Player player, AuraNodeBlockEntity node) {
+        if (!(context.getLevel() instanceof ServerLevel server)) {
+            return InteractionResult.SUCCESS;
+        }
+        ItemStack wand = context.getItemInHand();
+        int moved = node.drawInto(server, wand);
+        if (moved <= 0) {
+            player.sendOverlayMessage(Component.translatable(Wands.vis(wand).total() >= Wands.vis(wand).capacity() * 6
+                    ? "message.thaumicunity.wand.full" : "message.thaumicunity.wand.node_empty"));
+            return InteractionResult.FAIL;
+        }
+        BlockPos pos = context.getClickedPos();
+        int color = node.color(server.registryAccess());
+        SpellFx.line(server, Vec3.atCenterOf(pos), player.getEyePosition().subtract(0, 0.4, 0), color);
+        server.playSound(null, pos, TUSounds.ZAP.get(), SoundSource.PLAYERS, 0.5f, 1.4f);
+        player.sendOverlayMessage(Component.translatable("message.thaumicunity.wand.node_drawn", amount(moved), node.displayName()));
+        player.getCooldowns().addCooldown(wand, NODE_DRAW_COOLDOWN);
         return InteractionResult.SUCCESS;
     }
 

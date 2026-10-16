@@ -1102,6 +1102,7 @@ T_WAND_CAP_ITEM = [
 ]
 
 ROD_COLORS = {
+    "greatwood": rgb(0x6B4A2E), "silverwood": rgb(0xDDE3EC),
     "reed": rgb(0xC9D98C), "obsidian": rgb(0x40305E), "blaze": rgb(0xF2A23A),
     "ice": rgb(0xB8E6F6), "quartz": rgb(0xEDE6DE), "bone": rgb(0xE2DCC2),
 }
@@ -1567,6 +1568,192 @@ def equipment():
     save(template(T_NUGGET, void), "item/void_metal_nugget")
 
 
+# ---------------------------------------------------------------------------------------------------------- flora
+
+FLORA_WOODS = {
+    # id: (bark, wood, leaves)
+    "greatwood": (rgb(0x4A3626), rgb(0x9A7448), rgb(0x2F6B2C)),
+    "silverwood": (rgb(0xC9CFDA), rgb(0xE6E9EF), rgb(0x7FB9C8)),
+}
+
+
+def bark(name, color, silver=False):
+    r = rng(name)
+    n = value_noise(r, 16, 4)
+    img = Image.new("RGBA", (16, 16))
+    px = img.load()
+    furrows = [r.randrange(16) for _ in range(4)]
+    for y in range(16):
+        for x in range(16):
+            f = 0.92 + (n[(y // 3) % 16][x] - 0.5) * 0.3 + (r.random() - 0.5) * 0.08
+            if not silver and any((x - fx - (y // 5)) % 16 == 0 for fx in furrows):
+                f *= 0.62
+            px[x, y] = shade(color, f) + (255,)
+    if silver:
+        # Silverwood bark: pale with short dark streaks and a faint blue sheen.
+        for _ in range(9):
+            x, y, w = r.randrange(16), r.randrange(16), r.randrange(2, 5)
+            for i in range(w):
+                px[(x + i) % 16, y] = shade(color, 0.55) + (255,)
+        for _ in range(6):
+            px[r.randrange(16), r.randrange(16)] = (190, 225, 245, 255)
+    return img
+
+
+def log_top(name, bark_color, wood_color):
+    img = Image.new("RGBA", (16, 16))
+    px = img.load()
+    r = rng(name)
+    for y in range(16):
+        for x in range(16):
+            dx, dy = x - 7.5, y - 7.5
+            d = math.hypot(dx, dy)
+            if max(abs(dx), abs(dy)) > 6.6:
+                px[x, y] = shade(bark_color, 0.9 + (r.random() - 0.5) * 0.15) + (255,)
+            else:
+                ring = 0.88 if int(d * 1.1) % 2 else 1.04
+                px[x, y] = shade(wood_color, ring + (r.random() - 0.5) * 0.05) + (255,)
+    return img
+
+
+def leaves(name, color, sparkle=None):
+    r = rng(name)
+    n = value_noise(r, 16, 8)
+    img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    px = img.load()
+    for y in range(16):
+        for x in range(16):
+            v = n[y][x] + (r.random() - 0.5) * 0.35
+            if v < 0.3:
+                continue
+            f = 0.6 + v * 0.7
+            px[x, y] = shade(color, f) + (255,)
+    if sparkle:
+        for _ in range(5):
+            x, y = r.randrange(16), r.randrange(16)
+            if px[x, y][3]:
+                px[x, y] = sparkle + (255,)
+    return img
+
+
+def sprite(points, size=16):
+    """A 16x16 sprite from {(x, y): rgba} with a dark outline."""
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    px = img.load()
+    for (x, y), c in points.items():
+        if 0 <= x < size and 0 <= y < size:
+            px[x, y] = c if len(c) == 4 else c + (255,)
+    return img
+
+
+def sapling(name, stem, leaf, sparkle=None):
+    r = rng(name)
+    pts = {}
+    for y in range(9, 16):
+        pts[(7, y)] = shade(stem, 0.9)
+        pts[(8, y)] = shade(stem, 0.7)
+    for cx, cy, rad in ((7.5, 6, 4.2), (4.5, 8.5, 2.6), (10.5, 8, 2.6), (7.5, 2.5, 2.2)):
+        for y in range(16):
+            for x in range(16):
+                d = math.hypot(x - cx, y - cy)
+                if d <= rad and r.random() > 0.15:
+                    pts[(x, y)] = shade(leaf, 1.25 - d / rad * 0.6)
+    if sparkle:
+        for x, y in ((6, 4), (9, 7), (4, 8), (11, 9)):
+            pts[(x, y)] = sparkle
+    return sprite(pts)
+
+
+def flower(kind):
+    pts = {}
+    stem = rgb(0x3E7A35)
+    if kind == "shimmerleaf":
+        # Tall silvery-blue fronds with glowing tips.
+        for y in range(4, 16):
+            pts[(8, y)] = shade(stem, 0.9)
+        for i in range(6):
+            pts[(7 - i // 2, 12 - i)] = shade(rgb(0x9FD3E0), 1.0 + i * 0.05)
+            pts[(9 + i // 2, 11 - i)] = shade(rgb(0x9FD3E0), 0.9 + i * 0.05)
+            pts[(6 - i // 3, 15 - i)] = shade(rgb(0x7FB0C0), 0.9)
+            pts[(10 + i // 3, 15 - i)] = shade(rgb(0x7FB0C0), 0.8)
+        for x, y in ((8, 3), (5, 7), (11, 6), (4, 10), (12, 9)):
+            pts[(x, y)] = (225, 250, 255)
+    elif kind == "cinderpearl":
+        # A stalk with drooping leaves and a glowing ember-coloured pearl.
+        for y in range(7, 16):
+            pts[(8, y)] = shade(rgb(0x6B5A2E), 0.9)
+        for i in range(4):
+            pts[(7 - i, 12 + i // 2)] = shade(rgb(0x8A7A3A), 1.0)
+            pts[(9 + i, 11 + i // 2)] = shade(rgb(0x8A7A3A), 0.85)
+        for y in range(2, 8):
+            for x in range(5, 12):
+                d = math.hypot(x - 8, y - 4.5)
+                if d <= 3.0:
+                    pts[(x, y)] = shade(rgb(0xF07A28), 1.35 - d / 3.0 * 0.7)
+        pts[(7, 3)] = (255, 236, 160)
+        pts[(8, 3)] = (255, 220, 120)
+    elif kind == "vishroom":
+        # A purple mushroom with pale spots on a thick stalk.
+        for y in range(10, 16):
+            for x in range(7, 10):
+                pts[(x, y)] = shade(rgb(0xD9CDBA), 1.0 if x == 7 else 0.8)
+        for y in range(4, 11):
+            for x in range(2, 15):
+                if (x - 8) ** 2 / 36.0 + (y - 10) ** 2 / 36.0 <= 1.0 and y <= 10:
+                    pts[(x, y)] = shade(rgb(0x7A3FB0), 1.25 - (y - 4) * 0.08)
+        for x, y in ((5, 7), (8, 5), (11, 7), (9, 8), (6, 9)):
+            pts[(x, y)] = (235, 205, 255)
+    else:
+        raise ValueError(kind)
+    return sprite(pts)
+
+
+def crystal_cluster(color):
+    """Amethyst-cluster-like shards in a primal's colour, drawn on the cross model's plane."""
+    pts = {}
+    shards = ((7.5, 2, 1.6), (4, 6, 1.3), (11, 5, 1.3), (5.5, 9, 1.1), (10, 9, 1.1))
+    for cx, top, half in shards:
+        for y in range(int(top), 16):
+            w = half * (0.6 + (y - top) / (16 - top) * 0.6)
+            for x in range(16):
+                if abs(x - cx) <= w:
+                    light = 1.35 if x < cx else 0.95
+                    pts[(x, y)] = shade(color, light - (y - top) * 0.02)
+    for cx, top, half in shards:
+        pts[(int(cx), int(top))] = shade(color, 1.7)
+    return sprite(pts)
+
+
+def node_glow():
+    img = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
+    px = img.load()
+    for y in range(32):
+        for x in range(32):
+            d = math.hypot(x - 15.5, y - 15.5) / 15.5
+            if d < 1:
+                a = (1 - d) ** 1.8
+                core = max(0.0, 1 - d * 3.0)
+                v = clamp(200 + 55 * core)
+                px[x, y] = (v, v, v, clamp(255 * a))
+    return img
+
+
+def flora():
+    for wood_id, (bark_color, wood_color, leaf_color) in FLORA_WOODS.items():
+        silver = wood_id == "silverwood"
+        save(bark(f"{wood_id}_log", bark_color, silver), f"block/{wood_id}_log")
+        save(log_top(f"{wood_id}_log_top", bark_color, wood_color), f"block/{wood_id}_log_top")
+        save(wood(f"{wood_id}_planks", wood_color), f"block/{wood_id}_planks")
+        save(leaves(f"{wood_id}_leaves", leaf_color, (230, 250, 255) if silver else None), f"block/{wood_id}_leaves")
+        save(sapling(f"{wood_id}_sapling", bark_color, leaf_color, (230, 250, 255) if silver else None),
+             f"block/{wood_id}_sapling")
+    for kind in ("shimmerleaf", "cinderpearl", "vishroom"):
+        save(flower(kind), f"block/{kind}")
+    for primal, color in CRYSTAL_COLORS.items():
+        save(crystal_cluster(color), f"block/{primal}_crystal_cluster")
+    save(node_glow(), "misc/node_glow")
+
+
 # ---------------------------------------------------------------------------------------------------------- misc
 
 def liquids():
@@ -1598,6 +1785,7 @@ def main():
     wands()
     essentia_transport()
     equipment()
+    flora()
     logo()
     print(f"Wrote {len(WRITTEN)} textures ({len(OVERRIDES)} overridden paths skipped)")
 

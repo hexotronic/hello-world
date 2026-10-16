@@ -24,6 +24,7 @@ import dev.thaumicunity.common.registry.TUSounds;
 import dev.thaumicunity.common.spell.primitive.SpellScheduler;
 import dev.thaumicunity.common.spell.primitive.TUSpellPrimitives;
 import dev.thaumicunity.common.world.TUBiomeModifiers;
+import dev.thaumicunity.common.world.TUFeatures;
 import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -57,6 +58,7 @@ public final class ThaumicUnity {
         TUCreativeTabs.init(modBus);
         TUSpellPrimitives.init(modBus);
         TUBiomeModifiers.init(modBus);
+        TUFeatures.init(modBus);
         TUGameTests.init(modBus);
         TUNetwork.init(modBus);
 

@@ -14,6 +14,12 @@
     "thaumicunity:brass_block",
     "thaumicunity:amber_block",
     "thaumicunity:cinnabar_ore",
-    "thaumicunity:amber_ore"
+    "thaumicunity:amber_ore",
+    "thaumicunity:aer_crystal_cluster",
+    "thaumicunity:terra_crystal_cluster",
+    "thaumicunity:ignis_crystal_cluster",
+    "thaumicunity:aqua_crystal_cluster",
+    "thaumicunity:ordo_crystal_cluster",
+    "thaumicunity:perditio_crystal_cluster"
   ]
 }

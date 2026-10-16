@@ -5,6 +5,7 @@ import dev.thaumicunity.api.event.ResearchCompletedEvent;
 import dev.thaumicunity.api.event.ScanEvent;
 import dev.thaumicunity.common.aspect.AspectList;
 import dev.thaumicunity.common.aspect.ItemAspects;
+import dev.thaumicunity.common.blockentity.AuraNodeBlockEntity;
 import dev.thaumicunity.common.config.TUConfig;
 import dev.thaumicunity.common.registry.TUAttachments;
 import dev.thaumicunity.common.registry.TURegistries;
@@ -81,7 +82,13 @@ public final class ResearchManager {
         BlockState state = player.level().getBlockState(pos);
         Identifier id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
         AspectList aspects = ItemAspects.of(state.getBlock().asItem(), false);
-        boolean result = scan(player, ScanTarget.Kind.BLOCK, id, aspects, state.getBlock().getName());
+        Component name = state.getBlock().getName();
+        // An aura node teaches the primals it holds, and is named by its kind.
+        if (player.level().getBlockEntity(pos) instanceof AuraNodeBlockEntity node) {
+            aspects = node.aspects();
+            name = node.displayName();
+        }
+        boolean result = scan(player, ScanTarget.Kind.BLOCK, id, aspects, name);
         // A scanned block also counts as its item (one fewer step for item-based research).
         knowledge(player).markScanned(ScanTarget.scanKey(ScanTarget.Kind.ITEM, BuiltInRegistries.ITEM.getKey(state.getBlock().asItem())));
         return result;

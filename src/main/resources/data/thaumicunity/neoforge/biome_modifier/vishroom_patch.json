@@ -1,0 +1,8 @@
+{
+  "type": "thaumicunity:add_features",
+  "biomes": "#thaumicunity:vishroom_biomes",
+  "features": [
+    "thaumicunity:vishroom_patch"
+  ],
+  "step": "vegetal_decoration"
+}

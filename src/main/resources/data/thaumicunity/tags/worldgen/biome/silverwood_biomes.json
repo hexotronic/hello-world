@@ -1,0 +1,13 @@
+{
+  "values": [
+    "#minecraft:is_forest",
+    "minecraft:plains",
+    "minecraft:meadow",
+    "minecraft:flower_forest",
+    "minecraft:cherry_grove",
+    {
+      "id": "#c:is_magical",
+      "required": false
+    }
+  ]
+}

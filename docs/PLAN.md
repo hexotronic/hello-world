@@ -18,11 +18,11 @@ weighted towards systems players interact with most.
 |---|---:|---:|---:|---|
 | Aspects | 67 | 116 | **183** | **183** (data, validated by unit tests) + optional TC6 pair datapack; explicit aspects for 183 items, 65 creatures, 31 tag rules, the rest derived from recipes |
 | Research categories | 8 | 12 | 20 | 5 (fundamentals, alchemy, artifice, infusion, auromancy) |
-| Research entries | ≈ 520 | ≈ 2 600 | ≈ 3 100 | 40 (phase 3 starter tree and phase 4 entries, original text) |
-| Items | ≈ 900 | ≈ 4 500 | ≈ 5 400 | 87 (68 items + 19 block items; one wand item covers 35 rod and cap combinations) |
-| Blocks | ≈ 450 | ≈ 2 200 | ≈ 2 650 | 20 |
+| Research entries | ≈ 520 | ≈ 2 600 | ≈ 3 100 | 45 (phase 3 starter tree and phase 4 entries, original text) |
+| Items | ≈ 900 | ≈ 4 500 | ≈ 5 400 | 106 (70 items + 36 block items; one wand item covers 45 rod and cap combinations) |
+| Blocks | ≈ 450 | ≈ 2 200 | ≈ 2 650 | 38 |
 | Devices (block entities) | ≈ 180 | ≈ 900 | ≈ 1 080 | 7 (crucible, arcane workbench, research table, runic matrix, arcane pedestal, warded jar, alchemical furnace) |
-| Recipes (arcane, crucible, infusion, rituals) | ≈ 1 100 | ≈ 5 500 | ≈ 6 600 | 139 (75 arcane, 13 crucible, 13 infusion, 17 focus archetypes, 21 crafting and smelting) |
+| Recipes (arcane, crucible, infusion, rituals) | ≈ 1 100 | ≈ 5 500 | ≈ 6 600 | 155 (86 arcane, 13 crucible, 14 infusion, 17 focus archetypes, 25 crafting and smelting) |
 | **Spell components** | ≈ 72 | **≈ 650** (10×) | ≈ 720 | see §2 |
 | Golem parts and behaviours | ≈ 95 | ≈ 475 | ≈ 570 | 0 (phase 5) |
 | Armor sets | ≈ 14 | ≈ 60 | ≈ 74 | 5 (thaumium, void metal, fortress, thaumaturge's robes, Boots of the Traveller) |
@@ -56,7 +56,7 @@ focus workbench GUI and the per-component visuals.
 | 1 | Research and inventory of every source mod | **Done** — [INVENTORY.md](INVENTORY.md) (with a verification backlog) |
 | 2 | Architecture: packages, registries, data formats, aspect system, API | **Done** — [ARCHITECTURE.md](ARCHITECTURE.md), [DESIGN_DECISIONS.md](DESIGN_DECISIONS.md) |
 | 3 | Core systems: aspects, research, aura/vis, crucible, arcane crafting, infusion, spell framework | **Done** — Minecraft-independent core with 47 unit tests; NeoForge layer, client screens, 258 generated textures, all phase 3 data; in-game tests run in CI |
-| 4 | Migration of all existing content (items, blocks, devices, wands, foci, tools, armor, flora, ores, basic mobs) | In progress — steps 1–4 done (wands, essentia transport, classic foci, tools and armour) |
+| 4 | Migration of all existing content (items, blocks, devices, wands, foci, tools, armor, flora, ores, basic mobs) | In progress — steps 1–5 done (wands, essentia transport, classic foci, tools and armour, flora and aura nodes) |
 | 5 | New content: devices, golems, armor, worldgen, mobs, bosses, dimensions, endgame | Not started |
 | 6 | Spell expansion to ≈720 components, focus workbench, synergies, forbidden magic | Framework done; catalogue not started |
 | 7 | Integrations (JEI, EMI, REI, Jade, Curios, KubeJS, CraftTweaker, Create, Mekanism, AE2, RS, Botania, Ars Nouveau, Iron's Spells, Blood Magic, Tinkers', Farmer's Delight) and API docs | Not started |
@@ -82,7 +82,7 @@ focus workbench GUI and the per-component visuals.
 
 ## 5. Next steps (exact continuation point)
 
-Phase 3 is complete. **Phase 4, migration of existing content**, continues with step 5:
+Phase 3 is complete. **Phase 4, migration of existing content**, continues with step 6:
 
 1. ~~`common/wand/` — wands~~ **done**: rods and caps are datapack registries (`thaumicunity:wand_rod`,
    `thaumicunity:wand_cap`, tables in `tools/content/wands.py`); `WandItem` stores vis per primal, casts its fixed
@@ -105,8 +105,16 @@ Phase 3 is complete. **Phase 4, migration of existing content**, continues with 
    worn robes and goggles spare spell vis (data map `thaumicunity:vis_discount`, capped by `maxVisDiscount`). Each
    set has an equipment asset and generated 64×32 worn textures; five research entries; game test `equipment`.
    Still to come: fortress masks, crimson and primal armour, elemental tools, bone bows (with later steps).
-5. Flora and ores: greatwood and silverwood trees, cinderpearl, shimmerleaf, vishroom, crystal clusters; nodes for
-   the hybrid aura (D2).
+5. ~~Flora and aura nodes~~ **done** (`tools/content/flora.py`, `TUFlora`, `common/world/`, `AuraNodeBlockEntity`):
+   greatwood and silverwood trees (logs, planks, leaves, saplings that grow the data-driven tree features), the
+   greatwood (50) and silverwood (100) wand rods, shimmerleaf, cinderpearl and vishroom (their ground is a block tag),
+   primal crystal clusters in caves (custom feature, primal by the biome's attunement), and aura nodes for the hybrid
+   aura (D2): six types and four modifiers, they refill, feed the chunk aura, act on flux by type, and wands draw
+   from them; wild silverwood often hides a pure node. Nodes are not generated in the `chunk` aura mode. Five
+   research entries; game test `flora_and_nodes`. Still to come: node jars and stabilisers (phase 5), stairs and
+   slabs, ethereal bloom and mana pods.
+6. Basic mobs: wisps (born from aura nodes), firebats, pech (forager, stalker, thaumaturge, with trading), angry and
+   brainy zombies, thaumic slimes; with their research, drops and spawn rules.
 
 Each step adds its content tables in `tools/content/`, its textures to `tools/gen_textures.py`, its research to
 `tools/content/research.py` and an in-game test.

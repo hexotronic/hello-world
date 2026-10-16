@@ -424,3 +424,11 @@ for _entry in _EQUIPMENT_RESEARCH:
     if _entry in ENTRIES:
         raise SystemExit(f"research entry {_entry} is defined twice")
 ENTRIES.update(_EQUIPMENT_RESEARCH)
+
+# Flora, crystal clusters and aura nodes (phase 4.5).
+from flora import RESEARCH as _FLORA_RESEARCH  # noqa: E402
+
+for _entry in _FLORA_RESEARCH:
+    if _entry in ENTRIES:
+        raise SystemExit(f"research entry {_entry} is defined twice")
+ENTRIES.update(_FLORA_RESEARCH)
