@@ -62,7 +62,9 @@ public class AuraNodeRenderer implements BlockEntityRenderer<AuraNodeBlockEntity
         float size = state.size * pulse;
         pose.pushPose();
         pose.translate(0.5f, 0.5f, 0.5f);
-        pose.mulPose(camera.orientation);
+        // Face the camera: the same rotation the camera's orientation is made of (yaw, then pitch).
+        pose.rotateDegrees(Axis.YP, 180f - camera.yRot);
+        pose.rotateDegrees(Axis.XP, -camera.xRot);
         int halo = ARGB.color(150, state.color);
         int inner = ARGB.color(130, ARGB.srgbLerp(0.35f, state.color, 0xFFFFFF));
         int core = ARGB.color(235, ARGB.srgbLerp(0.7f, state.color, 0xFFFFFF));
@@ -75,7 +77,7 @@ public class AuraNodeRenderer implements BlockEntityRenderer<AuraNodeBlockEntity
     /** One camera-facing glow quad, turned by {@code degrees} about the view axis. */
     private static void quad(PoseStack pose, SubmitNodeCollector collector, float half, float degrees, int argb) {
         pose.pushPose();
-        pose.mulPose(Axis.ZP.rotationDegrees(degrees));
+        pose.rotateDegrees(Axis.ZP, degrees);
         collector.submitCustomGeometry(pose, RenderTypes.entityTranslucent(GLOW), (p, buffer) -> {
             // Both windings, so the quad shows whichever way the renderer culls.
             vertex(p, buffer, -half, -half, 0, 1, argb);
