@@ -101,6 +101,9 @@ oder **nur für ein bestimmtes Hörbuch** speichern.
 - **„Was bisher geschah“:** Das lokale Sprachmodell schreibt einen spoilerfreien Rückblick bis zur aktuellen Stelle
 - **Volltextsuche** im Hörbuch über alles, was bereits transkribiert wurde
 - Ohne Sprachmodell ordnet ein Schlüsselwort-Verfahren die Szenen grob ein; das Demo-Hörbuch hat fertige Szenen
+- **Tempo:** drei Stufen (Turbo 12 s, Stichproben 25 s oder vollständig je 2-Minuten-Abschnitt), schnelle
+  CPU-Variante (ARMv8.2 dotprod/fp16) mit automatischer Erkennung, nur Leistungskerne, wiederverwendeter
+  KV-Cache, Grammatik nur bei Bedarf; die App zeigt die geschätzte Restzeit an
 
 ### Statistik & Daten
 - Hörzeit heute / 7 Tage / gesamt, Serie in Tagen, beendete Bücher

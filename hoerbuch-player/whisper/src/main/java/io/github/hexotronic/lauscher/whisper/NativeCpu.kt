@@ -50,7 +50,7 @@ internal object NativeCpu {
             }
             if (freqs.isEmpty()) error("no cpufreq")
             val max = freqs.max()
-            freqs.count { it >= max * 0.7 }
+            freqs.count { it >= max * 0.6 }
         }.getOrElse { Runtime.getRuntime().availableProcessors() / 2 }.coerceIn(2, 8)
     }
 }
