@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Lauscher</string>
+    <string name="open_with">In Lauscher abspielen</string>
+    <string name="widget_name">Lauscher – Hörbuch</string>
+    <string name="widget_empty">Noch kein Hörbuch gestartet</string>
+    <string name="action_rewind">Zurückspulen</string>
+    <string name="action_forward">Vorspulen</string>
+    <string name="action_play_pause">Wiedergabe/Pause</string>
+</resources>
