@@ -10,7 +10,7 @@ android {
     namespace = "io.github.hexotronic.lauscher.llm"
     compileSdk = 35
     // On CI use the NDK that is already installed on the runner instead of downloading one.
-    System.getenv("ANDROID_NDK_LATEST_HOME")?.let { ndkVersion = java.io.File(it).name }
+    System.getenv("ANDROID_NDK_LATEST_HOME")?.let { ndkVersion = it.trimEnd('/').substringAfterLast('/') }
 
     defaultConfig {
         minSdk = 26
