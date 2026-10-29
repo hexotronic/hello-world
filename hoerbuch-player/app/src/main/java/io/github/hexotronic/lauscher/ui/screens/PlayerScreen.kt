@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay
@@ -74,6 +75,9 @@ import io.github.hexotronic.lauscher.playback.SleepMode
 import io.github.hexotronic.lauscher.ui.MainViewModel
 import io.github.hexotronic.lauscher.ui.Screen
 import io.github.hexotronic.lauscher.ui.components.BookCover
+import io.github.hexotronic.lauscher.ui.components.PixelBadge
+import io.github.hexotronic.lauscher.ui.components.moodColor
+import io.github.hexotronic.lauscher.ui.components.onMoodColor
 import io.github.hexotronic.lauscher.ui.components.RetroBox
 import io.github.hexotronic.lauscher.ui.components.RetroButton
 import io.github.hexotronic.lauscher.ui.components.RetroIconButton
@@ -89,7 +93,7 @@ import io.github.hexotronic.lauscher.ui.formatHuman
 import io.github.hexotronic.lauscher.ui.formatSpeed
 import kotlinx.coroutines.delay
 
-enum class PlayerSheet { CHAPTERS, BOOKMARKS, SPEED, SLEEP }
+enum class PlayerSheet { CHAPTERS, BOOKMARKS, SPEED, SLEEP, RECAP, SEARCH }
 
 @Composable
 fun PlayerScreen(vm: MainViewModel) {
@@ -122,6 +126,9 @@ fun PlayerScreen(vm: MainViewModel) {
                 },
                 title = { Text("Wiedergabe", style = MaterialTheme.typography.titleMedium) },
                 actions = {
+                    IconButton(onClick = { vm.navigate(Screen.Music) }) {
+                        Icon(Icons.Filled.MusicNote, contentDescription = "Hintergrundmusik")
+                    }
                     IconButton(onClick = { vm.navigate(Screen.SoundStudio) }) {
                         Icon(Icons.Filled.GraphicEq, contentDescription = "Klangstudio")
                     }
@@ -139,6 +146,14 @@ fun PlayerScreen(vm: MainViewModel) {
                                 DropdownMenuItem(text = { Text("Lesezeichen mit Notiz …") }, onClick = {
                                     menu = false
                                     noteDialog = true
+                                })
+                                DropdownMenuItem(text = { Text("Was bisher geschah …") }, onClick = {
+                                    menu = false
+                                    sheet = PlayerSheet.RECAP
+                                })
+                                DropdownMenuItem(text = { Text("Im Hörbuch suchen …") }, onClick = {
+                                    menu = false
+                                    sheet = PlayerSheet.SEARCH
                                 })
                             }
                             DropdownMenuItem(
@@ -178,6 +193,8 @@ fun PlayerScreen(vm: MainViewModel) {
         PlayerSheet.BOOKMARKS -> BookmarksSheet(vm, np) { sheet = null }
         PlayerSheet.SPEED -> SpeedSheet(vm, np) { sheet = null }
         PlayerSheet.SLEEP -> SleepSheet(vm, np) { sheet = null }
+        PlayerSheet.RECAP -> RecapSheet(vm) { sheet = null }
+        PlayerSheet.SEARCH -> SearchSheet(vm) { sheet = null }
         null -> Unit
     }
     if (noteDialog) {
@@ -292,6 +309,27 @@ private fun PlayerContent(
                     .padding(top = 4.dp)
                     .clickable { openSheet(PlayerSheet.CHAPTERS) },
             )
+        }
+        val scene = np.scene
+        if (np.musicPlaying && scene?.mood != null) {
+            Row(
+                Modifier.padding(top = 6.dp).clickable { vm.navigate(Screen.Music) },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Filled.MusicNote, contentDescription = null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.width(4.dp))
+                PixelBadge(scene.mood.label, moodColor(scene.mood), onMoodColor(scene.mood))
+                if (scene.title.isNotBlank()) {
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        scene.title,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
         }
         np.undoPositionMs?.let { undo ->
             AssistChip(

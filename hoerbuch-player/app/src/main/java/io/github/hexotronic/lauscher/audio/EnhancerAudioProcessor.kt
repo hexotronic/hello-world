@@ -50,7 +50,19 @@ class EnhancerAudioProcessor : BaseAudioProcessor() {
         }
         inputBuffer.position(inputBuffer.position() + count * bytesPerSample)
         eng.process(samples, frames, AudioEnhancerHub.settings, AudioEnhancerHub.bypass)
+        trackLevel(count)
         write(count, isFloat)
+    }
+
+    private var level = -90f
+
+    private fun trackLevel(count: Int) {
+        var sum = 0.0
+        for (i in 0 until count) sum += samples[i] * samples[i]
+        val db = (10 * kotlin.math.log10(sum / count.coerceAtLeast(1) + 1e-12)).toFloat()
+        // Fast rise, slower fall, so short gaps between words don't make the music jump.
+        level = if (db > level) db else level * 0.92f + db * 0.08f
+        AudioEnhancerHub.speechLevelDb = level
     }
 
     private fun emitTail(isFloat: Boolean) {

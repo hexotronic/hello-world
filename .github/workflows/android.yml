@@ -82,7 +82,7 @@ jobs:
     name: Emulator-Test & Screenshots
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
@@ -90,6 +90,28 @@ jobs:
         with:
           name: Lauscher-APK
           path: apk
+
+      - name: Prepare local AI test (speech + small models)
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq flite > /dev/null
+          mkdir -p e2e
+          cat > e2e/story.txt <<'TXT'
+          It was a quiet morning at the lake. Mira sat on the wooden pier with a cup of tea and watched the sun rise
+          over the water. Birds were singing in the reeds and a soft wind moved through the old trees. She smiled,
+          closed her eyes and listened to the gentle waves. Everything was peaceful, and she thought about the
+          summer holidays of her childhood, about long afternoons in the garden and the smell of fresh bread.
+          Suddenly she heard footsteps behind her. A dark shadow moved between the trees. Her heart was racing.
+          Somebody was following her! She jumped up and ran along the shore, faster and faster, while the stranger
+          chased her through the forest. Branches hit her face. She fell, got up again and kept running for her life,
+          until she reached the old boat house and slammed the door shut behind her.
+          Three days later they buried her grandfather on the hill above the village. Everybody was crying.
+          Mira held the old letter in her hands and could not stop her tears. It was the saddest goodbye of her life,
+          and the empty chair by the window would always remind her of him.
+          TXT
+          flite -f e2e/story.txt -o e2e/story.wav
+          curl -sSL --retry 3 -o e2e/ggml-tiny-q5_1.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny-q5_1.bin
+          curl -sSL --retry 3 -o e2e/qwen2.5-0.5b-instruct-q4_k_m.gguf https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf
+          ls -la e2e
 
       - name: Enable KVM
         run: |
@@ -106,7 +128,7 @@ jobs:
           profile: pixel_6
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim -camera-back none
-          script: bash .github/scripts/emulator-screens.sh "$(ls apk/*.apk | head -1)" screenshots
+          script: E2E_DIR=e2e bash .github/scripts/emulator-screens.sh "$(ls apk/*.apk | head -1)" screenshots
 
       - uses: actions/upload-artifact@v4
         if: always()

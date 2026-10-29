@@ -40,6 +40,10 @@ start --es screen stats
 shot 05-statistik-hell 5
 start --es screen settings
 shot 06-einstellungen-hell 3
+start --ez music true --es screen player
+shot 06b-player-musik-hell 6
+start --es screen music
+shot 06c-hintergrundmusik-hell 4
 
 adb shell cmd uimode night yes
 sleep 3
@@ -52,6 +56,31 @@ shot 09-bibliothek-dunkel 4
 adb shell cmd statusbar expand-notifications
 shot 10-benachrichtigung 3
 adb shell cmd statusbar collapse
+
+# --- Local AI end to end: speech file + small models -> scene analysis on the device.
+if [ -n "${E2E_DIR:-}" ] && [ -f "$E2E_DIR/story.wav" ]; then
+  DATA=/sdcard/Android/data/$PKG/files
+  adb shell mkdir -p "$DATA/models" "$DATA/test"
+  adb push "$E2E_DIR/ggml-tiny-q5_1.bin" "$DATA/models/" > /dev/null
+  adb push "$E2E_DIR/qwen2.5-0.5b-instruct-q4_k_m.gguf" "$DATA/models/" > /dev/null
+  adb push "$E2E_DIR/story.wav" "$DATA/test/" > /dev/null
+  adb shell cmd uimode night no
+  start --ez music true --es whisper_model whisper-tiny --es llm_model qwen2.5-0.5b --es language en \
+    --es import_path "$DATA/test/story.wav" --ez analyze true
+  echo "Warte auf die lokale Analyse …"
+  for i in $(seq 1 120); do
+    if adb logcat -d -s LauscherAnalyse:* | grep -qE "Szenen|Analysis failed"; then break; fi
+    sleep 5
+  done
+  adb logcat -d -s LauscherAnalyse:* LauscherLlm:* LauscherWhisper:* | tail -40 | tee "$OUT/analyse.txt"
+  sleep 5
+  start --es screen music
+  shot 11-ki-analyse-hell 5
+  if ! grep -q "Szenen" "$OUT/analyse.txt"; then
+    echo "::error::Die lokale Analyse hat keine Szenen geliefert"
+    E2E_FAILED=1
+  fi
+fi
 
 adb shell dumpsys media_session > "$OUT/media_session.txt" || true
 adb logcat -d -b crash > "$OUT/crash.txt" || true
@@ -72,4 +101,5 @@ fi
 if ! grep -q "$PKG" "$OUT/media_session.txt"; then
   echo "::warning::Keine Media-Session von Lauscher gefunden"
 fi
+if [ "${E2E_FAILED:-0}" = 1 ]; then exit 1; fi
 echo "Keine Abstürze."

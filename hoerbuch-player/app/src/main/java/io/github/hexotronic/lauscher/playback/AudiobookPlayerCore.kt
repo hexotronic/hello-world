@@ -18,6 +18,12 @@ import io.github.hexotronic.lauscher.data.Book
 import io.github.hexotronic.lauscher.data.BookDetails
 import io.github.hexotronic.lauscher.data.Chapter
 import io.github.hexotronic.lauscher.data.Track
+import io.github.hexotronic.lauscher.analysis.core.Scene
+import io.github.hexotronic.lauscher.analysis.core.SceneMerger
+import io.github.hexotronic.lauscher.music.MusicEngine
+import io.github.hexotronic.lauscher.music.MusicMode
+import io.github.hexotronic.lauscher.music.synth.Mood
+import io.github.hexotronic.lauscher.music.synth.SoundSpec
 import io.github.hexotronic.lauscher.widget.WidgetUpdater
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
@@ -49,6 +55,10 @@ data class NowPlaying(
     val error: String? = null,
     /** Position before the last big jump, offered as "undo". */
     val undoPositionMs: Long? = null,
+    /** Scene at the current position (from the music analysis), if known. */
+    val scene: Scene? = null,
+    /** True while background music is audible. */
+    val musicPlaying: Boolean = false,
 ) {
     val chapter: Chapter? get() = chapters.getOrNull(chapterIndex)
     val chapterPositionMs: Long get() = chapter?.let { (positionMs - it.startMs).coerceAtLeast(0) } ?: positionMs
@@ -92,6 +102,12 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
     private var undoSetAt = 0L
     private var error: String? = null
     private val shake = ShakeDetector(context) { onShake() }
+    private val music = MusicEngine()
+    private var scenes: List<Scene> = emptyList()
+    private var scenesJob: Job? = null
+    private var lastChapterIndex = -1
+    private var lastAheadCheck = 0L
+    private var previewUntil = 0L
 
     private val listener = object : Player.Listener {
         override fun onEvents(player: Player, events: Player.Events) = refresh()
@@ -164,6 +180,9 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
         scope.launch {
             settingsStore.settings.collect { s -> exoPlayer.skipSilenceEnabled = s.skipSilence }
         }
+        scope.launch {
+            app.musicSettings.settings.collect { refresh() }
+        }
     }
 
     // ------------------------------------------------------------------ loading
@@ -196,6 +215,8 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
             start = 0
         }
         details = d
+        observeScenes(d.book.id)
+        lastChapterIndex = -1
         undoPosition = null
         pausedAt = 0
         error = null
@@ -480,7 +501,7 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
                 refresh()
                 if (playing && now - lastSavedAt > SAVE_INTERVAL_MS) saveProgress()
                 if (pendingListenMs > STATS_INTERVAL_MS) flushStats()
-                if (!playing && _sleep.value.mode == SleepMode.OFF) break
+                if (!playing && _sleep.value.mode == SleepMode.OFF && now > previewUntil) break
             }
         }
     }
@@ -524,10 +545,83 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
         }
     }
 
+    private fun observeScenes(bookId: Long) {
+        scenesJob?.cancel()
+        scenes = emptyList()
+        scenesJob = scope.launch {
+            repo.observeScenes(bookId).collect {
+                scenes = it
+                refresh()
+            }
+        }
+    }
+
+    /** Picks the background music for the current position. */
+    private fun updateMusic(pos: Long, chapterIndex: Int, chapters: List<Chapter>): Scene? {
+        val s = app.musicSettings.current
+        val d = details
+        val now = SystemClock.elapsedRealtime()
+        val previewing = now < previewUntil
+        val scene = SceneMerger.sceneAt(scenes, pos)
+        if (previewing) {
+            music.setPlaying(true)
+            return scene
+        }
+        if (!s.enabled || d == null) {
+            music.setPlaying(false)
+            return scene
+        }
+        // The sleep timer fades the narration; the music follows.
+        music.apply(s, exoPlayer.volume)
+        val spec = when (s.mode) {
+            MusicMode.FIXED -> if (s.fixedMood == null && s.fixedAtmosphere == null) null else {
+                SoundSpec(s.fixedMood, s.fixedAtmosphere, 0.5f, d.book.id)
+            }
+            MusicMode.CHAPTERS -> chapters.getOrNull(chapterIndex)?.let { ch ->
+                when {
+                    pos - ch.startMs < CHAPTER_INTRO_MS -> SoundSpec(Mood.CALM, null, 0.4f, ch.startMs)
+                    ch.endMs - pos < CHAPTER_OUTRO_MS && ch.durationMs > 2 * CHAPTER_INTRO_MS ->
+                        SoundSpec(Mood.NEUTRAL, null, 0.3f, ch.startMs)
+                    else -> null
+                }
+            }
+            MusicMode.SCENES -> when {
+                scene == null -> if (s.neutralFallback) SoundSpec(Mood.NEUTRAL, null, 0.3f, d.book.id) else null
+                scene.mood == null -> null
+                else -> SoundSpec(scene.mood, null, scene.intensity, scene.startMs)
+            }
+        }
+        music.setSpec(spec)
+        val playing = exoPlayer.isPlaying
+        music.setPlaying(playing && spec != null)
+        if (playing && s.chapterChime && lastChapterIndex >= 0 && chapterIndex != lastChapterIndex) music.chime()
+        lastChapterIndex = chapterIndex
+        if (playing && s.mode == MusicMode.SCENES && now - lastAheadCheck > AHEAD_CHECK_MS) {
+            lastAheadCheck = now
+            app.analysis.ensureAhead(d.book.id, pos)
+        }
+        return scene
+    }
+
+    /** Plays a few seconds of a mood or atmosphere, also while the book is paused. */
+    fun previewMusic(spec: SoundSpec, seconds: Int = 12) {
+        music.apply(app.musicSettings.current, 1f)
+        music.setSpec(spec)
+        previewUntil = SystemClock.elapsedRealtime() + seconds * 1000L
+        music.setPlaying(true)
+        startTicker()
+    }
+
+    fun stopPreview() {
+        previewUntil = 0
+        refresh()
+    }
+
     private fun refresh() {
         val d = details
         val pos = currentPosition()
         val chapters = d?.chapters.orEmpty()
+        val scene = updateMusic(pos, chapterIndexAt(chapters, pos), chapters)
         if (undoPosition != null && SystemClock.elapsedRealtime() - undoSetAt > UNDO_VISIBLE_MS) undoPosition = null
         val next = NowPlaying(
             book = d?.book,
@@ -543,6 +637,8 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
             skipSilence = exoPlayer.skipSilenceEnabled,
             error = error,
             undoPositionMs = undoPosition,
+            scene = scene,
+            musicPlaying = music.currentSpec != null && (exoPlayer.isPlaying || SystemClock.elapsedRealtime() < previewUntil),
         )
         _state.value = next
         WidgetUpdater.onState(context, next)
@@ -552,6 +648,7 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
         saveProgress()
         flushStats()
         shake.setActive(false)
+        music.setPlaying(false)
         exoPlayer.removeListener(listener)
         scope.cancel()
     }
@@ -600,6 +697,9 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
         private const val STATS_INTERVAL_MS = 30_000L
         private const val FADE_MS = 20_000L
         private const val UNDO_VISIBLE_MS = 30_000L
+        private const val CHAPTER_INTRO_MS = 25_000L
+        private const val CHAPTER_OUTRO_MS = 15_000L
+        private const val AHEAD_CHECK_MS = 20_000L
 
         fun bookIdOf(mediaId: String): Long? =
             mediaId.takeIf { it.startsWith("book:") }?.split(':')?.getOrNull(1)?.toLongOrNull()

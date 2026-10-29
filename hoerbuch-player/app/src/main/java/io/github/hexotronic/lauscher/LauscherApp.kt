@@ -1,10 +1,13 @@
 package io.github.hexotronic.lauscher
 
 import android.app.Application
+import io.github.hexotronic.lauscher.analysis.AnalysisManager
+import io.github.hexotronic.lauscher.analysis.ModelManager
 import io.github.hexotronic.lauscher.audio.SoundSettingsManager
 import io.github.hexotronic.lauscher.data.BackupManager
 import io.github.hexotronic.lauscher.data.LibraryRepository
 import io.github.hexotronic.lauscher.data.SettingsStore
+import io.github.hexotronic.lauscher.music.MusicSettingsStore
 import io.github.hexotronic.lauscher.scan.LibraryScanner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +23,9 @@ class LauscherApp : Application() {
     val sound by lazy { SoundSettingsManager(this, repository, appScope) }
     val scanner by lazy { LibraryScanner(this, repository) }
     val backup by lazy { BackupManager(this, repository, settings, sound) }
+    val musicSettings by lazy { MusicSettingsStore(this) }
+    val models by lazy { ModelManager(this) }
+    val analysis by lazy { AnalysisManager(this, repository, models, musicSettings, appScope) }
 
     override fun onCreate() {
         super.onCreate()

@@ -84,6 +84,24 @@ oder **nur für ein bestimmtes Hörbuch** speichern.
 - **A/B-Taste**: gedrückt halten, um das Original zu hören
 - Voreinstellungen: Klare Sprache, Verrauschte Aufnahme, Altes Tonband, Laute Umgebung, Nachtmodus, Ein Ohrhörer
 
+### Hintergrundmusik passend zur Szene (lokale KI)
+- **Alles auf dem Handy:** Die Spracherkennung (whisper.cpp) schreibt kurze Ausschnitte des Hörbuchs mit,
+  ein **lokales Sprachmodell** (llama.cpp, z. B. Qwen2.5 1.5B) liest den Text, versteht die Szene und entscheidet,
+  **ob** und **welche** Musik passt – ruhig, spannend, traurig, fröhlich, geheimnisvoll, dramatisch, romantisch,
+  gruselig, idyllisch oder neutral. Nichts wird hochgeladen, keine API-Schlüssel, keine Kosten.
+- Die Modelle werden einmal in der App heruntergeladen (Whisper ab 32 MB, Sprachmodell ab 400 MB) oder als
+  eigene GGUF-Datei gewählt; danach läuft alles offline.
+- **Vorausschauende Analyse:** Beim Hören bereitet die App die nächsten Minuten im Hintergrund vor –
+  oder analysiert auf Wunsch das ganze Buch (Stichproben oder vollständig).
+- Die **Musik wird live erzeugt** (Flächen, gezupfte Saiten, Glocken, Herzschlag, Natur-Geräusche, Hall),
+  überblendet weich zwischen Szenen und **weicht der Stimme aus** (Ducking), Lautstärke und Übergänge einstellbar.
+- **Stimmungskarte** des ganzen Buchs; jede Szene lässt sich antippen und korrigieren
+- Weitere Modi: **Kapitel-Intros** (ohne KI) oder **feste Atmosphäre** (Regen, Kaminfeuer, Wald, Meer,
+  Sommernacht, Sturm – auch kombiniert mit Musik), Gong bei Kapitelwechsel, Hörproben aller Stimmungen
+- **„Was bisher geschah“:** Das lokale Sprachmodell schreibt einen spoilerfreien Rückblick bis zur aktuellen Stelle
+- **Volltextsuche** im Hörbuch über alles, was bereits transkribiert wurde
+- Ohne Sprachmodell ordnet ein Schlüsselwort-Verfahren die Szenen grob ein; das Demo-Hörbuch hat fertige Szenen
+
 ### Statistik & Daten
 - Hörzeit heute / 7 Tage / gesamt, Serie in Tagen, beendete Bücher
 - Tagesdiagramm für 7/30/90 Tage, meistgehörte Bücher
@@ -92,8 +110,10 @@ oder **nur für ein bestimmtes Hörbuch** speichern.
 
 ## Technik
 
-Kotlin, Jetpack Compose (Material 3), Media3/ExoPlayer mit `MediaLibraryService`, SQLite.
-Die gesamte Klangverarbeitung (`audio/dsp`) und die Kapitel-Parser (`scan/core`) sind reines
+Kotlin, Jetpack Compose (Material 3), Media3/ExoPlayer mit `MediaLibraryService`, SQLite,
+llama.cpp (v0.8.0) und whisper.cpp (v1.9.5) über JNI (Module `llm/` und `whisper/`, beim Build per CMake geladen).
+Die gesamte Klangverarbeitung (`audio/dsp`), der Musik-Synthesizer (`music/synth`), die Szenen-Logik
+(`analysis/core`: Prompt, GBNF-Grammatik, Auswertung) und die Kapitel-Parser (`scan/core`) sind reines
 Kotlin ohne Android-Abhängigkeiten und durch Unit-Tests abgedeckt
 (`./gradlew testReleaseUnitTest`). Ein Test misst z. B., dass die Rauschunterdrückung bei
 verrauschter Sprache den Störabstand um mehr als 5 dB verbessert und Sprechpausen um mehr als
@@ -108,8 +128,10 @@ cd hoerbuch-player
 
 Benötigt JDK 17 und das Android SDK (API 35).
 
-Die CI baut die APK, führt die Unit-Tests aus und startet die App anschließend in einem
-Android-14-Emulator: Demo-Hörbuch abspielen, Screenshots aller Hauptseiten, Prüfung auf Abstürze.
+Die CI baut die APK (inklusive llama.cpp und whisper.cpp für arm64 und x86_64), führt die Unit-Tests aus
+und startet die App anschließend in einem Android-14-Emulator: Demo-Hörbuch abspielen, Screenshots aller
+Hauptseiten, ein Ende-zu-Ende-Test der lokalen KI (synthetische Sprache → Whisper Tiny → Qwen2.5 0.5B →
+Szenen) und Prüfung auf Abstürze.
 
 ### Schriften
 

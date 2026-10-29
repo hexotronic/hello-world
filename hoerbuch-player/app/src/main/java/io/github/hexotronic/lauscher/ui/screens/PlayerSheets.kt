@@ -29,6 +29,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,6 +52,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.hexotronic.lauscher.analysis.core.TranscriptWindow
 import io.github.hexotronic.lauscher.data.Bookmark
 import io.github.hexotronic.lauscher.playback.AudiobookPlayerCore
 import io.github.hexotronic.lauscher.playback.NowPlaying
@@ -354,5 +357,93 @@ fun SleepSheet(vm: MainViewModel, np: NowPlaying, onDismiss: () -> Unit) {
             vm.updateSettings { it.copy(sleepBookmark = on) }
         }
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** "Was bisher geschah": a recap written by the on-device language model. */
+@Composable
+fun RecapSheet(vm: MainViewModel, onDismiss: () -> Unit) {
+    var text by remember { mutableStateOf<String?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        vm.recap()
+            .onSuccess { text = it }
+            .onFailure { error = it.message ?: "Unbekannter Fehler" }
+    }
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
+            Text("Was bisher geschah", style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.height(12.dp))
+            when {
+                text != null -> Text(text!!, style = MaterialTheme.typography.bodyLarge)
+                error != null -> Text(error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+                else -> {
+                    Text(
+                        "Das Sprachmodell auf deinem Handy liest die bisherigen Abschnitte … das kann eine halbe Minute dauern.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                }
+            }
+        }
+    }
+}
+
+/** Full-text search in the transcribed parts of the book. */
+@Composable
+fun SearchSheet(vm: MainViewModel, onDismiss: () -> Unit) {
+    var query by remember { mutableStateOf("") }
+    var results by remember { mutableStateOf<List<TranscriptWindow>>(emptyList()) }
+    var searched by remember { mutableStateOf(false) }
+    LaunchedEffect(query) {
+        if (query.length < 3) {
+            results = emptyList()
+            searched = false
+            return@LaunchedEffect
+        }
+        kotlinx.coroutines.delay(300)
+        results = vm.searchTranscript(query)
+        searched = true
+    }
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.padding(horizontal = 20.dp)) {
+            Text("Im Hörbuch suchen", style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                label = { Text("Wort oder Name") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(
+                "Durchsucht alle Stellen, die die Musik-Analyse bereits transkribiert hat.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(vertical = 6.dp),
+            )
+        }
+        if (searched && results.isEmpty()) {
+            Text("Nichts gefunden.", modifier = Modifier.padding(20.dp))
+        }
+        LazyColumn(Modifier.heightIn(max = 480.dp)) {
+            items(results, key = { it.startMs }) { w ->
+                val idx = w.text.indexOf(query, ignoreCase = true).coerceAtLeast(0)
+                val from = (idx - 60).coerceAtLeast(0)
+                val snippet = (if (from > 0) "…" else "") + w.text.substring(from, minOf(w.text.length, idx + query.length + 80)) + "…"
+                ListItem(
+                    headlineContent = { Text(snippet, maxLines = 3, overflow = TextOverflow.Ellipsis) },
+                    leadingContent = { Text(formatClock(w.startMs), style = MaterialTheme.typography.labelLarge) },
+                    modifier = Modifier.clickable {
+                        vm.withCore { it.seekTo(w.startMs) }
+                        onDismiss()
+                    },
+                )
+                HorizontalDivider()
+            }
+        }
+        Spacer(Modifier.height(20.dp))
     }
 }

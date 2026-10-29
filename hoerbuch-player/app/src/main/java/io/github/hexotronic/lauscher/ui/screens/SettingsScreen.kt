@@ -125,6 +125,11 @@ fun SettingsScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
                 ClickRow("Bis", "${s.sleepAutoToHour}:00 Uhr") { picker = Picker.SLEEP_TO }
             }
 
+            SectionHeader("Hintergrundmusik und lokale KI")
+            ClickRow("Hintergrundmusik, Szenen-Analyse und KI-Modelle", "Musik passend zur Szene, Rückblick und Volltextsuche – alles auf dem Gerät") {
+                vm.navigate(io.github.hexotronic.lauscher.ui.Screen.Music)
+            }
+
             SectionHeader("Darstellung")
             ClickRow("Design", s.theme.label) { picker = Picker.THEME }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {

@@ -10,6 +10,17 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import io.github.hexotronic.lauscher.LauscherApp
+import io.github.hexotronic.lauscher.music.synth.SoundSpec
+import io.github.hexotronic.lauscher.music.synth.Mood
+import io.github.hexotronic.lauscher.music.MusicSettings
+import io.github.hexotronic.lauscher.analysis.core.TranscriptWindow
+import io.github.hexotronic.lauscher.analysis.core.Scene
+import io.github.hexotronic.lauscher.analysis.ModelManager
+import io.github.hexotronic.lauscher.analysis.ModelKind
+import io.github.hexotronic.lauscher.analysis.ModelInfo
+import io.github.hexotronic.lauscher.analysis.AnalysisStatus
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
 import io.github.hexotronic.lauscher.audio.SoundState
 import io.github.hexotronic.lauscher.audio.dsp.EnhancerPreset
 import io.github.hexotronic.lauscher.audio.dsp.EnhancerSettings
@@ -43,6 +54,7 @@ sealed interface Screen {
     data object Settings : Screen
     data object Player : Screen
     data object SoundStudio : Screen
+    data object Music : Screen
     data class BookDetail(val bookId: Long) : Screen
 }
 
@@ -253,7 +265,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             "studio" -> navigate(Screen.SoundStudio)
             "stats" -> navigate(Screen.Stats)
             "settings" -> navigate(Screen.Settings)
+            "music" -> navigate(Screen.Music)
             "detail" -> (nowPlaying.value.book ?: lastBook.value)?.let { navigate(Screen.BookDetail(it.id)) }
+        }
+    }
+
+    /** Imports an audio file from the app's own storage (used by tests and power users via adb). */
+    fun importLocalFile(path: String, analyze: Boolean) {
+        viewModelScope.launch {
+            val id = scanner.addFiles(listOf(Uri.fromFile(java.io.File(path))))
+            if (id == null) {
+                toast("Datei konnte nicht gelesen werden")
+                return@launch
+            }
+            playBook(id)
+            if (analyze) {
+                kotlinx.coroutines.delay(1500)
+                app.analysis.analyze(id)
+            }
         }
     }
 
@@ -322,6 +351,101 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setSoundPerBook(enabled: Boolean) = app.sound.setPerBook(enabled)
 
     fun setBypass(bypass: Boolean) = app.sound.setBypass(bypass)
+
+    // ---------------------------------------------------------------- background music & local AI
+
+    val musicSettings: StateFlow<MusicSettings> = app.musicSettings.settings
+    val analysisStatus: StateFlow<AnalysisStatus> = app.analysis.status
+    val modelDownload = app.models.download
+    val modelChanges = app.models.changes
+    val models: ModelManager = app.models
+
+    val scenes: StateFlow<List<Scene>> = nowPlaying
+        .map { it.book?.id }
+        .distinctUntilChanged()
+        .flatMapLatest { id -> if (id == null) flowOf(emptyList()) else repository.observeScenes(id) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun updateMusic(transform: (MusicSettings) -> MusicSettings) = app.musicSettings.update(transform)
+
+    fun analyzeBook(fromCurrentPosition: Boolean) {
+        val np = nowPlaying.value
+        val book = np.book ?: lastBook.value ?: return
+        if (!app.analysis.hasSpeechModel) {
+            toast("Bitte zuerst ein Spracherkennungsmodell laden")
+            return
+        }
+        val from = if (fromCurrentPosition && np.book != null) np.positionMs else 0L
+        app.analysis.analyze(book.id, fromMs = from)
+    }
+
+    fun stopAnalysis() = app.analysis.stop()
+
+    fun clearAnalysis() {
+        val book = nowPlaying.value.book ?: lastBook.value ?: return
+        app.analysis.stop()
+        viewModelScope.launch {
+            repository.clearAnalysis(book.id)
+            toast("Analyse gelöscht")
+        }
+    }
+
+    fun overrideScene(scene: Scene, mood: Mood?, level: Int, title: String) {
+        val book = nowPlaying.value.book ?: return
+        viewModelScope.launch { repository.overrideScene(book.id, scene.startMs, scene.endMs, mood, level, title) }
+    }
+
+    fun previewMusic(spec: SoundSpec) = withCore { it.previewMusic(spec) }
+
+    fun downloadModel(model: ModelInfo) {
+        val job = viewModelScope.launch {
+            if (app.models.downloadModel(model)) {
+                selectModel(model.kind, model.id)
+                toast("${model.label} ist bereit")
+            }
+        }
+        app.models.setJob(job)
+    }
+
+    fun cancelDownload() = app.models.cancelDownload()
+
+    fun importModel(kind: ModelKind, uri: Uri) {
+        viewModelScope.launch {
+            val id = app.models.importModel(kind, uri)
+            if (id != null) {
+                selectModel(kind, id)
+                toast("Eigenes Modell übernommen")
+            } else {
+                toast("Datei konnte nicht übernommen werden")
+            }
+        }
+    }
+
+    fun deleteModel(id: String) {
+        app.models.delete(id)
+        updateMusic { s ->
+            s.copy(
+                whisperModel = s.whisperModel.takeIf { it != id },
+                llmModel = s.llmModel.takeIf { it != id },
+            )
+        }
+    }
+
+    fun selectModel(kind: ModelKind, id: String) = updateMusic {
+        if (kind == ModelKind.SPEECH) it.copy(whisperModel = id) else it.copy(llmModel = id)
+    }
+
+    suspend fun recap(): Result<String> {
+        val np = nowPlaying.value
+        val book = np.book ?: return Result.failure(IllegalStateException("Kein Hörbuch geladen"))
+        return app.analysis.recap(book.id, np.positionMs)
+    }
+
+    suspend fun searchTranscript(query: String): List<TranscriptWindow> {
+        val book = nowPlaying.value.book ?: return emptyList()
+        if (query.isBlank()) return emptyList()
+        return repository.searchTranscripts(book.id, query)
+    }
 
     // ---------------------------------------------------------------- backup
 

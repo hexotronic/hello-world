@@ -2,9 +2,13 @@ package io.github.hexotronic.lauscher.scan
 
 import android.content.Context
 import android.net.Uri
+import io.github.hexotronic.lauscher.analysis.core.SceneMerger
+import io.github.hexotronic.lauscher.analysis.core.TranscriptWindow
+import io.github.hexotronic.lauscher.analysis.core.WindowMood
 import io.github.hexotronic.lauscher.data.Chapter
 import io.github.hexotronic.lauscher.data.LibraryRepository
 import io.github.hexotronic.lauscher.data.Track
+import io.github.hexotronic.lauscher.music.synth.Mood
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedOutputStream
@@ -48,7 +52,7 @@ object DemoBook {
             marks.add(Chapter(0, i, title, start, start + duration))
             start += duration
         }
-        repo.saveScannedBook(
+        val id = repo.saveScannedBook(
             sourceKey = KEY,
             rootUri = "demo",
             title = "Lauscher-Demo: Rauschtest",
@@ -58,10 +62,23 @@ object DemoBook {
             description = "Eine künstliche Stimme mit Bandrauschen, Netzbrummen und Knistern. " +
                 "Öffne das Klangstudio und vergleiche mit der A/B-Taste.",
             coverPath = null,
-            signature = "demo-v2",
+            signature = "demo-v3",
             tracks = tracks,
             chapters = marks,
         )
+        // A ready-made analysis, so background music and search work without downloading models.
+        val story = listOf(
+            Triple("Am Morgen saß Mira am See und trank Tee. Die Sonne wärmte das Wasser, Vögel sangen im Schilf.", Mood.IDYLLIC, "Morgen am See"),
+            Triple("Am Abend hörte sie Schritte im Dunkeln. Ein Schatten folgte ihr bis zum alten Bootshaus.", Mood.TENSE, "Schritte im Dunkeln"),
+            Triple("Doch es war nur ihr Bruder. Lachend feierten sie zusammen das Sommerfest bis tief in die Nacht.", Mood.HAPPY, "Das Sommerfest"),
+        )
+        story.forEachIndexed { i, (text, mood, title) ->
+            val window = TranscriptWindow(i * SECONDS * 1000L, (i + 1) * SECONDS * 1000L, text)
+            repo.saveTranscript(id, window)
+            repo.saveWindowMoods(id, listOf(WindowMood(window.startMs, window.endMs, mood, 2, title, SceneMerger.SOURCE_LLM)))
+        }
+        repo.saveStory(id, "Mira verbringt einen Sommertag am See, fürchtet sich abends vor einem Verfolger und feiert dann mit ihrem Bruder.")
+        id
     }
 
     private fun synthesize(kind: Int): ShortArray {

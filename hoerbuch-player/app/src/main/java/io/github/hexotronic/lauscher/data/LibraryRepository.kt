@@ -5,6 +5,11 @@ import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import io.github.hexotronic.lauscher.analysis.core.Scene
+import io.github.hexotronic.lauscher.analysis.core.SceneMerger
+import io.github.hexotronic.lauscher.analysis.core.TranscriptWindow
+import io.github.hexotronic.lauscher.analysis.core.WindowMood
+import io.github.hexotronic.lauscher.music.synth.Mood
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,7 +19,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
-private class LauscherDatabase(context: Context) : SQLiteOpenHelper(context, "lauscher.db", null, 1) {
+private class LauscherDatabase(context: Context) : SQLiteOpenHelper(context, "lauscher.db", null, 2) {
     override fun onConfigure(db: SQLiteDatabase) {
         db.setForeignKeyConstraintsEnabled(true)
     }
@@ -81,9 +86,41 @@ private class LauscherDatabase(context: Context) : SQLiteOpenHelper(context, "la
                 PRIMARY KEY(day, book_id))""",
         )
         db.execSQL("CREATE TABLE folders(uri TEXT PRIMARY KEY, name TEXT NOT NULL, added_at INTEGER NOT NULL)")
+        createAnalysisTables(db)
     }
 
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
+    /** Version 2: transcripts and scene analysis for background music. */
+    private fun createAnalysisTables(db: SQLiteDatabase) {
+        db.execSQL(
+            """CREATE TABLE transcripts(
+                book_id INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+                start_ms INTEGER NOT NULL,
+                end_ms INTEGER NOT NULL,
+                text TEXT NOT NULL,
+                PRIMARY KEY(book_id, start_ms))""",
+        )
+        db.execSQL(
+            """CREATE TABLE window_moods(
+                book_id INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+                start_ms INTEGER NOT NULL,
+                end_ms INTEGER NOT NULL,
+                mood TEXT,
+                level INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                source TEXT NOT NULL,
+                PRIMARY KEY(book_id, start_ms))""",
+        )
+        db.execSQL(
+            """CREATE TABLE analysis_state(
+                book_id INTEGER PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
+                story TEXT NOT NULL DEFAULT '',
+                updated_at INTEGER NOT NULL)""",
+        )
+    }
+
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        if (oldVersion < 2) createAnalysisTables(db)
+    }
 }
 
 /** Single source of truth for books, chapters, bookmarks, folders and statistics. */
@@ -450,6 +487,120 @@ class LibraryRepository(context: Context) {
 
     suspend fun clearStatistics() = io {
         db.delete("listening_log", null, null)
+    }.also { notifyChanged() }
+
+    // ---------------------------------------------------------------- analysis
+
+    fun observeScenes(bookId: Long): Flow<List<Scene>> = observe { SceneMerger.merge(windowMoods(bookId)) }
+
+    suspend fun scenes(bookId: Long): List<Scene> = io { SceneMerger.merge(windowMoods(bookId)) }
+
+    private fun windowMoods(bookId: Long): List<WindowMood> =
+        db.query("window_moods", null, "book_id = ?", arrayOf(bookId.toString()), null, null, "start_ms").use { c ->
+            c.map {
+                WindowMood(
+                    startMs = c.long("start_ms"),
+                    endMs = c.long("end_ms"),
+                    mood = Mood.parse(c.str("mood")),
+                    level = c.int("level"),
+                    title = c.str("title").orEmpty(),
+                    source = c.str("source").orEmpty(),
+                )
+            }
+        }
+
+    suspend fun analyzedWindowStarts(bookId: Long): Set<Long> = io {
+        db.rawQuery("SELECT start_ms FROM window_moods WHERE book_id = ?", arrayOf(bookId.toString())).use { c ->
+            HashSet<Long>().apply { while (c.moveToNext()) add(c.getLong(0)) }
+        }
+    }
+
+    suspend fun saveWindowMoods(bookId: Long, moods: List<WindowMood>, keepManual: Boolean = true) = io {
+        db.beginTransaction()
+        try {
+            for (m in moods) {
+                if (keepManual) {
+                    val manual = db.rawQuery(
+                        "SELECT 1 FROM window_moods WHERE book_id = ? AND start_ms = ? AND source = ?",
+                        arrayOf(bookId.toString(), m.startMs.toString(), SceneMerger.SOURCE_MANUAL),
+                    ).use { it.moveToFirst() }
+                    if (manual) continue
+                }
+                db.insertWithOnConflict("window_moods", null, ContentValues().apply {
+                    put("book_id", bookId)
+                    put("start_ms", m.startMs)
+                    put("end_ms", m.endMs)
+                    put("mood", m.mood?.name)
+                    put("level", m.level)
+                    put("title", m.title)
+                    put("source", m.source)
+                }, SQLiteDatabase.CONFLICT_REPLACE)
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }.also { notifyChanged() }
+
+    /** Manual correction of a whole scene from the mood map. */
+    suspend fun overrideScene(bookId: Long, startMs: Long, endMs: Long, mood: Mood?, level: Int, title: String) = io {
+        db.execSQL(
+            "UPDATE window_moods SET mood = ?, level = ?, title = ?, source = ? WHERE book_id = ? AND start_ms >= ? AND start_ms < ?",
+            arrayOf<Any?>(mood?.name, level, title, SceneMerger.SOURCE_MANUAL, bookId, startMs, endMs),
+        )
+    }.also { notifyChanged() }
+
+    suspend fun saveTranscript(bookId: Long, window: TranscriptWindow) = io {
+        db.insertWithOnConflict("transcripts", null, ContentValues().apply {
+            put("book_id", bookId)
+            put("start_ms", window.startMs)
+            put("end_ms", window.endMs)
+            put("text", window.text)
+        }, SQLiteDatabase.CONFLICT_REPLACE)
+        Unit
+    }
+
+    suspend fun transcripts(bookId: Long, untilMs: Long = Long.MAX_VALUE): List<TranscriptWindow> = io {
+        db.query(
+            "transcripts", null, "book_id = ? AND start_ms < ?", arrayOf(bookId.toString(), untilMs.toString()),
+            null, null, "start_ms",
+        ).use { c -> c.map { TranscriptWindow(c.long("start_ms"), c.long("end_ms"), c.str("text").orEmpty()) } }
+    }
+
+    suspend fun transcriptAt(bookId: Long, startMs: Long): TranscriptWindow? = io {
+        db.query("transcripts", null, "book_id = ? AND start_ms = ?", arrayOf(bookId.toString(), startMs.toString()), null, null, null)
+            .use { c -> c.map { TranscriptWindow(c.long("start_ms"), c.long("end_ms"), c.str("text").orEmpty()) }.firstOrNull() }
+    }
+
+    /** Full-text search in everything that was transcribed so far. */
+    suspend fun searchTranscripts(bookId: Long, query: String, limit: Int = 50): List<TranscriptWindow> = io {
+        val q = "%" + query.trim().replace("%", "").replace("_", "") + "%"
+        db.query(
+            "transcripts", null, "book_id = ? AND text LIKE ?", arrayOf(bookId.toString(), q),
+            null, null, "start_ms", limit.toString(),
+        ).use { c -> c.map { TranscriptWindow(c.long("start_ms"), c.long("end_ms"), c.str("text").orEmpty()) } }
+    }
+
+    suspend fun story(bookId: Long): String = io {
+        db.rawQuery("SELECT story FROM analysis_state WHERE book_id = ?", arrayOf(bookId.toString())).use { c ->
+            if (c.moveToFirst()) c.getString(0) else ""
+        }
+    }
+
+    suspend fun saveStory(bookId: Long, story: String) = io {
+        db.insertWithOnConflict("analysis_state", null, ContentValues().apply {
+            put("book_id", bookId)
+            put("story", story)
+            put("updated_at", System.currentTimeMillis())
+        }, SQLiteDatabase.CONFLICT_REPLACE)
+        Unit
+    }
+
+    suspend fun clearAnalysis(bookId: Long) = io {
+        db.delete("window_moods", "book_id = ?", arrayOf(bookId.toString()))
+        db.delete("transcripts", "book_id = ?", arrayOf(bookId.toString()))
+        db.delete("analysis_state", "book_id = ?", arrayOf(bookId.toString()))
+        Unit
     }.also { notifyChanged() }
 
     // ---------------------------------------------------------------- cursor helpers

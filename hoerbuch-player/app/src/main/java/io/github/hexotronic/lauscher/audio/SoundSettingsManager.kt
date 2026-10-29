@@ -27,6 +27,10 @@ object AudioEnhancerHub {
 
     @Volatile
     var engine: EnhancerEngine? = null
+
+    /** Smoothed level of the narration (dBFS) – lets the background music duck under speech. */
+    @Volatile
+    var speechLevelDb: Float = -90f
 }
 
 data class SoundState(
