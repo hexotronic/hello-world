@@ -203,7 +203,7 @@ fun SoundStudioScreen(vm: MainViewModel) {
                 enabled = on,
             ) { v -> update { it.copy(deEsser = v.snap()) } }
 
-            SectionHeader("Sprache & Lautstärke")
+            SectionHeader("Sprache und Lautstärke")
             LabeledSlider(
                 "Sprachverständlichkeit",
                 s.voiceClarity,
