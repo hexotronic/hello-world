@@ -8,6 +8,7 @@ import io.github.hexotronic.lauscher.data.BackupManager
 import io.github.hexotronic.lauscher.data.LibraryRepository
 import io.github.hexotronic.lauscher.data.SettingsStore
 import io.github.hexotronic.lauscher.music.MusicSettingsStore
+import io.github.hexotronic.lauscher.music.library.MusicLibrary
 import io.github.hexotronic.lauscher.scan.LibraryScanner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +27,7 @@ class LauscherApp : Application() {
     val musicSettings by lazy { MusicSettingsStore(this) }
     val models by lazy { ModelManager(this) }
     val analysis by lazy { AnalysisManager(this, repository, models, musicSettings, appScope) }
+    val musicLibrary by lazy { MusicLibrary(this, musicSettings, appScope) }
 
     override fun onCreate() {
         super.onCreate()

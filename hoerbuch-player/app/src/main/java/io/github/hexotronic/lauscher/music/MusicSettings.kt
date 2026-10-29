@@ -13,6 +13,11 @@ enum class MusicMode(val label: String, val hint: String) {
     FIXED("Feste Atmosphäre", "Immer dieselbe Stimmung oder Geräuschkulisse"),
 }
 
+enum class MusicSource(val label: String, val hint: String) {
+    SYNTH("Erzeugt", "Der eingebaute Synthesizer spielt jede Stimmung – ohne Download"),
+    LIBRARY("Fantasy-Bibliothek", "Echte Orchester- und Folkstücke von Menschen komponiert; fehlende Stimmungen erzeugt der Synthesizer"),
+}
+
 enum class AnalysisDepth(val label: String, val hint: String, val sampleMs: Long) {
     TURBO("Turbo", "12 Sekunden je 2 Minuten – etwa zehnmal schneller als vollständig", 12_000),
     SAMPLES("Stichproben", "25 Sekunden je 2 Minuten – guter Kompromiss", 25_000),
@@ -22,6 +27,8 @@ enum class AnalysisDepth(val label: String, val hint: String, val sampleMs: Long
 data class MusicSettings(
     val enabled: Boolean = false,
     val mode: MusicMode = MusicMode.SCENES,
+    /** Where the music for a mood comes from. */
+    val source: MusicSource = MusicSource.SYNTH,
     val fixedMood: Mood? = Mood.CALM,
     val fixedAtmosphere: Atmosphere? = null,
     val volume: Float = 0.5f,
@@ -51,6 +58,7 @@ class MusicSettingsStore(context: Context) {
         prefs.edit()
             .putBoolean("enabled", next.enabled)
             .putString("mode", next.mode.name)
+            .putString("source", next.source.name)
             .putString("fixedMood", next.fixedMood?.name)
             .putString("fixedAtmosphere", next.fixedAtmosphere?.name)
             .putFloat("volume", next.volume)
@@ -71,6 +79,7 @@ class MusicSettingsStore(context: Context) {
         return MusicSettings(
             enabled = prefs.getBoolean("enabled", d.enabled),
             mode = MusicMode.entries.firstOrNull { it.name == prefs.getString("mode", null) } ?: d.mode,
+            source = MusicSource.entries.firstOrNull { it.name == prefs.getString("source", null) } ?: d.source,
             fixedMood = if (prefs.contains("fixedMood")) Mood.parse(prefs.getString("fixedMood", null)) else d.fixedMood,
             fixedAtmosphere = Atmosphere.entries.firstOrNull { it.name == prefs.getString("fixedAtmosphere", null) },
             volume = prefs.getFloat("volume", d.volume),

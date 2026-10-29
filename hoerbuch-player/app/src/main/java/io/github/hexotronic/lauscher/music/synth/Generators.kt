@@ -8,6 +8,9 @@ internal interface Generator {
     /** Reverb amount wanted by this layer. */
     val reverb: Float
     fun render(left: FloatArray, right: FloatArray, frames: Int)
+
+    /** Frees resources (decoder threads) once the layer has faded out. */
+    fun close() {}
 }
 
 /** Noise based soundscapes: rain, fire, forest, sea, summer night, storm. */

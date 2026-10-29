@@ -13,6 +13,10 @@ import io.github.hexotronic.lauscher.LauscherApp
 import io.github.hexotronic.lauscher.music.synth.SoundSpec
 import io.github.hexotronic.lauscher.music.synth.Mood
 import io.github.hexotronic.lauscher.music.MusicSettings
+import io.github.hexotronic.lauscher.music.MusicSource
+import io.github.hexotronic.lauscher.music.library.LibraryDownload
+import io.github.hexotronic.lauscher.music.library.MusicLibrary
+import io.github.hexotronic.lauscher.music.library.core.LibraryTrack
 import io.github.hexotronic.lauscher.analysis.core.TranscriptWindow
 import io.github.hexotronic.lauscher.analysis.core.Scene
 import io.github.hexotronic.lauscher.analysis.ModelManager
@@ -55,6 +59,7 @@ sealed interface Screen {
     data object Player : Screen
     data object SoundStudio : Screen
     data object Music : Screen
+    data object MusicLibrary : Screen
     data class BookDetail(val bookId: Long) : Screen
 }
 
@@ -266,6 +271,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             "stats" -> navigate(Screen.Stats)
             "settings" -> navigate(Screen.Settings)
             "music" -> navigate(Screen.Music)
+            "musiclibrary" -> navigate(Screen.MusicLibrary)
             "detail" -> (nowPlaying.value.book ?: lastBook.value)?.let { navigate(Screen.BookDetail(it.id)) }
         }
     }
@@ -396,6 +402,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun previewMusic(spec: SoundSpec) = withCore { it.previewMusic(spec) }
+
+    // ------------------------------------------------------------------ fantasy music library
+
+    val musicLibrary: MusicLibrary = app.musicLibrary
+    val libraryInstalled: StateFlow<Set<String>> = app.musicLibrary.installed
+    val libraryDownload: StateFlow<LibraryDownload?> = app.musicLibrary.download
+
+    /** Downloads pieces and switches the music to the library, so they are used right away. */
+    fun downloadMusic(ids: Collection<String>) {
+        app.musicLibrary.download(ids)
+        updateMusic { it.copy(source = MusicSource.LIBRARY) }
+    }
+
+    fun cancelMusicDownload() = app.musicLibrary.cancel()
+
+    fun stopMusicPreview() = withCore { it.stopPreview() }
+
+    fun dismissMusicDownloadError() = app.musicLibrary.clearError()
+
+    fun deleteMusic(ids: Collection<String>) {
+        app.musicLibrary.delete(ids)
+        if (app.musicLibrary.installed.value.isEmpty()) updateMusic { it.copy(source = MusicSource.SYNTH) }
+    }
+
+    fun previewTrack(track: LibraryTrack) = withCore {
+        it.previewMusic(SoundSpec(mood = track.primaryMood, intensity = 0.6f, trackId = track.id), seconds = 30)
+    }
 
     fun downloadModel(model: ModelInfo) {
         val job = viewModelScope.launch {

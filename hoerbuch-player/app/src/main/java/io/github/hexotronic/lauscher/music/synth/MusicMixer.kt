@@ -9,8 +9,10 @@ import kotlin.math.sqrt
 
 /**
  * Renders the background music: cross-fades between scenes, levels all moods to the same
- * loudness, ducks under speech and adds reverb. Thread-safe hand-off: control methods may be
- * called from any thread, [render] runs on the audio thread.
+ * loudness, ducks under speech and adds reverb. Moods come from the synthesizer or, when a
+ * [recordings] source has a piece for them, from the downloaded music library.
+ * Thread-safe hand-off: control methods may be called from any thread, [render] runs on the
+ * audio thread.
  */
 class MusicMixer(private val sampleRate: Int) {
     private class Layer(val generator: Generator, var gain: Float, var target: Float)
@@ -19,6 +21,8 @@ class MusicMixer(private val sampleRate: Int) {
     private val reverb = Reverb(sampleRate)
     private val left = FloatArray(MAX_BLOCK)
     private val right = FloatArray(MAX_BLOCK)
+    private val recLeft = FloatArray(MAX_BLOCK)
+    private val recRight = FloatArray(MAX_BLOCK)
     private var current: SoundSpec? = null
 
     @Volatile
@@ -29,6 +33,21 @@ class MusicMixer(private val sampleRate: Int) {
 
     @Volatile
     private var chimeRequested = false
+
+    @Volatile
+    private var refreshRequested = false
+
+    @Volatile
+    private var closeRequested = false
+
+    /** Recorded music for moods; null plays everything with the synthesizer. */
+    @Volatile
+    var recordings: RecordingSource? = null
+
+    /** Library id of the recorded piece that is currently playing, if any. */
+    @Volatile
+    var currentTrackId: String? = null
+        private set
 
     /** 0..1 user volume. */
     @Volatile
@@ -62,6 +81,21 @@ class MusicMixer(private val sampleRate: Int) {
         chimeRequested = true
     }
 
+    /** Picks the sound for the current target again, e.g. after the music source was changed. */
+    fun refresh() {
+        refreshRequested = true
+    }
+
+    /** Stops everything at once and frees the decoders. */
+    fun closeAll() {
+        closeRequested = true
+        synchronized(layers) {
+            layers.forEach { it.generator.close() }
+            layers.clear()
+        }
+        currentTrackId = null
+    }
+
     /** True when nothing is audible anymore (all layers faded out). */
     val isSilent: Boolean get() = synchronized(layers) { layers.isEmpty() }
 
@@ -80,9 +114,15 @@ class MusicMixer(private val sampleRate: Int) {
     }
 
     private fun renderBlock(n: Int) {
-        if (specChanged) {
+        if (closeRequested) {
+            closeRequested = false
+            current = null
+        }
+        if (specChanged || refreshRequested) {
+            val force = refreshRequested
             specChanged = false
-            applySpec(pendingSpec)
+            refreshRequested = false
+            applySpec(pendingSpec, force)
         }
         if (chimeRequested) {
             chimeRequested = false
@@ -90,12 +130,16 @@ class MusicMixer(private val sampleRate: Int) {
         }
         left.fill(0f, 0, n)
         right.fill(0f, 0, n)
+        recLeft.fill(0f, 0, n)
+        recRight.fill(0f, 0, n)
         val fadeStep = n / (crossfadeSeconds.coerceAtLeast(0.2f) * sampleRate)
         synchronized(layers) {
             val tmpL = scratchL
             val tmpR = scratchR
             var wetSum = 0f
             var gainSum = 0f
+            var playingTrack: String? = null
+            var playingGain = 0f
             val it = layers.iterator()
             while (it.hasNext()) {
                 val layer = it.next()
@@ -106,6 +150,7 @@ class MusicMixer(private val sampleRate: Int) {
                 }
                 val chime = layer.generator as? ChimeGenerator
                 if ((layer.target == 0f && layer.gain <= 0f) || chime?.finished == true) {
+                    layer.generator.close()
                     it.remove()
                     continue
                 }
@@ -114,18 +159,26 @@ class MusicMixer(private val sampleRate: Int) {
                 layer.generator.render(tmpL, tmpR, n)
                 // Equal-power style curve for smooth cross-fades.
                 val g = layer.gain * layer.gain * (3 - 2 * layer.gain)
+                // Recordings are already levelled and get no automatic gain, so they keep their dynamics.
+                val recording = layer.generator as? RecordingGenerator
+                val busL = if (recording != null) recLeft else left
+                val busR = if (recording != null) recRight else right
                 for (i in 0 until n) {
-                    left[i] += tmpL[i] * g
-                    right[i] += tmpR[i] * g
+                    busL[i] += tmpL[i] * g
+                    busR[i] += tmpR[i] * g
+                }
+                if (recording != null && layer.target > 0f && g >= playingGain) {
+                    playingGain = g
+                    playingTrack = recording.trackId
                 }
                 wetSum += layer.generator.reverb * g
                 gainSum += g
             }
             if (gainSum > 0f) reverbWet = wetSum / gainSum
+            currentTrackId = playingTrack
         }
-        reverb.process(left, right, n, reverbWet)
 
-        // Slow automatic gain: every mood ends up equally loud.
+        // Slow automatic gain on the synthesizer: every mood ends up equally loud.
         var p = 0f
         for (i in 0 until n) p += left[i] * left[i] + right[i] * right[i]
         p /= (2 * n)
@@ -136,6 +189,11 @@ class MusicMixer(private val sampleRate: Int) {
         val agcTarget = (TARGET_RMS / sqrt(max(meanPower, 1e-9f))).coerceIn(0.25f, 6f)
         val agcStep = exp(-n / (0.8f * sampleRate))
         agcGain = agcStep * agcGain + (1 - agcStep) * agcTarget
+        for (i in 0 until n) {
+            left[i] = left[i] * agcGain + recLeft[i]
+            right[i] = right[i] * agcGain + recRight[i]
+        }
+        reverb.process(left, right, n, reverbWet)
 
         // Duck under speech: fast down, slow up.
         val duckTarget = if (speechLevelDb > SPEECH_THRESHOLD_DB) 10f.pow(-duckDepthDb / 20f) else 1f
@@ -143,7 +201,7 @@ class MusicMixer(private val sampleRate: Int) {
         duckGain = coef * duckGain + (1 - coef) * duckTarget
 
         val v = volume.coerceIn(0f, 1f)
-        val master = agcGain * duckGain * v * v * MASTER
+        val master = duckGain * v * v * MASTER
         for (i in 0 until n) {
             left[i] = softClip(left[i] * master)
             right[i] = softClip(right[i] * master)
@@ -153,13 +211,29 @@ class MusicMixer(private val sampleRate: Int) {
     private val scratchL = FloatArray(MAX_BLOCK)
     private val scratchR = FloatArray(MAX_BLOCK)
 
-    private fun applySpec(spec: SoundSpec?) {
-        if (spec == current) return
+    private fun applySpec(spec: SoundSpec?, force: Boolean) {
+        if (spec == current && !force) return
         current = spec
         synchronized(layers) {
-            for (l in layers) if (l.generator !is ChimeGenerator) l.target = 0f
+            val mood = spec?.mood
+            // A recorded piece keeps playing across scenes of the same mood instead of restarting.
+            val keep = if (force || mood == null || spec.trackId != null) {
+                null
+            } else {
+                layers.firstOrNull { l -> l.target > 0f && (l.generator as? RecordingGenerator)?.mood == mood }
+            }
+            for (l in layers) if (l.generator !is ChimeGenerator && l !== keep) l.target = 0f
             if (spec != null) {
-                spec.mood?.let { layers.add(Layer(MoodGenerator(sampleRate, it, spec.intensity, spec.seed), 0f, 1f)) }
+                if (mood != null && keep == null) {
+                    val source = recordings
+                    val stream = source?.open(mood, spec.intensity, spec.trackId)
+                    val generator = if (source != null && stream != null) {
+                        RecordingGenerator(sampleRate, source, mood, spec.intensity, stream)
+                    } else {
+                        MoodGenerator(sampleRate, mood, spec.intensity, spec.seed)
+                    }
+                    layers.add(Layer(generator, 0f, 1f))
+                }
                 spec.atmosphere?.let { layers.add(Layer(AtmosphereGenerator(sampleRate, it, 1f, spec.seed), 0f, 1f)) }
             }
         }

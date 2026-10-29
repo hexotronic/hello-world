@@ -53,10 +53,13 @@ import io.github.hexotronic.lauscher.analysis.core.Scene
 import io.github.hexotronic.lauscher.music.AnalysisDepth
 import io.github.hexotronic.lauscher.music.MusicMode
 import io.github.hexotronic.lauscher.music.MusicSettings
+import io.github.hexotronic.lauscher.music.MusicSource
+import io.github.hexotronic.lauscher.music.library.core.MusicCatalog
 import io.github.hexotronic.lauscher.music.synth.Atmosphere
 import io.github.hexotronic.lauscher.music.synth.Mood
 import io.github.hexotronic.lauscher.music.synth.SoundSpec
 import io.github.hexotronic.lauscher.ui.MainViewModel
+import io.github.hexotronic.lauscher.ui.Screen
 import io.github.hexotronic.lauscher.ui.components.LabeledSlider
 import io.github.hexotronic.lauscher.ui.components.MoodMap
 import io.github.hexotronic.lauscher.ui.components.PixelBadge
@@ -84,6 +87,7 @@ fun MusicScreen(vm: MainViewModel) {
     val status by vm.analysisStatus.collectAsStateWithLifecycle()
     val download by vm.modelDownload.collectAsStateWithLifecycle()
     val changes by vm.modelChanges.collectAsStateWithLifecycle()
+    val libraryInstalled by vm.libraryInstalled.collectAsStateWithLifecycle()
     var editScene by remember { mutableStateOf<Scene?>(null) }
 
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
@@ -99,8 +103,9 @@ fun MusicScreen(vm: MainViewModel) {
         )
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(bottom = 24.dp)) {
             Text(
-                "Leise Musik und Geräusche unter der Erzählung. Sie wird direkt auf dem Handy erzeugt und " +
-                    "macht unter Sprache Platz. Die Szenen erkennt eine lokale KI – nichts verlässt das Gerät.",
+                "Leise Musik und Geräusche unter der Erzählung – vom eingebauten Synthesizer oder aus der " +
+                    "Fantasy-Musikbibliothek. Sie macht unter Sprache Platz. Die Szenen erkennt eine lokale KI – " +
+                    "nichts verlässt das Gerät.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(16.dp),
@@ -161,6 +166,26 @@ fun MusicScreen(vm: MainViewModel) {
                     "Am Anfang jedes Kapitels spielt 25 Sekunden ruhige Musik, am Ende 15 Sekunden ein leiser Ausklang.",
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+
+            SectionHeader("Klangquelle")
+            MusicSource.entries.forEach { source ->
+                SourceOption(source, selected = s.source == source, enabled = source == MusicSource.SYNTH || libraryInstalled.isNotEmpty()) {
+                    vm.updateMusic { it.copy(source = source) }
+                }
+            }
+            RetroButton(
+                onClick = { vm.navigate(Screen.MusicLibrary) },
+                style = if (libraryInstalled.isEmpty()) RetroButtonStyle.PRIMARY else RetroButtonStyle.SECONDARY,
+                modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
+            ) {
+                Text(
+                    if (libraryInstalled.isEmpty()) {
+                        "Fantasy-Musik laden (${MusicCatalog.tracks.size} Stücke)"
+                    } else {
+                        "Fantasy-Bibliothek (${libraryInstalled.size}/${MusicCatalog.tracks.size} geladen)"
+                    },
                 )
             }
 
@@ -227,11 +252,20 @@ private fun MoodLegend(scenes: List<Scene>) {
 }
 
 @Composable
-private fun ModeOption(mode: MusicMode, selected: Boolean, onClick: () -> Unit) {
+private fun ModeOption(mode: MusicMode, selected: Boolean, onClick: () -> Unit) =
+    OptionBox(mode.label, mode.hint, selected, enabled = true, onClick)
+
+@Composable
+private fun SourceOption(source: MusicSource, selected: Boolean, enabled: Boolean, onClick: () -> Unit) =
+    OptionBox(source.label, if (enabled) source.hint else "Lade zuerst Stücke herunter", selected, enabled, onClick)
+
+@Composable
+private fun OptionBox(label: String, hint: String, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
     RetroBox(
         modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 20.dp, bottom = 10.dp),
         background = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
         shadow = if (selected) 0.dp else 3.dp,
+        enabled = enabled,
         onClick = onClick,
     ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -244,8 +278,12 @@ private fun ModeOption(mode: MusicMode, selected: Boolean, onClick: () -> Unit) 
             )
             Spacer(Modifier.width(12.dp))
             Column {
-                Text(mode.label, style = MaterialTheme.typography.titleSmall)
-                Text(mode.hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    label,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

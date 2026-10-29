@@ -16,6 +16,9 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.hexotronic.lauscher.audio.dsp.EnhancerPreset
 import io.github.hexotronic.lauscher.music.MusicMode
+import io.github.hexotronic.lauscher.music.MusicSource
+import io.github.hexotronic.lauscher.music.library.core.MusicCatalog
+import io.github.hexotronic.lauscher.music.synth.Mood
 import io.github.hexotronic.lauscher.ui.LauscherRoot
 import io.github.hexotronic.lauscher.ui.MainViewModel
 import io.github.hexotronic.lauscher.ui.Screen
@@ -89,6 +92,14 @@ class MainActivity : ComponentActivity() {
         intent.getStringExtra(EXTRA_WHISPER_MODEL)?.let { id -> vm.updateMusic { it.copy(whisperModel = id) } }
         intent.getStringExtra(EXTRA_LLM_MODEL)?.let { id -> vm.updateMusic { it.copy(llmModel = id) } }
         intent.getStringExtra(EXTRA_LANGUAGE)?.let { lang -> vm.updateMusic { it.copy(language = lang) } }
+        intent.getStringExtra(EXTRA_MUSIC_DOWNLOAD)?.let { ids -> vm.downloadMusic(ids.split(',').map { it.trim() }) }
+        intent.getStringExtra(EXTRA_MUSIC_FIXED)?.let { name ->
+            val mood = Mood.parse(name) ?: return@let
+            vm.updateMusic {
+                it.copy(enabled = true, mode = MusicMode.FIXED, fixedMood = mood, fixedAtmosphere = null, source = MusicSource.LIBRARY)
+            }
+        }
+        intent.getStringExtra(EXTRA_MUSIC_PREVIEW)?.let { id -> MusicCatalog.byId(id)?.let(vm::previewTrack) }
     }
 
     private fun requestNotificationPermission() {
@@ -110,5 +121,8 @@ class MainActivity : ComponentActivity() {
         const val EXTRA_LANGUAGE = "language"
         const val EXTRA_IMPORT_PATH = "import_path"
         const val EXTRA_ANALYZE = "analyze"
+        const val EXTRA_MUSIC_DOWNLOAD = "music_download"
+        const val EXTRA_MUSIC_FIXED = "music_fixed"
+        const val EXTRA_MUSIC_PREVIEW = "music_preview"
     }
 }

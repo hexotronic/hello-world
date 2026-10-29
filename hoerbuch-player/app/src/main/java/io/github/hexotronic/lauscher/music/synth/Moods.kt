@@ -36,6 +36,8 @@ data class SoundSpec(
     val intensity: Float = 0.5f,
     /** Varies melodies between scenes. */
     val seed: Long = 1L,
+    /** A specific piece of the music library (previews); otherwise one is picked for the mood. */
+    val trackId: String? = null,
 )
 
 /**

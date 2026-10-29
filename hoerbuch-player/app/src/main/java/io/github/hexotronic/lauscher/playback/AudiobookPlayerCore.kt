@@ -59,6 +59,8 @@ data class NowPlaying(
     val scene: Scene? = null,
     /** True while background music is audible. */
     val musicPlaying: Boolean = false,
+    /** Downloaded piece that is playing as background music (for its credit), if any. */
+    val musicTrackId: String? = null,
 ) {
     val chapter: Chapter? get() = chapters.getOrNull(chapterIndex)
     val chapterPositionMs: Long get() = chapter?.let { (positionMs - it.startMs).coerceAtLeast(0) } ?: positionMs
@@ -102,7 +104,7 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
     private var undoSetAt = 0L
     private var error: String? = null
     private val shake = ShakeDetector(context) { onShake() }
-    private val music = MusicEngine()
+    private val music = MusicEngine(app.musicLibrary)
     private var scenes: List<Scene> = emptyList()
     private var scenesJob: Job? = null
     private var lastChapterIndex = -1
@@ -181,7 +183,14 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
             settingsStore.settings.collect { s -> exoPlayer.skipSilenceEnabled = s.skipSilence }
         }
         scope.launch {
-            app.musicSettings.settings.collect { refresh() }
+            var source = app.musicSettings.current.source
+            app.musicSettings.settings.collect { s ->
+                if (s.source != source) {
+                    source = s.source
+                    music.refresh()
+                }
+                refresh()
+            }
         }
     }
 
@@ -639,6 +648,7 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
             undoPositionMs = undoPosition,
             scene = scene,
             musicPlaying = music.currentSpec != null && (exoPlayer.isPlaying || SystemClock.elapsedRealtime() < previewUntil),
+            musicTrackId = music.currentTrackId,
         )
         _state.value = next
         WidgetUpdater.onState(context, next)
@@ -648,7 +658,7 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
         saveProgress()
         flushStats()
         shake.setActive(false)
-        music.setPlaying(false)
+        music.release()
         exoPlayer.removeListener(listener)
         scope.cancel()
     }

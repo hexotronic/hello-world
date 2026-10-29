@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- AI models are large and can be downloaded again, so they are not part of backups. -->
+<!-- AI models and downloaded music are large and can be downloaded again, so they are not part of backups. -->
 <full-backup-content>
     <exclude domain="file" path="models/" />
+    <exclude domain="file" path="music/" />
     <exclude domain="file" path="demo/" />
+    <exclude domain="external" path="models/" />
+    <exclude domain="external" path="music/" />
 </full-backup-content>

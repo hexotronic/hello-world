@@ -70,6 +70,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.hexotronic.lauscher.music.library.core.MusicCatalog
 import io.github.hexotronic.lauscher.playback.NowPlaying
 import io.github.hexotronic.lauscher.playback.SleepMode
 import io.github.hexotronic.lauscher.ui.MainViewModel
@@ -330,6 +331,17 @@ private fun PlayerContent(
                     )
                 }
             }
+        }
+        // Credit for the downloaded piece that plays underneath.
+        np.musicTrackId?.takeIf { np.musicPlaying }?.let { MusicCatalog.byId(it) }?.let { piece ->
+            Text(
+                "♪ ${piece.title} – ${piece.composer}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 4.dp).clickable { vm.navigate(Screen.MusicLibrary) },
+            )
         }
         np.undoPositionMs?.let { undo ->
             AssistChip(

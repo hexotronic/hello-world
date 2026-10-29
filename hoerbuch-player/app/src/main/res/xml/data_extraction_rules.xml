@@ -2,9 +2,13 @@
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="file" path="models/" />
+        <exclude domain="file" path="music/" />
         <exclude domain="file" path="demo/" />
+        <exclude domain="external" path="models/" />
+        <exclude domain="external" path="music/" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="file" path="models/" />
+        <exclude domain="external" path="models/" />
     </device-transfer>
 </data-extraction-rules>

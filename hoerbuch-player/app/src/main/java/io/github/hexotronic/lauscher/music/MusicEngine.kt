@@ -6,14 +6,15 @@ import android.media.AudioTrack
 import android.os.Process
 import io.github.hexotronic.lauscher.audio.AudioEnhancerHub
 import io.github.hexotronic.lauscher.music.synth.MusicMixer
+import io.github.hexotronic.lauscher.music.synth.RecordingSource
 import io.github.hexotronic.lauscher.music.synth.SoundSpec
 
 /**
- * Plays the generated background music on its own AudioTrack, next to the audiobook.
- * Starts and stops with the narration (with a short fade) and ducks under speech.
+ * Plays the background music (synthesizer or downloaded pieces) on its own AudioTrack, next
+ * to the audiobook. Starts and stops with the narration (with a short fade) and ducks under speech.
  */
-class MusicEngine {
-    private val mixer = MusicMixer(SAMPLE_RATE)
+class MusicEngine(recordings: RecordingSource? = null) {
+    private val mixer = MusicMixer(SAMPLE_RATE).apply { this.recordings = recordings }
     private var thread: Thread? = null
 
     @Volatile
@@ -39,6 +40,12 @@ class MusicEngine {
     }
 
     fun chime() = mixer.playChime()
+
+    /** Library id of the downloaded piece that is playing, if any. */
+    val currentTrackId: String? get() = mixer.currentTrackId
+
+    /** Chooses the music for the current scene again (after the music source changed). */
+    fun refresh() = mixer.refresh()
 
     @Synchronized
     fun setPlaying(playing: Boolean) {
@@ -106,6 +113,7 @@ class MusicEngine {
 
     fun release() {
         wantPlaying = false
+        mixer.closeAll()
     }
 
     companion object {
