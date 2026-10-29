@@ -43,6 +43,9 @@ jobs:
             echo "LAUSCHER_KEYSTORE=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
           fi
 
+      - name: Show preinstalled NDK
+        run: echo "NDK: $ANDROID_NDK_LATEST_HOME"
+
       - name: Unit tests
         run: ./gradlew --no-daemon testReleaseUnitTest
 

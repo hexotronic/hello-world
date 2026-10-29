@@ -9,6 +9,8 @@ plugins {
 android {
     namespace = "io.github.hexotronic.lauscher.whisper"
     compileSdk = 35
+    // On CI use the NDK that is already installed on the runner instead of downloading one.
+    System.getenv("ANDROID_NDK_LATEST_HOME")?.let { ndkVersion = java.io.File(it).name }
 
     defaultConfig {
         minSdk = 26
