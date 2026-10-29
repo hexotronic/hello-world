@@ -176,8 +176,13 @@ private fun DailyChart(values: List<Pair<LocalDate, Long>>) {
     val label = MaterialTheme.colorScheme.onSurfaceVariant
     val ink = LocalRetro.current.ink
     val maxMs = max(values.maxOf { it.second }, 60_000L)
-    // Round the axis up to whole quarter hours (or hours above 2 h).
-    val stepMs = if (maxMs > 2 * 3_600_000L) 3_600_000L else 15 * 60_000L
+    // Round the axis up to a clean step that suits the largest day.
+    val stepMs = when {
+        maxMs > 2 * 3_600_000L -> 3_600_000L
+        maxMs > 30 * 60_000L -> 15 * 60_000L
+        maxMs > 5 * 60_000L -> 5 * 60_000L
+        else -> 60_000L
+    }
     val axisMax = ceil(maxMs.toDouble() / stepMs).toLong() * stepMs
     val dateFormat = DateTimeFormatter.ofPattern("EEEE, d. MMMM", Locale.GERMANY)
 
@@ -241,5 +246,6 @@ private fun axisLabel(ms: Long): String = when {
     ms == 0L -> "0"
     ms % 3_600_000L == 0L -> "${ms / 3_600_000L} h"
     ms >= 3_600_000L -> String.format(Locale.GERMANY, "%.1f h", ms / 3_600_000.0)
+    ms < 60_000L -> "${ms / 1000L} s"
     else -> "${ms / 60_000L} min"
 }

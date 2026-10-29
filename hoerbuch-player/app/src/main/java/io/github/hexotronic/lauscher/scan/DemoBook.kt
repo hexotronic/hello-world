@@ -53,12 +53,12 @@ object DemoBook {
             rootUri = "demo",
             title = "Lauscher-Demo: Rauschtest",
             author = "Lauscher",
-            narrator = "Synthetische Stimme",
+            narrator = "Robo-Sprecher",
             year = null,
             description = "Eine künstliche Stimme mit Bandrauschen, Netzbrummen und Knistern. " +
                 "Öffne das Klangstudio und vergleiche mit der A/B-Taste.",
             coverPath = null,
-            signature = "demo-v1",
+            signature = "demo-v2",
             tracks = tracks,
             chapters = marks,
         )

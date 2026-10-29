@@ -32,7 +32,8 @@ fun formatHours(ms: Long): String {
     return when {
         hours >= 10 -> String.format(German, "%.0f Std.", hours)
         hours >= 1 -> String.format(German, "%.1f Std.", hours)
-        else -> "${ms / 60_000} Min."
+        ms >= 60_000 -> "${ms / 60_000} Min."
+        else -> "${ms / 1000} Sek."
     }
 }
 
