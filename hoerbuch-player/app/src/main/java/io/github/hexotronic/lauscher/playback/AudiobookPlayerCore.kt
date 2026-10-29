@@ -278,6 +278,8 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
         val d = details ?: return
         val from = currentPosition()
         val target = positionMs.coerceIn(0, max(0, d.book.durationMs - 500))
+        // A deliberate jump while paused makes the smart rewind on resume pointless.
+        if (rememberUndo) pausedAt = 0
         if (rememberUndo && abs(target - from) > 60_000) {
             undoPosition = from
             undoSetAt = SystemClock.elapsedRealtime()
@@ -305,6 +307,7 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
     fun nextChapter() {
         val chapters = details?.chapters ?: return
         val i = chapterIndexAt(chapters, currentPosition())
+        pausedAt = 0
         if (i + 1 < chapters.size) seekTo(chapters[i + 1].startMs, rememberUndo = false)
     }
 
@@ -314,6 +317,7 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
         val pos = currentPosition()
         val i = chapterIndexAt(chapters, pos)
         val target = if (pos - chapters[i].startMs > 3_000 || i == 0) chapters[i].startMs else chapters[i - 1].startMs
+        pausedAt = 0
         seekTo(target, rememberUndo = false)
     }
 

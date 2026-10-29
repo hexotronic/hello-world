@@ -143,7 +143,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Binding a MediaController starts the playback service (and therefore the player core). */
     fun connect() {
-        if (controllerFuture != null) return
+        controllerFuture?.let { future ->
+            // Reconnect if the service was stopped in the meantime (e.g. notification swiped away).
+            val stale = future.isDone && runCatching { !future.get().isConnected }.getOrDefault(true)
+            if (!stale) return
+            MediaController.releaseFuture(future)
+        }
         val context = getApplication<Application>()
         val token = SessionToken(context, ComponentName(context, PlaybackService::class.java))
         controllerFuture = MediaController.Builder(context, token).buildAsync()
@@ -208,16 +213,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun rescan(force: Boolean = false) {
+    /** @param quiet only report when something changed (used for the automatic scan at start). */
+    fun rescan(force: Boolean = false, quiet: Boolean = false) {
         viewModelScope.launch {
             scanner.scanAll(force)
-            reportScan()
+            reportScan(quiet)
         }
     }
 
-    private fun reportScan() {
+    private fun reportScan(quiet: Boolean = false) {
         val s = scanner.state.value
         if (s is io.github.hexotronic.lauscher.scan.ScanState.Finished) {
+            if (quiet && s.added == 0 && s.errors == 0) {
+                scanner.clearFinishedState()
+                return
+            }
             val text = buildString {
                 append("${s.books} Hörbücher")
                 if (s.added > 0) append(", ${s.added} neu")

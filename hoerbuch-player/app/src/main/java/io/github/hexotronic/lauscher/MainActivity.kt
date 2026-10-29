@@ -35,7 +35,7 @@ class MainActivity : ComponentActivity() {
         }
         if (savedInstanceState == null) {
             handleIntent(intent)
-            if (vm.settings.value.autoRescan) vm.rescan()
+            if (vm.settings.value.autoRescan) vm.rescan(quiet = true)
         }
         requestNotificationPermission()
     }
