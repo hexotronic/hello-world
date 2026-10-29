@@ -13,9 +13,10 @@ enum class MusicMode(val label: String, val hint: String) {
     FIXED("Feste Atmosphäre", "Immer dieselbe Stimmung oder Geräuschkulisse"),
 }
 
-enum class AnalysisDepth(val label: String, val hint: String) {
-    SAMPLES("Stichproben", "35 Sekunden je 1,5 Minuten – etwa viermal schneller"),
-    FULL("Vollständig", "Jede Sekunde wird transkribiert – genauer, aber langsamer"),
+enum class AnalysisDepth(val label: String, val hint: String, val sampleMs: Long) {
+    TURBO("Turbo", "12 Sekunden je 2 Minuten – etwa zehnmal schneller als vollständig", 12_000),
+    SAMPLES("Stichproben", "25 Sekunden je 2 Minuten – guter Kompromiss", 25_000),
+    FULL("Vollständig", "Jede Sekunde wird transkribiert – am genauesten, aber langsam", Long.MAX_VALUE),
 }
 
 data class MusicSettings(

@@ -13,7 +13,6 @@ import io.github.hexotronic.lauscher.data.Book
 import io.github.hexotronic.lauscher.data.LibraryRepository
 import io.github.hexotronic.lauscher.data.Track
 import io.github.hexotronic.lauscher.llm.LlamaNative
-import io.github.hexotronic.lauscher.music.AnalysisDepth
 import io.github.hexotronic.lauscher.music.MusicSettingsStore
 import io.github.hexotronic.lauscher.playback.AudiobookPlayerCore
 import io.github.hexotronic.lauscher.whisper.WhisperNative
@@ -31,7 +30,15 @@ import kotlin.coroutines.coroutineContext
 
 sealed interface AnalysisStatus {
     data object Idle : AnalysisStatus
-    data class Running(val bookId: Long, val phase: String, val done: Int, val total: Int, val automatic: Boolean) : AnalysisStatus
+    data class Running(
+        val bookId: Long,
+        val phase: String,
+        val done: Int,
+        val total: Int,
+        val automatic: Boolean,
+        /** Estimated remaining time, once a few windows have been measured. */
+        val remainingSeconds: Int? = null,
+    ) : AnalysisStatus
     data class Finished(val bookId: Long, val windows: Int, val usedLanguageModel: Boolean) : AnalysisStatus
     data class Failed(val message: String) : AnalysisStatus
 }
@@ -112,31 +119,47 @@ class AnalysisManager(
             ?: error("Kein Spracherkennungsmodell installiert – bitte unter „KI-Modelle“ herunterladen")
         _status.value = AnalysisStatus.Running(bookId, "Lade Spracherkennung …", 0, todo.size, automatic)
         val whisper = WhisperNative.load(whisperFile.absolutePath) ?: error("Spracherkennungsmodell konnte nicht geladen werden")
+        Log.i(TAG, "Variante: Whisper ${WhisperNative.variant}, LLM ${LlamaNative.variant}, ${LlamaNative.defaultThreads()} Threads, ${s.depth.label}")
         var llm: LlamaNative? = null
         var analysed = 0
+        val started = System.nanoTime()
+        fun remaining(): Int? = if (analysed < 2) null else {
+            val perWindow = (System.nanoTime() - started) / 1e9 / analysed
+            (perWindow * (todo.size - analysed)).toInt()
+        }
         try {
             for (batch in todo.chunked(BATCH)) {
                 coroutineContext.ensureActive()
                 val windows = ArrayList<TranscriptWindow>()
+                val t0 = System.nanoTime()
                 for (w in batch) {
                     coroutineContext.ensureActive()
-                    _status.value = AnalysisStatus.Running(bookId, "Höre zu: ${ScenePrompt.clock(w.first)}", analysed, todo.size, automatic)
+                    _status.value = AnalysisStatus.Running(bookId, "Höre zu: ${ScenePrompt.clock(w.first)}", analysed, todo.size, automatic, remaining())
                     val existing = repo.transcriptAt(bookId, w.first)
-                    val text = existing?.text ?: transcribe(whisper, details.tracks, w, s.depth == AnalysisDepth.FULL, s.language)
+                    val text = existing?.text ?: transcribe(whisper, details.tracks, w, s.depth.sampleMs, s.language)
                     val window = TranscriptWindow(w.first, w.last + 1, text)
                     if (existing == null) repo.saveTranscript(bookId, window)
                     windows.add(window)
                     analysed++
                 }
-                _status.value = AnalysisStatus.Running(bookId, "Verstehe die Szene …", analysed, todo.size, automatic)
+                val t1 = System.nanoTime()
+                _status.value = AnalysisStatus.Running(bookId, "Verstehe die Szene …", analysed, todo.size, automatic, remaining())
                 if (llm == null && hasLanguageModel) {
                     llm = models.fileFor(s.llmModel)?.let { LlamaNative.load(it.absolutePath, CONTEXT) }
                     currentLlm = llm
                 }
+                val t2 = System.nanoTime()
                 val moods = classify(details.book, windows, llm)
                 repo.saveWindowMoods(bookId, moods)
+                val t3 = System.nanoTime()
+                Log.i(
+                    TAG,
+                    "Zeit für ${batch.size} Abschnitte: Spracherkennung ${(t1 - t0) / 1_000_000} ms, " +
+                        "Modell laden ${(t2 - t1) / 1_000_000} ms, Sprachmodell ${(t3 - t2) / 1_000_000} ms",
+                )
             }
             _status.value = AnalysisStatus.Finished(bookId, analysed, llm != null)
+            Log.i(TAG, "Analyse fertig: $analysed Abschnitte in ${(System.nanoTime() - started) / 1_000_000} ms")
         } finally {
             whisper.close()
             llm?.close()
@@ -144,27 +167,31 @@ class AnalysisManager(
         }
     }
 
-    private fun transcribe(whisper: WhisperNative, tracks: List<Track>, window: LongRange, full: Boolean, language: String): String {
-        val sample = WindowPlanner.sampleOf(window, full)
-        val (index, offset) = AudiobookPlayerCore.locate(tracks, sample.first)
-        val track = tracks.getOrNull(index) ?: return ""
-        val length = minOf(sample.last + 1 - sample.first, (track.durationMs - offset).coerceAtLeast(0))
-        if (length < 2_000) return ""
-        val pcm = AudioSegmentDecoder.decode(context, Uri.parse(track.uri), offset, length)
-        if (pcm.size < WhisperNative.SAMPLE_RATE) return ""
-        return whisper.transcribe(pcm, language).joinToString(" ") { it.text }.trim()
+    private fun transcribe(whisper: WhisperNative, tracks: List<Track>, window: LongRange, sampleMs: Long, language: String): String {
+        val sample = WindowPlanner.sampleOf(window, sampleMs)
+        // One whisper pass handles 30 s; longer samples (full mode) are cut into chunks.
+        return WindowPlanner.chunks(sample).joinToString(" ") { chunk ->
+            val (index, offset) = AudiobookPlayerCore.locate(tracks, chunk.first)
+            val track = tracks.getOrNull(index) ?: return@joinToString ""
+            val length = minOf(chunk.last + 1 - chunk.first, (track.durationMs - offset).coerceAtLeast(0))
+            if (length < 2_000) return@joinToString ""
+            val pcm = AudioSegmentDecoder.decode(context, Uri.parse(track.uri), offset, length)
+            if (pcm.size < WhisperNative.SAMPLE_RATE) return@joinToString ""
+            whisper.transcribe(pcm, language).joinToString(" ") { it.text }.trim()
+        }.trim()
     }
 
     private suspend fun classify(book: Book, windows: List<TranscriptWindow>, llm: LlamaNative?): List<WindowMood> {
         if (llm != null) {
             val story = repo.story(book.id)
-            var maxChars = 900
+            var maxChars = 450
             var prompt: String
             do {
                 prompt = llm.chatPrompt(ScenePrompt.SYSTEM, ScenePrompt.user(book.title, book.author, story, windows, maxChars))
-                maxChars -= 200
+                maxChars -= 100
             } while (llm.countTokens(prompt) + maxTokens(windows.size) > llm.contextSize && maxChars > 100)
-            val output = llm.generate(prompt, ScenePrompt.grammar(windows.size), maxTokens(windows.size), temperature = 0.2f)
+            // Greedy decoding: deterministic and the fastest path through the JSON grammar.
+            val output = llm.generate(prompt, ScenePrompt.grammar(windows.size), maxTokens(windows.size), temperature = 0f)
             val parsed = output?.let { ScenePrompt.parse(it, windows) }
             if (parsed != null) {
                 if (parsed.story.isNotBlank()) repo.saveStory(book.id, parsed.story)
@@ -181,7 +208,7 @@ class AnalysisManager(
         }
     }
 
-    private fun maxTokens(windows: Int) = 200 + 60 * windows
+    private fun maxTokens(windows: Int) = 120 + 40 * windows
 
     /** "Was bisher geschah": a spoiler-free recap from the transcripts up to [positionMs]. */
     suspend fun recap(bookId: Long, positionMs: Long): Result<String> {
@@ -217,7 +244,8 @@ class AnalysisManager(
 
     companion object {
         private const val TAG = "LauscherAnalyse"
-        private const val BATCH = 5
+        /** Windows per language-model call: the instructions are read once for all of them. */
+        private const val BATCH = 8
         private const val CONTEXT = 4096
         private const val AHEAD_MS = 8 * 60_000L
     }

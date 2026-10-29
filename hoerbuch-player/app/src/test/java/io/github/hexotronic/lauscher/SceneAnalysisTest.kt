@@ -84,10 +84,13 @@ class SceneAnalysisTest {
     @Test
     fun planner() {
         val w = WindowPlanner.windows(400_000)
-        assertEquals(5, w.size)
+        assertEquals(4, w.size)
         assertEquals(360_000L until 400_000L, w.last())
-        val sample = WindowPlanner.sampleOf(0L until 90_000L, full = false)
-        assertEquals(35_000L, sample.last + 1 - sample.first)
+        val sample = WindowPlanner.sampleOf(0L until 120_000L, 25_000L)
+        assertEquals(25_000L, sample.last + 1 - sample.first)
+        assertEquals(0L until 120_000L, WindowPlanner.sampleOf(0L until 120_000L, Long.MAX_VALUE))
+        val chunks = WindowPlanner.chunks(0L until 100_000L)
+        assertEquals(listOf(0L until 30_000L, 30_000L until 60_000L, 60_000L until 90_000L, 90_000L until 100_000L), chunks)
     }
 
     @Test

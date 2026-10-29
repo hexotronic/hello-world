@@ -72,6 +72,7 @@ import io.github.hexotronic.lauscher.ui.components.block
 import io.github.hexotronic.lauscher.ui.components.moodColor
 import io.github.hexotronic.lauscher.ui.components.onMoodColor
 import io.github.hexotronic.lauscher.ui.formatClock
+import io.github.hexotronic.lauscher.ui.formatHuman
 import io.github.hexotronic.lauscher.ui.theme.LocalRetro
 import io.github.hexotronic.lauscher.ui.theme.PixelFont
 
@@ -295,7 +296,11 @@ private fun AnalysisBlock(vm: MainViewModel, s: MusicSettings, status: AnalysisS
                 Text(status.phase + if (status.automatic) " (vorausschauend)" else "", style = MaterialTheme.typography.bodyMedium)
                 Spacer(Modifier.height(4.dp))
                 RetroProgress(if (status.total > 0) status.done.toFloat() / status.total else 0f)
-                Text("${status.done} von ${status.total} Abschnitten", style = MaterialTheme.typography.labelSmall)
+                Text(
+                    "${status.done} von ${status.total} Abschnitten" +
+                        (status.remainingSeconds?.let { " · noch ca. ${formatHuman(it * 1000L)}" } ?: ""),
+                    style = MaterialTheme.typography.labelSmall,
+                )
                 Spacer(Modifier.height(8.dp))
                 RetroButton(onClick = { vm.stopAnalysis() }, style = RetroButtonStyle.PLAIN) { Text("Stopp") }
             }

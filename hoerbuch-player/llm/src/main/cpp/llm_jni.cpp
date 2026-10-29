@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cmath>
 #include <cstring>
 #include <string>
 #include <vector>
@@ -31,6 +32,8 @@ struct Session {
     int n_ctx = 0;
     int n_batch = 0;
     std::atomic<bool> cancel{false};
+    // Tokens currently in the KV cache (the last prompt): a shared prefix is not computed again.
+    std::vector<llama_token> cached;
 };
 
 void log_callback(ggml_log_level level, const char * text, void *) {
@@ -71,6 +74,14 @@ std::vector<llama_token> tokenize(const llama_vocab * vocab, const std::string &
         llama_tokenize(vocab, text.data(), static_cast<int32_t>(text.size()), tokens.data(), n, true, true);
     }
     return tokens;
+}
+
+llama_token argmax(const float * logits, int n) {
+    int best = 0;
+    for (int i = 1; i < n; ++i) {
+        if (logits[i] > logits[best]) best = i;
+    }
+    return best;
 }
 
 std::string piece(const llama_vocab * vocab, llama_token token) {
@@ -183,12 +194,84 @@ Java_io_github_hexotronic_lauscher_llm_LlamaNative_nativeGenerate(
     const std::string prompt = bytes_to_string(env, prompt_bytes);
     const std::string grammar = to_string(env, grammar_str);
 
-    llama_memory_clear(llama_get_memory(s->ctx), true);
-
     std::vector<llama_token> tokens = tokenize(s->vocab, prompt);
     if (tokens.empty() || static_cast<int>(tokens.size()) + max_tokens > s->n_ctx) {
         LOGW("prompt too long: %zu tokens, context %d", tokens.size(), s->n_ctx);
         return to_bytes(env, "");
+    }
+
+    // Reuse the KV cache for the part of the prompt that did not change (system prompt,
+    // book title …). At least one token must be decoded to get fresh logits.
+    size_t keep = 0;
+    while (keep < s->cached.size() && keep < tokens.size() && s->cached[keep] == tokens[keep]) ++keep;
+    if (keep >= tokens.size()) keep = tokens.size() - 1;
+    llama_memory_t mem = llama_get_memory(s->ctx);
+    if (keep == 0 || !llama_memory_seq_rm(mem, 0, static_cast<llama_pos>(keep), -1)) {
+        llama_memory_clear(mem, true);
+        keep = 0;
+    }
+    s->cached.clear();
+
+    for (size_t i = keep; i < tokens.size(); i += static_cast<size_t>(s->n_batch)) {
+        const int n = static_cast<int>(std::min(tokens.size() - i, static_cast<size_t>(s->n_batch)));
+        llama_batch batch = llama_batch_get_one(tokens.data() + i, n);
+        if (llama_decode(s->ctx, batch) != 0) {
+            LOGW("decode failed while reading the prompt");
+            llama_memory_clear(mem, true);
+            return to_bytes(env, "");
+        }
+        if (s->cancel.load()) {
+            llama_memory_clear(mem, true);
+            return to_bytes(env, "");
+        }
+    }
+    s->cached = tokens;
+    LOGI("prompt: %zu tokens, %zu reused from cache", tokens.size(), keep);
+
+    std::string out;
+    if (!grammar.empty() && temperature <= 0.0f) {
+        // Greedy decoding with "lazy" grammar: the grammar is only evaluated against the whole
+        // vocabulary when the model's favourite token breaks the JSON format. Checking 150k
+        // candidates on every step is the slowest part of constrained decoding otherwise.
+        llama_sampler * g = llama_sampler_init_grammar(s->vocab, grammar.c_str(), "root");
+        if (g == nullptr) {
+            LOGW("invalid grammar");
+            return to_bytes(env, "");
+        }
+        const int n_vocab = llama_vocab_n_tokens(s->vocab);
+        std::vector<llama_token_data> candidates;
+        for (int i = 0; i < max_tokens; ++i) {
+            if (s->cancel.load()) break;
+            const float * logits = llama_get_logits_ith(s->ctx, -1);
+            llama_token token = argmax(logits, n_vocab);
+            llama_token_data single = {token, logits[token], 0.0f};
+            llama_token_data_array one = {&single, 1, -1, false};
+            llama_sampler_apply(g, &one);
+            if (!std::isfinite(one.data[0].logit)) {
+                candidates.resize(static_cast<size_t>(n_vocab));
+                for (int t = 0; t < n_vocab; ++t) candidates[static_cast<size_t>(t)] = {t, logits[t], 0.0f};
+                llama_token_data_array all = {candidates.data(), candidates.size(), -1, false};
+                llama_sampler_apply(g, &all);
+                int best = -1;
+                for (size_t c = 0; c < all.size; ++c) {
+                    if (std::isfinite(all.data[c].logit) && (best < 0 || all.data[c].logit > all.data[best].logit)) {
+                        best = static_cast<int>(c);
+                    }
+                }
+                if (best < 0) break;
+                token = all.data[best].id;
+            }
+            if (llama_vocab_is_eog(s->vocab, token)) break;
+            llama_sampler_accept(g, token);
+            out += piece(s->vocab, token);
+            llama_batch batch = llama_batch_get_one(&token, 1);
+            if (llama_decode(s->ctx, batch) != 0) {
+                LOGW("decode failed while generating");
+                break;
+            }
+        }
+        llama_sampler_free(g);
+        return to_bytes(env, out);
     }
 
     llama_sampler * chain = llama_sampler_chain_init(llama_sampler_chain_default_params());
@@ -208,23 +291,6 @@ Java_io_github_hexotronic_lauscher_llm_LlamaNative_nativeGenerate(
         llama_sampler_chain_add(chain, llama_sampler_init_temp(temperature));
         llama_sampler_chain_add(chain, llama_sampler_init_dist(static_cast<uint32_t>(seed)));
     }
-
-    // Feed the prompt in batches.
-    for (size_t i = 0; i < tokens.size(); i += static_cast<size_t>(s->n_batch)) {
-        const int n = static_cast<int>(std::min(tokens.size() - i, static_cast<size_t>(s->n_batch)));
-        llama_batch batch = llama_batch_get_one(tokens.data() + i, n);
-        if (llama_decode(s->ctx, batch) != 0) {
-            LOGW("decode failed while reading the prompt");
-            llama_sampler_free(chain);
-            return to_bytes(env, "");
-        }
-        if (s->cancel.load()) {
-            llama_sampler_free(chain);
-            return to_bytes(env, "");
-        }
-    }
-
-    std::string out;
     for (int i = 0; i < max_tokens; ++i) {
         if (s->cancel.load()) break;
         llama_token token = llama_sampler_sample(chain, s->ctx, -1);

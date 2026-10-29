@@ -15,4 +15,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "Lauscher"
-include(":app", ":llm", ":whisper")
+include(":app", ":llm", ":llm-fast", ":whisper", ":whisper-fast")

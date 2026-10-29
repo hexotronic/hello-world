@@ -28,16 +28,15 @@ class WhisperNative private constructor(private var handle: Long) : Closeable {
     companion object {
         const val SAMPLE_RATE = 16_000
 
-        init {
-            System.loadLibrary("lauscher_whisper")
-        }
+        /** "schnell" or "standard", see [NativeCpu]. */
+        val variant: String = NativeCpu.load("lauscher_whisper")
 
         fun load(path: String): WhisperNative? {
             val h = nativeInit(path)
             return if (h == 0L) null else WhisperNative(h)
         }
 
-        fun defaultThreads(): Int = (Runtime.getRuntime().availableProcessors() - 2).coerceIn(2, 6)
+        fun defaultThreads(): Int = NativeCpu.performanceCores
 
         @JvmStatic private external fun nativeInit(path: String): Long
         @JvmStatic private external fun nativeTranscribe(handle: Long, samples: FloatArray, language: String, threads: Int): ByteArray

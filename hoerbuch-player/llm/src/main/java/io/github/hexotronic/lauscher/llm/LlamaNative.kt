@@ -36,9 +36,8 @@ class LlamaNative private constructor(private var handle: Long) : Closeable {
     }
 
     companion object {
-        init {
-            System.loadLibrary("lauscher_llm")
-        }
+        /** "schnell" or "standard", see [NativeCpu]. */
+        val variant: String = NativeCpu.load("lauscher_llm")
 
         /** Loads a GGUF model; returns null if the file is not a usable model. */
         fun load(path: String, contextSize: Int = 4096, threads: Int = defaultThreads()): LlamaNative? {
@@ -46,7 +45,7 @@ class LlamaNative private constructor(private var handle: Long) : Closeable {
             return if (h == 0L) null else LlamaNative(h)
         }
 
-        fun defaultThreads(): Int = (Runtime.getRuntime().availableProcessors() - 2).coerceIn(2, 6)
+        fun defaultThreads(): Int = NativeCpu.performanceCores
 
         @JvmStatic private external fun nativeLoad(path: String, nCtx: Int, nThreads: Int): Long
         @JvmStatic private external fun nativeChatPrompt(handle: Long, system: ByteArray, user: ByteArray): ByteArray

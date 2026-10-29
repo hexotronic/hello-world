@@ -2,6 +2,7 @@
 
 #include <jni.h>
 
+#include <algorithm>
 #include <string>
 
 #include "whisper.h"
@@ -40,6 +41,7 @@ Java_io_github_hexotronic_lauscher_whisper_WhisperNative_nativeInit(JNIEnv * env
     const char * p = env->GetStringUTFChars(path, nullptr);
     whisper_context_params cparams = whisper_context_default_params();
     cparams.use_gpu = false;
+    cparams.flash_attn = true;
     whisper_context * ctx = whisper_init_from_file_with_params(p, cparams);
     env->ReleaseStringUTFChars(path, p);
     return reinterpret_cast<jlong>(ctx);
@@ -69,8 +71,16 @@ Java_io_github_hexotronic_lauscher_whisper_WhisperNative_nativeTranscribe(
     params.print_realtime = false;
     params.print_timestamps = false;
     params.suppress_blank = true;
+    // Speed: we only need the words, one segment, no timestamps and no slow re-decoding
+    // with higher temperatures when the first pass looks uncertain.
+    params.no_timestamps = true;
+    params.single_segment = true;
+    params.temperature_inc = 0.0f;
 
     const jsize n = env->GetArrayLength(samples);
+    // Shorter clips need less encoder context (1500 frames = 30 s); this saves encoder time.
+    const int seconds = static_cast<int>(n / 16000) + 1;
+    if (seconds < 30) params.audio_ctx = std::min(1500, seconds * 50 + 64);
     jfloat * data = env->GetFloatArrayElements(samples, nullptr);
     const int rc = whisper_full(ctx, params, data, n);
     env->ReleaseFloatArrayElements(samples, data, JNI_ABORT);

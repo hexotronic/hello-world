@@ -29,7 +29,8 @@ data class Scene(
 }
 
 object WindowPlanner {
-    const val WINDOW_MS = 90_000L
+    /** Scenes rarely change faster than this; longer windows mean fewer model calls. */
+    const val WINDOW_MS = 120_000L
 
     /** Splits the book into fixed windows. */
     fun windows(durationMs: Long, windowMs: Long = WINDOW_MS): List<LongRange> {
@@ -44,11 +45,23 @@ object WindowPlanner {
     }
 
     /** Which part of a window gets transcribed: everything, or a sample from its middle. */
-    fun sampleOf(window: LongRange, full: Boolean, sampleMs: Long = 35_000L): LongRange {
+    fun sampleOf(window: LongRange, sampleMs: Long): LongRange {
         val length = window.last + 1 - window.first
-        if (full || length <= sampleMs) return window
+        if (length <= sampleMs) return window
         val start = window.first + (length - sampleMs) / 2
         return start until start + sampleMs
+    }
+
+    /** Whisper works on 30 s blocks; longer clips are cut into such chunks. */
+    fun chunks(range: LongRange, chunkMs: Long = 30_000L): List<LongRange> {
+        val out = ArrayList<LongRange>()
+        var start = range.first
+        while (start <= range.last) {
+            val end = minOf(range.last + 1, start + chunkMs)
+            out.add(start until end)
+            start = end
+        }
+        return out
     }
 }
 
@@ -124,12 +137,12 @@ object ScenePrompt {
         level: 1 = subtle, 2 = clear, 3 = strong.
         title: a short scene title in the language of the book, at most five words.
         Neighbouring windows of the same scene keep the same mood; only change it when the scene really changes.
-        story: the running summary of the plot so far, updated with these windows, at most three sentences, in the
+        story: the running summary of the plot so far, updated with these windows, at most two short sentences, in the
         language of the book.
         Answer with JSON only.
     """.trimIndent()
 
-    fun user(bookTitle: String, author: String?, story: String?, windows: List<TranscriptWindow>, maxCharsPerWindow: Int = 900): String =
+    fun user(bookTitle: String, author: String?, story: String?, windows: List<TranscriptWindow>, maxCharsPerWindow: Int = 450): String =
         buildString {
             append("Book: \"").append(bookTitle).append('"')
             if (!author.isNullOrBlank()) append(" by ").append(author)
@@ -156,8 +169,8 @@ object ScenePrompt {
             append("\"\\\"title\\\":\" ws title ws \"}\"\n")
         }
         append("mood ::= ").append(moods.joinToString(" | ") { "\"\\\"$it\\\"\"" }).append('\n')
-        append("title ::= \"\\\"\" char{1,40} \"\\\"\"\n")
-        append("story ::= \"\\\"\" char{0,400} \"\\\"\"\n")
+        append("title ::= \"\\\"\" char{1,32} \"\\\"\"\n")
+        append("story ::= \"\\\"\" char{0,300} \"\\\"\"\n")
         append("char ::= [^\"\\\\\\x00-\\x1F] | \"\\\\\" [\"\\\\/nt]\n")
         append("ws ::= [ \\n]{0,2}\n")
     }

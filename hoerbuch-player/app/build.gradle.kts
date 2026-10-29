@@ -90,6 +90,8 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation(project(":llm"))
     implementation(project(":whisper"))
+    implementation(project(":llm-fast"))
+    implementation(project(":whisper-fast"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.9.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
