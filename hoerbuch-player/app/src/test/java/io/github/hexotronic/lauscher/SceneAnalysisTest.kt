@@ -71,6 +71,7 @@ class SceneAnalysisTest {
         assertEquals(Mood.ACTION, SceneMerger.sceneAt(scenes, 200_000)?.mood)
         assertNull(SceneMerger.sceneAt(scenes, 300_000)?.mood)
         assertNull(SceneMerger.sceneAt(scenes, 999_999))
+        assertEquals(scenes.last(), SceneMerger.sceneAt(scenes, 360_000))
     }
 
     @Test

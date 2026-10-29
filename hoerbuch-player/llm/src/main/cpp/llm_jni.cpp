@@ -34,7 +34,8 @@ struct Session {
 };
 
 void log_callback(ggml_log_level level, const char * text, void *) {
-    if (level >= GGML_LOG_LEVEL_WARN) {
+    // Only real problems; loading progress (dots) and info lines would flood logcat.
+    if (level == GGML_LOG_LEVEL_WARN || level == GGML_LOG_LEVEL_ERROR) {
         LOGW("%s", text);
     }
 }

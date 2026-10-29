@@ -300,7 +300,8 @@ private fun AnalysisBlock(vm: MainViewModel, s: MusicSettings, status: AnalysisS
                 RetroButton(onClick = { vm.stopAnalysis() }, style = RetroButtonStyle.PLAIN) { Text("Stopp") }
             }
             is AnalysisStatus.Finished -> Text(
-                "Fertig: ${status.windows} Abschnitte " + if (status.usedLanguageModel) "mit dem Sprachmodell analysiert" else "über Schlüsselwörter eingeordnet",
+                "Fertig: ${status.windows} " + (if (status.windows == 1) "Abschnitt " else "Abschnitte ") +
+                    if (status.usedLanguageModel) "mit dem Sprachmodell analysiert" else "über Schlüsselwörter eingeordnet",
                 style = MaterialTheme.typography.bodyMedium,
             )
             is AnalysisStatus.Failed -> Text(status.message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)

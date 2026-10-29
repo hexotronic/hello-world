@@ -72,6 +72,9 @@ object SceneMerger {
     }
 
     fun sceneAt(scenes: List<Scene>, positionMs: Long): Scene? {
+        // At the very end of the book the position equals the end of the last scene.
+        val last = scenes.lastOrNull()
+        if (last != null && positionMs >= last.endMs && positionMs - last.endMs < 2_000) return last
         var lo = 0
         var hi = scenes.size - 1
         while (lo <= hi) {
