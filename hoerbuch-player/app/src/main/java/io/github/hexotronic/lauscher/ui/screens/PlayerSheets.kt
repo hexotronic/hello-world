@@ -24,22 +24,16 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -54,13 +48,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.hexotronic.lauscher.data.Bookmark
 import io.github.hexotronic.lauscher.playback.AudiobookPlayerCore
 import io.github.hexotronic.lauscher.playback.NowPlaying
 import io.github.hexotronic.lauscher.playback.SleepMode
 import io.github.hexotronic.lauscher.ui.MainViewModel
+import io.github.hexotronic.lauscher.ui.components.RetroButton
+import io.github.hexotronic.lauscher.ui.components.RetroButtonStyle
+import io.github.hexotronic.lauscher.ui.components.RetroIconButton
+import io.github.hexotronic.lauscher.ui.components.RetroProgress
+import io.github.hexotronic.lauscher.ui.components.RetroSlider
 import io.github.hexotronic.lauscher.ui.components.SwitchRow
+import io.github.hexotronic.lauscher.ui.theme.PixelFont
 import io.github.hexotronic.lauscher.ui.formatClock
 import io.github.hexotronic.lauscher.ui.formatHuman
 import io.github.hexotronic.lauscher.ui.formatSpeed
@@ -95,9 +96,10 @@ fun ChaptersSheet(np: NowPlaying, onDismiss: () -> Unit, onJump: (Int) -> Unit) 
                         if (current) {
                             Column {
                                 Text("läuft · noch ${formatClock(chapter.endMs - np.positionMs)}")
-                                LinearProgressIndicator(
-                                    progress = { np.chapterPositionMs.toFloat() / max(1L, chapter.durationMs) },
-                                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                                RetroProgress(
+                                    np.chapterPositionMs.toFloat() / max(1L, chapter.durationMs),
+                                    Modifier.padding(top = 4.dp),
+                                    height = 8.dp,
                                 )
                             }
                         } else {
@@ -106,8 +108,9 @@ fun ChaptersSheet(np: NowPlaying, onDismiss: () -> Unit, onJump: (Int) -> Unit) 
                     },
                     leadingContent = {
                         Text(
-                            "${index + 1}",
-                            style = MaterialTheme.typography.titleMedium,
+                            "%02d".format(index + 1),
+                            fontFamily = PixelFont,
+                            fontSize = 14.sp,
                             color = if (current) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     },
@@ -136,9 +139,9 @@ fun BookmarksSheet(vm: MainViewModel, np: NowPlaying, onDismiss: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Row(Modifier.padding(horizontal = 20.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Lesezeichen", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-            OutlinedButton(onClick = { adding = true }) { Text("Mit Notiz") }
-            Spacer(Modifier.width(8.dp))
-            Button(onClick = { vm.addBookmark() }) {
+            RetroButton(onClick = { adding = true }, style = RetroButtonStyle.PLAIN) { Text("Mit Notiz") }
+            Spacer(Modifier.width(10.dp))
+            RetroButton(onClick = { vm.addBookmark() }) {
                 Icon(Icons.Filled.Add, contentDescription = null)
                 Text("Hier")
             }
@@ -225,22 +228,22 @@ fun SpeedSheet(vm: MainViewModel, np: NowPlaying, onDismiss: () -> Unit) {
     }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.padding(horizontal = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Geschwindigkeit", style = MaterialTheme.typography.titleLarge, modifier = Modifier.fillMaxWidth())
+            Text("Tempo", style = MaterialTheme.typography.titleLarge, modifier = Modifier.fillMaxWidth())
             Text(formatSpeed(speed), style = MaterialTheme.typography.displaySmall, modifier = Modifier.padding(top = 8.dp))
             Text(
                 "Restzeit: ${formatHuman((np.remainingMs / speed).toLong())}",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
-                FilledTonalIconButton(onClick = { applySpeed(speed - 0.05f) }) { Icon(Icons.Filled.Remove, contentDescription = "Langsamer") }
-                Slider(
+                RetroIconButton(Icons.Filled.Remove, "Langsamer", { applySpeed(speed - 0.05f) }, size = 40.dp)
+                RetroSlider(
                     value = speed,
                     onValueChange = { speed = ((it * 20).roundToInt() / 20f) },
                     onValueChangeFinished = { applySpeed(speed) },
                     valueRange = AudiobookPlayerCore.MIN_SPEED..AudiobookPlayerCore.MAX_SPEED,
                     modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
                 )
-                FilledTonalIconButton(onClick = { applySpeed(speed + 0.05f) }) { Icon(Icons.Filled.Add, contentDescription = "Schneller") }
+                RetroIconButton(Icons.Filled.Add, "Schneller", { applySpeed(speed + 0.05f) }, size = 40.dp)
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 listOf(0.75f, 0.9f, 1f, 1.1f, 1.2f, 1.25f, 1.5f, 1.75f, 2f, 2.5f, 3f).forEach { preset ->
@@ -254,9 +257,10 @@ fun SpeedSheet(vm: MainViewModel, np: NowPlaying, onDismiss: () -> Unit) {
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(vertical = 8.dp),
             )
-            FilledTonalButton(
+            RetroButton(
                 onClick = { vm.updateSettings { it.copy(defaultSpeed = speed) } },
                 enabled = settings.defaultSpeed != speed,
+                style = RetroButtonStyle.SECONDARY,
             ) {
                 Text("Als Standard für neue Hörbücher (${formatSpeed(settings.defaultSpeed)})")
             }
@@ -295,9 +299,9 @@ fun SleepSheet(vm: MainViewModel, np: NowPlaying, onDismiss: () -> Unit) {
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
-                    FilledTonalButton(onClick = { vm.withCore { it.extendSleepTimer(5) } }, modifier = Modifier.weight(1f)) { Text("+5 Min.") }
-                    FilledTonalButton(onClick = { vm.withCore { it.extendSleepTimer(15) } }, modifier = Modifier.weight(1f)) { Text("+15 Min.") }
-                    Button(onClick = { vm.withCore { it.cancelSleepTimer() } }, modifier = Modifier.weight(1f)) { Text("Aus") }
+                    RetroButton(onClick = { vm.withCore { it.extendSleepTimer(5) } }, modifier = Modifier.weight(1f), style = RetroButtonStyle.SECONDARY) { Text("+5 Min.") }
+                    RetroButton(onClick = { vm.withCore { it.extendSleepTimer(15) } }, modifier = Modifier.weight(1f), style = RetroButtonStyle.SECONDARY) { Text("+15 Min.") }
+                    RetroButton(onClick = { vm.withCore { it.cancelSleepTimer() } }, modifier = Modifier.weight(1f)) { Text("Aus") }
                 }
             } else {
                 Text(
@@ -326,14 +330,14 @@ fun SleepSheet(vm: MainViewModel, np: NowPlaying, onDismiss: () -> Unit) {
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
-                    Slider(
+                    RetroSlider(
                         value = custom,
                         onValueChange = { custom = it.roundToInt().toFloat() },
                         valueRange = 1f..180f,
                         modifier = Modifier.weight(1f),
                     )
                     Spacer(Modifier.width(8.dp))
-                    Button(onClick = {
+                    RetroButton(onClick = {
                         vm.withCore { it.startSleepTimer(custom.toInt()) }
                         onDismiss()
                     }) { Text("${custom.toInt()} Min.") }

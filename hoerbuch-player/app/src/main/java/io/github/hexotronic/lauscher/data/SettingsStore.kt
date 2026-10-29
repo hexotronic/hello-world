@@ -29,7 +29,7 @@ data class AppSettings(
     val sleepAutoFromHour: Int = 22,
     val sleepAutoToHour: Int = 6,
     val theme: ThemeMode = ThemeMode.SYSTEM,
-    val dynamicColor: Boolean = true,
+    val dynamicColor: Boolean = false,
     val libraryGrid: Boolean = true,
     val librarySort: LibrarySort = LibrarySort.RECENT,
     val libraryFilter: LibraryFilter = LibraryFilter.ALL,

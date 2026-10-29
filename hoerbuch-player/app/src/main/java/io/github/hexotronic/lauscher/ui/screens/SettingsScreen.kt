@@ -22,7 +22,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,6 +36,7 @@ import io.github.hexotronic.lauscher.data.ThemeMode
 import io.github.hexotronic.lauscher.ui.MainViewModel
 import io.github.hexotronic.lauscher.ui.components.ChoiceDialog
 import io.github.hexotronic.lauscher.ui.components.ClickRow
+import io.github.hexotronic.lauscher.ui.components.RetroTopBar
 import io.github.hexotronic.lauscher.ui.components.SectionHeader
 import io.github.hexotronic.lauscher.ui.components.SwitchRow
 import io.github.hexotronic.lauscher.ui.formatSpeed
@@ -63,7 +63,7 @@ fun SettingsScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
     }
 
     Column(modifier) {
-        TopAppBar(title = { Text("Einstellungen") })
+        RetroTopBar(title = { Text("Einstellungen") })
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
             SectionHeader("Bibliothek")
             folders.forEach { folder ->
@@ -83,6 +83,9 @@ fun SettingsScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
             ClickRow("Alles komplett neu einlesen", "Liest Kapitel, Cover und Längen aller Bücher erneut") { vm.rescan(force = true) }
             SwitchRow("Beim Start automatisch einlesen", null, s.autoRescan) { v -> vm.updateSettings { it.copy(autoRescan = v) } }
             ClickRow("Fehlende Hörbücher entfernen", "Bücher, deren Dateien nicht mehr gefunden werden") { vm.deleteMissing() }
+            ClickRow("Demo-Hörbuch erzeugen", "Künstliche Stimme mit Rauschen, Brummen und Knistern zum Testen des Klangstudios") {
+                vm.createDemo(play = false)
+            }
 
             SectionHeader("Wiedergabe")
             ClickRow("Zurückspulen", "${s.rewindSeconds} Sekunden") { picker = Picker.REWIND }
@@ -125,7 +128,7 @@ fun SettingsScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
             SectionHeader("Darstellung")
             ClickRow("Design", s.theme.label) { picker = Picker.THEME }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                SwitchRow("Farben vom Hintergrundbild (Material You)", null, s.dynamicColor) { v ->
+                SwitchRow("Farben vom Hintergrundbild (Material You)", "Ersetzt die Erdtöne durch die Systemfarben", s.dynamicColor) { v ->
                     vm.updateSettings { it.copy(dynamicColor = v) }
                 }
             }
@@ -141,7 +144,7 @@ fun SettingsScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
             ClickRow("Statistik zurücksetzen") { confirmStats = true }
 
             SectionHeader("Über")
-            ClickRow("Lauscher ${BuildConfig.VERSION_NAME}", "Hörbuch-Player mit Klangstudio · Open Source") {}
+            ClickRow("Lauscher ${BuildConfig.VERSION_NAME}", "Hörbuch-Player mit Klangstudio · Retro-Edition") {}
             HorizontalDivider(Modifier.padding(top = 8.dp))
         }
     }

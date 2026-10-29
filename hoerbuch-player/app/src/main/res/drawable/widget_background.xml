@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <solid android:color="@color/widget_background" />
-    <corners android:radius="24dp" />
-</shape>
+<!-- Square block with a hard offset shadow, like the in-app cards. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:left="4dp" android:top="4dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#FF000000" />
+        </shape>
+    </item>
+    <item android:bottom="4dp" android:right="4dp">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/widget_background" />
+            <stroke android:width="2dp" android:color="@color/widget_border" />
+        </shape>
+    </item>
+</layer-list>

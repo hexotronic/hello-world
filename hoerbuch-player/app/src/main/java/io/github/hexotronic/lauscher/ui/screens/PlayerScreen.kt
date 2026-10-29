@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.Undo
@@ -29,6 +28,7 @@ import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
@@ -40,20 +40,13 @@ import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -65,14 +58,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -83,6 +74,16 @@ import io.github.hexotronic.lauscher.playback.SleepMode
 import io.github.hexotronic.lauscher.ui.MainViewModel
 import io.github.hexotronic.lauscher.ui.Screen
 import io.github.hexotronic.lauscher.ui.components.BookCover
+import io.github.hexotronic.lauscher.ui.components.RetroBox
+import io.github.hexotronic.lauscher.ui.components.RetroButton
+import io.github.hexotronic.lauscher.ui.components.RetroIconButton
+import io.github.hexotronic.lauscher.ui.components.RetroProgress
+import io.github.hexotronic.lauscher.ui.components.RetroSlider
+import io.github.hexotronic.lauscher.ui.components.RetroTopBar
+import io.github.hexotronic.lauscher.ui.components.block
+import io.github.hexotronic.lauscher.ui.components.hardShadow
+import io.github.hexotronic.lauscher.ui.theme.LocalRetro
+import io.github.hexotronic.lauscher.ui.theme.PixelFont
 import io.github.hexotronic.lauscher.ui.formatClock
 import io.github.hexotronic.lauscher.ui.formatHuman
 import io.github.hexotronic.lauscher.ui.formatSpeed
@@ -112,7 +113,7 @@ fun PlayerScreen(vm: MainViewModel) {
     val book = np.book
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
         Column(Modifier.fillMaxSize().navigationBarsPadding()) {
-            TopAppBar(
+            RetroTopBar(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                 navigationIcon = {
                     IconButton(onClick = { vm.back() }) {
@@ -197,9 +198,9 @@ private fun NoBookLoaded(vm: MainViewModel, lastTitle: String?, onResume: () -> 
         Text("Gerade läuft nichts", style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(16.dp))
         if (lastTitle != null) {
-            Button(onClick = onResume) { Text("„$lastTitle“ fortsetzen") }
+            RetroButton(onClick = onResume) { Text("„$lastTitle“ fortsetzen") }
         } else {
-            Button(onClick = { vm.navigate(Screen.Library) }) { Text("Zur Bibliothek") }
+            RetroButton(onClick = { vm.navigate(Screen.Library) }) { Text("Zur Bibliothek") }
         }
     }
 }
@@ -239,7 +240,7 @@ private fun PlayerContent(
                     detectTapGestures(onDoubleTap = { offset ->
                         if (offset.x < size.width / 2) {
                             vm.withCore { it.rewind() }
-                            seekFlash = "−$rewindSeconds s"
+                            seekFlash = "-$rewindSeconds s"
                         } else {
                             vm.withCore { it.forward() }
                             seekFlash = "+$forwardSeconds s"
@@ -252,17 +253,12 @@ private fun PlayerContent(
             BookCover(
                 book.coverPath,
                 book.title,
-                Modifier.fillMaxSize().shadow(12.dp, RoundedCornerShape(20.dp)),
-                RoundedCornerShape(20.dp),
+                Modifier.fillMaxSize().padding(end = 6.dp, bottom = 6.dp).hardShadow(LocalRetro.current.shadow, 6.dp),
+                frame = 3.dp,
             )
             seekFlash?.let { flash ->
-                Surface(shape = RoundedCornerShape(50), color = Color.Black.copy(alpha = 0.6f)) {
-                    Text(
-                        flash,
-                        color = Color.White,
-                        style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
-                    )
+                Box(Modifier.block(MaterialTheme.colorScheme.tertiary, shadow = 4.dp).padding(horizontal = 18.dp, vertical = 10.dp)) {
+                    Text(flash, color = MaterialTheme.colorScheme.onTertiary, style = MaterialTheme.typography.headlineSmall)
                 }
             }
         }
@@ -313,7 +309,7 @@ private fun PlayerContent(
         val chapterDuration = np.chapterDurationMs.coerceAtLeast(1)
         val chapterStart = chapter?.startMs ?: 0L
         val shownPos = drag?.let { (it * chapterDuration).toLong() } ?: np.chapterPositionMs
-        Slider(
+        RetroSlider(
             value = (shownPos.toFloat() / chapterDuration).coerceIn(0f, 1f),
             onValueChange = { drag = it },
             onValueChangeFinished = {
@@ -336,7 +332,7 @@ private fun PlayerContent(
                 )
                 Spacer(Modifier.weight(1f))
             }
-            Text("−" + formatClock(chapterDuration - shownPos), style = MaterialTheme.typography.labelMedium)
+            Text("-" + formatClock(chapterDuration - shownPos), style = MaterialTheme.typography.labelMedium)
         }
 
         // Transport controls.
@@ -345,32 +341,26 @@ private fun PlayerContent(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = { vm.withCore { it.previousChapter() } }, modifier = Modifier.size(52.dp)) {
-                Icon(Icons.Filled.SkipPrevious, contentDescription = "Vorheriges Kapitel", Modifier.size(32.dp))
-            }
+            RetroIconButton(Icons.Filled.SkipPrevious, "Vorheriges Kapitel", { vm.withCore { it.previousChapter() } }, size = 46.dp, iconSize = 28.dp)
             SeekButton(rewindSeconds, forward = false) { vm.withCore { it.rewind() } }
-            FilledIconButton(onClick = { vm.togglePlayPause() }, modifier = Modifier.size(80.dp)) {
-                if (np.isBuffering && np.playWhenReady) {
-                    CircularProgressIndicator(Modifier.size(36.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 3.dp)
-                } else {
-                    Icon(
-                        if (np.playWhenReady) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                        contentDescription = if (np.playWhenReady) "Pause" else "Abspielen",
-                        modifier = Modifier.size(44.dp),
-                    )
-                }
-            }
+            RetroIconButton(
+                icon = when {
+                    np.isBuffering && np.playWhenReady -> Icons.Filled.HourglassEmpty
+                    np.playWhenReady -> Icons.Filled.Pause
+                    else -> Icons.Filled.PlayArrow
+                },
+                contentDescription = if (np.playWhenReady) "Pause" else "Abspielen",
+                onClick = { vm.togglePlayPause() },
+                size = 80.dp,
+                iconSize = 46.dp,
+                filled = true,
+            )
             SeekButton(forwardSeconds, forward = true) { vm.withCore { it.forward() } }
-            IconButton(onClick = { vm.withCore { it.nextChapter() } }, modifier = Modifier.size(52.dp)) {
-                Icon(Icons.Filled.SkipNext, contentDescription = "Nächstes Kapitel", Modifier.size(32.dp))
-            }
+            RetroIconButton(Icons.Filled.SkipNext, "Nächstes Kapitel", { vm.withCore { it.nextChapter() } }, size = 46.dp, iconSize = 28.dp)
         }
 
         // Whole-book progress.
-        LinearProgressIndicator(
-            progress = { if (np.durationMs > 0) np.positionMs.toFloat() / np.durationMs else 0f },
-            modifier = Modifier.fillMaxWidth().height(3.dp),
-        )
+        RetroProgress(if (np.durationMs > 0) np.positionMs.toFloat() / np.durationMs else 0f, height = 8.dp)
         val remainingAtSpeed = (np.remainingMs / np.speed).toLong()
         Text(
             "${formatClock(np.positionMs)} von ${formatClock(np.durationMs)} · noch ${formatHuman(remainingAtSpeed)}" +
@@ -434,20 +424,28 @@ private fun PlayerContent(
 
 @Composable
 private fun SeekButton(seconds: Int, forward: Boolean, onClick: () -> Unit) {
-    IconButton(onClick = onClick, modifier = Modifier.size(60.dp)) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                Icons.Filled.Replay,
-                contentDescription = if (forward) "$seconds Sekunden vor" else "$seconds Sekunden zurück",
-                modifier = Modifier.size(44.dp).graphicsLayer { if (forward) scaleX = -1f },
-            )
-            Text(
-                "$seconds",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-        }
+    RetroBox(
+        modifier = Modifier.size(58.dp).semantics {
+            contentDescription = if (forward) "$seconds Sekunden vor" else "$seconds Sekunden zurück"
+        },
+        background = MaterialTheme.colorScheme.secondaryContainer,
+        shadow = 3.dp,
+        onClick = onClick,
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            Icons.Filled.Replay,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+            modifier = Modifier.size(40.dp).graphicsLayer { if (forward) scaleX = -1f },
+        )
+        Text(
+            "$seconds",
+            fontFamily = PixelFont,
+            fontSize = 10.sp,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            modifier = Modifier.padding(top = 4.dp),
+        )
     }
 }
 
@@ -460,16 +458,16 @@ private fun LockOverlay(onUnlock: () -> Unit) {
             .pointerInput(Unit) { detectTapGestures { } },
         contentAlignment = Alignment.Center,
     ) {
-        Surface(
-            shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            modifier = Modifier.combinedClickable(onClick = {}, onLongClick = onUnlock),
+        Row(
+            Modifier
+                .block(MaterialTheme.colorScheme.surfaceContainerHigh, shadow = 5.dp)
+                .combinedClickable(onClick = {}, onLongClick = onUnlock)
+                .padding(horizontal = 24.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(Modifier.padding(horizontal = 24.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.LockOpen, contentDescription = null)
-                Spacer(Modifier.width(12.dp))
-                Text("Zum Entsperren lange drücken")
-            }
+            Icon(Icons.Filled.LockOpen, contentDescription = null)
+            Spacer(Modifier.width(12.dp))
+            Text("Zum Entsperren lange drücken", style = MaterialTheme.typography.labelLarge)
         }
     }
 }

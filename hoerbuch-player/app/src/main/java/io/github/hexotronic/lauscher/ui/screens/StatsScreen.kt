@@ -3,7 +3,6 @@
 package io.github.hexotronic.lauscher.ui.screens
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,28 +17,25 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.RoundRect
-import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -48,6 +44,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.hexotronic.lauscher.data.Stats
 import io.github.hexotronic.lauscher.ui.MainViewModel
 import io.github.hexotronic.lauscher.ui.components.EmptyState
+import io.github.hexotronic.lauscher.ui.components.RetroProgress
+import io.github.hexotronic.lauscher.ui.components.RetroTopBar
+import io.github.hexotronic.lauscher.ui.components.block
+import io.github.hexotronic.lauscher.ui.theme.LocalRetro
+import io.github.hexotronic.lauscher.ui.theme.MonoFont
+import io.github.hexotronic.lauscher.ui.theme.PixelFont
 import io.github.hexotronic.lauscher.ui.components.SectionHeader
 import io.github.hexotronic.lauscher.ui.components.StatTile
 import io.github.hexotronic.lauscher.ui.formatHours
@@ -63,7 +65,7 @@ import kotlin.math.max
 fun StatsScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
     val stats by vm.stats.collectAsStateWithLifecycle()
     Column(modifier) {
-        TopAppBar(title = { Text("Statistik") })
+        RetroTopBar(title = { Text("Statistik") })
         val s = stats
         if (s == null || s.totalMs == 0L) {
             EmptyState(
@@ -103,10 +105,15 @@ private fun StatsContent(stats: Stats) {
             StatTile("Beendet", "${stats.finishedBooks}", Modifier.weight(1f))
         }
 
-        ElevatedCard(Modifier.fillMaxWidth().padding(16.dp)) {
-            Column(Modifier.padding(16.dp)) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 20.dp, top = 20.dp, bottom = 8.dp)
+                .block(MaterialTheme.colorScheme.surfaceContainerLow),
+        ) {
+            Column(Modifier.padding(14.dp)) {
                 Row {
-                    Text("Hörzeit pro Tag", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                    Text("Hörzeit pro Tag", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(8.dp))
                 SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
@@ -114,7 +121,7 @@ private fun StatsContent(stats: Stats) {
                         SegmentedButton(
                             selected = range == days,
                             onClick = { range = days },
-                            shape = SegmentedButtonDefaults.itemShape(i, 3),
+                            shape = SegmentedButtonDefaults.itemShape(i, 3, baseShape = RoundedCornerShape(0.dp)),
                         ) { Text("$days Tage") }
                     }
                 }
@@ -152,13 +159,7 @@ private fun StatsContent(stats: Stats) {
                     Text(formatHuman(b.listenedMs), style = MaterialTheme.typography.labelLarge)
                 }
                 Spacer(Modifier.height(4.dp))
-                Box(
-                    Modifier
-                        .fillMaxWidth(b.listenedMs.toFloat() / maxMs)
-                        .height(8.dp)
-                        .clip(RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp))
-                        .background(MaterialTheme.colorScheme.primary),
-                )
+                RetroProgress(b.listenedMs.toFloat() / maxMs, height = 10.dp)
             }
         }
     }
@@ -173,7 +174,7 @@ private fun DailyChart(values: List<Pair<LocalDate, Long>>) {
     val dimColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
     val grid = MaterialTheme.colorScheme.outlineVariant
     val label = MaterialTheme.colorScheme.onSurfaceVariant
-    val ink = MaterialTheme.colorScheme.onSurface
+    val ink = LocalRetro.current.ink
     val maxMs = max(values.maxOf { it.second }, 60_000L)
     // Round the axis up to whole quarter hours (or hours above 2 h).
     val stepMs = if (maxMs > 2 * 3_600_000L) 3_600_000L else 15 * 60_000L
@@ -198,29 +199,22 @@ private fun DailyChart(values: List<Pair<LocalDate, Long>>) {
         val plotH = bottom - top
         val slot = (size.width - left) / values.size
         val barW = (slot * 0.62f).coerceAtMost(24.dp.toPx()).coerceAtLeast(2.dp.toPx())
-        val radius = 4.dp.toPx().coerceAtMost(barW / 2)
         fun y(ms: Long) = bottom - plotH * (ms.toFloat() / axisMax)
 
         for (tick in listOf(0L, axisMax / 2, axisMax)) {
             drawLine(grid, Offset(left, y(tick)), Offset(size.width, y(tick)), strokeWidth = 1f)
-            val t = measurer.measure(axisLabel(tick), TextStyle(fontSize = 10.sp, color = label))
+            val t = measurer.measure(axisLabel(tick), TextStyle(fontSize = 10.sp, color = label, fontFamily = MonoFont))
             drawText(t, topLeft = Offset(0f, y(tick) - t.size.height / 2f))
         }
         values.forEachIndexed { i, (date, ms) ->
             val x = left + i * slot + (slot - barW) / 2
             if (ms > 0) {
-                val path = Path().apply {
-                    addRoundRect(
-                        RoundRect(
-                            left = x, top = y(ms), right = x + barW, bottom = bottom,
-                            topLeftCornerRadius = CornerRadius(radius),
-                            topRightCornerRadius = CornerRadius(radius),
-                            bottomRightCornerRadius = CornerRadius.Zero,
-                            bottomLeftCornerRadius = CornerRadius.Zero,
-                        ),
-                    )
+                // Square blocks fit the retro look; the selected day gets an ink outline.
+                drawRect(if (i == selected) barColor else dimColor, Offset(x, y(ms)), Size(barW, bottom - y(ms)))
+                if (i == selected) {
+                    val w = 2.dp.toPx()
+                    drawRect(ink, Offset(x + w / 2, y(ms) + w / 2), Size(barW - w, bottom - y(ms) - w), style = Stroke(w))
                 }
-                drawPath(path, if (i == selected) barColor else dimColor)
             }
             val showLabel = values.size <= 7 || i == values.lastIndex || (values.size - 1 - i) % (values.size / 6) == 0
             if (showLabel) {
@@ -229,14 +223,14 @@ private fun DailyChart(values: List<Pair<LocalDate, Long>>) {
                 } else {
                     "${date.dayOfMonth}.${date.monthValue}."
                 }
-                val t = measurer.measure(text, TextStyle(fontSize = 10.sp, color = label))
+                val t = measurer.measure(text, TextStyle(fontSize = 9.sp, color = label, fontFamily = PixelFont))
                 drawText(t, topLeft = Offset(left + i * slot + slot / 2 - t.size.width / 2f, size.height - t.size.height))
             }
         }
         values.getOrNull(selected)?.let { (date, ms) ->
             val t = measurer.measure(
                 "${date.format(dateFormat)}: ${if (ms > 0) formatHuman(ms) else "nicht gehört"}",
-                TextStyle(fontSize = 12.sp, color = ink),
+                TextStyle(fontSize = 12.sp, color = ink, fontFamily = MonoFont, fontWeight = FontWeight.Bold),
             )
             drawText(t, topLeft = Offset(left, 0f))
         }

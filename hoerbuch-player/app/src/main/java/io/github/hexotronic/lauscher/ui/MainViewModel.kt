@@ -238,6 +238,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun createDemo(play: Boolean) {
+        viewModelScope.launch {
+            val id = io.github.hexotronic.lauscher.scan.DemoBook.create(getApplication(), repository)
+            if (play) playBook(id) else toast("Demo-Hörbuch hinzugefügt")
+        }
+    }
+
+    /** Deep links used by the launcher shortcut / CI screenshots: library, player, studio, stats, settings, detail. */
+    fun openScreen(name: String) {
+        when (name) {
+            "library" -> navigate(Screen.Library)
+            "player" -> navigate(Screen.Player)
+            "studio" -> navigate(Screen.SoundStudio)
+            "stats" -> navigate(Screen.Stats)
+            "settings" -> navigate(Screen.Settings)
+            "detail" -> (nowPlaying.value.book ?: lastBook.value)?.let { navigate(Screen.BookDetail(it.id)) }
+        }
+    }
+
     fun removeFolder(uri: String) {
         viewModelScope.launch { scanner.removeFolder(uri) }
     }

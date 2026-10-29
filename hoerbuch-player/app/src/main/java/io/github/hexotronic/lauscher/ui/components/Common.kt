@@ -1,6 +1,8 @@
 package io.github.hexotronic.lauscher.ui.components
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,36 +21,40 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import io.github.hexotronic.lauscher.ui.theme.LocalRetro
+import io.github.hexotronic.lauscher.ui.theme.PixelFont
 import java.io.File
 import kotlin.math.abs
 
-/** Cover image, or a calm generated placeholder with the book's initials. */
+/**
+ * Cover image with an ink frame, or a generated pixel-art cover in earth tones
+ * (a mirrored 6x6 block pattern derived from the title, like an identicon).
+ */
 @Composable
 fun BookCover(
     coverPath: String?,
     title: String,
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(12.dp),
+    frame: Dp = 2.dp,
 ) {
-    Box(modifier.clip(shape)) {
+    val retro = LocalRetro.current
+    Box(modifier.border(frame, retro.ink).padding(frame)) {
         if (coverPath != null) {
             AsyncImage(
                 model = File(coverPath),
@@ -56,39 +63,56 @@ fun BookCover(
                 modifier = Modifier.fillMaxSize(),
             )
         } else {
-            val hues = listOf(
-                Color(0xFF2E5E4E) to Color(0xFF6E9C7E),
-                Color(0xFF4A6178) to Color(0xFF8BA6C1),
-                Color(0xFF8A5A00) to Color(0xFFD39B45),
-                Color(0xFF6B4E71) to Color(0xFFAD8FB3),
-                Color(0xFF7A4A3A) to Color(0xFFC08A73),
-            )
-            val (a, b) = hues[abs(title.hashCode()) % hues.size]
+            val seed = abs(title.hashCode())
+            val earth = retro.earth
+            val background = earth[seed % earth.size]
+            val block = earth[(seed / 7 + 3) % earth.size].let { if (it == background) earth[(seed + 1) % earth.size] else it }
+            val light = Color(0xFFEFE4CC)
             val initials = title.split(' ', '-', '_').filter { it.isNotBlank() }.take(2)
                 .joinToString("") { it.first().uppercase() }
-            Box(
-                Modifier.fillMaxSize().background(Brush.linearGradient(listOf(a, b))),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    initials,
-                    color = Color.White.copy(alpha = 0.92f),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 28.sp,
-                )
+            Canvas(Modifier.fillMaxSize()) {
+                drawRect(background)
+                val cells = 6
+                val cell = size.width / (cells + 2)
+                for (y in 0 until cells - 2) {
+                    for (x in 0 until cells / 2) {
+                        val on = ((seed shr (y * (cells / 2) + x)) and 1) == 1
+                        if (!on) continue
+                        for (cx in listOf(x, cells - 1 - x)) {
+                            drawRect(block, Offset(cell * (cx + 1), cell * (y + 1)), Size(cell, cell))
+                        }
+                    }
+                }
+                drawRect(light, Offset(0f, size.height * 0.7f), Size(size.width, size.height * 0.3f))
             }
+            Text(
+                initials,
+                color = Color(0xFF2E2118),
+                fontFamily = PixelFont,
+                fontSize = 22.sp,
+                maxLines = 1,
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp),
+            )
         }
     }
 }
 
+/** Pixel-font section heading with a square bullet. */
 @Composable
 fun SectionHeader(text: String, modifier: Modifier = Modifier) {
-    Text(
-        text,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = modifier.padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 6.dp),
-    )
+    Row(
+        modifier.padding(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(8.dp).background(MaterialTheme.colorScheme.primary))
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text.uppercase(),
+            fontFamily = PixelFont,
+            fontSize = 13.sp,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
 }
 
 @Composable
@@ -107,7 +131,7 @@ fun SwitchRow(title: String, subtitle: String? = null, checked: Boolean, enabled
             }
         }
         Spacer(Modifier.width(12.dp))
-        Switch(checked = checked, onCheckedChange = onChange, enabled = enabled)
+        RetroToggle(checked = checked, onCheckedChange = onChange, enabled = enabled)
     }
 }
 
@@ -152,7 +176,7 @@ fun LabeledSlider(
             }
             Text(valueText, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Slider(value = value, onValueChange = onChange, valueRange = range, steps = steps, enabled = enabled)
+        RetroSlider(value = value, onValueChange = onChange, valueRange = range, steps = steps, enabled = enabled)
     }
 }
 
@@ -214,11 +238,10 @@ fun EmptyState(title: String, text: String, modifier: Modifier = Modifier, actio
 fun StatTile(label: String, value: String, modifier: Modifier = Modifier) {
     Column(
         modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-            .padding(14.dp),
+            .block(MaterialTheme.colorScheme.surfaceContainerLow, shadow = 3.dp)
+            .padding(12.dp),
     ) {
-        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(4.dp))
         Text(value, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }

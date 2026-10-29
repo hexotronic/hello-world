@@ -14,6 +14,7 @@ import androidx.activity.viewModels
 import androidx.compose.runtime.getValue
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.hexotronic.lauscher.audio.dsp.EnhancerPreset
 import io.github.hexotronic.lauscher.ui.LauscherRoot
 import io.github.hexotronic.lauscher.ui.MainViewModel
 import io.github.hexotronic.lauscher.ui.Screen
@@ -58,6 +59,14 @@ class MainActivity : ComponentActivity() {
 
     private fun handleIntent(intent: Intent?) {
         if (intent == null) return
+        if (intent.getBooleanExtra(EXTRA_DEMO, false)) vm.createDemo(play = true)
+        intent.getStringExtra(EXTRA_PRESET)?.let { name ->
+            EnhancerPreset.entries.firstOrNull { it.name == name }?.let(vm::applyPreset)
+        }
+        intent.getStringExtra(EXTRA_SCREEN)?.let { screen ->
+            vm.openScreen(screen)
+            return
+        }
         if (intent.getBooleanExtra(EXTRA_OPEN_PLAYER, false)) {
             vm.navigate(Screen.Player)
             return
@@ -78,5 +87,8 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         const val EXTRA_OPEN_PLAYER = "open_player"
+        const val EXTRA_DEMO = "demo"
+        const val EXTRA_SCREEN = "screen"
+        const val EXTRA_PRESET = "preset"
     }
 }

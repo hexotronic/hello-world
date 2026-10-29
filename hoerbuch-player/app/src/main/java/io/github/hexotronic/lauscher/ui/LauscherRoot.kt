@@ -1,6 +1,7 @@
 package io.github.hexotronic.lauscher.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,7 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
@@ -21,16 +21,11 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,6 +37,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.hexotronic.lauscher.ui.components.BookCover
+import io.github.hexotronic.lauscher.ui.components.RetroIconButton
+import io.github.hexotronic.lauscher.ui.components.RetroProgress
+import io.github.hexotronic.lauscher.ui.components.RetroTab
+import io.github.hexotronic.lauscher.ui.components.RetroTabBar
+import io.github.hexotronic.lauscher.ui.theme.LocalRetro
 import io.github.hexotronic.lauscher.ui.screens.BookDetailScreen
 import io.github.hexotronic.lauscher.ui.screens.LibraryScreen
 import io.github.hexotronic.lauscher.ui.screens.PlayerScreen
@@ -89,26 +89,15 @@ private fun TabScaffold(vm: MainViewModel, snackbar: SnackbarHostState, content:
         bottomBar = {
             Column {
                 MiniPlayer(vm)
-                NavigationBar {
-                    NavigationBarItem(
-                        selected = screen == Screen.Library || screen is Screen.BookDetail,
-                        onClick = { vm.navigate(Screen.Library) },
-                        icon = { Icon(Icons.AutoMirrored.Filled.LibraryBooks, contentDescription = null) },
-                        label = { Text("Bibliothek") },
-                    )
-                    NavigationBarItem(
-                        selected = screen == Screen.Stats,
-                        onClick = { vm.navigate(Screen.Stats) },
-                        icon = { Icon(Icons.Filled.BarChart, contentDescription = null) },
-                        label = { Text("Statistik") },
-                    )
-                    NavigationBarItem(
-                        selected = screen == Screen.Settings,
-                        onClick = { vm.navigate(Screen.Settings) },
-                        icon = { Icon(Icons.Filled.Settings, contentDescription = null) },
-                        label = { Text("Einstellungen") },
-                    )
-                }
+                RetroTabBar(
+                    listOf(
+                        RetroTab("Bücher", Icons.AutoMirrored.Filled.LibraryBooks, screen == Screen.Library || screen is Screen.BookDetail) {
+                            vm.navigate(Screen.Library)
+                        },
+                        RetroTab("Statistik", Icons.Filled.BarChart, screen == Screen.Stats) { vm.navigate(Screen.Stats) },
+                        RetroTab("Optionen", Icons.Filled.Settings, screen == Screen.Settings) { vm.navigate(Screen.Settings) },
+                    ),
+                )
             }
         },
     ) { padding ->
@@ -127,41 +116,44 @@ private fun MiniPlayer(vm: MainViewModel) {
     } else {
         book.progress
     }
-    Surface(tonalElevation = 3.dp, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-        Column {
-            LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().height(2.dp))
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .clickable { if (loaded) vm.navigate(Screen.Player) else vm.playBook(book.id) }
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                BookCover(book.coverPath, book.title, Modifier.size(44.dp), RoundedCornerShape(6.dp))
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(book.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(
-                        np.chapter?.title?.takeIf { loaded && np.chapters.size > 1 }
-                            ?: if (loaded) "noch ${formatHuman((np.remainingMs / np.speed).toLong())}" else "Tippen zum Weiterhören",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                if (loaded) {
-                    IconButton(onClick = { vm.withCore { it.rewind() } }) {
-                        Icon(Icons.Filled.Replay, contentDescription = "Zurückspulen")
-                    }
-                }
-                IconButton(onClick = { vm.togglePlayPause() }) {
-                    Icon(
-                        if (np.playWhenReady) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                        contentDescription = if (np.playWhenReady) "Pause" else "Abspielen",
-                    )
-                }
+    val retro = LocalRetro.current
+    Column(Modifier.background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
+        HorizontalDivider(thickness = 2.dp, color = retro.ink)
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clickable { if (loaded) vm.navigate(Screen.Player) else vm.playBook(book.id) }
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            BookCover(book.coverPath, book.title, Modifier.size(46.dp))
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(book.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    np.chapter?.title?.takeIf { loaded && np.chapters.size > 1 }
+                        ?: if (loaded) "noch ${formatHuman((np.remainingMs / np.speed).toLong())}" else "Tippen zum Weiterhören",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(4.dp))
+                RetroProgress(progress, height = 7.dp)
             }
+            Spacer(Modifier.width(8.dp))
+            if (loaded) {
+                RetroIconButton(Icons.Filled.Replay, "Zurückspulen", { vm.withCore { it.rewind() } }, size = 40.dp, iconSize = 22.dp)
+                Spacer(Modifier.width(8.dp))
+            }
+            RetroIconButton(
+                if (np.playWhenReady) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                if (np.playWhenReady) "Pause" else "Abspielen",
+                { vm.togglePlayPause() },
+                size = 44.dp,
+                iconSize = 26.dp,
+                filled = true,
+            )
         }
     }
 }

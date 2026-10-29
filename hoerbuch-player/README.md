@@ -3,6 +3,16 @@
 Ein Hörbuch-Player mit eingebautem **Klangstudio**: Rauschen, Brummen, Knacksen und
 Zischlaute werden direkt beim Abspielen herausgefiltert.
 
+## Aussehen
+
+Retro-Blockstil in Erdtönen: Pergament, Terrakotta, Moos, Ocker und Umbra (dunkler Modus
+„Erde bei Nacht“, dazu AMOLED-Schwarz). Alles ist eckig, mit dicken Rahmen und harten, versetzten
+Schatten. Tasten „drücken sich ein“. Überschriften stehen in der Pixel-Schrift *Silkscreen*, Text in
+*Space Mono*. Fortschrittsbalken bestehen aus Blöcken, Spektrum und Equalizer aus LED-Säulen.
+Bücher ohne Cover bekommen ein Pixel-Muster, App-Icon und Widget sind Pixel-Art.
+
+Echte Screenshots aus dem Emulator hängen bei jedem Build am Release (hell und dunkel).
+
 ## Installieren
 
 1. Im Repository auf **Releases** gehen und beim neuesten „Lauscher – neuester Build“
@@ -28,6 +38,8 @@ Fortschritt und Einstellungen bleiben erhalten.
 - Raster- oder Listenansicht, Suche, Filter (Angefangen/Neu/Beendet), 6 Sortierungen
 - „Weiterhören“-Karte, Fortschrittsbalken und Restzeit je Buch
 - Einzelne Dateien hinzufügen oder aus anderen Apps mit „Öffnen mit … Lauscher“ abspielen
+- **Demo-Hörbuch** (Einstellungen): künstliche Stimme mit Bandrauschen, Netzbrummen und Knistern
+  zum Ausprobieren des Klangstudios
 
 ### Wiedergabe
 - Fortschritt wird automatisch pro Buch gespeichert, über Dateigrenzen hinweg
@@ -76,7 +88,7 @@ oder **nur für ein bestimmtes Hörbuch** speichern.
 - Hörzeit heute / 7 Tage / gesamt, Serie in Tagen, beendete Bücher
 - Tagesdiagramm für 7/30/90 Tage, meistgehörte Bücher
 - Sicherung exportieren/importieren (Fortschritt, Lesezeichen, Statistik, Einstellungen)
-- Design: System, Hell, Dunkel, AMOLED-Schwarz, Material-You-Farben
+- Design: System, Hell, Dunkel, AMOLED-Schwarz; optional Material-You-Farben statt Erdtönen
 
 ## Technik
 
@@ -95,6 +107,13 @@ cd hoerbuch-player
 ```
 
 Benötigt JDK 17 und das Android SDK (API 35).
+
+Die CI baut die APK, führt die Unit-Tests aus und startet die App anschließend in einem
+Android-14-Emulator: Demo-Hörbuch abspielen, Screenshots aller Hauptseiten, Prüfung auf Abstürze.
+
+### Schriften
+
+Silkscreen und Space Mono stehen unter der SIL Open Font License (siehe `licenses/`).
 
 ### Signatur
 

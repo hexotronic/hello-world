@@ -1,9 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="brand">#FF2E5E4E</color>
-    <color name="brand_light">#FFE6B566</color>
-    <color name="splash_background">#FF101614</color>
-    <color name="widget_background">#F0182420</color>
-    <color name="widget_text">#FFFFFFFF</color>
-    <color name="widget_text_secondary">#B3FFFFFF</color>
+    <!-- Earth tones of the retro look -->
+    <color name="brand">#FFB4532A</color>
+    <color name="brand_light">#FFE3B652</color>
+    <color name="paper">#FFEFE4CC</color>
+    <color name="umber">#FF2E2118</color>
+    <color name="night_earth">#FF1F1812</color>
+    <color name="splash_background">#FF1F1812</color>
+    <color name="widget_background">#FF2B2219</color>
+    <color name="widget_border">#FFC2AE8E</color>
+    <color name="widget_text">#FFF0E3C8</color>
+    <color name="widget_text_secondary">#FFC2AE8E</color>
+    <color name="widget_button">#FFB4532A</color>
 </resources>

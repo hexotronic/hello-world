@@ -27,7 +27,6 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.automirrored.filled.ViewList
@@ -43,13 +42,9 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -57,11 +52,9 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -72,7 +65,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -83,6 +75,15 @@ import io.github.hexotronic.lauscher.scan.ScanState
 import io.github.hexotronic.lauscher.ui.MainViewModel
 import io.github.hexotronic.lauscher.ui.Screen
 import io.github.hexotronic.lauscher.ui.components.BookCover
+import io.github.hexotronic.lauscher.ui.components.PixelBadge
+import io.github.hexotronic.lauscher.ui.components.RetroBox
+import io.github.hexotronic.lauscher.ui.components.RetroButton
+import io.github.hexotronic.lauscher.ui.components.RetroButtonStyle
+import io.github.hexotronic.lauscher.ui.components.RetroIconButton
+import io.github.hexotronic.lauscher.ui.components.RetroProgress
+import io.github.hexotronic.lauscher.ui.components.RetroTopBar
+import io.github.hexotronic.lauscher.ui.components.hardShadow
+import io.github.hexotronic.lauscher.ui.theme.LocalRetro
 import io.github.hexotronic.lauscher.ui.components.EmptyState
 import io.github.hexotronic.lauscher.ui.formatHuman
 
@@ -107,7 +108,7 @@ fun LibraryScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
     }
 
     Column(modifier) {
-        TopAppBar(
+        RetroTopBar(
             title = {
                 if (searching) {
                     TextField(
@@ -202,7 +203,7 @@ fun LibraryScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
                 )
                 Spacer(Modifier.height(4.dp))
                 if (running.total > 0) {
-                    LinearProgressIndicator(progress = { running.done.toFloat() / running.total }, modifier = Modifier.fillMaxWidth())
+                    RetroProgress(running.done.toFloat() / running.total)
                 } else {
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 }
@@ -216,13 +217,13 @@ fun LibraryScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
                     ".m4b-Dateien mit Kapiteln werden automatisch erkannt.",
                 modifier = Modifier.fillMaxSize(),
             ) {
-                Button(onClick = { pickFolder.launch(null) }) {
+                RetroButton(onClick = { pickFolder.launch(null) }) {
                     Icon(Icons.Filled.CreateNewFolder, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text("Hörbuch-Ordner auswählen")
                 }
-                Spacer(Modifier.height(12.dp))
-                OutlinedButton(onClick = { pickFiles.launch(arrayOf("audio/*")) }) {
+                Spacer(Modifier.height(16.dp))
+                RetroButton(onClick = { pickFiles.launch(arrayOf("audio/*")) }, style = RetroButtonStyle.PLAIN) {
                     Text("Einzelne Dateien wählen")
                 }
             }
@@ -292,7 +293,7 @@ private fun LibraryContent(
 fun BookActionsSheet(vm: MainViewModel, book: Book, onDismiss: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Row(Modifier.padding(horizontal = 20.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            BookCover(book.coverPath, book.title, Modifier.size(56.dp), RoundedCornerShape(8.dp))
+            BookCover(book.coverPath, book.title, Modifier.size(56.dp))
             Spacer(Modifier.width(12.dp))
             Column {
                 Text(book.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -344,52 +345,71 @@ private fun FilterRow(books: List<Book>, selected: LibraryFilter, onSelect: (Lib
 
 @Composable
 private fun ContinueCard(book: Book, onPlay: () -> Unit) {
-    Card(
+    RetroBox(
+        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp, end = 4.dp),
+        background = MaterialTheme.colorScheme.primaryContainer,
         onClick = onPlay,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
     ) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             BookCover(book.coverPath, book.title, Modifier.size(84.dp))
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text("Weiterhören", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                Text(book.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                book.author?.let { Text(it, style = MaterialTheme.typography.bodyMedium, maxLines = 1) }
+                PixelBadge("Weiterhören", MaterialTheme.colorScheme.tertiary, MaterialTheme.colorScheme.onTertiary)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    book.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                book.author?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer, maxLines = 1)
+                }
                 Spacer(Modifier.height(6.dp))
-                LinearProgressIndicator(progress = { book.progress }, modifier = Modifier.fillMaxWidth())
-                Text("noch ${formatHuman(book.remainingMs)}", style = MaterialTheme.typography.bodySmall)
+                RetroProgress(book.progress)
+                Text(
+                    "noch ${formatHuman(book.remainingMs)}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
             }
-            Spacer(Modifier.width(8.dp))
-            FilledIconButton(onClick = onPlay, modifier = Modifier.size(52.dp)) {
-                Icon(Icons.Filled.PlayArrow, contentDescription = "Abspielen")
-            }
+            Spacer(Modifier.width(10.dp))
+            RetroIconButton(Icons.Filled.PlayArrow, "Abspielen", onPlay, size = 52.dp, iconSize = 30.dp, filled = true)
         }
     }
 }
 
 @Composable
 private fun BookGridItem(book: Book, onClick: () -> Unit, onLongClick: () -> Unit) {
+    val shadow = LocalRetro.current.shadow
     Column(Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick)) {
         Box {
-            BookCover(book.coverPath, book.title, Modifier.fillMaxWidth().aspectRatio(1f))
-            if (book.finished) {
-                Icon(
-                    Icons.Filled.CheckCircle,
-                    contentDescription = "Beendet",
-                    tint = Color.White,
-                    modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
+            BookCover(
+                book.coverPath,
+                book.title,
+                Modifier.fillMaxWidth().padding(end = 4.dp, bottom = 4.dp).aspectRatio(1f).hardShadow(shadow, 4.dp),
+            )
+            when {
+                book.finished -> PixelBadge(
+                    "Fertig",
+                    MaterialTheme.colorScheme.secondary,
+                    MaterialTheme.colorScheme.onSecondary,
+                    Modifier.align(Alignment.TopStart).padding(6.dp),
+                )
+                !book.isStarted -> PixelBadge(
+                    "Neu",
+                    MaterialTheme.colorScheme.tertiary,
+                    MaterialTheme.colorScheme.onTertiary,
+                    Modifier.align(Alignment.TopStart).padding(6.dp),
                 )
             }
         }
         if (book.isStarted) {
-            LinearProgressIndicator(
-                progress = { book.progress },
-                modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-            )
+            RetroProgress(book.progress, Modifier.padding(top = 6.dp, end = 4.dp), height = 8.dp)
         }
         Spacer(Modifier.height(6.dp))
-        Text(book.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(book.title, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Text(
             book.author ?: "Unbekannt",
             style = MaterialTheme.typography.bodySmall,
@@ -414,8 +434,8 @@ private fun BookListItem(book: Book, onClick: () -> Unit, onLongClick: () -> Uni
             .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        BookCover(book.coverPath, book.title, Modifier.size(64.dp), RoundedCornerShape(8.dp))
-        Spacer(Modifier.width(12.dp))
+        BookCover(book.coverPath, book.title, Modifier.size(64.dp).hardShadow(LocalRetro.current.shadow, 3.dp))
+        Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
             Text(book.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
@@ -426,9 +446,7 @@ private fun BookListItem(book: Book, onClick: () -> Unit, onLongClick: () -> Uni
                 overflow = TextOverflow.Ellipsis,
             )
             Spacer(Modifier.height(4.dp))
-            if (book.isStarted) {
-                LinearProgressIndicator(progress = { book.progress }, modifier = Modifier.fillMaxWidth())
-            }
+            if (book.isStarted) RetroProgress(book.progress, height = 8.dp)
             Text(statusText(book), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }

@@ -24,13 +24,11 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -38,7 +36,6 @@ import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -53,6 +50,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.hexotronic.lauscher.data.Book
 import io.github.hexotronic.lauscher.ui.MainViewModel
 import io.github.hexotronic.lauscher.ui.components.BookCover
+import io.github.hexotronic.lauscher.ui.components.RetroButton
+import io.github.hexotronic.lauscher.ui.components.RetroProgress
+import io.github.hexotronic.lauscher.ui.components.RetroTopBar
+import io.github.hexotronic.lauscher.ui.components.hardShadow
+import io.github.hexotronic.lauscher.ui.theme.LocalRetro
+import io.github.hexotronic.lauscher.ui.theme.PixelFont
 import io.github.hexotronic.lauscher.ui.formatClock
 import io.github.hexotronic.lauscher.ui.formatHuman
 
@@ -73,7 +76,7 @@ fun BookDetailScreen(vm: MainViewModel, bookId: Long) {
     }
 
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
-        TopAppBar(
+        RetroTopBar(
             navigationIcon = { IconButton(onClick = { vm.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück") } },
             title = { Text(book?.title.orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis) },
             actions = {
@@ -168,7 +171,7 @@ private fun BookDetailBody(
     val book = d.book
     Column {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
-            BookCover(book.coverPath, book.title, Modifier.size(132.dp))
+            BookCover(book.coverPath, book.title, Modifier.size(132.dp).hardShadow(LocalRetro.current.shadow, 5.dp))
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Text(book.title, style = MaterialTheme.typography.titleLarge, maxLines = 3, overflow = TextOverflow.Ellipsis)
@@ -192,7 +195,7 @@ private fun BookDetailBody(
                     )
                 }
                 Spacer(Modifier.height(8.dp))
-                LinearProgressIndicator(progress = { book.progress }, modifier = Modifier.fillMaxWidth())
+                RetroProgress(book.progress)
                 Text(
                     if (book.finished) "Beendet" else "${formatClock(book.positionMs)} von ${formatClock(book.durationMs)}",
                     style = MaterialTheme.typography.labelSmall,
@@ -200,7 +203,7 @@ private fun BookDetailBody(
             }
         }
         Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { vm.playBook(book.id) }) {
+            RetroButton(onClick = { vm.playBook(book.id) }) {
                 Icon(Icons.Filled.PlayArrow, contentDescription = null)
                 Text(if (book.isStarted) "Weiterhören" else "Abspielen")
             }
@@ -229,7 +232,8 @@ private fun BookDetailBody(
                         supportingContent = { Text("${formatClock(ch.startMs)} · ${formatClock(ch.durationMs)}") },
                         leadingContent = {
                             Text(
-                                "${ch.index + 1}",
+                                "%02d".format(ch.index + 1),
+                                fontFamily = PixelFont,
                                 color = if (current) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         },

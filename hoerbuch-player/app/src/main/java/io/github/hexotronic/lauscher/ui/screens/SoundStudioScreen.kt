@@ -4,6 +4,7 @@ package io.github.hexotronic.lauscher.ui.screens
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -28,7 +30,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Hearing
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -37,11 +38,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -53,16 +51,14 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -72,6 +68,12 @@ import io.github.hexotronic.lauscher.audio.dsp.EnhancerPreset
 import io.github.hexotronic.lauscher.audio.dsp.EnhancerSettings
 import io.github.hexotronic.lauscher.ui.MainViewModel
 import io.github.hexotronic.lauscher.ui.components.LabeledSlider
+import io.github.hexotronic.lauscher.ui.components.RetroToggle
+import io.github.hexotronic.lauscher.ui.components.RetroTopBar
+import io.github.hexotronic.lauscher.ui.components.block
+import io.github.hexotronic.lauscher.ui.theme.LocalRetro
+import io.github.hexotronic.lauscher.ui.theme.MonoFont
+import io.github.hexotronic.lauscher.ui.theme.PixelFont
 import io.github.hexotronic.lauscher.ui.components.SectionHeader
 import io.github.hexotronic.lauscher.ui.components.SwitchRow
 import io.github.hexotronic.lauscher.ui.formatDb
@@ -100,13 +102,13 @@ fun SoundStudioScreen(vm: MainViewModel) {
     val update = vm::updateSound
 
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
-        TopAppBar(
+        RetroTopBar(
             navigationIcon = {
                 IconButton(onClick = { vm.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück") }
             },
             title = { Text("Klangstudio") },
             actions = {
-                Switch(checked = s.enabled, onCheckedChange = { on -> update { it.copy(enabled = on) } })
+                RetroToggle(checked = s.enabled, onCheckedChange = { on -> update { it.copy(enabled = on) } })
                 Spacer(Modifier.width(12.dp))
             },
         )
@@ -116,12 +118,12 @@ fun SoundStudioScreen(vm: MainViewModel) {
                     SegmentedButton(
                         selected = !sound.perBook,
                         onClick = { vm.setSoundPerBook(false) },
-                        shape = SegmentedButtonDefaults.itemShape(0, 2),
+                        shape = SegmentedButtonDefaults.itemShape(0, 2, baseShape = RoundedCornerShape(0.dp)),
                     ) { Text("Alle Hörbücher") }
                     SegmentedButton(
                         selected = sound.perBook,
                         onClick = { vm.setSoundPerBook(true) },
-                        shape = SegmentedButtonDefaults.itemShape(1, 2),
+                        shape = SegmentedButtonDefaults.itemShape(1, 2, baseShape = RoundedCornerShape(0.dp)),
                     ) { Text("Nur dieses Hörbuch") }
                 }
                 if (sound.perBook) {
@@ -336,76 +338,81 @@ private fun SpectrumCard(vm: MainViewModel, active: Boolean, playing: Boolean) {
         }
     }
 
-    val original = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.22f)
+    val original = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.25f)
     val processed = MaterialTheme.colorScheme.primary
     val floor = MaterialTheme.colorScheme.secondary
-    val grid = MaterialTheme.colorScheme.outlineVariant
+    val screen = MaterialTheme.colorScheme.surfaceContainerLowest
 
-    ElevatedCard(Modifier.fillMaxWidth().padding(16.dp)) {
-        Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Live-Spektrum", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                ABButton(vm)
-            }
-            Spacer(Modifier.height(8.dp))
-            Box(Modifier.fillMaxWidth().height(150.dp)) {
-                Canvas(Modifier.fillMaxSize()) {
-                    // Reading the frame counter here redraws the canvas for every new snapshot.
-                    if (frame < 0) return@Canvas
-                    val minDb = -100f
-                    val maxDb = -10f
-                    fun y(db: Float) = size.height * (1f - ((db - minDb) / (maxDb - minDb)).coerceIn(0f, 1f))
-                    for (db in listOf(-90f, -60f, -30f)) {
-                        drawLine(grid, Offset(0f, y(db)), Offset(size.width, y(db)), strokeWidth = 1f)
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, end = 20.dp, top = 16.dp, bottom = 20.dp)
+            .block(MaterialTheme.colorScheme.surfaceContainerLow)
+            .padding(14.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Live-Spektrum", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+            ABButton(vm)
+        }
+        Spacer(Modifier.height(10.dp))
+        Box(Modifier.fillMaxWidth().height(150.dp).block(screen, shadow = 0.dp)) {
+            Canvas(Modifier.fillMaxSize().padding(4.dp)) {
+                // Reading the frame counter here redraws the canvas for every new snapshot.
+                if (frame < 0) return@Canvas
+                val minDb = -100f
+                val maxDb = -10f
+                val stepDb = 3f
+                val levels = ((maxDb - minDb) / stepDb).toInt()
+                val segH = size.height / levels
+                val gap = 1.5.dp.toPx()
+                val slot = size.width / bands
+                val barW = slot - gap
+                fun level(db: Float) = ((db - minDb) / stepDb).toInt().coerceIn(0, levels)
+                for (i in 0 until bands) {
+                    val x = i * slot
+                    val inLevel = level(input[i])
+                    val outLevel = if (active) level(output[i]) else 0
+                    val noiseLevel = level(noise[i])
+                    for (l in 0 until inLevel) {
+                        val y = size.height - (l + 1) * segH
+                        drawRect(if (l < outLevel) processed else original, Offset(x, y + gap / 2), Size(barW, segH - gap))
                     }
-                    val slot = size.width / bands
-                    val barWidth = (slot - 2.dp.toPx()).coerceIn(1f, 24.dp.toPx())
-                    for (i in 0 until bands) {
-                        val x = i * slot + (slot - barWidth) / 2
-                        val top = y(input[i])
-                        drawRect(original, Offset(x, top), Size(barWidth, size.height - top))
-                        if (active) {
-                            val outTop = y(output[i])
-                            drawRect(processed, Offset(x, outTop), Size(barWidth, size.height - outTop))
-                        }
+                    if (noiseLevel in 1..levels) {
+                        val y = size.height - noiseLevel * segH
+                        drawRect(floor, Offset(x, y + gap / 2), Size(barW, segH - gap))
                     }
-                    val path = Path()
-                    for (i in 0 until bands) {
-                        val x = i * slot + slot / 2
-                        if (i == 0) path.moveTo(x, y(noise[i])) else path.lineTo(x, y(noise[i]))
-                    }
-                    drawPath(path, floor, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round))
-                }
-                if (!hasEngine) {
-                    Text(
-                        "Das Spektrum erscheint, sobald ein Hörbuch läuft.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.align(Alignment.Center),
-                    )
                 }
             }
-            Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                LegendSwatch(original, "Original")
-                Spacer(Modifier.width(14.dp))
-                LegendSwatch(processed, "Bearbeitet")
-                Spacer(Modifier.width(14.dp))
-                LegendSwatch(floor, "Rauschboden")
+            if (!hasEngine) {
+                Text(
+                    "Das Spektrum erscheint, sobald ein Hörbuch läuft.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.align(Alignment.Center).padding(16.dp),
+                )
             }
-            Row(Modifier.fillMaxWidth()) {
-                Text("50 Hz", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.weight(1f))
-                Text("1 kHz", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.weight(1f))
-                Text("16 kHz", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+        }
+        Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            LegendSwatch(original, "Original")
+            Spacer(Modifier.width(14.dp))
+            LegendSwatch(processed, "Bearbeitet")
+            Spacer(Modifier.width(14.dp))
+            LegendSwatch(floor, "Rauschboden")
+        }
+        Row(Modifier.fillMaxWidth()) {
+            Text("50 Hz", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.weight(1f))
+            Text("1 kHz", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.weight(1f))
+            Text("16 kHz", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
 @Composable
 private fun LegendSwatch(color: Color, label: String) {
-    Box(Modifier.size(10.dp).clip(RoundedCornerShape(2.dp)).background(color))
+    Box(Modifier.size(10.dp).background(color).border(1.dp, LocalRetro.current.ink))
     Spacer(Modifier.width(6.dp))
     Text(label, style = MaterialTheme.typography.labelSmall)
 }
@@ -414,27 +421,31 @@ private fun LegendSwatch(color: Color, label: String) {
 @Composable
 private fun ABButton(vm: MainViewModel) {
     var pressed by remember { mutableStateOf(false) }
-    Surface(
-        shape = RoundedCornerShape(50),
-        color = if (pressed) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.secondaryContainer,
-        modifier = Modifier.pointerInput(Unit) {
-            detectTapGestures(onPress = {
-                pressed = true
-                vm.setBypass(true)
-                try {
-                    tryAwaitRelease()
-                } finally {
-                    vm.setBypass(false)
-                    pressed = false
-                }
-            })
-        },
+    val colors = MaterialTheme.colorScheme
+    val shift = if (pressed) 3.dp else 0.dp
+    Row(
+        Modifier
+            .offset(shift, shift)
+            .block(if (pressed) colors.secondary else colors.secondaryContainer, shadow = 3.dp - shift)
+            .pointerInput(Unit) {
+                detectTapGestures(onPress = {
+                    pressed = true
+                    vm.setBypass(true)
+                    try {
+                        tryAwaitRelease()
+                    } finally {
+                        vm.setBypass(false)
+                        pressed = false
+                    }
+                })
+            }
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Filled.Hearing, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(if (pressed) "Original" else "Halten: A/B", style = MaterialTheme.typography.labelLarge)
-        }
+        val fg = if (pressed) colors.onSecondary else colors.onSecondaryContainer
+        Icon(Icons.Filled.Hearing, contentDescription = null, tint = fg, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(if (pressed) "ORIGINAL" else "A/B HALTEN", color = fg, fontFamily = PixelFont, fontSize = 10.sp)
     }
 }
 
@@ -446,11 +457,11 @@ private fun EqualizerEditor(gains: List<Float>, enabled: Boolean, onChange: (Lis
     val currentEnabled by rememberUpdatedState(enabled)
     val measurer = rememberTextMeasurer()
     val line = MaterialTheme.colorScheme.primary.copy(alpha = if (enabled) 1f else 0.35f)
-    val fill = MaterialTheme.colorScheme.primary.copy(alpha = if (enabled) 0.1f else 0.04f)
     val grid = MaterialTheme.colorScheme.outlineVariant
-    val zero = MaterialTheme.colorScheme.outline
+    val zero = LocalRetro.current.ink.copy(alpha = if (enabled) 1f else 0.4f)
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val surface = MaterialTheme.colorScheme.surface
+    val handleFill = if (enabled) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.surfaceContainerHighest
+    val handleShadow = LocalRetro.current.shadow.copy(alpha = if (enabled) 1f else 0.3f)
     val range = EnhancerSettings.EQ_RANGE_DB
     val freqs = EnhancerSettings.EQ_FREQUENCIES
     var activeBand by remember { mutableIntStateOf(-1) }
@@ -496,47 +507,40 @@ private fun EqualizerEditor(gains: List<Float>, enabled: Boolean, onChange: (Lis
         val labelSpace = 18.dp.toPx()
         val h = size.height - labelSpace
         val slot = size.width / freqs.size
+        val stepDb = 1.5f
+        val segments = (range / stepDb).toInt()
+        val segH = (h / 2) / segments
+        val gap = 2.dp.toPx()
+        val colW = (slot * 0.55f).coerceAtMost(26.dp.toPx())
         fun y(g: Float) = h * (0.5f - g / (2 * range))
-        for (g in listOf(-range, -range / 2, range / 2, range)) {
-            drawLine(grid, Offset(0f, y(g)), Offset(size.width, y(g)), strokeWidth = 1f)
-        }
-        drawLine(zero, Offset(0f, y(0f)), Offset(size.width, y(0f)), strokeWidth = 1.5f)
-
-        val points = gains.mapIndexed { i, g -> Offset(i * slot + slot / 2, y(g)) }
-        val curve = Path()
-        points.forEachIndexed { i, p ->
-            if (i == 0) {
-                curve.moveTo(p.x, p.y)
-            } else {
-                val prev = points[i - 1]
-                val midX = (prev.x + p.x) / 2
-                curve.cubicTo(midX, prev.y, midX, p.y, p.x, p.y)
+        drawRect(grid, Offset(0f, 0f), Size(size.width, h), style = Stroke(1f))
+        drawLine(zero, Offset(0f, y(0f)), Offset(size.width, y(0f)), strokeWidth = 2.dp.toPx())
+        gains.forEachIndexed { i, g ->
+            val cx = i * slot + slot / 2
+            val left = cx - colW / 2
+            val count = kotlin.math.abs(g / stepDb).roundToInt()
+            for (k in 0 until count) {
+                val top = if (g > 0) y(0f) - (k + 1) * segH else y(0f) + k * segH
+                drawRect(line, Offset(left, top + gap / 2), Size(colW, segH - gap))
             }
-        }
-        val area = Path().apply {
-            addPath(curve)
-            lineTo(points.last().x, y(0f))
-            lineTo(points.first().x, y(0f))
-            close()
-        }
-        drawPath(area, fill)
-        drawPath(curve, line, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round))
-        points.forEachIndexed { i, p ->
-            val r = if (i == activeBand) 8.dp.toPx() else 5.dp.toPx()
-            drawCircle(surface, radius = r + 2.dp.toPx(), center = p)
-            drawCircle(line, radius = r, center = p)
+            // Square handle on top of each column.
+            val handle = if (i == activeBand) 18.dp.toPx() else 14.dp.toPx()
+            val hy = y(g)
+            drawRect(handleShadow, Offset(cx - handle / 2 + 2.dp.toPx(), hy - handle / 2 + 2.dp.toPx()), Size(handle, handle))
+            drawRect(handleFill, Offset(cx - handle / 2, hy - handle / 2), Size(handle, handle))
+            drawRect(zero, Offset(cx - handle / 2, hy - handle / 2), Size(handle, handle), style = Stroke(2.dp.toPx()))
             val label = freqs[i].let { if (it >= 1000) "${it / 1000}k" else "$it" }
-            val layout = measurer.measure(label, TextStyle(fontSize = 10.sp, color = labelColor))
-            drawText(layout, topLeft = Offset(p.x - layout.size.width / 2f, size.height - layout.size.height))
+            val layout = measurer.measure(label, TextStyle(fontSize = 9.sp, color = labelColor, fontFamily = PixelFont))
+            drawText(layout, topLeft = Offset(cx - layout.size.width / 2f, size.height - layout.size.height))
             if (i == activeBand) {
-                val value = measurer.measure(formatDb(gains[i]), TextStyle(fontSize = 11.sp, color = labelColor))
-                val ty = (p.y - 26.dp.toPx()).coerceAtLeast(0f)
-                drawText(value, topLeft = Offset((p.x - value.size.width / 2f).coerceIn(0f, size.width - value.size.width), ty))
+                val value = measurer.measure(formatDb(g), TextStyle(fontSize = 11.sp, color = labelColor, fontFamily = MonoFont))
+                val ty = (hy - handle - value.size.height).coerceAtLeast(0f)
+                drawText(value, topLeft = Offset((cx - value.size.width / 2f).coerceIn(0f, size.width - value.size.width), ty))
             }
         }
     }
     Text(
-        "Punkte ziehen zum Anpassen, Doppeltippen setzt ein Band auf 0 dB.",
+        "Regler ziehen zum Anpassen, Doppeltippen setzt ein Band auf 0 dB.",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 16.dp),
