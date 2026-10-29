@@ -72,7 +72,7 @@ class AnalysisManager(
         if (isRunning) return
         job = scope.launch(native) {
             try {
-                run(bookId, fromMs, untilMs, automatic)
+                runAnalysis(bookId, fromMs, untilMs, automatic)
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Throwable) {
@@ -98,7 +98,7 @@ class AnalysisManager(
         }
     }
 
-    private suspend fun run(bookId: Long, fromMs: Long, untilMs: Long, automatic: Boolean) {
+    private suspend fun runAnalysis(bookId: Long, fromMs: Long, untilMs: Long, automatic: Boolean) {
         val details = repo.bookDetails(bookId) ?: return
         val s = settings.current
         val done = repo.analyzedWindowStarts(bookId)
