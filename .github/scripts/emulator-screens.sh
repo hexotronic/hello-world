@@ -149,6 +149,44 @@ PY
     echo "::error::Der Sprachtest bei mehreren Tempi hat nicht funktioniert"
     E2E_FAILED=1
   fi
+
+  # --- Downloads: a video from the phone as MP3, one LibriVox chapter, a PeerTube search result.
+  if [ -f "$E2E_DIR/video.mp4" ]; then adb push "$E2E_DIR/video.mp4" "$DATA/test/" > /dev/null; fi
+  adb logcat -c
+  start --es download_convert "$DATA/test/video.mp4" --es screen downloads
+  start --es download_audiobook "Grimm" --es download_limit 1
+  start --es download_media "peertube:peertube" --es download_limit 1
+  echo "Warte auf die Downloads …"
+  for i in $(seq 1 96); do
+    if [ "$(adb logcat -d -s LauscherDownload:* | grep -cE "Auftrag [0-9]+ (fertig|fehlgeschlagen)")" -ge 3 ]; then break; fi
+    sleep 5
+  done
+  start --es screen downloads
+  shot 12-herunterladen-hell 4
+  adb logcat -d -s LauscherDownload:* | tail -40 | tee "$OUT/downloads.txt"
+  if ! grep -q "Umgewandelt: .*video.mp3" "$OUT/downloads.txt" || ! grep -qE "Importiert \[download:[0-9a-f]+\]: video .*Buch [0-9]" "$OUT/downloads.txt"; then
+    echo "::error::Das Video wurde nicht in MP3 umgewandelt"
+    E2E_FAILED=1
+  fi
+  if ! grep -qE "Importiert \[download:librivox:.*Buch [0-9]" "$OUT/downloads.txt"; then
+    echo "::error::Das LibriVox-Hörbuch wurde nicht geladen"
+    E2E_FAILED=1
+  fi
+  if ! grep -E "Importiert \[download:[0-9a-f]+\]: .*Buch [0-9]" "$OUT/downloads.txt" | grep -qv "\]: video "; then
+    echo "::warning::Der PeerTube-Download hat nicht geklappt (externer Dienst)"
+  fi
+
+  # YouTube (Big Buck Bunny, CC BY 3.0 Blender Foundation): best effort, YouTube often blocks CI servers.
+  adb logcat -c
+  start --es download_media "https://www.youtube.com/watch?v=aqz-KE-bpKQ" --es download_limit 1
+  for i in $(seq 1 48); do
+    if adb logcat -d -s LauscherDownload:* | grep -qE "Auftrag [0-9]+ (fertig|fehlgeschlagen)|Automatischer Download fehlgeschlagen"; then break; fi
+    sleep 5
+  done
+  adb logcat -d -s LauscherDownload:* | tail -15 | tee "$OUT/downloads-youtube.txt"
+  if ! grep -qE "Importiert \[.*Buch [0-9]" "$OUT/downloads-youtube.txt"; then
+    echo "::warning::Der YouTube-Download hat in der CI nicht geklappt (siehe downloads-youtube.txt)"
+  fi
 fi
 
 adb shell dumpsys media_session > "$OUT/media_session.txt" || true

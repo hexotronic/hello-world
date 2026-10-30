@@ -69,6 +69,12 @@ class MainActivity : ComponentActivity() {
         intent.getStringExtra(EXTRA_IMPORT_PATH)?.let { vm.importLocalFile(it, intent.getBooleanExtra(EXTRA_ANALYZE, false)) }
         intent.getStringExtra(EXTRA_BOOK_TEXT_PATH)?.let { vm.importBookTextFile(it, intent.getBooleanExtra(EXTRA_ANALYZE, false)) }
         intent.getStringExtra(EXTRA_SPEECH_CHECK)?.let { vm.speechCheck(it) }
+        // Test aid: download or convert without tapping through the screen.
+        val limit = intent.getStringExtra(EXTRA_DOWNLOAD_LIMIT)?.toIntOrNull() ?: 1
+        val original = intent.getStringExtra(EXTRA_DOWNLOAD_FORMAT) == "original"
+        intent.getStringExtra(EXTRA_DOWNLOAD_AUDIOBOOK)?.let { vm.downloads.automate("audiobook", it, limit, original) }
+        intent.getStringExtra(EXTRA_DOWNLOAD_MEDIA)?.let { vm.downloads.automate("media", it, limit, original) }
+        intent.getStringExtra(EXTRA_DOWNLOAD_CONVERT)?.let { vm.downloads.automate("convert", it, limit, original) }
         // "Teilen → Lauscher" from an e-book app: text or a TXT/EPUB/HTML file becomes a book text.
         if (intent.action == Intent.ACTION_SEND) {
             val stream = if (Build.VERSION.SDK_INT >= 33) {
@@ -147,5 +153,10 @@ class MainActivity : ComponentActivity() {
         const val EXTRA_BOOK_TEXT_PATH = "book_text_path"
         const val EXTRA_SPEECH_SPEED = "speech_speed"
         const val EXTRA_SPEECH_CHECK = "speech_check"
+        const val EXTRA_DOWNLOAD_AUDIOBOOK = "download_audiobook"
+        const val EXTRA_DOWNLOAD_MEDIA = "download_media"
+        const val EXTRA_DOWNLOAD_CONVERT = "download_convert"
+        const val EXTRA_DOWNLOAD_LIMIT = "download_limit"
+        const val EXTRA_DOWNLOAD_FORMAT = "download_format"
     }
 }

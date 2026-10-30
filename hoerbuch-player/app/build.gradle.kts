@@ -53,6 +53,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // NewPipe Extractor uses java.nio.file APIs that Android only has from version 13 on.
+        isCoreLibraryDesugaringEnabled = true
     }
 
     buildFeatures {
@@ -94,6 +96,9 @@ dependencies {
     implementation(project(":whisper"))
     implementation(project(":llm-fast"))
     implementation(project(":whisper-fast"))
+    implementation(project(":mp3"))
+    implementation("com.github.TeamNewPipe:NewPipeExtractor:v0.26.5")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs_nio:2.1.5")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.9.0")
     debugImplementation("androidx.compose.ui:ui-tooling")

@@ -7,6 +7,7 @@ import io.github.hexotronic.lauscher.audio.SoundSettingsManager
 import io.github.hexotronic.lauscher.data.BackupManager
 import io.github.hexotronic.lauscher.data.LibraryRepository
 import io.github.hexotronic.lauscher.data.SettingsStore
+import io.github.hexotronic.lauscher.download.DownloadManager
 import io.github.hexotronic.lauscher.music.MusicSettingsStore
 import io.github.hexotronic.lauscher.music.library.MusicLibrary
 import io.github.hexotronic.lauscher.scan.LibraryScanner
@@ -28,6 +29,7 @@ class LauscherApp : Application() {
     val models by lazy { ModelManager(this) }
     val analysis by lazy { AnalysisManager(this, repository, models, musicSettings, appScope) }
     val musicLibrary by lazy { MusicLibrary(this, musicSettings, appScope) }
+    val downloads by lazy { DownloadManager(this, scanner, appScope) }
 
     override fun onCreate() {
         super.onCreate()

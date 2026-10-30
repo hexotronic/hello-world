@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.VIBRATE" />
@@ -36,7 +37,8 @@
                 <data android:scheme="content" />
                 <data android:mimeType="audio/*" />
             </intent-filter>
-            <!-- Book texts shared from e-book apps (text, TXT, HTML or EPUB) for the scene analysis. -->
+            <!-- Book texts shared from e-book apps (text, TXT, HTML or EPUB) for the scene analysis,
+                 or links to videos and playlists for the download screen. -->
             <intent-filter android:label="@string/book_text_share">
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -44,7 +46,19 @@
                 <data android:mimeType="text/html" />
                 <data android:mimeType="application/epub+zip" />
             </intent-filter>
+            <!-- Video and audio files to convert into an audiobook (MP3). -->
+            <intent-filter android:label="@string/media_share">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="video/*" />
+                <data android:mimeType="audio/*" />
+            </intent-filter>
         </activity>
+
+        <service
+            android:name=".download.DownloadService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
         <service
             android:name=".playback.PlaybackService"

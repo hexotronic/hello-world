@@ -31,6 +31,7 @@ import io.github.hexotronic.lauscher.analysis.ModelKind
 import io.github.hexotronic.lauscher.analysis.ModelInfo
 import io.github.hexotronic.lauscher.analysis.AnalysisStatus
 import io.github.hexotronic.lauscher.analysis.SpeedCheck
+import io.github.hexotronic.lauscher.download.core.LinkInput
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.distinctUntilChanged
 import io.github.hexotronic.lauscher.audio.SoundState
@@ -71,6 +72,7 @@ sealed interface Screen {
     data object SoundStudio : Screen
     data object Music : Screen
     data object MusicLibrary : Screen
+    data object Downloads : Screen
     data class BookDetail(val bookId: Long) : Screen
 }
 
@@ -108,6 +110,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun toast(text: String) {
         _messages.tryEmit(text)
     }
+
+    /** Downloading audiobooks and videos, converting files (see DownloadScreen). */
+    val downloads = DownloadBrowser(app, viewModelScope, ::toast)
 
     // ---------------------------------------------------------------- state
 
@@ -283,6 +288,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             "settings" -> navigate(Screen.Settings)
             "music" -> navigate(Screen.Music)
             "musiclibrary" -> navigate(Screen.MusicLibrary)
+            "downloads" -> navigate(Screen.Downloads)
             "feedback" -> {
                 openFeedback = true
                 navigate(Screen.Player)
@@ -530,6 +536,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val sharedText: StateFlow<SharedText?> = _sharedText
 
     fun receiveSharedText(text: String?, uri: Uri?) {
+        // A shared video or sound file: convert it into an audiobook.
+        val mime = uri?.let { getApplication<Application>().contentResolver.getType(it) }.orEmpty()
+        if (uri != null && (mime.startsWith("video/") || mime.startsWith("audio/"))) {
+            downloads.tab = DownloadBrowser.Tab.FILES
+            navigate(Screen.Downloads)
+            downloads.convertFiles(listOf(uri))
+            return
+        }
+        // Shared links (from YouTube, NewPipe, a browser …): open them on the download screen.
+        val urls = text?.let { LinkInput.allUrls(it) }.orEmpty()
+        if (uri == null && urls.isNotEmpty() && text!!.length - urls.sumOf { it.length } < 200) {
+            downloads.tab = DownloadBrowser.Tab.MEDIA
+            downloads.mediaInput = urls.joinToString("\n")
+            navigate(Screen.Downloads)
+            downloads.go()
+            return
+        }
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
                 runCatching {

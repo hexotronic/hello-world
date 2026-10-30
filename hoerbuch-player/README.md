@@ -41,6 +41,32 @@ Fortschritt und Einstellungen bleiben erhalten.
 - **Demo-Hörbuch** (Einstellungen): künstliche Stimme mit Bandrauschen, Netzbrummen und Knistern
   zum Ausprobieren des Klangstudios
 
+### Herunterladen und umwandeln
+In der Bibliothek über **＋ → Herunterladen und umwandeln …** (oder in den Einstellungen):
+
+- **Kostenlose Hörbücher** von LibriVox (gemeinfrei, von Freiwilligen eingelesen): nach Titel oder Autor
+  suchen, Sprache wählen (Deutsch, Englisch, alle), mit einem Tipp das **ganze Buch mit allen Kapiteln**
+  laden. Die Dateien kommen aus dem Internet Archive.
+- **Videos als MP3** von YouTube, PeerTube, SoundCloud, Bandcamp und media.ccc.de (über
+  [NewPipe Extractor](https://github.com/TeamNewPipe/NewPipeExtractor)):
+  - **Suchen** oder **Links einfügen**: einzelne Videos, **ganze Playlists und Kanäle**, auch mehrere
+    Links auf einmal. Direkte Links auf Ton- oder Videodateien (z. B. `…/vortrag.mp4`) gehen ebenfalls.
+  - **Bulk:** Treffer per Häkchen auswählen, „Alle“ oder „Alle Seiten laden“ (bis 500 Videos), dann
+    herunterladen – als **ein Hörbuch mit Kapiteln** (Playlist = Buch) oder jedes einzeln.
+  - Gespeichert wird nur der Ton: als **MP3** (64 kbit/s mono für Sprache, 128 oder 192 kbit/s) mit
+    Titel, Interpret, Album und Cover in den ID3-Tags, oder im **Originalformat** (M4A/WebM, ohne
+    Umwandlung, schneller, ohne Qualitätsverlust).
+  - Links lassen sich aus YouTube, NewPipe oder dem Browser über **Teilen → In Lauscher öffnen** schicken.
+- **Videos vom Handy umwandeln**: Video- oder Tondateien auswählen (oder über **Teilen → In Lauscher
+  als MP3** schicken) – sie werden zu MP3 bzw. ihre Tonspur wird herausgelöst.
+- Alles landet als Hörbuch in der Bibliothek, die Dateien liegen sichtbar für andere Apps unter
+  **Audiobooks/Lauscher/<Autor – Titel>/** (Android 10+). Downloads laufen im Hintergrund weiter
+  (Benachrichtigung mit Fortschritt), einzelne Fehler in einer Playlist brechen den Rest nicht ab.
+- **Bitte nur herunterladen, was du darfst** – gemeinfreie oder frei lizenzierte Inhalte (LibriVox,
+  Creative Commons), eigene Aufnahmen oder mit Erlaubnis. Manche Plattformen, etwa YouTube, untersagen
+  das Herunterladen in ihren Nutzungsbedingungen. Wenn eine Plattform ihre Seiten ändert, kann die
+  Suche dort bis zum nächsten Update der App ausfallen.
+
 ### Wiedergabe
 - Fortschritt wird automatisch pro Buch gespeichert, über Dateigrenzen hinweg
 - Kapitel-Navigation, Kapitelliste, Suchleiste pro Kapitel, Gesamtfortschritt
@@ -179,9 +205,11 @@ davon ist KI-generiert (Veloren verbietet KI-Inhalte sogar ausdrücklich in sein
 ## Technik
 
 Kotlin, Jetpack Compose (Material 3), Media3/ExoPlayer mit `MediaLibraryService`, SQLite,
-llama.cpp (v0.8.0) und whisper.cpp (v1.9.5) über JNI (Module `llm/` und `whisper/`, beim Build per CMake geladen).
+llama.cpp (v0.8.0) und whisper.cpp (v1.9.5) über JNI (Module `llm/` und `whisper/`, beim Build per CMake geladen),
+der MP3-Encoder LAME 3.100 (Modul `mp3/`, LGPL) und NewPipe Extractor v0.26.5 (GPL-3.0) für die Video-Plattformen.
 Die gesamte Klangverarbeitung (`audio/dsp`), der Musik-Synthesizer und Mixer (`music/synth`), der
-Musikkatalog mit Stückauswahl (`music/library/core`), die Szenen-Logik
+Musikkatalog mit Stückauswahl (`music/library/core`), die Download-Logik (`download/core`: LibriVox-Suche,
+ID3-Tags, Links, Aufteilung in Bücher), die Szenen-Logik
 (`analysis/core`: Prompt, GBNF-Grammatik, Auswertung) und die Kapitel-Parser (`scan/core`) sind reines
 Kotlin ohne Android-Abhängigkeiten und durch Unit-Tests abgedeckt
 (`./gradlew testReleaseUnitTest`). Ein Test misst z. B., dass die Rauschunterdrückung bei

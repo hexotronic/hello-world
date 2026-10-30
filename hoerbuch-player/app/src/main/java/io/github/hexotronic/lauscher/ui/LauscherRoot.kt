@@ -43,6 +43,7 @@ import io.github.hexotronic.lauscher.ui.components.RetroTab
 import io.github.hexotronic.lauscher.ui.components.RetroTabBar
 import io.github.hexotronic.lauscher.ui.theme.LocalRetro
 import io.github.hexotronic.lauscher.ui.screens.BookDetailScreen
+import io.github.hexotronic.lauscher.ui.screens.DownloadScreen
 import io.github.hexotronic.lauscher.ui.screens.LibraryScreen
 import io.github.hexotronic.lauscher.ui.screens.MusicLibraryScreen
 import io.github.hexotronic.lauscher.ui.screens.MusicScreen
@@ -66,6 +67,7 @@ fun LauscherRoot(vm: MainViewModel) {
         Screen.SoundStudio -> FullScreen(snackbar) { SoundStudioScreen(vm) }
         Screen.Music -> FullScreen(snackbar) { MusicScreen(vm) }
         Screen.MusicLibrary -> FullScreen(snackbar) { MusicLibraryScreen(vm) }
+        Screen.Downloads -> FullScreen(snackbar) { DownloadScreen(vm) }
         is Screen.BookDetail -> TabScaffold(vm, snackbar) { BookDetailScreen(vm, screen.bookId) }
         else -> TabScaffold(vm, snackbar) {
             when (screen) {

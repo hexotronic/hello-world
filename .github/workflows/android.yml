@@ -96,7 +96,7 @@ jobs:
 
       - name: Prepare local AI test (speech + small models)
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq flite > /dev/null
+          sudo apt-get update -qq && sudo apt-get install -y -qq flite ffmpeg > /dev/null
           mkdir -p e2e
           cat > e2e/story.txt <<'TXT'
           It was a quiet morning at the lake. Mira sat on the wooden pier with a cup of tea and watched the sun rise
@@ -112,6 +112,9 @@ jobs:
           and the empty chair by the window would always remind her of him.
           TXT
           flite -f e2e/story.txt -o e2e/story.wav
+          # A short video (test picture + the story as AAC sound) for the "video to MP3" conversion.
+          ffmpeg -nostdin -loglevel error -f lavfi -i testsrc=size=320x240:rate=15 -i e2e/story.wav -t 20 \
+            -c:v libx264 -pix_fmt yuv420p -c:a aac -b:a 96k -shortest e2e/video.mp4
           curl -sSL --retry 3 -o e2e/ggml-tiny-q5_1.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny-q5_1.bin
           curl -sSL --retry 3 -o e2e/qwen2.5-0.5b-instruct-q4_k_m.gguf https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf
           ls -la e2e

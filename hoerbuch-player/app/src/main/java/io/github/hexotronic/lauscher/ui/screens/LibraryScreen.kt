@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LibraryMusic
@@ -180,6 +181,14 @@ fun LibraryScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
                             },
                         )
                         DropdownMenuItem(
+                            text = { Text("Herunterladen und umwandeln …") },
+                            leadingIcon = { Icon(Icons.Filled.Download, contentDescription = null) },
+                            onClick = {
+                                addMenu = false
+                                vm.navigate(Screen.Downloads)
+                            },
+                        )
+                        DropdownMenuItem(
                             text = { Text("Bibliothek neu einlesen") },
                             leadingIcon = { Icon(Icons.Filled.Refresh, contentDescription = null) },
                             onClick = {
@@ -225,6 +234,10 @@ fun LibraryScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
                 Spacer(Modifier.height(16.dp))
                 RetroButton(onClick = { pickFiles.launch(arrayOf("audio/*")) }, style = RetroButtonStyle.PLAIN) {
                     Text("Einzelne Dateien wählen")
+                }
+                Spacer(Modifier.height(16.dp))
+                RetroButton(onClick = { vm.navigate(Screen.Downloads) }, style = RetroButtonStyle.PLAIN) {
+                    Text("Kostenlose Hörbücher laden")
                 }
             }
         } else {

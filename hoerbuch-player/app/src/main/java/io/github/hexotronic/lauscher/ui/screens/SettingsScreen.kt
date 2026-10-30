@@ -129,6 +129,9 @@ fun SettingsScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
             ClickRow("Hintergrundmusik, Szenen-Analyse und KI-Modelle", "Musik passend zur Szene, Rückblick und Volltextsuche – alles auf dem Gerät") {
                 vm.navigate(io.github.hexotronic.lauscher.ui.Screen.Music)
             }
+            ClickRow("Herunterladen und umwandeln", "Kostenlose Hörbücher (LibriVox), Videos als MP3, Dateien vom Handy umwandeln") {
+                vm.navigate(io.github.hexotronic.lauscher.ui.Screen.Downloads)
+            }
             ClickRow("Musikbibliothek", "Stücke laden, Lieblinge und ausgeblendete Stücke verwalten") {
                 vm.navigate(io.github.hexotronic.lauscher.ui.Screen.MusicLibrary)
             }

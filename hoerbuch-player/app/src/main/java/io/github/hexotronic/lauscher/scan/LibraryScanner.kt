@@ -84,6 +84,24 @@ class LibraryScanner(private val context: Context, private val repo: LibraryRepo
         }
     }
 
+    /**
+     * Imports downloaded or converted [files] (in this order) as one book named exactly [title]
+     * by [author], whatever the files' own tags say; [cover] is an optional image file.
+     */
+    suspend fun importFiles(key: String, title: String, author: String?, files: List<Pair<Uri, String>>, cover: File?): Long? = mutex.withLock {
+        withContext(Dispatchers.IO) {
+            val entries = files.map { (uri, name) -> FsEntry(id = uri.toString(), name = name, isDirectory = false) }
+            val images = listOfNotNull(
+                cover?.takeIf { it.length() > 0 }?.let { FsEntry(id = Uri.fromFile(it).toString(), name = "cover.jpg", isDirectory = false, size = it.length()) },
+            )
+            val candidate = BookCandidate(key, title, null, entries, images)
+            runCatching { importBook(candidate, ROOT_DOWNLOADS) { Uri.parse(it.id) } }
+                .onFailure { Log.w(TAG, "Import failed for $title", it) }
+                .getOrNull()
+                ?.also { id -> repo.updateInfo(id, title, author, null) }
+        }
+    }
+
     suspend fun scanAll(force: Boolean) = mutex.withLock {
         withContext(Dispatchers.IO) {
             var books = 0
@@ -318,5 +336,8 @@ class LibraryScanner(private val context: Context, private val repo: LibraryRepo
         const val TAG = "LibraryScanner"
         const val MAX_DEPTH = 10
         const val MAX_COVER_PX = 1000
+
+        /** Root of books that Lauscher downloaded or converted itself. */
+        const val ROOT_DOWNLOADS = "lauscher:downloads"
     }
 }
