@@ -73,9 +73,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           APK="$RUNNER_TEMP/Lauscher-${GITHUB_RUN_NUMBER}.apk"
+          # The same file under a fixed name, so ".../releases/download/<tag>/Lauscher.apk" always
+          # points to the newest build.
+          cp "$APK" "$RUNNER_TEMP/Lauscher.apk"
           TAG="lauscher-latest-${GITHUB_REF_NAME//\//-}"
           gh release delete "$TAG" --yes --cleanup-tag || true
-          gh release create "$TAG" "$APK" \
+          gh release create "$TAG" "$APK" "$RUNNER_TEMP/Lauscher.apk" \
             --target "$GITHUB_SHA" \
             --title "Lauscher – neuester Build (${GITHUB_REF_NAME})" \
             --notes "Automatisch gebaut aus ${GITHUB_SHA::7}. APK auf dem Handy herunterladen und installieren." \

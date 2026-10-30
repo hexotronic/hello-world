@@ -16,8 +16,10 @@ Echte Screenshots aus dem Emulator hängen bei jedem Build am Release (hell und 
 ## Installieren
 
 1. Im Repository auf **Releases** gehen und beim neuesten „Lauscher – neuester Build“
-   die Datei `Lauscher-<nummer>.apk` auf dem Handy herunterladen
-   (alternativ: **Actions → Lauscher APK → Artifacts**).
+   die Datei `Lauscher.apk` (immer der neueste Build; gleicher Inhalt wie `Lauscher-<nummer>.apk`)
+   auf dem Handy herunterladen (alternativ: **Actions → Lauscher APK → Artifacts**).
+   Während ein neuer Build veröffentlicht wird, ist der Release für einige Sekunden weg – dann kurz
+   warten und neu laden.
 2. Die APK öffnen und die Installation aus dieser Quelle erlauben.
 3. In der App **Hörbuch-Ordner auswählen** – fertig.
 
