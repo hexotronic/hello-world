@@ -3,6 +3,7 @@ package io.github.hexotronic.lauscher
 import io.github.hexotronic.lauscher.analysis.core.Correction
 import io.github.hexotronic.lauscher.analysis.core.KeywordMoods
 import io.github.hexotronic.lauscher.analysis.core.MiniJson
+import io.github.hexotronic.lauscher.analysis.core.Scene
 import io.github.hexotronic.lauscher.analysis.core.SceneCut
 import io.github.hexotronic.lauscher.analysis.core.SceneCuts
 import io.github.hexotronic.lauscher.analysis.core.SceneMerger
@@ -201,5 +202,32 @@ class SceneAnalysisTest {
         assertEquals(false, ScenePrompt.parseCut("a"))
         assertNull(ScenePrompt.parseCut("?"))
         assertNull(ScenePrompt.parseCut(null))
+    }
+
+    @Test
+    fun readAheadAndOverviewOfABook() {
+        fun sc(start: Long, end: Long, mood: Mood?, setting: Setting?) = Scene(start, end, mood, 2, "", false, setting)
+        val scenes = listOf(
+            sc(0, 120_000, Mood.CALM, Setting.HOME),
+            sc(120_000, 300_000, Mood.TENSE, Setting.FOREST),
+            sc(300_500, 360_000, Mood.ACTION, Setting.FOREST),
+            sc(600_000, 720_000, null, null),
+        )
+        // From 1:30 the analysis reaches 6:00 without a gap (the half-second gap does not count).
+        assertEquals(360_000L, SceneMerger.coveredUntil(scenes, 90_000))
+        assertEquals(720_000L, SceneMerger.coveredUntil(scenes, 650_000))
+        assertNull(SceneMerger.coveredUntil(scenes, 400_000))
+
+        val places = SceneMerger.shares(scenes) { it.setting }
+        assertEquals(Setting.FOREST, places[0].first)
+        assertEquals(239_500f / 479_500f, places[0].second, 1e-4f)
+        assertEquals(listOf(Mood.TENSE, Mood.CALM, Mood.ACTION), SceneMerger.shares(scenes) { it.mood }.map { it.first })
+
+        val todo = WindowPlanner.windows(1_200_000, 60_000)
+        val batches = WindowPlanner.batches(todo, first = 2, size = 8)
+        assertEquals(listOf(2, 8, 8, 2), batches.map { it.size })
+        assertEquals(todo, batches.flatten())
+        assertEquals(listOf(1), WindowPlanner.batches(todo.take(1), 2, 8).map { it.size })
+        assertTrue(WindowPlanner.batches(emptyList(), 2, 8).isEmpty())
     }
 }

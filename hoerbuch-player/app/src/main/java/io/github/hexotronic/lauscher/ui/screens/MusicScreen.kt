@@ -157,6 +157,7 @@ fun MusicScreen(vm: MainViewModel) {
                         modifier = Modifier.padding(top = 6.dp),
                     )
                     MoodLegend(scenes)
+                    TextButton(onClick = { vm.openScreen("analysis") }) { Text("Alle Szenen als Stichpunkte (KI-Analyse) …") }
                 }
             }
 

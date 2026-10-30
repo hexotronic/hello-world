@@ -141,6 +141,13 @@ oder **nur für ein bestimmtes Hörbuch** speichern.
   Stichprobe 5 s … alles“, dazu Schnellwahl (Turbo, Ausgewogen, Gründlich, Vollständig). Die App zeigt, wie viel
   des Buchs gehört wird und wie viel Rechenzeit eine Stunde Hörbuch braucht – nach der ersten Analyse auf dem
   eigenen Gerät gemessen.
+- **Liest voraus:** Beim Hören analysiert die KI im Hintergrund die nächsten Minuten (einstellbar 5–60, Standard
+  15) – die Musik steht also fest, bevor du an der Stelle bist. Der erste Durchgang nimmt nur zwei Abschnitte,
+  damit die Musik für die aktuelle Stelle schnell bereit ist. Ganze Bücher lassen sich auch vorab analysieren.
+- **Reiter „KI-Analyse“** in den Buch-Details (auch aus dem Player über „Alle Szenen“): wie weit vorausgelesen
+  ist („bis 1:23:00 – 38 Min. vor dir“), Stimmungskarte, „Was bisher geschah“, ein Überblick über Orte und
+  Gefühle des Buchs und jede Szene als Stichpunkte – Zeit, Titel, Ort, Gefühl, Spannung, welche Musik läuft
+  und ein Auszug des Texts. Tippen springt zur Szene, der Stift korrigiert sie.
 - **Szenenwechsel genau finden:** Wo die Musik zwischen zwei Abschnitten wechselt, hört die App an der Grenze
   zweimal kurz nach (12 s, oder liest im Buchtext) und fragt das Sprachmodell nur „gehört das noch zur alten
   oder schon zur neuen Szene?“ (eine Antwort, A oder B). So wechselt die Musik auf etwa ±15 s genau statt im

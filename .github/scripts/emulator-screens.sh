@@ -123,6 +123,8 @@ if [ -n "${E2E_DIR:-}" ] && [ -f "$E2E_DIR/story.wav" ]; then
     echo "::error::Die Analyse mit Buchtext hat nicht funktioniert"
     E2E_FAILED=1
   fi
+  start --es screen analysis
+  shot 13-ki-analyse-tab-hell 5
   # Two windows with different music: the scene change must have been looked for.
   KINDS=$(grep "Szenen:" "$OUT/analyse-buchtext.txt" | grep -oE "[0-9]+:[0-9]+=[A-Z]+/[0-9]@[A-Z_?]+" | cut -d= -f2 | sort -u | wc -l)
   if [ "$KINDS" -gt 1 ]; then

@@ -64,6 +64,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
+/** Index of the "KI-Analyse" tab in the book details. */
+const val BOOK_TAB_ANALYSIS = 4
+
 sealed interface Screen {
     data object Library : Screen
     data object Stats : Screen
@@ -294,6 +297,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 navigate(Screen.Player)
             }
             "detail" -> (nowPlaying.value.book ?: lastBook.value)?.let { navigate(Screen.BookDetail(it.id)) }
+            "analysis" -> (nowPlaying.value.book ?: lastBook.value)?.let {
+                requestedBookTab = BOOK_TAB_ANALYSIS
+                navigate(Screen.BookDetail(it.id))
+            }
         }
     }
 
@@ -413,6 +420,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /** Analyses [bookId] from [fromMs] on (from the "KI-Analyse" tab of any book). */
+    fun analyzeBookFrom(bookId: Long, fromMs: Long) {
+        viewModelScope.launch {
+            if (!app.analysis.hasSpeechModel && !repository.hasBookText(bookId)) {
+                toast("Bitte zuerst ein Spracherkennungsmodell laden oder den Buchtext einfügen")
+                return@launch
+            }
+            app.analysis.analyze(bookId, fromMs = fromMs)
+        }
+    }
+
+    /** Set before opening a book's details on a certain tab (e.g. 4 = "KI-Analyse"). */
+    var requestedBookTab by mutableStateOf<Int?>(null)
+
     fun stopAnalysis() = app.analysis.stop()
 
     /** Deletes the analysis of the current book, or of all books when [allBooks] is set. */
@@ -437,22 +458,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /** "Fits": the scene stays as it is and serves as an example for the rest of the book. */
-    fun confirmScene(scene: Scene) {
-        val book = nowPlaying.value.book ?: return
+    fun confirmScene(scene: Scene, bookId: Long? = null) {
+        val id = bookId ?: nowPlaying.value.book?.id ?: return
         viewModelScope.launch {
-            repository.confirmScene(book.id, scene.startMs, scene.endMs)
+            repository.confirmScene(id, scene.startMs, scene.endMs)
             toast("Danke – die Szene bleibt so")
         }
     }
 
     /** Forgets the analysis of a scene; with [reanalyze] the language model judges it again. */
-    fun deleteScene(scene: Scene, reanalyze: Boolean) {
-        val book = nowPlaying.value.book ?: return
+    fun deleteScene(scene: Scene, reanalyze: Boolean, bookId: Long? = null) {
+        val id = bookId ?: nowPlaying.value.book?.id ?: return
         viewModelScope.launch {
             if (app.analysis.isRunning) app.analysis.stop()
-            repository.deleteSceneAnalysis(book.id, scene.startMs, scene.endMs)
+            repository.deleteSceneAnalysis(id, scene.startMs, scene.endMs)
             if (reanalyze) {
-                app.analysis.analyze(book.id, fromMs = scene.startMs, untilMs = scene.endMs)
+                app.analysis.analyze(id, fromMs = scene.startMs, untilMs = scene.endMs)
                 toast("Szene wird neu analysiert")
             } else {
                 toast("Analyse der Szene gelöscht")
@@ -591,9 +612,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun showAllTracks() = updateMusic { it.copy(hiddenTracks = emptySet()) }
 
-    fun overrideScene(scene: Scene, mood: Mood?, level: Int, title: String, setting: Setting?) {
-        val book = nowPlaying.value.book ?: return
-        viewModelScope.launch { repository.overrideScene(book.id, scene.startMs, scene.endMs, mood, level, title, setting) }
+    fun overrideScene(scene: Scene, mood: Mood?, level: Int, title: String, setting: Setting?, bookId: Long? = null) {
+        val id = bookId ?: nowPlaying.value.book?.id ?: return
+        viewModelScope.launch { repository.overrideScene(id, scene.startMs, scene.endMs, mood, level, title, setting) }
     }
 
     fun previewMusic(spec: SoundSpec) = withCore { it.previewMusic(spec) }

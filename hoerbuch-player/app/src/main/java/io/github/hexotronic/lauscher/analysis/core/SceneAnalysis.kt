@@ -65,6 +65,15 @@ object WindowPlanner {
     /** Scenes rarely change faster than this; longer windows mean fewer model calls. */
     const val WINDOW_MS = 120_000L
 
+    /**
+     * Groups windows for the language model: [size] per call, but the first call only [first], so
+     * the music for the current position is ready sooner.
+     */
+    fun batches(todo: List<LongRange>, first: Int, size: Int): List<List<LongRange>> {
+        if (todo.size <= first) return listOf(todo).filter { it.isNotEmpty() }
+        return listOf(todo.take(first)) + todo.drop(first).chunked(size)
+    }
+
     /** Splits the book into fixed windows. */
     fun windows(durationMs: Long, windowMs: Long = WINDOW_MS): List<LongRange> {
         val out = ArrayList<LongRange>()
@@ -195,6 +204,29 @@ object SceneMerger {
             }
         }
         return out
+    }
+
+    /**
+     * How far the analysis reaches without a gap from [positionMs] (gaps up to a second are
+     * ignored); null if the position itself is not analysed yet.
+     */
+    fun coveredUntil(scenes: List<Scene>, positionMs: Long): Long? {
+        val sorted = scenes.sortedBy { it.startMs }
+        var i = sorted.indexOfFirst { positionMs >= it.startMs && positionMs < it.endMs }
+        if (i < 0) return null
+        var end = sorted[i].endMs
+        while (++i < sorted.size && sorted[i].startMs - end <= 1_000) end = maxOf(end, sorted[i].endMs)
+        return end
+    }
+
+    /** Share of the analysed time per [key] (e.g. place or mood), largest first; null keys are left out. */
+    fun <K> shares(scenes: List<Scene>, key: (Scene) -> K?): List<Pair<K, Float>> {
+        val total = scenes.sumOf { it.endMs - it.startMs }.toFloat()
+        if (total <= 0f) return emptyList()
+        return scenes.mapNotNull { s -> key(s)?.let { it to (s.endMs - s.startMs) } }
+            .groupBy({ it.first }, { it.second })
+            .map { (k, v) -> k to v.sum() / total }
+            .sortedByDescending { it.second }
     }
 
     fun sceneAt(scenes: List<Scene>, positionMs: Long): Scene? {

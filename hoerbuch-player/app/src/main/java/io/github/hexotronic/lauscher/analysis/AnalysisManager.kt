@@ -109,11 +109,12 @@ class AnalysisManager(
             if (!hasSpeechModel && !repo.hasBookText(bookId)) return@launch
             val book = repo.book(bookId) ?: return@launch
             val windowMs = s.samplingPlan.windowMs
+            val aheadMs = s.aheadMinutes * 60_000L
             val upcoming = WindowPlanner.windows(book.durationMs, windowMs).filter {
-                it.last >= positionMs && it.first < positionMs + AHEAD_MS
+                it.last >= positionMs && it.first < positionMs + aheadMs
             }
             if (WindowPlanner.pending(upcoming, repo.analyzedRanges(bookId)).isNotEmpty()) {
-                analyze(bookId, fromMs = positionMs, untilMs = positionMs + AHEAD_MS + 4 * windowMs, automatic = true)
+                analyze(bookId, fromMs = positionMs, untilMs = positionMs + aheadMs + 4 * windowMs, automatic = true)
             }
         }
     }
@@ -192,7 +193,7 @@ class AnalysisManager(
             return heard
         }
         try {
-            for (batch in todo.chunked(BATCH)) {
+            for (batch in WindowPlanner.batches(todo, FIRST_BATCH, BATCH)) {
                 coroutineContext.ensureActive()
                 val windows = ArrayList<TranscriptWindow>()
                 val t0 = System.nanoTime()
@@ -469,7 +470,9 @@ class AnalysisManager(
 
         /** Samples with fewer words (music, silence) say nothing about the speed. */
         private const val SPEED_PROBE_WORDS = 15
-        private const val AHEAD_MS = 8 * 60_000L
+
+        /** The first model call covers only this many windows, so music for the current spot is ready sooner. */
+        private const val FIRST_BATCH = 2
 
         /** With a book text: listen briefly where the nearest anchor is further away than this. */
         private const val ALIGN_EVERY_MS = 10 * 60_000L

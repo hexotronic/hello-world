@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -106,6 +107,10 @@ fun SceneFeedbackSheet(vm: MainViewModel, np: NowPlaying, onDismiss: () -> Unit)
                 FeedbackButton(Icons.Filled.Delete, "Analyse löschen") {
                     vm.deleteScene(scene, reanalyze = false)
                     onDismiss()
+                }
+                FeedbackButton(Icons.AutoMirrored.Filled.List, "Alle Szenen (KI-Analyse)") {
+                    onDismiss()
+                    vm.openScreen("analysis")
                 }
             }
 

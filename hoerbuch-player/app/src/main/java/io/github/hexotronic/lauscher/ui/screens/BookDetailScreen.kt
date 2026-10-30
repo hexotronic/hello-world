@@ -2,6 +2,9 @@
 
 package io.github.hexotronic.lauscher.ui.screens
 
+import io.github.hexotronic.lauscher.ui.BOOK_TAB_ANALYSIS
+import io.github.hexotronic.lauscher.analysis.core.Scene
+import androidx.compose.runtime.LaunchedEffect
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -35,7 +38,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -68,7 +71,14 @@ fun BookDetailScreen(vm: MainViewModel, bookId: Long) {
     val bookmarksFlow = remember(bookId) { vm.repository.observeBookmarks(bookId) }
     val details by detailsFlow.collectAsStateWithLifecycle(null)
     val bookmarks by bookmarksFlow.collectAsStateWithLifecycle(emptyList())
-    var tab by remember { mutableIntStateOf(0) }
+    var tab by remember { mutableIntStateOf(vm.requestedBookTab ?: 0) }
+    // Opened from the player ("KI-Analyse"): show that tab.
+    LaunchedEffect(vm.requestedBookTab) {
+        vm.requestedBookTab?.let {
+            tab = it
+            vm.requestedBookTab = null
+        }
+    }
     var menu by remember { mutableStateOf(false) }
     var editInfo by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -221,14 +231,18 @@ private fun BookDetailBody(
             )
         }
 
-        PrimaryTabRow(selectedTabIndex = tab, modifier = Modifier.padding(top = 8.dp)) {
+        PrimaryScrollableTabRow(selectedTabIndex = tab, modifier = Modifier.padding(top = 8.dp), edgePadding = 8.dp) {
             Tab(selected = tab == 0, onClick = { onTab(0) }, text = { Text("Kapitel") })
             Tab(selected = tab == 1, onClick = { onTab(1) }, text = { Text("Lesezeichen (${bookmarks.size})") })
             Tab(selected = tab == 2, onClick = { onTab(2) }, text = { Text("Dateien") })
             Tab(selected = tab == 3, onClick = { onTab(3) }, text = { Text("Buchtext") })
+            Tab(selected = tab == BOOK_TAB_ANALYSIS, onClick = { onTab(BOOK_TAB_ANALYSIS) }, text = { Text("KI-Analyse") })
         }
+        val analysis = if (tab == BOOK_TAB_ANALYSIS) rememberAnalysisTabData(vm, book) else null
+        var editScene by remember { mutableStateOf<Scene?>(null) }
         LazyColumn(Modifier.fillMaxSize()) {
             when (tab) {
+                BOOK_TAB_ANALYSIS -> if (analysis != null) analysisTab(analysis, vm, book.id) { editScene = it }
                 0 -> items(d.chapters) { ch ->
                     val current = book.positionMs >= ch.startMs && book.positionMs < ch.endMs && !book.finished
                     ListItem(
@@ -261,6 +275,18 @@ private fun BookDetailBody(
                         modifier = Modifier.clickable { vm.playBook(book.id, startAtMs = t.startMs) },
                     )
                 }
+            }
+        }
+        editScene?.let { scene ->
+            SceneEditDialog(
+                scene,
+                onDismiss = { editScene = null },
+                onConfirm = { vm.confirmScene(scene, book.id); editScene = null },
+                onReanalyze = { vm.deleteScene(scene, reanalyze = true, bookId = book.id); editScene = null },
+                onDelete = { vm.deleteScene(scene, reanalyze = false, bookId = book.id); editScene = null },
+            ) { mood, level, title, setting ->
+                vm.overrideScene(scene, mood, level, title, setting, book.id)
+                editScene = null
             }
         }
     }
