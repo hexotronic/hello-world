@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.github.hexotronic.lauscher.LauscherApp
+import io.github.hexotronic.lauscher.download.DownloadErrors
 import io.github.hexotronic.lauscher.download.Listing
 import io.github.hexotronic.lauscher.download.MediaSources
 import io.github.hexotronic.lauscher.download.Source
@@ -63,7 +64,7 @@ class DownloadBrowser(private val app: LauscherApp, private val scope: Coroutine
                 bookTotal = result.total
                 bookResults = if (more) (bookResults + result.items).distinctBy { it.id } else result.items
             }.onFailure {
-                bookError = "Suche fehlgeschlagen: ${it.message ?: it.javaClass.simpleName}"
+                bookError = "Suche fehlgeschlagen: ${DownloadErrors.describe(it)}"
             }
             bookLoading = false
         }
@@ -150,7 +151,7 @@ class DownloadBrowser(private val app: LauscherApp, private val scope: Coroutine
                     hasMore = listing.more != null
                 }
                 .onFailure {
-                    mediaError = it.message ?: it.javaClass.simpleName
+                    mediaError = DownloadErrors.describe(it)
                     if (reset) {
                         mediaItems = emptyList()
                         hasMore = false

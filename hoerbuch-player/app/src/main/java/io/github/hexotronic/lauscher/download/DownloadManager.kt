@@ -135,7 +135,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
                     throw e
                 } catch (e: Throwable) {
                     Log.w(TAG, "Auftrag ${job.id} fehlgeschlagen", e)
-                    setJob(job.id) { it.copy(state = JobState.FAILED, current = null, message = e.message ?: e.javaClass.simpleName) }
+                    setJob(job.id) { it.copy(state = JobState.FAILED, current = null, message = DownloadErrors.describe(e)) }
                 }
             }
             running = job.id to task
@@ -181,7 +181,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
                 target.discard()
                 if (e is CancellationException) throw e
                 Log.w(TAG, "Kapitel ${f.name} fehlgeschlagen", e)
-                setJob(jobId) { it.copy(failed = it.failed + 1, message = e.message) }
+                setJob(jobId) { it.copy(failed = it.failed + 1, message = DownloadErrors.describe(e)) }
             }
         }
         importBook(jobId, "download:librivox:${book.id}", book.title, book.author, saved, cover)
@@ -212,7 +212,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
                 } catch (e: Throwable) {
                     if (e is CancellationException) throw e
                     Log.w(TAG, "„${item.title}“ fehlgeschlagen", e)
-                    setJob(jobId) { it.copy(failed = it.failed + 1, message = e.message ?: e.javaClass.simpleName) }
+                    setJob(jobId) { it.copy(failed = it.failed + 1, message = DownloadErrors.describe(e)) }
                 }
                 index++
             }
