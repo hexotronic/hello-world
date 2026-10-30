@@ -296,13 +296,17 @@ object ScenePrompt {
                 endMs = w.endMs,
                 mood = mood,
                 level = ((m?.get("level") as? Number)?.toInt() ?: 2).coerceIn(1, 3),
-                title = (m?.get("title") as? String)?.trim().orEmpty().take(60),
+                title = ((m?.get("title") as? String)?.trim().orEmpty().take(60)).takeUnless { echoesInstructions(it) }.orEmpty(),
                 source = SceneMerger.SOURCE_LLM,
                 setting = Setting.parse(m?.get("place") as? String),
             )
         }
         return Result(result, (root["story"] as? String).orEmpty().trim())
     }
+
+    /** Small models sometimes copy a phrase of their instructions ("a short scene title in the") instead of a title. */
+    private fun echoesInstructions(title: String): Boolean =
+        title.split(' ').count { it.isNotBlank() } >= 3 && SYSTEM.replace(Regex("\\s+"), " ").contains(title, ignoreCase = true)
 
     val RECAP_SYSTEM = """
         You summarise audiobooks for listeners who return after a break. Write in the language of the book.

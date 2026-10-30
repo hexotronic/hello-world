@@ -39,6 +39,16 @@ class SceneAnalysisTest {
     }
 
     @Test
+    fun titlesCopiedFromTheInstructionsAreDropped() {
+        val out = """{"windows":[{"w":0,"mood":"CALM","level":1,"place":"SEA","title":"a short scene title in the"},
+            {"w":1,"mood":"CALM","level":1,"place":"SEA","title":"Quiet morning at the lake"}],"story":""}"""
+        val windows = listOf(TranscriptWindow(0, 90_000, "a"), TranscriptWindow(90_000, 180_000, "b"))
+        val result = ScenePrompt.parse(out, windows)!!
+        assertEquals("", result.windows[0].title)
+        assertEquals("Quiet morning at the lake", result.windows[1].title)
+    }
+
+    @Test
     fun parsesModelOutput() {
         val out = """{"windows": [{"w": 0, "mood": "CALM", "level": 1, "place": "HOME", "title": "Morgentee"},
             {"w":1,"mood":"TENSE","level":2,"place":"OTHER","title":"Schritte im Garten"},
