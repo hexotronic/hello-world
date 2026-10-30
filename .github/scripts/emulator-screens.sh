@@ -87,7 +87,8 @@ if [ -n "${E2E_DIR:-}" ] && [ -f "$E2E_DIR/story.wav" ]; then
   adb push "$E2E_DIR/story.wav" "$DATA/test/" > /dev/null
   adb push "$E2E_DIR/story.txt" "$DATA/test/" > /dev/null
   adb shell cmd uimode night no
-  # Speech recognition at double speed (time-stretched, same pitch).
+  # Speech recognition at double speed (time-stretched, same pitch): the first sample is compared with
+  # normal speed, and the faster speed is only kept if recognition hardly suffers.
   start --ez music true --es whisper_model whisper-tiny --es llm_model qwen2.5-0.5b --es language en --es speech_speed 2 \
     --es import_path "$DATA/test/story.wav" --ez analyze true
   echo "Warte auf die lokale Analyse …"
@@ -101,6 +102,10 @@ if [ -n "${E2E_DIR:-}" ] && [ -f "$E2E_DIR/story.wav" ]; then
   shot 11-ki-analyse-hell 5
   if ! grep -q "Szenen" "$OUT/analyse.txt"; then
     echo "::error::Die lokale Analyse hat keine Szenen geliefert"
+    E2E_FAILED=1
+  fi
+  if ! grep -q "Tempoprobe 2.0" "$OUT/analyse.txt"; then
+    echo "::error::Die Tempoprobe bei 2× fehlt"
     E2E_FAILED=1
   fi
 
@@ -118,7 +123,7 @@ if [ -n "${E2E_DIR:-}" ] && [ -f "$E2E_DIR/story.wav" ]; then
     E2E_FAILED=1
   fi
 
-  # Speech recognition of the same recording at 1×, 1.5×, 2× and 2.5×: time and words recognised.
+  # Speech recognition of the same recording at 1×, 1.25×, 1.5× and 2×: time and words recognised.
   adb logcat -c
   start --es speech_check "$DATA/test/story.wav"
   echo "Warte auf den Sprachtest …"
@@ -127,6 +132,7 @@ if [ -n "${E2E_DIR:-}" ] && [ -f "$E2E_DIR/story.wav" ]; then
     sleep 5
   done
   adb logcat -d -s LauscherAnalyse:* | grep "Sprachtest" > "$OUT/sprachtest.txt" || true
+  sed -E 's/^.*(Sprachtest)/\1/' "$OUT/sprachtest.txt" | cut -c1-300
   python3 - "$E2E_DIR/story.txt" "$OUT/sprachtest.txt" <<'PY' | tee "$OUT/sprachtest-auswertung.txt"
 import difflib, re, sys
 words = lambda t: re.findall(r"[a-z]+", t.lower())

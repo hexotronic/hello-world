@@ -273,6 +273,26 @@ object TextAligner {
 
     private val WORD = Regex("[\\p{L}\\p{N}]+")
 
+    /** The words of [text], normalised for comparisons. */
+    fun words(text: String): List<String> = WORD.findAll(text).map { normalizeWord(it.value) }.toList()
+
+    /**
+     * Share of the words of [reference] that [other] recognised in the same order (longest common
+     * subsequence). Compares a sped-up transcript with the one at normal speed.
+     */
+    fun agreement(reference: String, other: String): Float {
+        val a = words(reference)
+        val b = words(other)
+        if (a.isEmpty()) return 0f
+        var prev = IntArray(b.size + 1)
+        var cur = IntArray(b.size + 1)
+        for (x in a) {
+            for (j in b.indices) cur[j + 1] = if (x == b[j]) prev[j] + 1 else maxOf(prev[j + 1], cur[j])
+            prev = cur.also { cur = prev }
+        }
+        return prev[b.size].toFloat() / a.size
+    }
+
     /** Distance in ms from [timeMs] to the nearest anchor; decides where a speech sample is worth it. */
     fun nearestAnchorDistance(anchors: List<Anchor>, timeMs: Long): Long =
         anchors.minOfOrNull { abs(it.timeMs - timeMs) } ?: Long.MAX_VALUE

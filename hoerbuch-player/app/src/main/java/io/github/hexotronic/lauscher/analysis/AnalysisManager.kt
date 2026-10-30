@@ -46,6 +46,9 @@ sealed interface AnalysisStatus {
     data class Failed(val message: String) : AnalysisStatus
 }
 
+/** Result of comparing speech recognition at [speed] with normal speed on a sample of a book. */
+data class SpeedCheck(val bookId: Long, val speed: Float, val agreement: Float, val accepted: Boolean)
+
 /**
  * Listens to the audiobook with an on-device speech model (whisper.cpp) and lets an
  * on-device language model (llama.cpp) decide which background music suits each scene.
@@ -65,6 +68,9 @@ class AnalysisManager(
     val status: StateFlow<AnalysisStatus> = _status.asStateFlow()
     private var job: Job? = null
     private var currentLlm: LlamaNative? = null
+    private val speedChecks = HashMap<Long, SpeedCheck>()
+    private val _lastSpeedCheck = MutableStateFlow<SpeedCheck?>(null)
+    val lastSpeedCheck: StateFlow<SpeedCheck?> = _lastSpeedCheck.asStateFlow()
 
     val hasSpeechModel: Boolean get() = models.isInstalled(settings.current.whisperModel)
     val hasLanguageModel: Boolean get() = models.isInstalled(settings.current.llmModel)
@@ -155,6 +161,34 @@ class AnalysisManager(
             val perWindow = (System.nanoTime() - started) / 1e9 / analysed
             (perWindow * (todo.size - analysed)).toInt()
         }
+        // Faster speech is only used once a sample of this book showed that recognition hardly
+        // suffers from it: the first sample is heard at both speeds and compared.
+        val knownCheck = speedChecks[bookId]?.takeIf { it.speed == plan.speed }
+        var speed = if (plan.speed > 1.01f && knownCheck?.accepted == true) plan.speed else 1f
+        var probing = plan.speed > 1.01f && knownCheck == null
+        fun listen(range: LongRange, sampleMs: Long): String {
+            val heardStart = System.nanoTime()
+            val audioMs = minOf(sampleMs, range.last + 1 - range.first)
+            val heard = transcribe(speech(), details.tracks, range, sampleMs, s.language, speed)
+            speechAudioMs += (audioMs / speed).toLong()
+            if (probing && TextAligner.words(heard).size >= SPEED_PROBE_WORDS) {
+                probing = false
+                val fast = transcribe(speech(), details.tracks, range, sampleMs, s.language, plan.speed)
+                speechAudioMs += (audioMs / plan.speed).toLong()
+                val agreement = TextAligner.agreement(heard, fast)
+                val check = SpeedCheck(bookId, plan.speed, agreement, agreement >= MIN_SPEED_AGREEMENT)
+                speedChecks[bookId] = check
+                _lastSpeedCheck.value = check
+                if (check.accepted) speed = plan.speed
+                Log.i(
+                    TAG,
+                    "Tempoprobe ${plan.speed}×: ${(agreement * 100).toInt()} % der Wörter wie bei 1× – " +
+                        if (check.accepted) "wird genutzt" else "zu ungenau, es bleibt bei 1×",
+                )
+            }
+            speechNanos += System.nanoTime() - heardStart
+            return heard
+        }
         try {
             for (batch in todo.chunked(BATCH)) {
                 coroutineContext.ensureActive()
@@ -169,10 +203,7 @@ class AnalysisManager(
                         val mid = (w.first + w.last) / 2
                         if (textIndex != null && TextAligner.nearestAnchorDistance(a, mid) > ALIGN_EVERY_MS) {
                             // Listen briefly and find the heard words in the text.
-                            val heardStart = System.nanoTime()
-                            val heard = transcribe(speech(), details.tracks, mid until mid + ALIGN_SAMPLE_MS, Long.MAX_VALUE, s.language, plan.speed)
-                            speechNanos += System.nanoTime() - heardStart
-                            speechAudioMs += (ALIGN_SAMPLE_MS / plan.speed).toLong()
+                            val heard = listen(mid until mid + ALIGN_SAMPLE_MS, Long.MAX_VALUE)
                             val expected = TextAligner.charAt(a, mid)
                             val radius = maxOf(5_000, TextAligner.charAt(a, mid + ALIGN_RADIUS_MS) - TextAligner.charAt(a, mid - ALIGN_RADIUS_MS))
                             val found = TextAligner.locate(textIndex, heard, expected, radius)
@@ -187,13 +218,7 @@ class AnalysisManager(
                     } else {
                         _status.value = AnalysisStatus.Running(bookId, "Höre zu: ${ScenePrompt.clock(w.first)}", analysed, todo.size, automatic, remaining())
                         val existing = repo.transcriptAt(bookId, w.first)
-                        existing?.text ?: run {
-                            val heardStart = System.nanoTime()
-                            val heard = transcribe(speech(), details.tracks, w, plan.sampleMs, s.language, plan.speed)
-                            speechNanos += System.nanoTime() - heardStart
-                            speechAudioMs += (minOf(plan.sampleMs, w.last + 1 - w.first) / plan.speed).toLong()
-                            heard
-                        }
+                        existing?.text ?: listen(w, plan.sampleMs)
                     }
                     val window = TranscriptWindow(w.first, w.last + 1, text)
                     repo.saveTranscript(bookId, window)
@@ -375,6 +400,12 @@ class AnalysisManager(
         private const val BATCH = 8
         private const val CONTEXT = 4096
         private const val SPEECH_CHECK_MS = 90_000L
+
+        /** A faster speed must recognise at least this share of the words heard at normal speed. */
+        private const val MIN_SPEED_AGREEMENT = 0.7f
+
+        /** Samples with fewer words (music, silence) say nothing about the speed. */
+        private const val SPEED_PROBE_WORDS = 15
         private const val AHEAD_MS = 8 * 60_000L
 
         /** With a book text: listen briefly where the nearest anchor is further away than this. */

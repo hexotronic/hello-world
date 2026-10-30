@@ -113,8 +113,12 @@ oder **nur für ein bestimmtes Hörbuch** speichern.
   Stichprobe 5 s … alles“, dazu Schnellwahl (Turbo, Ausgewogen, Gründlich, Vollständig). Die App zeigt, wie viel
   des Buchs gehört wird und wie viel Rechenzeit eine Stunde Hörbuch braucht – nach der ersten Analyse auf dem
   eigenen Gerät gemessen.
-- **Spracherkennung bis 2,5× schneller:** die Stimme wird vor der Erkennung zeitlich gestaucht (WSOLA, gleiche
-  Tonhöhe), die Spracherkennung hat entsprechend weniger zu tun.
+- **Spracherkennung bis 2× schneller:** die Stimme wird vor der Erkennung zeitlich gestaucht (WSOLA, gleiche
+  Tonhöhe), die Spracherkennung hat entsprechend weniger zu tun. Das kostet Genauigkeit – im CI-Test (Whisper Tiny,
+  synthetische Stimme) fiel die Erkennung schon bei 1,5× von 83 % auf 17 % der Wörter. Deshalb macht Lauscher bei
+  jedem Buch zuerst eine **Tempoprobe**: dieselbe Stelle wird mit 1× und mit dem gewählten Tempo erkannt, und das
+  schnellere Tempo wird nur genutzt, wenn mindestens 70 % der Wörter übereinstimmen. Das Ergebnis steht unter dem
+  Regler.
 - **Buchtext einfügen statt mitschreiben:** in den Buch-Details unter „Buchtext“ eine TXT-, EPUB- oder HTML-Datei
   wählen, Text aus der Zwischenablage einfügen oder aus einer E-Book-App über „Teilen → Lauscher“ schicken. Die
   App ordnet den Text über die Kapitel (Nummern/Titel) der Zeit zu und gleicht ihn – falls ein

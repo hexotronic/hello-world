@@ -107,6 +107,17 @@ class BookTextTest {
     }
 
     @Test
+    fun spedUpTranscriptsAreComparedWordByWord() {
+        val normal = "Sie rannte am Ufer entlang, schneller und schneller, während der Fremde ihr folgte."
+        assertEquals(1f, TextAligner.agreement(normal, normal.uppercase()), 1e-6f)
+        // Two words misheard, one missing: 10 of 13 words agree.
+        val fast = "sie rannte am ufer entlang schneller und schnell während der fremde sie"
+        assertEquals(10f / 13f, TextAligner.agreement(normal, fast), 1e-6f)
+        assertEquals(0f, TextAligner.agreement(normal, "Musik"), 1e-6f)
+        assertEquals(0f, TextAligner.agreement("", "irgendwas"), 1e-6f)
+    }
+
+    @Test
     fun pendingWindowsSurviveANewWindowLength() {
         val analysed = WindowPlanner.windows(600_000, 120_000)
         // Switching to 3-minute windows: all of them are covered already.

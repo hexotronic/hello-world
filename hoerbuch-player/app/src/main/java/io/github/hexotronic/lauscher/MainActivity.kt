@@ -106,7 +106,7 @@ class MainActivity : ComponentActivity() {
         intent.getStringExtra(EXTRA_WHISPER_MODEL)?.let { id -> vm.updateMusic { it.copy(whisperModel = id) } }
         intent.getStringExtra(EXTRA_LLM_MODEL)?.let { id -> vm.updateMusic { it.copy(llmModel = id) } }
         intent.getStringExtra(EXTRA_LANGUAGE)?.let { lang -> vm.updateMusic { it.copy(language = lang) } }
-        intent.getStringExtra(EXTRA_SPEECH_SPEED)?.toFloatOrNull()?.let { v -> vm.updateMusic { it.copy(speechSpeed = v.coerceIn(1f, 2.5f)) } }
+        intent.getStringExtra(EXTRA_SPEECH_SPEED)?.toFloatOrNull()?.let { v -> vm.updateMusic { it.copy(speechSpeed = v.coerceIn(1f, 2f)) } }
         intent.getStringExtra(EXTRA_MUSIC_DOWNLOAD)?.let { ids -> vm.downloadMusic(ids.split(',').map { it.trim() }) }
         // "TENSE" or "TENSE@DUNGEON": a fixed mood, optionally at a place.
         intent.getStringExtra(EXTRA_MUSIC_FIXED)?.let { value ->

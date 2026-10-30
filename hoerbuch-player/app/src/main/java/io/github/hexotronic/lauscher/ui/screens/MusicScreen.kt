@@ -452,10 +452,21 @@ private fun SamplingSettings(vm: MainViewModel, s: MusicSettings) {
         "Tempo der Spracherkennung",
         s.speechSpeed,
         speedText(s.speechSpeed) + "×",
-        range = 1f..2.5f,
-        steps = 5,
-        subtitle = "Die Stimme wird für die Erkennung schneller abgespielt (Tonhöhe bleibt) – spart Zeit, erkennt evtl. etwas ungenauer",
+        range = 1f..2f,
+        steps = 3,
+        subtitle = "Die Stimme wird für die Erkennung schneller abgespielt (Tonhöhe bleibt). Spart Zeit, erkennt aber ungenauer: " +
+            "Lauscher vergleicht deshalb bei jedem Buch zuerst eine Probe mit 1× und nutzt das Tempo nur, wenn die Erkennung kaum leidet.",
     ) { v -> vm.updateMusic { it.copy(speechSpeed = (v * 4).roundToInt() / 4f) } }
+    val probe by vm.speedCheck.collectAsStateWithLifecycle()
+    probe?.let { c ->
+        Text(
+            "Letzte Tempoprobe: ${speedText(c.speed)}× erkannte ${(c.agreement * 100).roundToInt()} % der Wörter wie 1× – " +
+                if (c.accepted) "wird genutzt." else "zu ungenau, dieses Buch wird mit 1× analysiert.",
+            style = MaterialTheme.typography.bodySmall,
+            color = if (c.accepted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
+        )
+    }
     val measured = s.measuredSpeechFactor > 0 && s.measuredModelSeconds > 0
     val speech = if (s.measuredSpeechFactor > 0) s.measuredSpeechFactor else MusicSettings.DEFAULT_SPEECH_FACTOR
     val model = if (s.measuredModelSeconds > 0) s.measuredModelSeconds else MusicSettings.DEFAULT_MODEL_SECONDS

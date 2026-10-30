@@ -30,6 +30,7 @@ import io.github.hexotronic.lauscher.analysis.ModelManager
 import io.github.hexotronic.lauscher.analysis.ModelKind
 import io.github.hexotronic.lauscher.analysis.ModelInfo
 import io.github.hexotronic.lauscher.analysis.AnalysisStatus
+import io.github.hexotronic.lauscher.analysis.SpeedCheck
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.distinctUntilChanged
 import io.github.hexotronic.lauscher.audio.SoundState
@@ -306,8 +307,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** Test aid: recognises an audio file at 1×, 1.5×, 2× and 2.5× and logs the results. */
-    fun speechCheck(path: String) = app.analysis.speechCheck(java.io.File(path), listOf(1f, 1.5f, 2f, 2.5f))
+    /** Test aid: recognises an audio file at 1×, 1.25×, 1.5× and 2× and logs the results. */
+    fun speechCheck(path: String) = app.analysis.speechCheck(java.io.File(path), listOf(1f, 1.25f, 1.5f, 2f))
 
     fun removeFolder(uri: String) {
         viewModelScope.launch { scanner.removeFolder(uri) }
@@ -379,6 +380,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val musicSettings: StateFlow<MusicSettings> = app.musicSettings.settings
     val analysisStatus: StateFlow<AnalysisStatus> = app.analysis.status
+    val speedCheck: StateFlow<SpeedCheck?> = app.analysis.lastSpeedCheck
     val modelDownload = app.models.download
     val modelChanges = app.models.changes
     val models: ModelManager = app.models
