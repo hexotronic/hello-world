@@ -310,6 +310,16 @@ private fun DownloadOptions(d: DownloadBrowser, grouping: Boolean) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Mp3Quality.entries.forEach { q -> FilterChip(selected = d.quality == q, onClick = { d.quality = q }, label = { Text(q.label) }) }
         }
+        if (d.quality.kbps > 160) {
+            Text(
+                "Mehr als die Quelle hergibt, klingt nicht besser: YouTube liefert Ton mit etwa 130–160 kbit/s, " +
+                    "SoundCloud und Bandcamp mit 128 kbit/s. 320 kbit/s macht die Datei nur größer – volle " +
+                    "Qualität ohne Umwandlung gibt es mit „Original“.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        }
     }
     if (grouping) {
         Text("Mehrere Dateien", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 6.dp))

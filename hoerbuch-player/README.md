@@ -55,7 +55,7 @@ In der Bibliothek über **＋ → Herunterladen und umwandeln …** (oder in den
     Links auf einmal. Direkte Links auf Ton- oder Videodateien (z. B. `…/vortrag.mp4`) gehen ebenfalls.
   - **Bulk:** Treffer per Häkchen auswählen, „Alle“ oder „Alle Seiten laden“ (bis 500 Videos), dann
     herunterladen – als **ein Hörbuch mit Kapiteln** (Playlist = Buch) oder jedes einzeln.
-  - Gespeichert wird nur der Ton: als **MP3** (64 kbit/s mono für Sprache, 128 oder 192 kbit/s) mit
+  - Gespeichert wird nur der Ton: als **MP3** (64 kbit/s mono für Sprache, 128, 192 oder 320 kbit/s) mit
     Titel, Interpret, Album und Cover in den ID3-Tags, oder im **Originalformat** (M4A/WebM, ohne
     Umwandlung, schneller, ohne Qualitätsverlust).
   - Links lassen sich aus YouTube, NewPipe oder dem Browser über **Teilen → In Lauscher öffnen** schicken.

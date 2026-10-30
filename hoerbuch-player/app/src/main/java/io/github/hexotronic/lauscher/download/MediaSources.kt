@@ -146,8 +146,12 @@ object MediaSources {
         return Listing(first.title, items.distinctBy { it.url }.take(max), next)
     }
 
-    /** The best downloadable sound of [url]: an audio-only stream, else the smallest video with sound. */
-    fun audioOf(url: String): AudioSource {
+    /**
+     * The best downloadable sound of [url]: an audio-only stream, else the smallest video with sound.
+     * With [compatible] M4A is preferred (kept as it is); otherwise the highest bitrate wins, since
+     * the stream is decoded and re-encoded anyway.
+     */
+    fun audioOf(url: String, compatible: Boolean = true): AudioSource {
         init()
         if (!isSupported(url)) {
             return AudioSource(url, LinkInput.extensionOf(url).ifEmpty { "mp4" }, true, LinkInput.fileNameOf(url), null, null)
@@ -158,8 +162,9 @@ object MediaSources {
             .filter { it.isUrl && it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP }
             .sortedWith(
                 compareBy<AudioStream> { if (it.audioTrackType == null || it.audioTrackType == AudioTrackType.ORIGINAL) 0 else 1 }
-                    .thenBy { formatRank(it.format) }
-                    .thenByDescending { it.averageBitrate },
+                    .let { c -> if (compatible) c.thenBy { formatRank(it.format) } else c }
+                    .thenByDescending { maxOf(it.averageBitrate, it.bitrate) }
+                    .thenBy { formatRank(it.format) },
             )
             .firstOrNull()
         if (audio != null) {

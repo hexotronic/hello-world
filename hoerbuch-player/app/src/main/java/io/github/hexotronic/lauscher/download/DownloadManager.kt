@@ -202,7 +202,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
                     val source = if (w.local) {
                         localSource(item)
                     } else {
-                        MediaSources.audioOf(item.url)
+                        MediaSources.audioOf(item.url, compatible = w.format == OutputFormat.ORIGINAL)
                     }
                     if (cover == null && !w.local) {
                         coverBytes = (source.thumbnail ?: item.thumbnail)?.let { Net.bytes(it) }

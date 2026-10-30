@@ -58,6 +58,7 @@ enum class Mp3Quality(val label: String, val kbps: Int, val mono: Boolean) {
     SPEECH("Sprache · 64 kbit/s mono", 64, true),
     STANDARD("Standard · 128 kbit/s", 128, false),
     HIGH("Hoch · 192 kbit/s", 192, false),
+    MAX("Maximal · 320 kbit/s", 320, false),
 }
 
 /** How selected items become books in the library. */
