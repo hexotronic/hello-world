@@ -205,8 +205,9 @@ class DownloadBrowser(private val app: LauscherApp, private val scope: Coroutine
     /**
      * Test aid (adb extras, see MainActivity): finds [value] – LibriVox words, a link, or
      * "quelle:suchwörter" – and downloads the first [limit] results, or converts the file [value].
+     * With [pauseAfterMs] the download is paused after that time and continued 3 s later.
      */
-    fun automate(kind: String, value: String, limit: Int, original: Boolean) {
+    fun automate(kind: String, value: String, limit: Int, original: Boolean, pauseAfterMs: Long? = null) {
         val format = if (original) OutputFormat.ORIGINAL else OutputFormat.MP3
         scope.launch {
             runCatching {
@@ -217,7 +218,13 @@ class DownloadBrowser(private val app: LauscherApp, private val scope: Coroutine
                         }
                         val item = page.items.firstOrNull() ?: error("LibriVox: nichts gefunden für „$value“")
                         Log.i(TAG, "LibriVox: ${page.total} Treffer, lade „${item.title}“")
-                        app.downloads.downloadAudiobook(item, limit)
+                        val id = app.downloads.downloadAudiobook(item, limit)
+                        if (pauseAfterMs != null) {
+                            kotlinx.coroutines.delay(pauseAfterMs)
+                            app.downloads.pause(id)
+                            kotlinx.coroutines.delay(3_000)
+                            app.downloads.resume(id)
+                        }
                     }
                     "media" -> {
                         val listing = withContext(Dispatchers.IO) {
@@ -243,6 +250,14 @@ class DownloadBrowser(private val app: LauscherApp, private val scope: Coroutine
     }
 
     fun cancel(id: Long) = app.downloads.cancel(id)
+
+    fun pause(id: Long) = app.downloads.pause(id)
+
+    fun resume(id: Long) = app.downloads.resume(id)
+
+    fun pauseAll() = app.downloads.pauseAll()
+
+    fun resumeAll() = app.downloads.resumeAll()
 
     fun clearFinished() = app.downloads.clearFinished()
 

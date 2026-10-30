@@ -66,6 +66,10 @@ import io.github.hexotronic.lauscher.ui.components.RetroProgress
 import io.github.hexotronic.lauscher.ui.components.RetroTopBar
 import io.github.hexotronic.lauscher.ui.components.SectionHeader
 import io.github.hexotronic.lauscher.ui.components.block
+import io.github.hexotronic.lauscher.download.core.TransferEstimate
+import io.github.hexotronic.lauscher.ui.formatHuman
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 import io.github.hexotronic.lauscher.ui.formatClock
 
 /** Free audiobooks (LibriVox), videos as audio via search or link, and converting files on the phone. */
@@ -95,10 +99,25 @@ fun DownloadScreen(vm: MainViewModel) {
             }
             if (jobs.isNotEmpty()) {
                 item { SectionHeader("Aufträge") }
-                items(jobs.asReversed(), key = { "job-${it.id}" }) { job ->
-                    JobCard(job, onCancel = { d.cancel(job.id) }, onOpen = { id -> vm.navigate(Screen.BookDetail(id)) })
+                val open = jobs.count { it.active || it.state == JobState.PAUSED }
+                if (open > 1) {
+                    item {
+                        Row(Modifier.padding(horizontal = 8.dp)) {
+                            if (jobs.any { it.active }) TextButton(onClick = d::pauseAll) { Text("Alle pausieren") }
+                            if (jobs.any { it.state == JobState.PAUSED }) TextButton(onClick = d::resumeAll) { Text("Alle fortsetzen") }
+                        }
+                    }
                 }
-                if (jobs.any { !it.active }) {
+                items(jobs.asReversed(), key = { "job-${it.id}" }) { job ->
+                    JobCard(
+                        job,
+                        onPause = { d.pause(job.id) },
+                        onResume = { d.resume(job.id) },
+                        onCancel = { d.cancel(job.id) },
+                        onOpen = { id -> vm.navigate(Screen.BookDetail(id)) },
+                    )
+                }
+                if (jobs.any { it.finished }) {
                     item {
                         TextButton(onClick = d::clearFinished, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Erledigte entfernen") }
                     }
@@ -330,7 +349,7 @@ private fun DownloadOptions(d: DownloadBrowser, grouping: Boolean) {
 }
 
 @Composable
-private fun JobCard(job: DownloadJob, onCancel: () -> Unit, onOpen: (Long) -> Unit) {
+private fun JobCard(job: DownloadJob, onPause: () -> Unit, onResume: () -> Unit, onCancel: () -> Unit, onOpen: (Long) -> Unit) {
     val colors = MaterialTheme.colorScheme
     Column(
         Modifier
@@ -345,6 +364,7 @@ private fun JobCard(job: DownloadJob, onCancel: () -> Unit, onOpen: (Long) -> Un
             val (label, bg, fg) = when (job.state) {
                 JobState.QUEUED -> Triple("Wartet", colors.surfaceContainerHighest, colors.onSurface)
                 JobState.RUNNING -> Triple("Lädt", colors.primary, colors.onPrimary)
+                JobState.PAUSED -> Triple("Pausiert", colors.secondaryContainer, colors.onSecondaryContainer)
                 JobState.DONE -> Triple("Fertig", colors.tertiary, colors.onTertiary)
                 JobState.FAILED -> Triple("Fehler", colors.error, colors.onError)
                 JobState.CANCELLED -> Triple("Abgebrochen", colors.surfaceContainerHighest, colors.onSurface)
@@ -352,7 +372,8 @@ private fun JobCard(job: DownloadJob, onCancel: () -> Unit, onOpen: (Long) -> Un
             PixelBadge(label, bg, fg)
         }
         Text(job.detail, style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
-        if (job.active) {
+        val paused = job.state == JobState.PAUSED
+        if (job.active || paused) {
             Spacer(Modifier.height(8.dp))
             RetroProgress(job.overall, Modifier.fillMaxWidth())
             job.current?.let {
@@ -364,7 +385,39 @@ private fun JobCard(job: DownloadJob, onCancel: () -> Unit, onOpen: (Long) -> Un
                     modifier = Modifier.padding(top = 4.dp),
                 )
             }
-            TextButton(onClick = onCancel) { Text("Abbrechen") }
+            // Network data: how much has arrived, how fast, over which connection.
+            val running = job.state == JobState.RUNNING
+            val data = listOfNotNull(
+                when {
+                    job.bytesTotal > 0 -> "${TransferEstimate.size(job.bytes)} von ${TransferEstimate.size(job.bytesTotal)}"
+                    job.bytes > 0 -> "${TransferEstimate.size(job.bytes)} geladen"
+                    else -> null
+                },
+                job.bytesPerSecond.takeIf { running && it > 0 }?.let { "${TransferEstimate.size(it)}/s" },
+                job.network?.takeIf { running }?.let { if (it == "offline") "keine Verbindung" else "über $it" },
+            ).joinToString(" · ")
+            if (data.isNotEmpty()) Text(data, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 2.dp))
+            if (running) {
+                job.remainingMs?.let { ms ->
+                    val end = LocalTime.now().plusSeconds(ms / 1000).format(DateTimeFormatter.ofPattern("HH:mm"))
+                    Text(
+                        "Fertig ca. $end Uhr (noch ${formatHuman(ms)})",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = colors.primary,
+                    )
+                }
+            }
+            if (paused) {
+                Text("Pausiert – Fertiges und Angefangenes bleiben erhalten", style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
+            }
+            Row {
+                if (paused) {
+                    TextButton(onClick = onResume) { Text("Fortsetzen") }
+                } else {
+                    TextButton(onClick = onPause) { Text("Pausieren") }
+                }
+                TextButton(onClick = onCancel) { Text("Abbrechen") }
+            }
         }
         job.message?.let {
             Text(

@@ -72,7 +72,8 @@ class MainActivity : ComponentActivity() {
         // Test aid: download or convert without tapping through the screen.
         val limit = intent.getStringExtra(EXTRA_DOWNLOAD_LIMIT)?.toIntOrNull() ?: 1
         val original = intent.getStringExtra(EXTRA_DOWNLOAD_FORMAT) == "original"
-        intent.getStringExtra(EXTRA_DOWNLOAD_AUDIOBOOK)?.let { vm.downloads.automate("audiobook", it, limit, original) }
+        val pauseTest = intent.getStringExtra(EXTRA_DOWNLOAD_PAUSE_TEST)?.toLongOrNull()
+        intent.getStringExtra(EXTRA_DOWNLOAD_AUDIOBOOK)?.let { vm.downloads.automate("audiobook", it, limit, original, pauseTest) }
         intent.getStringExtra(EXTRA_DOWNLOAD_MEDIA)?.let { vm.downloads.automate("media", it, limit, original) }
         intent.getStringExtra(EXTRA_DOWNLOAD_CONVERT)?.let { vm.downloads.automate("convert", it, limit, original) }
         // "Teilen → Lauscher" from an e-book app: text or a TXT/EPUB/HTML file becomes a book text.
@@ -160,5 +161,6 @@ class MainActivity : ComponentActivity() {
         const val EXTRA_DOWNLOAD_CONVERT = "download_convert"
         const val EXTRA_DOWNLOAD_LIMIT = "download_limit"
         const val EXTRA_DOWNLOAD_FORMAT = "download_format"
+        const val EXTRA_DOWNLOAD_PAUSE_TEST = "download_pause_test"
     }
 }

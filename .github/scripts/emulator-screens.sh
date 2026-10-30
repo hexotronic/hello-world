@@ -195,6 +195,24 @@ PY
     echo "::warning::Der PeerTube-Download hat nicht geklappt (externer Dienst)"
   fi
 
+  # Pause and continue: two LibriVox chapters, paused after 1.5 s and continued 3 s later.
+  adb logcat -c
+  start --es download_audiobook "Grimm" --es download_limit 2 --es download_pause_test 1500 --es screen downloads
+  shot 12b-download-pausiert-hell 2
+  for i in $(seq 1 36); do
+    if adb logcat -d -s LauscherDownload:* | grep -qE "Auftrag [0-9]+ (fertig|fehlgeschlagen)"; then break; fi
+    sleep 5
+  done
+  adb logcat -d -s LauscherDownload:* | tail -15 | tee "$OUT/downloads-pause.txt"
+  if grep -q "pausiert" "$OUT/downloads-pause.txt"; then
+    if ! grep -q "fortgesetzt" "$OUT/downloads-pause.txt" || ! grep -qE "fertig: DONE" "$OUT/downloads-pause.txt"; then
+      echo "::error::Ein pausierter Download wurde nicht fortgesetzt und beendet"
+      E2E_FAILED=1
+    fi
+  else
+    echo "::notice::Der Download war schon fertig, bevor er pausiert werden konnte"
+  fi
+
   # YouTube (Big Buck Bunny, CC BY 3.0 Blender Foundation): best effort, YouTube often blocks CI servers.
   adb logcat -c
   start --es download_media "https://www.youtube.com/watch?v=aqz-KE-bpKQ" --es download_limit 1

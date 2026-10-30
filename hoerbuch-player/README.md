@@ -61,6 +61,12 @@ In der Bibliothek über **＋ → Herunterladen und umwandeln …** (oder in den
   - Links lassen sich aus YouTube, NewPipe oder dem Browser über **Teilen → In Lauscher öffnen** schicken.
 - **Videos vom Handy umwandeln**: Video- oder Tondateien auswählen (oder über **Teilen → In Lauscher
   als MP3** schicken) – sie werden zu MP3 bzw. ihre Tonspur wird herausgelöst.
+- **Fortschritt mit Netzdaten:** geladene Datenmenge (bei LibriVox „12,4 MB von 48 MB“), Geschwindigkeit,
+  Verbindung (WLAN/mobile Daten) und das erwartete Ende („Fertig ca. 14:32 Uhr (noch 6 Min.)“) – in der App und
+  in der Benachrichtigung.
+- **Pausieren und fortsetzen** – einzeln, alle auf einmal oder aus der Benachrichtigung. Fertige Kapitel/Videos
+  bleiben, die angefangene Datei wird per HTTP-Range (bei YouTube stückweise) an der Stelle fortgesetzt, an der sie
+  stand; abgebrochene Verbindungen werden ebenso fortgesetzt. (Pausierte Aufträge gelten bis zum Beenden der App.)
 - Alles landet als Hörbuch in der Bibliothek, die Dateien liegen sichtbar für andere Apps unter
   **Audiobooks/Lauscher/<Autor – Titel>/** (Android 10+). Downloads laufen im Hintergrund weiter
   (Benachrichtigung mit Fortschritt), einzelne Fehler in einer Playlist brechen den Rest nicht ab.
