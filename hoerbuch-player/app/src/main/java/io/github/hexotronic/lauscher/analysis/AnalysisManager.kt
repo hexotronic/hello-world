@@ -195,20 +195,22 @@ class AnalysisManager(
             val parsed = output?.let { ScenePrompt.parse(it, windows) }
             if (parsed != null) {
                 if (parsed.story.isNotBlank()) repo.saveStory(book.id, parsed.story)
-                Log.i(TAG, "Szenen: " + parsed.windows.joinToString { "${ScenePrompt.clock(it.startMs)}=${it.mood ?: "NONE"}/${it.level} ${it.title}" })
-                return parsed.windows
+                // Where the model saw no clear place, place words in the text may still name one.
+                val result = parsed.windows.mapIndexed { i, w -> if (w.setting != null) w else w.copy(setting = KeywordMoods.settingOf(windows[i].text)) }
+                Log.i(TAG, "Szenen: " + result.joinToString { "${ScenePrompt.clock(it.startMs)}=${it.mood ?: "NONE"}/${it.level}@${it.setting ?: "?"} ${it.title}" })
+                return result
             }
             Log.w(TAG, "Language model gave no usable answer, using keywords")
         }
         return windows.map { w ->
             val (mood, level) = KeywordMoods.classify(w.text)
-            WindowMood(w.startMs, w.endMs, mood, level, "", SceneMerger.SOURCE_KEYWORDS)
+            WindowMood(w.startMs, w.endMs, mood, level, "", SceneMerger.SOURCE_KEYWORDS, KeywordMoods.settingOf(w.text))
         }.also { list ->
-            Log.i(TAG, "Szenen (Schlüsselwörter): " + list.joinToString { "${ScenePrompt.clock(it.startMs)}=${it.mood ?: "NONE"}" })
+            Log.i(TAG, "Szenen (Schlüsselwörter): " + list.joinToString { "${ScenePrompt.clock(it.startMs)}=${it.mood ?: "NONE"}@${it.setting ?: "?"}" })
         }
     }
 
-    private fun maxTokens(windows: Int) = 120 + 40 * windows
+    private fun maxTokens(windows: Int) = 120 + 48 * windows
 
     /** "Was bisher geschah": a spoiler-free recap from the transcripts up to [positionMs]. */
     suspend fun recap(bookId: Long, positionMs: Long): Result<String> {

@@ -9,6 +9,7 @@ import io.github.hexotronic.lauscher.data.Chapter
 import io.github.hexotronic.lauscher.data.LibraryRepository
 import io.github.hexotronic.lauscher.data.Track
 import io.github.hexotronic.lauscher.music.synth.Mood
+import io.github.hexotronic.lauscher.music.synth.Setting
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedOutputStream
@@ -62,20 +63,24 @@ object DemoBook {
             description = "Eine künstliche Stimme mit Bandrauschen, Netzbrummen und Knistern. " +
                 "Öffne das Klangstudio und vergleiche mit der A/B-Taste.",
             coverPath = null,
-            signature = "demo-v3",
+            signature = "demo-v4",
             tracks = tracks,
             chapters = marks,
         )
         // A ready-made analysis, so background music and search work without downloading models.
+        data class DemoScene(val text: String, val mood: Mood, val level: Int, val place: Setting, val title: String)
         val story = listOf(
-            Triple("Am Morgen saß Mira am See und trank Tee. Die Sonne wärmte das Wasser, Vögel sangen im Schilf.", Mood.IDYLLIC, "Morgen am See"),
-            Triple("Am Abend hörte sie Schritte im Dunkeln. Ein Schatten folgte ihr bis zum alten Bootshaus.", Mood.TENSE, "Schritte im Dunkeln"),
-            Triple("Doch es war nur ihr Bruder. Lachend feierten sie zusammen das Sommerfest bis tief in die Nacht.", Mood.HAPPY, "Das Sommerfest"),
+            DemoScene("Am Morgen saß Mira am See und trank Tee. Die Sonne wärmte das Wasser, Vögel sangen im Schilf.", Mood.IDYLLIC, 1, Setting.SEA, "Morgen am See"),
+            DemoScene("Am Abend hörte sie Schritte im Wald. Ein Schatten folgte ihr bis zum alten Bootshaus.", Mood.TENSE, 2, Setting.FOREST, "Schritte im Wald"),
+            DemoScene("Doch es war nur ihr Bruder. Im Wirtshaus feierten sie lachend das Sommerfest bis tief in die Nacht.", Mood.HAPPY, 2, Setting.TAVERN, "Das Sommerfest"),
         )
-        story.forEachIndexed { i, (text, mood, title) ->
-            val window = TranscriptWindow(i * SECONDS * 1000L, (i + 1) * SECONDS * 1000L, text)
+        story.forEachIndexed { i, scene ->
+            val window = TranscriptWindow(i * SECONDS * 1000L, (i + 1) * SECONDS * 1000L, scene.text)
             repo.saveTranscript(id, window)
-            repo.saveWindowMoods(id, listOf(WindowMood(window.startMs, window.endMs, mood, 2, title, SceneMerger.SOURCE_LLM)))
+            repo.saveWindowMoods(
+                id,
+                listOf(WindowMood(window.startMs, window.endMs, scene.mood, scene.level, scene.title, SceneMerger.SOURCE_LLM, scene.place)),
+            )
         }
         repo.saveStory(id, "Mira verbringt einen Sommertag am See, fürchtet sich abends vor einem Verfolger und feiert dann mit ihrem Bruder.")
         id

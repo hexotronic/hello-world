@@ -19,6 +19,7 @@ import io.github.hexotronic.lauscher.music.MusicMode
 import io.github.hexotronic.lauscher.music.MusicSource
 import io.github.hexotronic.lauscher.music.library.core.MusicCatalog
 import io.github.hexotronic.lauscher.music.synth.Mood
+import io.github.hexotronic.lauscher.music.synth.Setting
 import io.github.hexotronic.lauscher.ui.LauscherRoot
 import io.github.hexotronic.lauscher.ui.MainViewModel
 import io.github.hexotronic.lauscher.ui.Screen
@@ -93,10 +94,15 @@ class MainActivity : ComponentActivity() {
         intent.getStringExtra(EXTRA_LLM_MODEL)?.let { id -> vm.updateMusic { it.copy(llmModel = id) } }
         intent.getStringExtra(EXTRA_LANGUAGE)?.let { lang -> vm.updateMusic { it.copy(language = lang) } }
         intent.getStringExtra(EXTRA_MUSIC_DOWNLOAD)?.let { ids -> vm.downloadMusic(ids.split(',').map { it.trim() }) }
-        intent.getStringExtra(EXTRA_MUSIC_FIXED)?.let { name ->
-            val mood = Mood.parse(name) ?: return@let
+        // "TENSE" or "TENSE@DUNGEON": a fixed mood, optionally at a place.
+        intent.getStringExtra(EXTRA_MUSIC_FIXED)?.let { value ->
+            val mood = Mood.parse(value.substringBefore('@')) ?: return@let
+            val place = Setting.parse(value.substringAfter('@', ""))
             vm.updateMusic {
-                it.copy(enabled = true, mode = MusicMode.FIXED, fixedMood = mood, fixedAtmosphere = null, source = MusicSource.LIBRARY)
+                it.copy(
+                    enabled = true, mode = MusicMode.FIXED, fixedMood = mood, fixedAtmosphere = null, fixedSetting = place,
+                    source = MusicSource.LIBRARY,
+                )
             }
         }
         intent.getStringExtra(EXTRA_MUSIC_PREVIEW)?.let { id -> MusicCatalog.byId(id)?.let(vm::previewTrack) }

@@ -1,144 +1,209 @@
-"""Generates FantasyCatalog.kt from analysis.jsonl (see measure.sh) and the hand-made table below.
+"""Generates FantasyCatalog.kt, the music library of the app.
 
-Usage: python3 catalog.py analysis.jsonl > ../../app/src/main/java/io/github/hexotronic/lauscher/music/library/core/FantasyCatalog.kt
+Inputs: analysis.jsonl and analysis-themes.jsonl (measured by measure.sh from candidates.txt and
+candidates-themes.txt), veloren-soundtrack.json and supertux-music.txt (the games' own metadata) and the
+hand-made tables in catalog_tables.py: who composed each piece, under which licence (from the games'
+credits), and which moods and places it fits (assigned by hand from titles, the games' descriptions and
+the measurements).
+
+Usage: python3 catalog.py > ../../app/src/main/java/io/github/hexotronic/lauscher/music/library/core/FantasyCatalog.kt
 """
-import json, sys
-A = {json.loads(l)['id']: json.loads(l) for l in open(sys.argv[1])}
-W, WL, FL = 'WESNOTH', 'WIDELANDS', 'FLARE'
-GPL, BYSA3, BYSA4, BY4 = 'GPL2', 'CC_BY_SA_3', 'CC_BY_SA_4', 'CC_BY_4'
-# id, title, composer, year (None = unknown), licence, collection, moods (best fitting first)
-T = [
- ('wesnoth/battle-epic', 'Battle Epic', 'Doug Kaufman', 2007, GPL, W, 'ACTION TENSE'),
- ('wesnoth/battle', 'Battle Music', 'Aleksi Aubry-Carlson', 2006, GPL, W, 'ACTION TENSE'),
- ('wesnoth/breaking_the_chains', 'Breaking the Chains', 'Mattias Westlund', 2007, GPL, W, 'ACTION NEUTRAL'),
- ('wesnoth/casualties_of_war', 'Casualties of War', 'Tyler Johnson', 2009, GPL, W, 'TENSE SAD'),
- ('wesnoth/elvish-theme', 'Elvish Theme', 'Doug Kaufman', 2007, GPL, W, 'MYSTERIOUS IDYLLIC CALM'),
- ('wesnoth/frantic-old', 'Frantic (2004)', 'Aleksi Aubry-Carlson', 2004, GPL, W, 'TENSE ACTION'),
- ('wesnoth/frantic', 'Frantic', 'Stephen Rozanc', 2012, GPL, W, 'ACTION TENSE'),
- ('wesnoth/heroes_rite', 'Heroes Rite', 'Doug Kaufman', 2008, GPL, W, 'NEUTRAL CALM HAPPY'),
- ('wesnoth/into_the_shadows', 'Into the Shadows', 'Tyler Johnson', 2009, GPL, W, 'MYSTERIOUS TENSE EERIE'),
- ('wesnoth/journeys_end', "Journey's End", 'Mattias Westlund', 2009, GPL, W, 'CALM SAD NEUTRAL'),
- ('wesnoth/knalgan_theme', 'Knalgan Theme', 'Ryan Reilly', 2008, GPL, W, 'HAPPY NEUTRAL'),
- ('wesnoth/knolls', 'The Knolls of Doldesh', 'Timothy Pinkham', 2006, GPL, W, 'IDYLLIC CALM'),
- ('wesnoth/legends_of_the_north', 'Legends of the North', 'Mattias Westlund', 2007, GPL, W, 'ACTION TENSE'),
- ('wesnoth/love_theme', 'Love Theme', 'Ryan Reilly', 2008, GPL, W, 'ROMANTIC SAD'),
- ('wesnoth/loyalists', 'Loyalists', 'Joseph G. Toscano', 2004, GPL, W, 'ACTION HAPPY'),
- ('wesnoth/main_menu', 'Main Theme', 'Aleksi Aubry-Carlson', 2005, GPL, W, 'NEUTRAL HAPPY'),
- ('wesnoth/northern_mountains', 'Over the Northern Mountains', 'Mattias Westlund', 2008, GPL, W, 'NEUTRAL IDYLLIC'),
- ('wesnoth/northerners', 'Northerners', 'Stephen Rozanc', 2010, GPL, W, 'TENSE ACTION'),
- ('wesnoth/nunc_dimittis', 'Nunc Dimittis', 'Jeremy Nicoll', 2008, GPL, W, 'SAD CALM'),
- ('wesnoth/return_to_wesnoth', 'Return to Wesnoth', 'Mattias Westlund', 2017, BYSA4, W, 'HAPPY NEUTRAL'),
- ('wesnoth/revelation', 'Revelation', 'Joseph G. Toscano', 2004, GPL, W, 'MYSTERIOUS EERIE'),
- ('wesnoth/sad', 'Sad', 'Tyler Johnson', 2010, GPL, W, 'SAD'),
- ('wesnoth/siege_of_laurelmor', 'Siege of Laurelmor', 'Doug Kaufman', 2009, GPL, W, 'ACTION TENSE'),
- ('wesnoth/silvan_sanctuary', 'Silvan Sanctuary', 'Mattias Westlund', 2010, GPL, W, 'IDYLLIC CALM MYSTERIOUS'),
- ('wesnoth/suspense', 'Suspense', 'Ryan Reilly', 2008, GPL, W, 'TENSE EERIE MYSTERIOUS'),
- ('wesnoth/the_city_falls', 'The City Falls', 'Doug Kaufman', 2007, GPL, W, 'ACTION SAD'),
- ('wesnoth/the_dangerous_symphony', 'The Dangerous Symphony', 'Gianmarco Leone', 2008, GPL, W, 'TENSE ACTION'),
- ('wesnoth/the_deep_path', 'The Deep Path', 'Gianmarco Leone', 2008, GPL, W, 'MYSTERIOUS EERIE'),
- ('wesnoth/the_king_is_dead', 'The King is Dead', 'Mattias Westlund', 2008, GPL, W, 'SAD TENSE'),
- ('wesnoth/transience', 'Transience', 'Aleksi Aubry-Carlson', 2004, GPL, W, 'CALM SAD'),
- ('wesnoth/traveling_minstrels', 'Traveling Minstrels', 'Mattias Westlund', 2008, GPL, W, 'HAPPY IDYLLIC'),
- ('wesnoth/underground', 'Underground', 'Aleksi Aubry-Carlson', 2004, GPL, W, 'EERIE MYSTERIOUS'),
- ('wesnoth/vengeful', 'Vengeful Pursuit', 'Jeremy Nicoll', 2007, GPL, W, 'ACTION TENSE'),
- ('wesnoth/wanderer', 'Still Another Wanderer', 'Timothy Pinkham', 2006, GPL, W, 'CALM NEUTRAL IDYLLIC'),
- ('wesnoth/weight_of_revenge', 'Weight of Revenge', 'Doug Kaufman', 2010, GPL, W, 'TENSE SAD'),
- ('widelands/ingame_00', 'Recorder 2', 'Nikola Whallon', None, GPL, WL, 'IDYLLIC HAPPY'),
- ('widelands/ingame_01', 'Hard Time for Workers', 'Jan Bruns', 2009, GPL, WL, 'NEUTRAL SAD'),
- ('widelands/ingame_02', 'Mountainsketch', 'Nikola Whallon', None, GPL, WL, 'CALM IDYLLIC'),
- ('widelands/ingame_03', 'Tranquil Forest', 'Nikola Whallon', None, GPL, WL, 'CALM IDYLLIC'),
- ('widelands/ingame_04', 'Desertsketch 3', 'Nikola Whallon', None, GPL, WL, 'MYSTERIOUS NEUTRAL'),
- ('widelands/ingame_05', 'Widelands 1', 'Barry van Oudtshoorn', None, GPL, WL, 'NEUTRAL CALM'),
- ('widelands/ingame_06', 'Widelands 3', 'Barry van Oudtshoorn', None, GPL, WL, 'NEUTRAL'),
- ('widelands/ingame_07', 'Widelands 6', 'Barry van Oudtshoorn', None, GPL, WL, 'CALM SAD'),
- ('widelands/ingame_08', 'To Be in a Rut', 'Jan Bruns', 2009, GPL, WL, 'SAD CALM'),
- ('widelands/ingame_09', 'Renaissance Village', 'Nikola Whallon', None, GPL, WL, 'HAPPY IDYLLIC'),
- ('widelands/ingame_10', 'Desertsketch 2', 'Nikola Whallon', None, GPL, WL, 'MYSTERIOUS'),
- ('widelands/ingame_11', 'Desertsketch 1', 'Nikola Whallon', None, GPL, WL, 'MYSTERIOUS'),
- ('widelands/ingame_12', 'Between Peace and War', 'Jan Bruns', 2009, GPL, WL, 'TENSE NEUTRAL'),
- ('widelands/ingame_13', 'Castlesketch', 'Nikola Whallon', None, GPL, WL, 'NEUTRAL CALM'),
- ('widelands/ingame_18', 'Orchestral Sketch', 'Nikola Whallon', None, GPL, WL, 'NEUTRAL'),
- ('widelands/ingame_19', 'Widelands Tension 1', 'Nikola Whallon', None, GPL, WL, 'TENSE EERIE'),
- ('widelands/ingame_20', 'Widelands Tension 2', 'Nikola Whallon', None, GPL, WL, 'TENSE'),
- ('widelands/ingame_22', 'From Scotland to Rome', "Joshua O'Leary", 2011, GPL, WL, 'IDYLLIC HAPPY'),
- ('widelands/ingame_23', 'Silkweaver Song', 'Klaus Halfmann', None, GPL, WL, 'CALM ROMANTIC'),
- ('widelands/ingame_24', "Hypatia's Theme", 'Stuart Marshall', 2017, BYSA3, WL, 'ROMANTIC CALM MYSTERIOUS'),
- ('widelands/ingame_25', 'We Work in the Vineyards', 'Stuart Marshall', 2017, BYSA3, WL, 'IDYLLIC HAPPY'),
- ('widelands/ingame_26', 'Running Out of Coal', 'Stuart Marshall', None, BYSA3, WL, 'TENSE ACTION'),
- ('widelands/ingame_27', 'Scotty the Scout', 'Stuart Marshall', None, BYSA3, WL, 'HAPPY'),
- ('widelands/ingame_29', 'Teeming Waltz', 'Jan F. Bruns', None, BY4, WL, 'HAPPY ROMANTIC'),
- ('flare/battle_theme', 'Battle Theme', 'Brandon Morris', 2012, BYSA3, FL, 'ACTION TENSE'),
- ('flare/boss_theme', 'Boss Theme', 'Brandon Morris', 2012, BYSA3, FL, 'ACTION TENSE'),
- ('flare/cave_theme', 'Cave Theme', 'Brandon Morris', 2012, BYSA3, FL, 'EERIE MYSTERIOUS'),
- ('flare/dungeon_theme', 'Dungeon Theme', 'Brandon Morris', 2012, BYSA3, FL, 'EERIE TENSE'),
- ('flare/magical_theme', 'Magical Theme', 'Brandon Morris', 2012, BYSA3, FL, 'MYSTERIOUS CALM'),
- ('flare/overworld_theme', 'Overworld Theme', 'Brandon Morris', 2012, BYSA3, FL, 'NEUTRAL IDYLLIC HAPPY'),
- ('flare/safe_room_theme', 'Safe Room Theme', 'Brandon Morris', 2012, BYSA3, FL, 'CALM ROMANTIC'),
- ('flare/title_theme', 'Title Theme', 'Brandon Morris', 2012, BYSA3, FL, 'NEUTRAL MYSTERIOUS'),
- ('flare/town_theme', 'Town Theme', 'Brandon Morris', 2012, BYSA3, FL, 'HAPPY IDYLLIC'),
- ('flare/unrest_theme', 'Unrest Theme', 'Brandon Morris', 2012, BYSA3, FL, 'TENSE EERIE'),
-]
-PRIOR = dict(ACTION=1, TENSE=.75, HAPPY=.65, NEUTRAL=.5, MYSTERIOUS=.4, EERIE=.4, ROMANTIC=.35, IDYLLIC=.35, SAD=.25, CALM=.2)
-clamp = lambda x: max(0.0, min(1.0, x))
-def kstr(s): return '"' + s.replace('\\', '\\\\').replace('"', '\\"').replace('$', '\\$') + '"'
-out = []
+import json
+import math
+import os
+import re
+import sys
 from collections import Counter
-prim, anym = Counter(), Counter()
-total = 0
-for tid, title, comp, year, lic, coll, moods in T:
-    a = A[tid]; f = a['f']
-    moods = moods.split()
-    energy = 0.45 * clamp((f['onsets_per_s'] - 0.4) / 2.6) + 0.2 * clamp((f['centroid'] - 300) / 1800) + 0.35 * PRIOR[moods[0]]
-    gain = max(-8.0, min(15.0, -20.0 - f['loud_db']))
-    prim[moods[0]] += 1
-    for m in moods: anym[m] += 1
-    total += a['size']
-    out.append(f'        t({kstr(tid)}, {kstr(title)}, {kstr(comp)}, {year if year else "null"}, {lic}, {coll}, {kstr(a["url"])}, '
-               f'{a["size"]}, {kstr(a["sha256"])}, {round(f["dur"])}, listOf({", ".join(moods)}), {energy:.2f}f, {gain:.1f}f),')
-print('// tracks', len(T), 'bytes', total, file=sys.stderr)
-print('// primary', dict(prim), file=sys.stderr)
-print('// any', dict(anym), file=sys.stderr)
-src = '''package io.github.hexotronic.lauscher.music.library.core
 
-import io.github.hexotronic.lauscher.music.library.core.MusicCollection.FLARE
-import io.github.hexotronic.lauscher.music.library.core.MusicCollection.WESNOTH
-import io.github.hexotronic.lauscher.music.library.core.MusicCollection.WIDELANDS
-import io.github.hexotronic.lauscher.music.library.core.MusicLicense.CC_BY_4
-import io.github.hexotronic.lauscher.music.library.core.MusicLicense.CC_BY_SA_3
-import io.github.hexotronic.lauscher.music.library.core.MusicLicense.CC_BY_SA_4
-import io.github.hexotronic.lauscher.music.library.core.MusicLicense.GPL2
-import io.github.hexotronic.lauscher.music.synth.Mood.ACTION
-import io.github.hexotronic.lauscher.music.synth.Mood.CALM
-import io.github.hexotronic.lauscher.music.synth.Mood.EERIE
-import io.github.hexotronic.lauscher.music.synth.Mood.HAPPY
-import io.github.hexotronic.lauscher.music.synth.Mood.IDYLLIC
-import io.github.hexotronic.lauscher.music.synth.Mood.MYSTERIOUS
-import io.github.hexotronic.lauscher.music.synth.Mood.NEUTRAL
-import io.github.hexotronic.lauscher.music.synth.Mood.ROMANTIC
-import io.github.hexotronic.lauscher.music.synth.Mood.SAD
-import io.github.hexotronic.lauscher.music.synth.Mood.TENSE
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+from catalog_tables import (T, OLD_PLACES, VELOREN, VELOREN_COMBAT, SPD_AREAS, SPD_KINDS, SUPERTUX,  # noqa: E402
+                            SUPERTUX_LICENSES, STENDHAL, ZERO_AD, HEDGEWARS, PIONEER)
+
+A = {}
+for name in ('analysis.jsonl', 'analysis-themes.jsonl'):
+    for line in open(os.path.join(HERE, name)):
+        d = json.loads(line)
+        if not d.get('error'):
+            A[d['id']] = d
+
+PRIOR = dict(ACTION=1, TENSE=.75, HAPPY=.65, NEUTRAL=.5, MYSTERIOUS=.4, EERIE=.4, ROMANTIC=.35, IDYLLIC=.35, SAD=.25, CALM=.2)
+
+
+def clamp(x):
+    return max(0.0, min(1.0, x))
+
+
+def kstr(s):
+    return '"' + s.replace('\\', '\\\\').replace('"', '\\"').replace('$', '\\$') + '"'
+
+
+def energy(f, moods):
+    return 0.45 * clamp((f['onsets_per_s'] - 0.4) / 2.6) + 0.2 * clamp((f['centroid'] - 300) / 1800) + 0.35 * PRIOR[moods[0]]
+
+
+def gain(f):
+    return max(-8.0, min(15.0, -20.0 - f['loud_db']))
+
+
+def whole_loop(dur, target):
+    """Repeats a looping file until it fills about [target] seconds."""
+    r = max(1, min(4, math.ceil(target / dur)))
+    return [(0, 0.0, -1.0, r)], dur * r
+
+
+TRACKS = []
+SINGLE = [(0, 0.0, -1.0, 1)]
+
+
+def add(id, title, composer, year, lic, coll, files, moods, places, plan=None, seconds=None, feat=None):
+    moods = moods.split()
+    f = feat or A[files[0]]['f']
+    TRACKS.append(dict(id=id, title=title, composer=composer, year=year, lic=lic, coll=coll,
+                       files=[A[x] for x in files], moods=moods, places=places.split(), energy=energy(f, moods),
+                       gain=gain(f), plan=plan or SINGLE, seconds=seconds or A[files[0]]['f']['dur']))
+
+
+for tid, title, comp, year, lic, coll, moods in T:
+    add(tid, title, comp, year, lic, coll, [tid], moods, OLD_PLACES[tid])
+
+meta = {m['path'].split('.')[-1]: m for m in json.load(open(os.path.join(HERE, 'veloren-soundtrack.json')))}
+for key, (moods, places) in VELOREN.items():
+    fid = next(i for i in A if i.startswith('veloren/') and i.endswith('/' + key))
+    m = meta[key]
+    artist = re.split(r';| mixed by', m['artist'])[0].strip()
+    add(fid, m['title'], artist, None, 'GPL3', 'VELOREN', [fid], moods, places)
+for key, (title, artist, moods, places) in VELOREN_COMBAT.items():
+    parts = [f'veloren/combat/{key}/{key}-{p}' for p in ('start', 'loop', 'end')]
+    durs = [A[p]['f']['dur'] for p in parts]
+    add(f'veloren/combat/{key}', title, artist, None, 'GPL3', 'VELOREN', parts, moods, places,
+        plan=[(0, 0.0, -1.0, 1), (1, 0.0, -1.0, 2), (2, 0.0, -1.0, 1)], seconds=durs[0] + 2 * durs[1] + durs[2],
+        feat=A[parts[1]]['f'])
+
+for area, (area_title, places) in SPD_AREAS.items():
+    for kind, (kind_title, moods) in SPD_KINDS.items():
+        fid = f'spd/{area}_{kind}'
+        if fid not in A:
+            continue
+        plan, secs = whole_loop(A[fid]['f']['dur'], 150)
+        add(fid, f'{area_title} – {kind_title}', 'Lumine Haaristo', None, 'GPL3', 'SHATTERED_PD', [fid], moods, places, plan, secs)
+for fid, title, moods, places in (('spd/theme_1', 'Titelthema I', 'NEUTRAL MYSTERIOUS', 'DUNGEON'),
+                                  ('spd/theme_2', 'Titelthema II', 'MYSTERIOUS CALM', 'DUNGEON'),
+                                  ('spd/theme_finale', 'Finale', 'HAPPY NEUTRAL', '')):
+    plan, secs = whole_loop(A[fid]['f']['dur'], 150)
+    add(fid, title, 'Lumine Haaristo', None, 'GPL3', 'SHATTERED_PD', [fid], moods, places, plan, secs)
+
+stx = {}
+for line in open(os.path.join(HERE, 'supertux-music.txt'), newline='\n'):
+    path = re.search(r'<data/music/(.*)\.music>', line)
+    file = re.search(r'\(file "([^"]+)\.ogg"\)', line)
+    if not path or not file:
+        continue
+    key = path.group(1).rsplit('/', 1)[0] + '/' + file.group(1)
+    authors_block = re.search(r'\(authors ((?:"(?:[^"\\]|\\.)*"\s*)+)\)', line)
+    authors = re.findall(r'"((?:[^"\\]|\\.)*)"', authors_block.group(1)) if authors_block else []
+    lic = re.search(r'\(license "([^"]+)"\)', line)
+    lb = float(re.search(r'\(loop-begin ([-0-9.]+)\)', line).group(1))
+    la = float(re.search(r'\(loop-at ([-0-9.]+)\)', line).group(1))
+    stx[key] = dict(authors=[a.replace('\\"', '"') for a in authors], license=lic.group(1) if lic else None, begin=lb, at=la)
+for key, (title, moods, places) in SUPERTUX.items():
+    fid = 'supertux/' + key
+    m = stx[key]
+    dur = A[fid]['f']['dur']
+    at = min(m['at'] if m['at'] > 0 else dur, dur)
+    begin = m['begin']
+    if at - begin < 10:
+        plan, secs = SINGLE, dur
+    else:
+        # Play to the loop point, then repeat the loop until the piece fills about 2.5 minutes.
+        k = max(0, min(3, math.ceil((150 - at) / (at - begin))))
+        plan = [(0, 0.0, round(at, 3), 1)] + ([(0, round(begin, 3), round(at, 3), k)] if k > 0 else [])
+        secs = at + (at - begin) * k
+    add(fid, title, ' & '.join(m['authors']), None, SUPERTUX_LICENSES[m['license']], 'SUPERTUX', [fid], moods, places, plan, secs)
+
+for key, (title, composer, lic, moods, places) in STENDHAL.items():
+    fid = 'stendhal/' + key
+    plan, secs = whole_loop(A[fid]['f']['dur'], 120)
+    add(fid, title, composer, None, lic, 'STENDHAL', [fid], moods, places, plan, secs)
+
+for key, (moods, places) in ZERO_AD.items():
+    fid = '0ad/' + key
+    plan, secs = whole_loop(A[fid]['f']['dur'], 90)
+    add(fid, key.replace('_', ' '), 'Wildfire Games (Omri Lahav u. a.)', None, 'CC_BY_SA_3', 'ZERO_AD', [fid], moods, places, plan, secs)
+
+for key, (title, composer, moods, places) in HEDGEWARS.items():
+    fid = 'hedgewars/' + key
+    plan, secs = whole_loop(A[fid]['f']['dur'], 120)
+    add(fid, title, composer, None, 'GFDL', 'HEDGEWARS', [fid], moods, places, plan, secs)
+
+for key, (title, composer, moods, places, lic) in PIONEER.items():
+    fid = 'pioneer/' + key
+    plan, secs = whole_loop(A[fid]['f']['dur'], 120)
+    add(fid, title, composer, None, lic, 'PIONEER', [fid], moods, places, plan, secs)
+
+# ---------------------------------------------------------------- checks and output
+ids = [t['id'] for t in TRACKS]
+assert len(ids) == len(set(ids)), 'duplicate ids'
+assert not [t['id'] for t in TRACKS if t['seconds'] < 40], 'too short'
+
+
+def seg(s):
+    f, a, b, r = s
+    args = []
+    if f:
+        args.append(f'file = {f}')
+    if a:
+        args.append(f'fromSec = {a}f')
+    if b >= 0:
+        args.append(f'toSec = {b}f')
+    if r != 1:
+        args.append(f'repeat = {r}')
+    return 'Segment(' + ', '.join(args) + ')'
+
+
+def entry(t):
+    files = ', '.join(f'f({kstr(x["url"])}, {x["size"]}, {kstr(x["sha256"])})' for x in t['files'])
+    moods = ', '.join('M.' + m for m in t['moods'])
+    places = ', '.join('S.' + p for p in t['places'])
+    plan = '' if t['plan'] == SINGLE else ', listOf(' + ', '.join(seg(s) for s in t['plan']) + ')'
+    year = t['year'] if t['year'] else 'null'
+    return (f'        t({kstr(t["id"])}, {kstr(t["title"])}, {kstr(t["composer"])}, {year}, L.{t["lic"]}, C.{t["coll"]}, '
+            f'listOf({files}), {round(t["seconds"])}, listOf({moods}), listOf({places}), {t["energy"]:.2f}f, {t["gain"]:.1f}f{plan}),')
+
+
+print(f'// {len(TRACKS)} tracks, {sum(sum(x["size"] for x in t["files"]) for t in TRACKS) / 1e6:.0f} MB, '
+      f'{sum(t["seconds"] for t in TRACKS) / 3600:.1f} h', file=sys.stderr)
+print('// moods', dict(Counter(m for t in TRACKS for m in t['moods'])), file=sys.stderr)
+print('// places', dict(Counter(p for t in TRACKS for p in t['places'])), file=sys.stderr)
+
+HEADER = '''package io.github.hexotronic.lauscher.music.library.core
+
+import io.github.hexotronic.lauscher.music.library.core.MusicCollection as C
+import io.github.hexotronic.lauscher.music.library.core.MusicLicense as L
+import io.github.hexotronic.lauscher.music.synth.Mood as M
+import io.github.hexotronic.lauscher.music.synth.Setting as S
 
 /**
- * The fantasy music library. Composers, years and licences come from the games' own
- * credits (Wesnoth: copyrights.csv and file tags, Widelands: data/music/LICENSE.txt and file
- * tags, Flare: CREDITS.txt and LICENSE.txt). Sizes, checksums, durations, energy and level
- * were measured from the files; the moods were assigned by hand from titles, the composers'
- * descriptions and the measurements.
+ * The music library. Composers and licences come from the games' own credits; sizes, checksums,
+ * durations, energy and level were measured from the files; moods and places were assigned by hand.
  *
- * Generated by hoerbuch-player/tools/music-catalog.py – edit the table there.
+ * Generated by hoerbuch-player/tools/music/catalog.py – edit the tables there.
  */
 internal object FantasyCatalog {
+    private fun f(url: String, bytes: Long, sha256: String) = TrackFile(url, bytes, sha256)
+
     private fun t(
-        id: String, title: String, composer: String, year: Int?, license: MusicLicense, collection: MusicCollection,
-        url: String, bytes: Long, sha256: String, seconds: Int, moods: List<io.github.hexotronic.lauscher.music.synth.Mood>,
-        energy: Float, gainDb: Float,
-    ) = LibraryTrack(id, title, composer, year, license, collection, url, bytes, sha256, seconds, moods, energy, gainDb)
-
-    val tracks = listOf(
-''' + '\n'.join(out) + '''
-    )
-
-    val byId = tracks.associateBy { it.id }
-}
+        id: String, title: String, composer: String, year: Int?, license: L, collection: C, files: List<TrackFile>,
+        seconds: Int, moods: List<M>, settings: List<S>, energy: Float, gainDb: Float, plan: List<Segment> = listOf(Segment()),
+    ) = LibraryTrack(id, title, composer, year, license, collection, files, seconds, moods, settings, energy, gainDb, plan)
 '''
-print(src)
+
+# Several small functions keep each one far below the JVM's method size limit.
+CHUNK = 40
+chunks = [TRACKS[i:i + CHUNK] for i in range(0, len(TRACKS), CHUNK)]
+out = [HEADER]
+for i, c in enumerate(chunks):
+    out.append(f'\n    private fun part{i}() = listOf(\n' + '\n'.join(entry(t) for t in c) + '\n    )\n')
+out.append('\n    val tracks: List<LibraryTrack> = ' + ' + '.join(f'part{i}()' for i in range(len(chunks))) +
+           '\n\n    val byId = tracks.associateBy { it.id }\n}\n')
+sys.stdout.write(''.join(out))

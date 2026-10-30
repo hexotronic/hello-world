@@ -8,6 +8,7 @@ import io.github.hexotronic.lauscher.analysis.core.TranscriptWindow
 import io.github.hexotronic.lauscher.analysis.core.WindowMood
 import io.github.hexotronic.lauscher.analysis.core.WindowPlanner
 import io.github.hexotronic.lauscher.music.synth.Mood
+import io.github.hexotronic.lauscher.music.synth.Setting
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -29,15 +30,18 @@ class SceneAnalysisTest {
         assertTrue(g.contains("item2 ::="))
         assertTrue(!g.contains("item3 ::="))
         assertTrue(g.contains("\"\\\"TENSE\\\"\""))
+        assertTrue(g.contains("place ::="))
+        assertTrue(g.contains("\"\\\"DUNGEON\\\"\""))
+        assertTrue(g.contains("\"\\\"OTHER\\\"\""))
         // Written out for the Python grammar check in the harness.
         System.getProperty("grammarOut")?.let { File(it).writeText(g) }
     }
 
     @Test
     fun parsesModelOutput() {
-        val out = """{"windows": [{"w": 0, "mood": "CALM", "level": 1, "title": "Morgentee"},
-            {"w":1,"mood":"TENSE","level":2,"title":"Schritte im Garten"},
-            {"w": 2, "mood": "ACTION", "level": 3, "title": "Die Flucht \"beginnt\""}],
+        val out = """{"windows": [{"w": 0, "mood": "CALM", "level": 1, "place": "HOME", "title": "Morgentee"},
+            {"w":1,"mood":"TENSE","level":2,"place":"OTHER","title":"Schritte im Garten"},
+            {"w": 2, "mood": "ACTION", "level": 3, "place": "DUNGEON", "title": "Die Flucht \"beginnt\""}],
             "story": "Anna wird verfolgt.\nSie flieht."}"""
         val result = ScenePrompt.parse(out, windows)
         assertNotNull(result)
@@ -45,6 +49,7 @@ class SceneAnalysisTest {
         assertEquals(listOf(Mood.CALM, Mood.TENSE, Mood.ACTION), result.windows.map { it.mood })
         assertEquals("Die Flucht \"beginnt\"", result.windows[2].title)
         assertEquals(3, result.windows[2].level)
+        assertEquals(listOf(Setting.HOME, null, Setting.DUNGEON), result.windows.map { it.setting })
         assertEquals("Anna wird verfolgt.\nSie flieht.", result.story)
     }
 
@@ -72,6 +77,26 @@ class SceneAnalysisTest {
         assertNull(SceneMerger.sceneAt(scenes, 300_000)?.mood)
         assertNull(SceneMerger.sceneAt(scenes, 999_999))
         assertEquals(scenes.last(), SceneMerger.sceneAt(scenes, 360_000))
+    }
+
+    @Test
+    fun aNewPlaceStartsANewScene() {
+        val moods = listOf(
+            WindowMood(0, 90_000, Mood.TENSE, 2, "A", SceneMerger.SOURCE_LLM, Setting.FOREST),
+            WindowMood(90_000, 180_000, Mood.TENSE, 2, "B", SceneMerger.SOURCE_LLM, Setting.FOREST),
+            WindowMood(180_000, 270_000, Mood.TENSE, 2, "C", SceneMerger.SOURCE_LLM, Setting.DUNGEON),
+        )
+        val scenes = SceneMerger.merge(moods)
+        assertEquals(listOf(Setting.FOREST, Setting.DUNGEON), scenes.map { it.setting })
+        assertEquals(180_000, scenes[0].endMs)
+    }
+
+    @Test
+    fun keywordPlaces() {
+        assertEquals(Setting.DUNGEON, KeywordMoods.settingOf("Im Kerker war es kalt. Die Zelle stank, das Verlies hatte kein Fenster."))
+        assertEquals(Setting.SEA, KeywordMoods.settingOf("Das Schiff verließ den Hafen, die Wellen schlugen gegen den Bug."))
+        assertEquals(Setting.WESTERN, KeywordMoods.settingOf("Der Sheriff betrat den Saloon und legte den Colt auf den Tisch."))
+        assertNull(KeywordMoods.settingOf("Er dachte lange über die Frage nach."))
     }
 
     @Test

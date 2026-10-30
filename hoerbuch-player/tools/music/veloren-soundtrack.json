@@ -1,0 +1,1117 @@
+[
+{
+"title": "Soaring Skies",
+"path": "voxygen.audio.soundtrack.overworld.soaring_skies",
+"length": 239.0,
+"timing": "Night",
+"weather": "None",
+"biomes": [
+"Mountain"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "unii"
+},
+{
+"title": "Desert At Night",
+"path": "voxygen.audio.soundtrack.overworld.desert_at_night",
+"length": 192.0,
+"timing": "Night",
+"weather": "None",
+"biomes": [
+"Desert"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "Federico Orfanó"
+},
+{
+"title": "Legoom's Lament",
+"path": "voxygen.audio.soundtrack.overworld.legooms_lament",
+"length": 167.0,
+"timing": "None",
+"weather": "Rain",
+"biomes": [],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "DaforLynx"
+},
+{
+"title": "Aventure Fantastic",
+"path": "voxygen.audio.soundtrack.overworld.aventure_fantastic",
+"length": 130.0,
+"timing": "Day",
+"weather": "None",
+"biomes": [
+"Grassland",
+"Forest",
+"Taiga"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "Federico Orfanó"
+},
+{
+"title": "The Summit Awaits",
+"path": "voxygen.audio.soundtrack.overworld.the_summit_awaits",
+"length": 206.0,
+"timing": "Night",
+"weather": "None",
+"biomes": [
+"Snowland"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "unii"
+},
+{
+"title": "Desert Horizons",
+"path": "voxygen.audio.soundtrack.overworld.desert_horizons",
+"length": 121.0,
+"timing": "Night",
+"weather": "None",
+"biomes": [
+"Desert"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "Federico Orfanó"
+},
+{
+"title": "Lost Among Vast",
+"path": "voxygen.audio.soundtrack.overworld.lost_among_vast",
+"length": 167.0,
+"timing": "Night",
+"weather": "None",
+"biomes": [
+"Grassland",
+"Forest"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "unii"
+},
+{
+"title": "Graceful Journey",
+"path": "voxygen.audio.soundtrack.overworld.graceful_journey",
+"length": 240.0,
+"timing": "Day",
+"weather": "None",
+"biomes": [
+"Lake",
+"Grassland"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "Tobias Thy - (Thy SFX)"
+},
+{
+"title": "A Cold Breeze Blows",
+"path": "voxygen.audio.soundtrack.overworld.a_cold_breeze_blows",
+"length": 123.0,
+"timing": "Day",
+"weather": "None",
+"biomes": [
+"Mountain"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "Stone Music Productions"
+},
+{
+"title": "A Peaceful Moment",
+"path": "voxygen.audio.soundtrack.overworld.a_peaceful_moment",
+"length": 155.0,
+"timing": "Night",
+"weather": "None",
+"biomes": [
+"Grassland",
+"Mountain"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "ThanosFisherman"
+},
+{
+"title": "Everbearing",
+"path": "voxygen.audio.soundtrack.overworld.everbearing",
+"length": 192.0,
+"timing": "Day",
+"weather": "None",
+"biomes": [
+"Taiga"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "DaforLynx"
+},
+{
+"title": "Song of the Eldwood",
+"path": "voxygen.audio.soundtrack.overworld.song_of_the_eldwood",
+"length": 254.0,
+"timing": "Night",
+"weather": "None",
+"biomes": [
+"Taiga"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "DaforLynx"
+},
+{
+"title": "Torii",
+"path": "voxygen.audio.soundtrack.overworld.torii",
+"length": 157.0,
+"timing": "Night",
+"weather": "None",
+"biomes": [
+"Taiga"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "FaceImplosion"
+},
+{
+"title": "The Undergrowth",
+"path": "voxygen.audio.soundtrack.overworld.the_undergrowth",
+"length": 165.0,
+"timing": "None",
+"weather": "None",
+"biomes": [
+"Jungle"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "Oolnokk"
+},
+{
+"title": "Moonlit Canopy",
+"path": "voxygen.audio.soundtrack.overworld.moonlit_canopy",
+"length": 170.0,
+"timing": "Night",
+"weather": "None",
+"biomes": [
+"Forest",
+"Taiga"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "GeekyGami"
+},
+{
+"title": "Adventurous Soul",
+"path": "voxygen.audio.soundtrack.overworld.adventurous_soul",
+"length": 184.0,
+"timing": "Night",
+"weather": "None",
+"biomes": [
+"Mountain",
+"Snowland"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "Crow"
+},
+{
+"title": "Stargazing",
+"path": "voxygen.audio.soundtrack.overworld.stargazing",
+"length": 216.0,
+"timing": "Night",
+"weather": "None",
+"biomes": [
+"Taiga",
+"Grassland"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "GeekyGami"
+},
+{
+"title": "The Heavens Weep",
+"path": "voxygen.audio.soundtrack.overworld.the_heavens_weep",
+"length": 210.0,
+"timing": "None",
+"weather": "Rain",
+"biomes": [],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "Oolnokk"
+},
+{
+"title": "A Hero's Sorrow",
+"path": "voxygen.audio.soundtrack.overworld.a_heros_sorrow",
+"length": 252.0,
+"timing": "None",
+"weather": "Rain",
+"biomes": [],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "Oolnokk"
+},
+{
+"title": "Follow the Signs",
+"path": "voxygen.audio.soundtrack.overworld.follow_the_signs",
+"length": 154.0,
+"timing": "Night",
+"weather": "None",
+"biomes": [
+"Forest",
+"Taiga"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "Oolnokk"
+},
+{
+"title": "Travel By Night",
+"path": "voxygen.audio.soundtrack.overworld.travel_by_night",
+"length": 66.0,
+"timing": "Night",
+"weather": "None",
+"biomes": [
+"Forest",
+"Taiga"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "Oolnokk"
+},
+{
+"title": "Raising Below Like Thunder",
+"path": "voxygen.audio.soundtrack.overworld.raising_below_like_thunder",
+"length": 120.0,
+"timing": "Night",
+"weather": "None",
+"biomes": [
+"Desert",
+"Savannah"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "Rarnage"
+},
+{
+"title": "Calming Hills",
+"path": "voxygen.audio.soundtrack.overworld.calming_hills",
+"length": 101.0,
+"timing": "Day",
+"weather": "None",
+"biomes": [
+"Mountain"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "Ultimafounding; mixed by Robotnik"
+},
+{
+"title": "True Nature",
+"path": "voxygen.audio.soundtrack.overworld.true_nature",
+"length": 169.0,
+"timing": "Day",
+"weather": "None",
+"biomes": [
+"Forest"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "DaforLynx"
+},
+{
+"title": "Jungle Ambient",
+"path": "voxygen.audio.soundtrack.overworld.jungle_ambient",
+"length": 218.0,
+"timing": "None",
+"weather": "None",
+"biomes": [
+"Jungle"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "badbbad"
+},
+{
+"title": "Ethereal Bonds",
+"path": "voxygen.audio.soundtrack.overworld.ethereal_bonds",
+"length": 59.0,
+"timing": "Night",
+"weather": "None",
+"biomes": [
+"Mountain"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "Aeronic"
+},
+{
+"title": "Leap of Faith",
+"path": "voxygen.audio.soundtrack.overworld.leap_of_faith",
+"length": 269.0,
+"timing": "Night",
+"weather": "None",
+"biomes": [
+"Ocean",
+"Lake"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "Aeronic"
+},
+{
+"title": "Highland of the Hawk",
+"path": "voxygen.audio.soundtrack.overworld.highland_of_the_hawk",
+"length": 283.0,
+"timing": "Day",
+"weather": "None",
+"biomes": [
+"Desert",
+"Savannah"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "badbbad"
+},
+{
+"title": "Verdant Glades",
+"path": "voxygen.audio.soundtrack.overworld.verdant_glades",
+"length": 97.0,
+"timing": "Day",
+"weather": "None",
+"biomes": [
+"Grassland"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "Aeronic"
+},
+{
+"title": "Calling Wild",
+"path": "voxygen.audio.soundtrack.overworld.calling_wild",
+"length": 160.0,
+"timing": "Night",
+"weather": "None",
+"biomes": [
+"Grassland",
+"Savannah"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "Ultimafounding"
+},
+{
+"title": "Drifting Along",
+"path": "voxygen.audio.soundtrack.overworld.drifting_along",
+"length": 164.0,
+"timing": "None",
+"weather": "None",
+"biomes": [
+"Lake",
+"Ocean"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "DaforLynx"
+},
+{
+"title": "Winter Falls",
+"path": "voxygen.audio.soundtrack.overworld.winter_falls",
+"length": 215.0,
+"timing": "Day",
+"weather": "None",
+"biomes": [
+"Snowland"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "DaforLynx"
+},
+{
+"title": "Short Meandering",
+"path": "voxygen.audio.soundtrack.overworld.short_meandering",
+"length": 147.0,
+"timing": "Night",
+"weather": "None",
+"biomes": [
+"Desert",
+"Mountain"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "Ap1evideogame"
+},
+{
+"title": "Oceania",
+"path": "voxygen.audio.soundtrack.overworld.oceania",
+"length": 135.0,
+"timing": "None",
+"weather": "None",
+"biomes": [
+"Lake",
+"Ocean"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "Eden"
+},
+{
+"title": "A Solemn Quest",
+"path": "voxygen.audio.soundtrack.overworld.a_solemn_quest",
+"length": 206.0,
+"timing": "Night",
+"weather": "None",
+"biomes": [
+"Forest",
+"Taiga"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "Eden"
+},
+{
+"title": "Into The Dark Forest",
+"path": "voxygen.audio.soundtrack.overworld.into_the_dark_forest",
+"length": 184.0,
+"timing": "Night",
+"weather": "None",
+"biomes": [
+"Forest"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "Aeronic"
+},
+{
+"title": "Field Grazing",
+"path": "voxygen.audio.soundtrack.overworld.field_grazing",
+"length": 154.0,
+"timing": "Day",
+"weather": "None",
+"biomes": [
+"Grassland",
+"Forest"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "Aeronic"
+},
+{
+"title": "Wandering Voices",
+"path": "voxygen.audio.soundtrack.overworld.wandering_voices",
+"length": 137.0,
+"timing": "Night",
+"weather": "None",
+"biomes": [
+"Grassland"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "Aeronic"
+},
+{
+"title": "Snowtop Volume",
+"path": "voxygen.audio.soundtrack.overworld.snowtop_volume",
+"length": 89.0,
+"timing": "Day",
+"weather": "None",
+"biomes": [
+"Snowland"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "Aeronic"
+},
+{
+"title": "Moonbeams",
+"path": "voxygen.audio.soundtrack.overworld.moonbeams",
+"length": 158.0,
+"timing": "Night",
+"weather": "None",
+"biomes": [
+"Snowland"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "Aeronic"
+},
+{
+"title": "Serene Meadows",
+"path": "voxygen.audio.soundtrack.overworld.serene_meadows",
+"length": 173.0,
+"timing": "Night",
+"weather": "None",
+"biomes": [
+"Grassland"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "Aeronic"
+},
+{
+"title": "Just The Beginning",
+"path": "voxygen.audio.soundtrack.overworld.just_the_beginning",
+"length": 188.0,
+"timing": "Day",
+"weather": "None",
+"biomes": [
+"Grassland"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "badbbad"
+},
+{
+"title": "Campfire Stories",
+"path": "voxygen.audio.soundtrack.overworld.campfire_stories",
+"length": 100.0,
+"timing": "Night",
+"weather": "None",
+"biomes": [
+"Forest",
+"Taiga"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "badbbad"
+},
+{
+"title": "Limits",
+"path": "voxygen.audio.soundtrack.overworld.limits",
+"length": 203.0,
+"timing": "Day",
+"weather": "None",
+"biomes": [
+"Mountain",
+"Taiga"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "badbbad"
+},
+{
+"title": "Between The Fairies",
+"path": "voxygen.audio.soundtrack.overworld.between_the_fairies",
+"length": 175.0,
+"timing": "Day",
+"weather": "None",
+"biomes": [
+"Forest",
+"Taiga"
+],
+"sites": [
+"Void"
+],
+"state": "Activity(Explore)",
+"artist": "badbbad"
+},
+{
+"title": "Where Frost Played",
+"path": "voxygen.audio.soundtrack.town.where_frost_played",
+"length": 105.0,
+"timing": "None",
+"weather": "None",
+"biomes": [
+"Snowland"
+],
+"sites": [
+"Settlement(CoastalTown)",
+"Settlement(Default)"
+],
+"state": "Activity(Explore)",
+"artist": "phoenix13032005"
+},
+{
+"title": "Fill The Mugs",
+"path": "voxygen.audio.soundtrack.town.fill_the_mugs",
+"length": 83.0,
+"timing": "Day",
+"weather": "None",
+"biomes": [],
+"sites": [
+"Settlement(CoastalTown)",
+"Settlement(SavannahTown)"
+],
+"state": "Activity(Explore)",
+"artist": "phoenix13032005"
+},
+{
+"title": "Into the Mines",
+"path": "voxygen.audio.soundtrack.town.into_the_mines",
+"length": 157.0,
+"timing": "Day",
+"weather": "None",
+"biomes": [],
+"sites": [
+"Settlement(CliffTown)",
+"Settlement(SavannahTown)"
+],
+"state": "Activity(Explore)",
+"artist": "Stone Music Productions"
+},
+{
+"title": "Life of a Background Mob",
+"path": "voxygen.audio.soundtrack.town.life_of_a_background_mob",
+"length": 234.0,
+"timing": "Day",
+"weather": "None",
+"biomes": [
+"Forest",
+"Grassland"
+],
+"sites": [
+"Settlement(Default)",
+"Settlement(CliffTown)",
+"Settlement(SavannahTown)",
+"Settlement(CoastalTown)"
+],
+"state": "Activity(Explore)",
+"artist": "GeekyGami"
+},
+{
+"title": "Warmth of the Hearth",
+"path": "voxygen.audio.soundtrack.town.warmth_of_the_hearth",
+"length": 156.0,
+"timing": "Night",
+"weather": "None",
+"biomes": [],
+"sites": [
+"Settlement(Default)",
+"Settlement(CliffTown)",
+"Settlement(DesertCity)",
+"Settlement(SavannahTown)",
+"Settlement(CoastalTown)"
+],
+"state": "Activity(Explore)",
+"artist": "Crow"
+},
+{
+"title": "The Quiet After the Battle",
+"path": "voxygen.audio.soundtrack.town.the_quiet_after_the_battle",
+"length": 240.0,
+"timing": "Night",
+"weather": "None",
+"biomes": [],
+"sites": [
+"Settlement(Default)",
+"Settlement(CliffTown)",
+"Settlement(DesertCity)",
+"Settlement(SavannahTown)",
+"Settlement(CoastalTown)"
+],
+"state": "Activity(Explore)",
+"artist": "Tobias Thy - (Thy SFX)"
+},
+{
+"title": "A Rest Under the Sunset",
+"path": "voxygen.audio.soundtrack.town.a_rest_under_the_sunset",
+"length": 83.0,
+"timing": "Day",
+"weather": "None",
+"biomes": [],
+"sites": [
+"Settlement(Default)",
+"Settlement(CliffTown)",
+"Settlement(SavannahTown)",
+"Settlement(CoastalTown)"
+],
+"state": "Activity(Explore)",
+"artist": "phoenix13032005"
+},
+{
+"title": "A Tale Worth Telling",
+"path": "voxygen.audio.soundtrack.town.a_tale_worth_telling",
+"length": 279.0,
+"timing": "Night",
+"weather": "None",
+"biomes": [],
+"sites": [
+"Settlement(Default)",
+"Settlement(CliffTown)",
+"Settlement(DesertCity)",
+"Settlement(SavannahTown)",
+"Settlement(CoastalTown)"
+],
+"state": "Activity(Explore)",
+"artist": "Oolnokk; mixed by cereal7"
+},
+{
+"title": "Bustle and Bloom",
+"path": "voxygen.audio.soundtrack.town.bustle_and_bloom",
+"length": 155.0,
+"timing": "Day",
+"weather": "None",
+"biomes": [],
+"sites": [
+"Settlement(Default)",
+"Settlement(CliffTown)",
+"Settlement(SavannahTown)",
+"Settlement(CoastalTown)"
+],
+"state": "Activity(Explore)",
+"artist": "DaforLynx"
+},
+{
+"title": "Starlit Pathways",
+"path": "voxygen.audio.soundtrack.town.starlit_pathways",
+"length": 132.0,
+"timing": "Night",
+"weather": "None",
+"biomes": [],
+"sites": [
+"Settlement(Default)",
+"Settlement(CliffTown)",
+"Settlement(DesertCity)",
+"Settlement(SavannahTown)",
+"Settlement(CoastalTown)"
+],
+"state": "Activity(Explore)",
+"artist": "DaforLynx"
+},
+{
+"title": "Fiesta Del Pueblo",
+"path": "voxygen.audio.soundtrack.town.fiesta_del_pueblo",
+"length": 96.0,
+"timing": "Day",
+"weather": "None",
+"biomes": [],
+"sites": [
+"Settlement(DesertCity)"
+],
+"state": "Activity(Explore)",
+"artist": "Aeronic; mixed by Robotnik"
+},
+{
+"title": "Rest Assured",
+"path": "voxygen.audio.soundtrack.town.rest_assured",
+"length": 189.0,
+"timing": "Day",
+"weather": "None",
+"biomes": [],
+"sites": [
+"Settlement(Default)",
+"Settlement(CliffTown)",
+"Settlement(SavannahTown)",
+"Settlement(CoastalTown)"
+],
+"state": "Activity(Explore)",
+"artist": "badbbad"
+},
+{
+"title": "I'm Home",
+"path": "voxygen.audio.soundtrack.town.im_home",
+"length": 125.0,
+"timing": "Night",
+"weather": "None",
+"biomes": [],
+"sites": [
+"Settlement(Default)",
+"Settlement(CliffTown)",
+"Settlement(SavannahTown)",
+"Settlement(CoastalTown)"
+],
+"state": "Activity(Explore)",
+"artist": "badbbad"
+},
+{
+"title": "Stars Like Stalactites",
+"path": "voxygen.audio.soundtrack.cave.stars_like_stalactites",
+"length": 130.0,
+"timing": "None",
+"weather": "None",
+"biomes": [],
+"sites": [
+"Cave"
+],
+"state": "Activity(Explore)",
+"artist": "DragonDee"
+},
+{
+"title": "Cavernous Hollow",
+"path": "voxygen.audio.soundtrack.cave.cavernous_hollow",
+"length": 256.0,
+"timing": "None",
+"weather": "None",
+"biomes": [],
+"sites": [
+"Cave"
+],
+"state": "Activity(Explore)",
+"artist": "GeekyGami"
+},
+{
+"title": "Saturated Hallows",
+"path": "voxygen.audio.soundtrack.cave.saturated_hallows",
+"length": 227.0,
+"timing": "None",
+"weather": "None",
+"biomes": [],
+"sites": [
+"Cave"
+],
+"state": "Activity(Explore)",
+"artist": "Flashbang"
+},
+{
+"title": "Mineral Deposits",
+"path": "voxygen.audio.soundtrack.cave.mineral_deposits",
+"length": 148.0,
+"timing": "None",
+"weather": "None",
+"biomes": [],
+"sites": [
+"Cave"
+],
+"state": "Activity(Explore)",
+"artist": "Aeronic"
+},
+{
+"title": "Down The Rabbit Hole",
+"path": "voxygen.audio.soundtrack.cave.down_the_rabbit_hole",
+"length": 244.0,
+"timing": "None",
+"weather": "None",
+"biomes": [],
+"sites": [
+"Cave"
+],
+"state": "Activity(Explore)",
+"artist": "badbbad"
+},
+{
+"title": "Still Heart's Coffin",
+"path": "voxygen.audio.soundtrack.dungeon.still_hearts_coffin",
+"length": 199.0,
+"timing": "None",
+"weather": "None",
+"biomes": [],
+"sites": [
+"Dungeon(VampireCastle)"
+],
+"state": "Activity(Explore)",
+"artist": "GeekyGami"
+},
+{
+"title": "A Heart's Ice-Cold Protection",
+"path": "voxygen.audio.soundtrack.dungeon.a_hearts_ice-cold_protection",
+"length": 205.0,
+"timing": "None",
+"weather": "None",
+"biomes": [],
+"sites": [
+"Dungeon(Adlet)"
+],
+"state": "Activity(Explore)",
+"artist": "GeekyGami"
+},
+{
+"title": "Mysty Temple",
+"path": "voxygen.audio.soundtrack.dungeon.mysty_temple",
+"length": 183.0,
+"timing": "None",
+"weather": "None",
+"biomes": [],
+"sites": [
+"Dungeon(Adlet)",
+"Dungeon(SeaChapel)"
+],
+"state": "Activity(Explore)",
+"artist": "Tiny"
+},
+{
+"title": "Cobbled Halls",
+"path": "voxygen.audio.soundtrack.dungeon.cobbled_halls",
+"length": 240.0,
+"timing": "None",
+"weather": "None",
+"biomes": [],
+"sites": [
+"Dungeon(Haniwa)",
+"Dungeon(DwarvenMine)"
+],
+"state": "Activity(Explore)",
+"artist": "Crow"
+},
+{
+"title": "Dank Dungeon",
+"path": "voxygen.audio.soundtrack.dungeon.dank_dungeon",
+"length": 130.0,
+"timing": "None",
+"weather": "None",
+"biomes": [],
+"sites": [
+"Dungeon(DwarvenMine)",
+"Dungeon(Adlet)"
+],
+"state": "Activity(Explore)",
+"artist": "Aeronic"
+},
+{
+"title": "Ruination",
+"path": "voxygen.audio.soundtrack.dungeon.ruination",
+"length": 135.0,
+"timing": "None",
+"weather": "None",
+"biomes": [],
+"sites": [
+"Dungeon(SeaChapel)",
+"Dungeon(Cultist)"
+],
+"state": "Activity(Explore)",
+"artist": "Aeronic"
+},
+{
+"title": "Vast Onslaught",
+"path": "voxygen.audio.soundtrack.dungeon.vast_onslaught",
+"length": 237.0,
+"timing": "None",
+"weather": "None",
+"biomes": [],
+"sites": [
+"Dungeon(Myrmidon)",
+"Dungeon(VampireCastle)"
+],
+"state": "Activity(Explore)",
+"artist": "Aeronic"
+},
+{
+"title": "Sacred Temple",
+"path": "voxygen.audio.soundtrack.dungeon.sacred_temple",
+"length": 75.0,
+"timing": "None",
+"weather": "None",
+"biomes": [],
+"sites": [
+"Dungeon(Myrmidon)",
+"Dungeon(Sahagin)",
+"Dungeon(Cultist)"
+],
+"state": "Activity(Explore)",
+"artist": "Aeronic"
+},
+{
+"title": "The Undergrowth",
+"path": "voxygen.audio.soundtrack.overworld.the_undergrowth",
+"length": 165.0,
+"timing": "None",
+"weather": "None",
+"biomes": [],
+"sites": [
+"Dungeon(Gnarling)"
+],
+"state": "Activity(Explore)",
+"artist": "Oolnokk"
+},
+{
+"title": "Jungle Ambient",
+"path": "voxygen.audio.soundtrack.overworld.jungle_ambient",
+"length": 218.0,
+"timing": "None",
+"weather": "None",
+"biomes": [],
+"sites": [
+"Dungeon(Gnarling)",
+"Dungeon(Terracotta)"
+],
+"state": "Activity(Explore)",
+"artist": "badbbad"
+},
+{
+"title": "Thrumming Waters",
+"path": "voxygen.audio.soundtrack.dungeon.thrumming_waters",
+"length": 100.0,
+"timing": "None",
+"weather": "None",
+"biomes": [],
+"sites": [
+"Dungeon(Sahagin)"
+],
+"state": "Activity(Explore)",
+"artist": "Jeremiah Sweeney"
+}
+]

@@ -584,7 +584,7 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
         music.apply(s, exoPlayer.volume)
         val spec = when (s.mode) {
             MusicMode.FIXED -> if (s.fixedMood == null && s.fixedAtmosphere == null) null else {
-                SoundSpec(s.fixedMood, s.fixedAtmosphere, 0.5f, d.book.id)
+                SoundSpec(s.fixedMood, s.fixedAtmosphere, 0.5f, d.book.id, setting = s.fixedSetting)
             }
             MusicMode.CHAPTERS -> chapters.getOrNull(chapterIndex)?.let { ch ->
                 when {
@@ -597,7 +597,13 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
             MusicMode.SCENES -> when {
                 scene == null -> if (s.neutralFallback) SoundSpec(Mood.NEUTRAL, null, 0.3f, d.book.id) else null
                 scene.mood == null -> null
-                else -> SoundSpec(scene.mood, null, scene.intensity, scene.startMs)
+                else -> SoundSpec(
+                    mood = scene.mood,
+                    atmosphere = if (s.placeSounds) scene.setting?.atmosphere else null,
+                    intensity = scene.intensity,
+                    seed = scene.startMs,
+                    setting = scene.setting,
+                )
             }
         }
         music.setSpec(spec)

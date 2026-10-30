@@ -12,6 +12,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import io.github.hexotronic.lauscher.LauscherApp
 import io.github.hexotronic.lauscher.music.synth.SoundSpec
 import io.github.hexotronic.lauscher.music.synth.Mood
+import io.github.hexotronic.lauscher.music.synth.Setting
 import io.github.hexotronic.lauscher.music.MusicSettings
 import io.github.hexotronic.lauscher.music.MusicSource
 import io.github.hexotronic.lauscher.music.library.LibraryDownload
@@ -396,9 +397,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun overrideScene(scene: Scene, mood: Mood?, level: Int, title: String) {
+    fun overrideScene(scene: Scene, mood: Mood?, level: Int, title: String, setting: Setting?) {
         val book = nowPlaying.value.book ?: return
-        viewModelScope.launch { repository.overrideScene(book.id, scene.startMs, scene.endMs, mood, level, title) }
+        viewModelScope.launch { repository.overrideScene(book.id, scene.startMs, scene.endMs, mood, level, title, setting) }
     }
 
     fun previewMusic(spec: SoundSpec) = withCore { it.previewMusic(spec) }

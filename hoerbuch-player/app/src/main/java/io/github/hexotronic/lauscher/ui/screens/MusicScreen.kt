@@ -57,6 +57,7 @@ import io.github.hexotronic.lauscher.music.MusicSource
 import io.github.hexotronic.lauscher.music.library.core.MusicCatalog
 import io.github.hexotronic.lauscher.music.synth.Atmosphere
 import io.github.hexotronic.lauscher.music.synth.Mood
+import io.github.hexotronic.lauscher.music.synth.Setting
 import io.github.hexotronic.lauscher.music.synth.SoundSpec
 import io.github.hexotronic.lauscher.ui.MainViewModel
 import io.github.hexotronic.lauscher.ui.Screen
@@ -104,7 +105,7 @@ fun MusicScreen(vm: MainViewModel) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(bottom = 24.dp)) {
             Text(
                 "Leise Musik und Geräusche unter der Erzählung – vom eingebauten Synthesizer oder aus der " +
-                    "Fantasy-Musikbibliothek. Sie macht unter Sprache Platz. Die Szenen erkennt eine lokale KI – " +
+                    "Musikbibliothek. Sie macht unter Sprache Platz. Die Szenen erkennt eine lokale KI – " +
                     "nichts verlässt das Gerät.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -129,6 +130,10 @@ fun MusicScreen(vm: MainViewModel) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (scene?.mood != null) {
                             PixelBadge(scene.mood.label, moodColor(scene.mood), onMoodColor(scene.mood))
+                            Spacer(Modifier.width(8.dp))
+                        }
+                        scene?.setting?.let { place ->
+                            PixelBadge(place.label, MaterialTheme.colorScheme.surfaceContainerHighest, MaterialTheme.colorScheme.onSurface)
                             Spacer(Modifier.width(8.dp))
                         }
                         Text(
@@ -182,9 +187,9 @@ fun MusicScreen(vm: MainViewModel) {
             ) {
                 Text(
                     if (libraryInstalled.isEmpty()) {
-                        "Fantasy-Musik laden (${MusicCatalog.tracks.size} Stücke)"
+                        "Musikbibliothek öffnen (${MusicCatalog.tracks.size} Stücke)"
                     } else {
-                        "Fantasy-Bibliothek (${libraryInstalled.size}/${MusicCatalog.tracks.size} geladen)"
+                        "Musikbibliothek (${libraryInstalled.size}/${MusicCatalog.tracks.size} geladen)"
                     },
                 )
             }
@@ -229,8 +234,8 @@ fun MusicScreen(vm: MainViewModel) {
     }
 
     editScene?.let { scene ->
-        SceneEditDialog(scene, onDismiss = { editScene = null }) { mood, level, title ->
-            vm.overrideScene(scene, mood, level, title)
+        SceneEditDialog(scene, onDismiss = { editScene = null }) { mood, level, title, setting ->
+            vm.overrideScene(scene, mood, level, title, setting)
             editScene = null
         }
     }
@@ -300,6 +305,14 @@ private fun FixedChoice(s: MusicSettings, vm: MainViewModel) {
             }
         }
         Spacer(Modifier.height(8.dp))
+        Text("Ort (für die Musikbibliothek)", style = MaterialTheme.typography.labelLarge)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(selected = s.fixedSetting == null, onClick = { vm.updateMusic { it.copy(fixedSetting = null) } }, label = { Text("Egal") })
+            Setting.entries.forEach { p ->
+                FilterChip(selected = s.fixedSetting == p, onClick = { vm.updateMusic { it.copy(fixedSetting = p) } }, label = { Text(p.label) })
+            }
+        }
+        Spacer(Modifier.height(8.dp))
         Text("Geräuschkulisse", style = MaterialTheme.typography.labelLarge)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(
@@ -364,6 +377,11 @@ private fun AnalysisBlock(vm: MainViewModel, s: MusicSettings, status: AnalysisS
         "Beim Hören werden die nächsten Minuten im Hintergrund vorbereitet",
         s.analyzeAhead,
     ) { v -> vm.updateMusic { it.copy(analyzeAhead = v) } }
+    SwitchRow(
+        "Geräusche passend zum Ort",
+        "Wald, Meer, Wind oder Kaminfeuer leise unter der Musik",
+        s.placeSounds,
+    ) { v -> vm.updateMusic { it.copy(placeSounds = v) } }
     SwitchRow(
         "Dezente Musik, wo noch nichts analysiert ist",
         null,
@@ -506,15 +524,16 @@ private fun ModelRow(
 }
 
 @Composable
-private fun SceneEditDialog(scene: Scene, onDismiss: () -> Unit, onSave: (Mood?, Int, String) -> Unit) {
+private fun SceneEditDialog(scene: Scene, onDismiss: () -> Unit, onSave: (Mood?, Int, String, Setting?) -> Unit) {
     var mood by remember { mutableStateOf(scene.mood) }
     var level by remember { mutableStateOf(scene.level) }
     var title by remember { mutableStateOf(scene.title) }
+    var setting by remember { mutableStateOf(scene.setting) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Szene ${formatClock(scene.startMs)} – ${formatClock(scene.endMs)}") },
         text = {
-            Column {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Titel") }, singleLine = true)
                 Spacer(Modifier.height(8.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -524,14 +543,23 @@ private fun SceneEditDialog(scene: Scene, onDismiss: () -> Unit, onSave: (Mood?,
                     }
                 }
                 Spacer(Modifier.height(8.dp))
+                Text("Spannung", style = MaterialTheme.typography.labelLarge)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf(1 to "Dezent", 2 to "Deutlich", 3 to "Stark").forEach { (l, label) ->
                         FilterChip(selected = level == l, onClick = { level = l }, label = { Text(label) })
                     }
                 }
+                Spacer(Modifier.height(8.dp))
+                Text("Ort", style = MaterialTheme.typography.labelLarge)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FilterChip(selected = setting == null, onClick = { setting = null }, label = { Text("Unklar") })
+                    Setting.entries.forEach { p ->
+                        FilterChip(selected = setting == p, onClick = { setting = p }, label = { Text(p.label) })
+                    }
+                }
             }
         },
-        confirmButton = { TextButton(onClick = { onSave(mood, level, title) }) { Text("Übernehmen") } },
+        confirmButton = { TextButton(onClick = { onSave(mood, level, title, setting) }) { Text("Übernehmen") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen") } },
     )
 }

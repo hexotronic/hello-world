@@ -3,6 +3,7 @@ package io.github.hexotronic.lauscher.music
 import android.content.Context
 import io.github.hexotronic.lauscher.music.synth.Atmosphere
 import io.github.hexotronic.lauscher.music.synth.Mood
+import io.github.hexotronic.lauscher.music.synth.Setting
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,7 +16,7 @@ enum class MusicMode(val label: String, val hint: String) {
 
 enum class MusicSource(val label: String, val hint: String) {
     SYNTH("Erzeugt", "Der eingebaute Synthesizer spielt jede Stimmung – ohne Download"),
-    LIBRARY("Fantasy-Bibliothek", "Echte Orchester- und Folkstücke von Menschen komponiert; fehlende Stimmungen erzeugt der Synthesizer"),
+    LIBRARY("Musikbibliothek", "Echte, von Menschen komponierte Stücke passend zu Stimmung, Ort und Spannung; was fehlt, erzeugt der Synthesizer"),
 }
 
 enum class AnalysisDepth(val label: String, val hint: String, val sampleMs: Long) {
@@ -31,6 +32,10 @@ data class MusicSettings(
     val source: MusicSource = MusicSource.SYNTH,
     val fixedMood: Mood? = Mood.CALM,
     val fixedAtmosphere: Atmosphere? = null,
+    /** Place for the fixed mode, steers which library pieces play. */
+    val fixedSetting: Setting? = null,
+    /** Adds matching background sounds (forest, sea, fire …) to the place of each scene. */
+    val placeSounds: Boolean = false,
     val volume: Float = 0.5f,
     val duckDepthDb: Float = 8f,
     val crossfadeSeconds: Float = 4f,
@@ -61,6 +66,8 @@ class MusicSettingsStore(context: Context) {
             .putString("source", next.source.name)
             .putString("fixedMood", next.fixedMood?.name)
             .putString("fixedAtmosphere", next.fixedAtmosphere?.name)
+            .putString("fixedSetting", next.fixedSetting?.name)
+            .putBoolean("placeSounds", next.placeSounds)
             .putFloat("volume", next.volume)
             .putFloat("duckDepthDb", next.duckDepthDb)
             .putFloat("crossfadeSeconds", next.crossfadeSeconds)
@@ -82,6 +89,8 @@ class MusicSettingsStore(context: Context) {
             source = MusicSource.entries.firstOrNull { it.name == prefs.getString("source", null) } ?: d.source,
             fixedMood = if (prefs.contains("fixedMood")) Mood.parse(prefs.getString("fixedMood", null)) else d.fixedMood,
             fixedAtmosphere = Atmosphere.entries.firstOrNull { it.name == prefs.getString("fixedAtmosphere", null) },
+            fixedSetting = Setting.parse(prefs.getString("fixedSetting", null)),
+            placeSounds = prefs.getBoolean("placeSounds", d.placeSounds),
             volume = prefs.getFloat("volume", d.volume),
             duckDepthDb = prefs.getFloat("duckDepthDb", d.duckDepthDb),
             crossfadeSeconds = prefs.getFloat("crossfadeSeconds", d.crossfadeSeconds),

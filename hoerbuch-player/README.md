@@ -105,31 +105,47 @@ oder **nur für ein bestimmtes Hörbuch** speichern.
   CPU-Variante (ARMv8.2 dotprod/fp16) mit automatischer Erkennung, nur Leistungskerne, wiederverwendeter
   KV-Cache, Grammatik nur bei Bedarf; die App zeigt die geschätzte Restzeit an
 
-### Fantasy-Musikbibliothek (echte Musik, keine KI)
-Statt des Synthesizers kann die Hintergrundmusik aus **69 handkomponierten Stücken** (277 MB, gut 4 Stunden)
-kommen – Orchester- und Folkmusik aus den Soundtracks freier Fantasy-Spiele. Alles ist von Menschen
-komponiert und eingespielt (2004–2017), nichts davon ist KI-generiert:
+### Musikbibliothek nach Stimmung, Ort und Spannung (echte Musik, keine KI)
+Statt des Synthesizers kann die Hintergrundmusik aus **347 handkomponierten Stücken** (rund 1 GB, gut 18 Stunden
+mit Schleifen) kommen – Soundtracks freier Spiele. Alles ist von Menschen komponiert und eingespielt, nichts
+davon ist KI-generiert (Veloren verbietet KI-Inhalte sogar ausdrücklich in seinen Beitragsregeln):
 
-| Quelle | Stücke | Lizenz | Komponisten |
+| Quelle | Stücke | Lizenz | Schwerpunkt |
 |---|---|---|---|
-| [The Battle for Wesnoth](https://github.com/wesnoth/wesnoth) 1.18.8 | 35 | GPL v2+ (1× CC BY-SA 4.0) | Aleksi Aubry-Carlson, Doug Kaufman, Mattias Westlund, Ryan Reilly, Timothy Pinkham, Tyler Johnson, Jeremy Nicoll, Joseph G. Toscano, Gianmarco Leone, Stephen Rozanc |
-| [Widelands](https://github.com/widelands/widelands) | 24 | GPL v2+, CC BY-SA 3.0, CC BY 4.0 | Nikola Whallon, Jan Bruns, Barry van Oudtshoorn, Stuart Marshall, Klaus Halfmann, Joshua O'Leary |
-| [Flare](https://github.com/flareteam/flare-game) | 10 | CC BY-SA 3.0 | Brandon Morris |
+| [The Battle for Wesnoth](https://github.com/wesnoth/wesnoth) 1.18.8 | 35 | GPL v2+ (1× CC BY-SA 4.0) | Orchester: Schlacht, Burg, Wald, Höhle |
+| [Widelands](https://github.com/widelands/widelands) | 24 | GPL v2+, CC BY-SA 3.0, CC BY 4.0 | Mittelalter, Dorf, Wüste, Gebirge |
+| [Flare](https://github.com/flareteam/flare-game) | 10 | CC BY-SA 3.0 | Rollenspiel: Stadt, Höhle, Verlies |
+| [Veloren](https://github.com/veloren/veloren) | 69 | GPL v3 | Landschaften je Biom, Siedlungen, Höhlen, Verliese, Kampfmusik in drei Teilen |
+| [Shattered Pixel Dungeon](https://github.com/00-Evan/shattered-pixel-dungeon) | 31 | GPL v3 | Kerker, Kanalisation, Höhlen, Dämonenhallen – je ruhig, angespannt, Bosskampf |
+| [SuperTux](https://github.com/SuperTux/supertux) | 40 | CC BY-SA 3.0/4.0, GPL v2+ | Wald, Geisterwald, Eis, Festung, Unterwasser |
+| [Stendhal](https://github.com/arianne/stendhal) | 31 | GPL v2, CC0, CC BY 3.0/4.0, OGA-BY | Taverne, Markt, Kirche, Kerker, Mine, Spukwald |
+| [0 A.D.](https://github.com/0ad/0ad) | 60 | CC BY-SA 3.0 (Wildfire Games) | Antike: Griechen, Römer, Kelten, Ägypten, Persien, Indien, China |
+| [Pioneer](https://github.com/pioneerspacesim/pioneer) | 39 | CC BY-SA 3.0/4.0 | Weltraum: Sternenflug, Station, Begegnung, Gefecht |
+| [Hedgewars](https://github.com/hedgewars/hw) | 8 | GNU FDL 1.2 | Orient, Piraten, Schnee, Dschungel, Großstadt |
 
-- **Mehrere Stücke für jede Stimmung** (mindestens 5, z. B. 22 spannende, 18 ruhige, 14 idyllische, 5 romantische);
-  laden lassen sich alle auf einmal, einzelne Stimmungen oder einzelne Stücke, jeweils mit Hörprobe.
-- Die Dateien kommen **unverändert aus den Repositories der Spiele** (feste Version) und werden per
-  **SHA-256-Prüfsumme** kontrolliert; danach spielt alles offline.
-- Die App **wählt passend zur Szene**: Stücke, die für die Stimmung geschrieben sind, zuerst, ruhigere oder
-  treibendere je nach Intensität, ohne Wiederholungen. Bei gleicher Stimmung läuft ein Stück über
-  Szenengrenzen weiter; endet es, folgt nach kurzer Pause das nächste. Lautstärken sind angeglichen,
-  die Musik weicht weiterhin der Stimme aus. Wo einer Stimmung Stücke fehlen, spielt der Synthesizer.
-- Der Player zeigt das laufende Stück mit Komponist; Herkunft, Komponisten und Lizenzen stehen in der App
-  unter *Fantasy-Musik → Herkunft und Lizenzen*.
-- Wie der Katalog entstanden ist: `tools/music/` – `candidates.txt` (Quellen), `measure.sh` (lädt jedes Stück,
-  misst Prüfsumme, Länge, Lautstärke, Tempo), `analysis.jsonl` (Messwerte) und `catalog.py` (Stimmungs-Zuordnung
-  von Hand, erzeugt `FantasyCatalog.kt`). Komponisten und Lizenzen stammen aus `copyrights.csv` (Wesnoth),
-  `data/music/LICENSE.txt` (Widelands), `CREDITS.txt`/`LICENSE.txt` (Flare) und den Tags der Dateien.
+- **26 Orte und Themen:** Wald, Dschungel, Draußen, Gebirge, Schnee und Eis, Wüste, Meer, Unter Wasser, Höhle,
+  Kerker, Burg, Dorf und Stadt, Taverne, Zuhause, Schlacht, Tempel, Zauberwelt, Spukort, Orient, Fernost, Antike,
+  Norden, Wilder Westen, Weltraum, Großstadt. Die lokale KI erkennt neben der Stimmung auch den Ort jeder
+  Szene (sonst helfen Ortswörter im Text); in der Stimmungskarte lässt sich beides korrigieren.
+- **Verschiedene Stücke je Spannung im selben Gebiet:** Im Kerker etwa ruhiges Erkunden, dann „angespannt“,
+  dann Bosskampf; Veloren-Kampfmusik spielt Anlauf, Schleife und Ende nacheinander.
+- **Bei jedem Szenenwechsel neu gewählt:** Ändert sich Ort, Stimmung oder Spannungsstufe, wird zu einem
+  passenden Stück übergeblendet; bleibt alles gleich, läuft das Stück weiter. Die Auswahl richtet sich zuerst
+  nach der Stimmung, dann nach dem Ort (sonst verwandte Orte, z. B. Wüste und Prärie für den Wilden Westen,
+  für den es noch keine eigenen freien Stücke gibt), dann nach der Spannung, ohne Wiederholungen.
+- Kurze Spielmusik-Schleifen werden an ihren Schleifenpunkten mehrmals gespielt (mit winzigen
+  Überblendungen gegen Knackser) und am Ende ausgeblendet.
+- Optional **Geräusche passend zum Ort** (Wald, Meer, Wind, Kaminfeuer) leise unter der Musik.
+- **Laden:** Starterpaket (die passendsten Stücke je Ort und Stimmung, 66 Stücke, 209 MB), Pakete je Stimmung
+  oder je Ort, einzelne Stücke oder alles; jeweils mit Hörprobe. Die Dateien kommen **unverändert aus den
+  Repositories der Spiele** (fester Commit bzw. feste Version) und werden per **SHA-256-Prüfsumme** kontrolliert.
+- Der Player zeigt Stimmung, Ort und das laufende Stück mit Komponist; Herkunft, Komponisten und Lizenzen
+  stehen in der App unter *Musikbibliothek → Herkunft und Lizenzen*.
+- Wie der Katalog entstanden ist: `tools/music/` – `candidates*.txt` (Quellen), `measure.sh` (lädt jedes Stück,
+  misst Prüfsumme, Länge, Lautstärke, Tempo, liest die Tags), `analysis*.jsonl` (Messwerte),
+  `catalog_tables.py` (Komponisten, Lizenzen, Stimmungen und Orte von Hand) und `catalog.py` (erzeugt
+  `FantasyCatalog.kt`). Komponisten und Lizenzen stammen aus den Credits der Spiele (`copyrights.csv`,
+  `LICENSE.txt`, `CREDITS.txt`, `AUTHORS`, `credits.ron`, `audio-music.txt`, `.music`-Dateien) und den Tags der Dateien.
 
 ### Statistik & Daten
 - Hörzeit heute / 7 Tage / gesamt, Serie in Tagen, beendete Bücher
@@ -161,7 +177,7 @@ Benötigt JDK 17 und das Android SDK (API 35).
 Die CI baut die APK (inklusive llama.cpp und whisper.cpp für arm64 und x86_64), führt die Unit-Tests aus
 und startet die App anschließend in einem Android-14-Emulator: Demo-Hörbuch abspielen, Screenshots aller
 Hauptseiten, ein Ende-zu-Ende-Test der lokalen KI (synthetische Sprache → Whisper Tiny → Qwen2.5 0.5B →
-Szenen), Laden und Abspielen eines Stücks der Fantasy-Musikbibliothek und Prüfung auf Abstürze.
+Szenen), Laden und Abspielen von Stücken der Musikbibliothek (auch einer Schleife) und Prüfung auf Abstürze.
 
 ### Schriften
 

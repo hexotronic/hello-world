@@ -23,22 +23,24 @@ interface PcmStream {
 /** Supplies recorded pieces for a mood, e.g. the downloaded music library. */
 interface RecordingSource {
     /**
-     * Opens a piece for [mood]: [trackId] if given, otherwise one picked for the mood and
-     * [intensity] (0..1). Returns null when no piece is available, the synthesizer plays then.
+     * Opens a piece for [mood]: [trackId] if given, otherwise one picked for the mood, the
+     * place ([setting], may be null) and [intensity] (0..1). Returns null when no piece is
+     * available, the synthesizer plays then.
      * Called on the audio thread, so it must only start work, not wait for it.
      */
-    fun open(mood: Mood, intensity: Float, trackId: String?): PcmStream?
+    fun open(mood: Mood, setting: Setting?, intensity: Float, trackId: String?): PcmStream?
 }
 
 /**
- * Plays recorded pieces of one mood one after another, with a short pause in between.
- * Pieces already end musically, so they are not cut or looped.
+ * Plays recorded pieces of one mood and place one after another, with a short pause in between.
+ * Pieces already end musically, so they are not cut.
  */
 internal class RecordingGenerator(
     private val sampleRate: Int,
     private val source: RecordingSource,
     val mood: Mood,
-    private val intensity: Float,
+    val setting: Setting?,
+    val intensity: Float,
     first: PcmStream,
 ) : Generator {
     override val reverb = 0.05f
@@ -61,7 +63,7 @@ internal class RecordingGenerator(
                 pauseLeft -= skip
                 done += skip
                 if (pauseLeft <= 0) {
-                    stream = source.open(mood, intensity, null)
+                    stream = source.open(mood, setting, intensity, null)
                     // Nothing else to play: stay silent but try again after the next pause.
                     if (stream == null) pauseLeft = (PAUSE_SECONDS * sampleRate).toInt()
                 }

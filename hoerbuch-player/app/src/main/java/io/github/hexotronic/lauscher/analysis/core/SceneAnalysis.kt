@@ -1,6 +1,7 @@
 package io.github.hexotronic.lauscher.analysis.core
 
 import io.github.hexotronic.lauscher.music.synth.Mood
+import io.github.hexotronic.lauscher.music.synth.Setting
 
 /** A transcribed stretch of the book (book-wide positions in ms). */
 data class TranscriptWindow(val startMs: Long, val endMs: Long, val text: String)
@@ -14,9 +15,11 @@ data class WindowMood(
     val level: Int,
     val title: String,
     val source: String,
+    /** Where the window takes place, null when unclear. */
+    val setting: Setting? = null,
 )
 
-/** Consecutive windows with the same mood, as shown on the mood map and used for music. */
+/** Consecutive windows with the same mood and place, as shown on the mood map and used for music. */
 data class Scene(
     val startMs: Long,
     val endMs: Long,
@@ -24,6 +27,7 @@ data class Scene(
     val level: Int,
     val title: String,
     val manual: Boolean,
+    val setting: Setting? = null,
 ) {
     val intensity: Float get() = (level.coerceIn(1, 3) - 1) / 2f * 0.7f + 0.2f
 }
@@ -74,11 +78,11 @@ object SceneMerger {
             val last = out.lastOrNull()
             val manual = w.source == SOURCE_MANUAL
             if (last != null && last.mood == w.mood && last.manual == manual && w.startMs - last.endMs <= 1_000 &&
-                (last.level == w.level || last.mood == null)
+                (last.level == w.level || last.mood == null) && (last.setting == w.setting || last.mood == null)
             ) {
                 out[out.lastIndex] = last.copy(endMs = w.endMs)
             } else {
-                out.add(Scene(w.startMs, w.endMs, w.mood, w.level, w.title, manual))
+                out.add(Scene(w.startMs, w.endMs, w.mood, w.level, w.title, manual, w.setting))
             }
         }
         return out
@@ -115,6 +119,7 @@ object SceneMerger {
  */
 object ScenePrompt {
     private val moods = listOf("NONE") + Mood.entries.map { it.name }
+    private val places = Setting.entries.map { it.name } + "OTHER"
 
     val SYSTEM = """
         You are the sound designer of an audiobook app. You receive consecutive excerpts ("windows") of an
@@ -134,9 +139,21 @@ object ScenePrompt {
         IDYLLIC = nature, landscape, peace
         NEUTRAL = soft background when the mood is unclear
 
-        level: 1 = subtle, 2 = clear, 3 = strong.
+        level: 1 = subtle, 2 = clear, 3 = strong (how tense or intense the scene is).
+
+        place values (where the scene happens, or its cultural colour):
+        FOREST, JUNGLE (also swamp), OPEN_LAND (meadows, fields, roads, travelling), MOUNTAINS, WINTER (snow, ice),
+        DESERT, SEA (coast, ship, harbour, lake), UNDERWATER, CAVE (also mine, tunnels), DUNGEON (prison, crypt,
+        sewers), CASTLE (palace, throne room, fortress), TOWN (village, market, streets of old times), TAVERN (inn,
+        feast), HOME (living room, family, fireplace), BATTLEFIELD (war, army, siege), TEMPLE (church, monastery),
+        MAGIC (fairies, wizard tower, dreams), HAUNTED (graveyard, ghosts, hell), ORIENT (Arabia, Persia, Egypt,
+        bazaar), ASIA (China, Japan, India), ANCIENT (Greece, Rome), NORTH (Celts, Vikings, highlands),
+        WESTERN (wild west, prairie, saloon), SPACE (spaceship, stars, future), CITY (modern city, office, cars),
+        OTHER (unclear or none of these).
+
         title: a short scene title in the language of the book, at most five words.
-        Neighbouring windows of the same scene keep the same mood; only change it when the scene really changes.
+        Neighbouring windows of the same scene keep the same mood and place; only change them when the scene really
+        changes.
         story: the running summary of the plot so far, updated with these windows, at most two short sentences, in the
         language of the book.
         Answer with JSON only.
@@ -166,9 +183,10 @@ object ScenePrompt {
         for (i in 0 until count) {
             append("item").append(i).append(" ::= \"{\" ws \"\\\"w\\\":\" ws \"").append(i)
             append("\" ws \",\" ws \"\\\"mood\\\":\" ws mood ws \",\" ws \"\\\"level\\\":\" ws [1-3] ws \",\" ws ")
-            append("\"\\\"title\\\":\" ws title ws \"}\"\n")
+            append("\"\\\"place\\\":\" ws place ws \",\" ws \"\\\"title\\\":\" ws title ws \"}\"\n")
         }
         append("mood ::= ").append(moods.joinToString(" | ") { "\"\\\"$it\\\"\"" }).append('\n')
+        append("place ::= ").append(places.joinToString(" | ") { "\"\\\"$it\\\"\"" }).append('\n')
         append("title ::= \"\\\"\" char{1,32} \"\\\"\"\n")
         append("story ::= \"\\\"\" char{0,300} \"\\\"\"\n")
         append("char ::= [^\"\\\\\\x00-\\x1F] | \"\\\\\" [\"\\\\/nt]\n")
@@ -198,6 +216,7 @@ object ScenePrompt {
                 level = ((m?.get("level") as? Number)?.toInt() ?: 2).coerceIn(1, 3),
                 title = (m?.get("title") as? String)?.trim().orEmpty().take(60),
                 source = SceneMerger.SOURCE_LLM,
+                setting = Setting.parse(m?.get("place") as? String),
             )
         }
         return Result(result, (root["story"] as? String).orEmpty().trim())
@@ -287,6 +306,42 @@ object KeywordMoods {
             perWords > 1.5 -> best.key to 2
             else -> best.key to 1
         }
+    }
+
+    private val places: Map<Setting, List<String>> = mapOf(
+        Setting.FOREST to listOf("wald", "wälder", "bäume", "lichtung", "unterholz", "forest", "woods", "trees", "clearing"),
+        Setting.JUNGLE to listOf("dschungel", "urwald", "lianen", "sumpf", "tropen", "jungle", "swamp", "tropical"),
+        Setting.OPEN_LAND to listOf("wiese", "feld", "felder", "landstraße", "weg ", "hügel", "meadow", "field", "road", "hill"),
+        Setting.MOUNTAINS to listOf("gebirge", " berg", "berge ", "gipfel", "felsen", "mountain", "peak", "cliff"),
+        Setting.WINTER to listOf("schnee", "eis ", "frost", "gletscher", "winter", "snow", "ice ", "frozen", "glacier"),
+        Setting.DESERT to listOf("wüste", " sand", "düne", "oase", "desert", "dune", "oasis"),
+        Setting.SEA to listOf("meer", "schiff", "hafen", "küste", "strand", "segel", "welle", "sea ", "ship", "harbo", "coast", "beach", "waves"),
+        Setting.UNDERWATER to listOf("unter wasser", "tauch", "meeresgrund", "underwater", "dived", "seabed"),
+        Setting.CAVE to listOf("höhle", "stollen", "mine ", "tunnel", "cave", "cavern", "mine"),
+        Setting.DUNGEON to listOf("kerker", "verlies", "zelle", "gefängnis", "gruft", "kanalisation", "dungeon", "prison", "cell ", "crypt", "sewer"),
+        Setting.CASTLE to listOf("burg", "schloss", "palast", "thron", "festung", "könig", "castle", "palace", "throne", "fortress", "king"),
+        Setting.TOWN to listOf("dorf", "stadt", "markt", "gasse", "platz", "village", "town", "market", "street"),
+        Setting.TAVERN to listOf("taverne", "wirtshaus", "gasthaus", "schänke", "bier", "krug", "tavern", "inn ", "ale ", "pub "),
+        Setting.HOME to listOf("küche", "stube", "zuhause", "wohnzimmer", "kamin", " bett", "kitchen", "at home", "living room", "fireplace"),
+        Setting.BATTLEFIELD to listOf("schlacht", "krieg", "heer", "armee", "soldat", "belager", "battle", "war ", "army", "soldier", "siege"),
+        Setting.TEMPLE to listOf("tempel", "kirche", "kloster", "altar", "priester", "mönch", "temple", "church", "monastery", "priest", "monk"),
+        Setting.MAGIC to listOf("zauber", "magie", "fee ", "feen", "hexe", "magier", "zauberer", "magic", "wizard", "witch", "fairy", "spell"),
+        Setting.HAUNTED to listOf("friedhof", "geister", "gespenst", "spuk", "hölle", "dämon", "graveyard", "ghost", "haunted", " hell ", "demon"),
+        Setting.ORIENT to listOf("basar", "sultan", "pharao", "pyramide", "kalif", "bazaar", "pharaoh", "pyramid", "caliph", "arabia"),
+        Setting.ASIA to listOf("samurai", "kaiser von china", "tempel in kyoto", "shogun", "dynastie", "geisha", "ninja", "emperor of china", "dynasty"),
+        Setting.ANCIENT to listOf("römer", "rom ", "legion", "athen", "sparta", "gladiator", "senat", "roman", "rome", "athens", "senate"),
+        Setting.NORTH to listOf("wikinger", "drachenboot", "kelten", "druide", "clan", "viking", "longship", "celtic", "druid", "highlands"),
+        Setting.WESTERN to listOf("saloon", "sheriff", "cowboy", "revolver", "prärie", "colt", "ranch", "prairie", "outlaw"),
+        Setting.SPACE to listOf("raumschiff", "weltall", "planet", "galaxie", "astronaut", "spaceship", "space", "galaxy", "orbit"),
+        Setting.CITY to listOf("auto ", "autos", "büro", "handy", "u-bahn", "hochhaus", "taxi", "polizei", "car ", "office", "phone", "subway", "police"),
+    )
+
+    /** The most likely place of a passage, or null when no place word stands out. */
+    fun settingOf(text: String): Setting? {
+        val t = " " + text.lowercase() + " "
+        val scores = places.mapValues { (_, list) -> list.sumOf { w -> occurrences(t, w) } }
+        val best = scores.maxByOrNull { it.value } ?: return null
+        return best.key.takeIf { best.value >= 2 }
     }
 
     private fun occurrences(text: String, word: String): Int {

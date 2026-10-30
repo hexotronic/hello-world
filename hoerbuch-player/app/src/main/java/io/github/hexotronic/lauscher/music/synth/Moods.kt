@@ -28,6 +28,44 @@ enum class Atmosphere(val label: String) {
     WIND("Sturm"),
 }
 
+/**
+ * Where a scene takes place (or its cultural colour). Keys are stable (stored in the database).
+ * [related] places stand in when the music library has nothing for this one.
+ */
+enum class Setting(val label: String, val hint: String, private val relatedNames: List<String>, val atmosphere: Atmosphere? = null) {
+    FOREST("Wald", "Wald, Hain, Lichtung", listOf("JUNGLE", "OPEN_LAND", "MAGIC"), Atmosphere.FOREST),
+    JUNGLE("Dschungel", "Urwald, Tropen, Sumpf", listOf("FOREST", "OPEN_LAND"), Atmosphere.FOREST),
+    OPEN_LAND("Draußen", "Wiesen, Felder, Landstraße, Reise", listOf("FOREST", "MOUNTAINS", "TOWN")),
+    MOUNTAINS("Gebirge", "Berge, Hochland, Pass", listOf("WINTER", "OPEN_LAND", "NORTH"), Atmosphere.WIND),
+    WINTER("Schnee und Eis", "Winter, Gletscher, Frost", listOf("MOUNTAINS", "NORTH"), Atmosphere.WIND),
+    DESERT("Wüste", "Wüste, Steppe, Dürre", listOf("ORIENT", "WESTERN", "OPEN_LAND"), Atmosphere.WIND),
+    SEA("Meer", "Küste, Schiff, Hafen, See", listOf("UNDERWATER", "OPEN_LAND"), Atmosphere.SEA),
+    UNDERWATER("Unter Wasser", "Tiefsee, versunkene Stadt", listOf("SEA", "CAVE")),
+    CAVE("Höhle", "Höhle, Mine, Unterwelt, Tunnel", listOf("DUNGEON", "UNDERWATER")),
+    DUNGEON("Kerker", "Verlies, Gefängnis, Gruft, Kanalisation", listOf("CAVE", "HAUNTED", "CASTLE")),
+    CASTLE("Burg", "Burg, Palast, Thronsaal, Festung", listOf("TOWN", "BATTLEFIELD", "DUNGEON")),
+    TOWN("Dorf und Stadt", "Dorf, Markt, Gassen, Hafenstadt", listOf("TAVERN", "HOME", "CASTLE")),
+    TAVERN("Taverne", "Gasthaus, Fest, Feier, Musikanten", listOf("TOWN", "HOME"), Atmosphere.FIRE),
+    HOME("Zuhause", "Stube, Kaminfeuer, Familie", listOf("TAVERN", "TOWN"), Atmosphere.FIRE),
+    BATTLEFIELD("Schlacht", "Krieg, Heer, Belagerung, Kampf", listOf("CASTLE", "ANCIENT")),
+    TEMPLE("Tempel", "Kirche, Kloster, heiliger Ort", listOf("MAGIC", "CASTLE")),
+    MAGIC("Zauberwelt", "Magie, Feen, Zauberturm, Traum", listOf("TEMPLE", "FOREST")),
+    HAUNTED("Spukort", "Friedhof, Geister, Grauen, Hölle", listOf("DUNGEON", "CAVE")),
+    ORIENT("Orient", "Arabien, Persien, Ägypten, Basar", listOf("DESERT", "ASIA", "ANCIENT")),
+    ASIA("Fernost", "China, Japan, Indien", listOf("ORIENT")),
+    ANCIENT("Antike", "Griechenland, Rom, Karthago", listOf("ORIENT", "BATTLEFIELD")),
+    NORTH("Norden", "Kelten, Wikinger, Highlands", listOf("MOUNTAINS", "WINTER", "FOREST")),
+    WESTERN("Wilder Westen", "Prärie, Saloon, Cowboys", listOf("DESERT", "OPEN_LAND", "TOWN")),
+    SPACE("Weltraum", "Raumschiff, Sterne, ferne Zukunft", listOf("MAGIC")),
+    CITY("Großstadt", "Gegenwart, Straßen, Büro, Verkehr", listOf("TOWN", "HOME"));
+
+    val related: List<Setting> by lazy { relatedNames.map { valueOf(it) } }
+
+    companion object {
+        fun parse(name: String?): Setting? = entries.firstOrNull { it.name.equals(name?.trim(), ignoreCase = true) }
+    }
+}
+
 /** What the mixer should play: a mood, an atmosphere or both. */
 data class SoundSpec(
     val mood: Mood? = null,
@@ -38,6 +76,8 @@ data class SoundSpec(
     val seed: Long = 1L,
     /** A specific piece of the music library (previews); otherwise one is picked for the mood. */
     val trackId: String? = null,
+    /** Where the scene takes place; the music library prefers pieces for this place. */
+    val setting: Setting? = null,
 )
 
 /**

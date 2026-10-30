@@ -45,19 +45,22 @@ shot 06b-player-musik-hell 6
 start --es screen music
 shot 06c-hintergrundmusik-hell 4
 
-# --- Fantasy music library: download one piece from the game's repository, check it and play it.
-start --es music_download wesnoth/sad --es screen musiclibrary
-for i in $(seq 1 30); do
-  if adb logcat -d -s LauscherMusik:* | grep -qE "Geladen: wesnoth/sad|fehlgeschlagen"; then break; fi
+# --- Music library: download pieces from the games' repositories, check them and play them.
+# spd/sewers_1 is a 26-second loop that is played several times in a row.
+start --es music_download wesnoth/sad,spd/sewers_1 --es screen musiclibrary
+for i in $(seq 1 40); do
+  if adb logcat -d -s LauscherMusik:* | grep -qE "Geladen: spd/sewers_1|fehlgeschlagen"; then break; fi
   sleep 2
 done
 start --es music_preview wesnoth/sad --es screen musiclibrary
-shot 06d-fantasy-musik-hell 6
-start --es music_fixed SAD --es screen player
-shot 06e-player-fantasy-musik-hell 4
-adb logcat -d -s LauscherMusik:* | tail -20 | tee "$OUT/musik.txt"
-if ! grep -q "Dekodiert: wesnoth/sad" "$OUT/musik.txt"; then
-  echo "::error::Die Fantasy-Musik wurde nicht geladen oder nicht abgespielt"
+shot 06d-musikbibliothek-hell 6
+start --es music_preview spd/sewers_1 --es screen player
+sleep 32
+start --es music_fixed TENSE@DUNGEON --es screen player
+shot 06e-player-kerker-musik-hell 4
+adb logcat -d -s LauscherMusik:* | tail -30 | tee "$OUT/musik.txt"
+if ! grep -q "Dekodiert: wesnoth/sad" "$OUT/musik.txt" || ! grep -q "Fortsetzung: spd/sewers_1, Teil 2" "$OUT/musik.txt"; then
+  echo "::error::Die Musikbibliothek wurde nicht geladen oder nicht (in Schleife) abgespielt"
   E2E_FAILED=1
 fi
 

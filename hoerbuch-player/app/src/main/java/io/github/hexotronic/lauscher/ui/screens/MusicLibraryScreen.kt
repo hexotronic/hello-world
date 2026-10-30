@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -52,6 +53,7 @@ import io.github.hexotronic.lauscher.music.library.core.MusicCatalog
 import io.github.hexotronic.lauscher.music.library.core.MusicCollection
 import io.github.hexotronic.lauscher.music.library.core.MusicLicense
 import io.github.hexotronic.lauscher.music.synth.Mood
+import io.github.hexotronic.lauscher.music.synth.Setting
 import io.github.hexotronic.lauscher.ui.MainViewModel
 import io.github.hexotronic.lauscher.ui.components.PixelBadge
 import io.github.hexotronic.lauscher.ui.components.RetroButton
@@ -68,7 +70,7 @@ import io.github.hexotronic.lauscher.ui.formatHuman
 import io.github.hexotronic.lauscher.ui.theme.PixelFont
 import java.util.Locale
 
-/** Downloadable fantasy soundtrack pieces, grouped by mood, with their credits. */
+/** Downloadable soundtrack pieces of open games, grouped by mood or place, with their credits. */
 @Composable
 fun MusicLibraryScreen(vm: MainViewModel) {
     val s by vm.musicSettings.collectAsStateWithLifecycle()
@@ -76,21 +78,24 @@ fun MusicLibraryScreen(vm: MainViewModel) {
     val installed by vm.libraryInstalled.collectAsStateWithLifecycle()
     val download by vm.libraryDownload.collectAsStateWithLifecycle()
     var expanded by rememberSaveable { mutableStateOf<String?>(null) }
+    var byPlace by rememberSaveable { mutableStateOf(false) }
     val all = MusicCatalog.tracks
     val missing = all.filter { it.id !in installed }
+    val starterMissing = MusicCatalog.starterPack.filter { it.id !in installed }
 
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
         RetroTopBar(
             navigationIcon = {
                 IconButton(onClick = { vm.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück") }
             },
-            title = { Text("Fantasy-Musik") },
+            title = { Text("Musikbibliothek") },
         )
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(bottom = 24.dp)) {
             Text(
-                "Echte Orchester- und Folkmusik, von Menschen komponiert und eingespielt – keine KI-Musik. " +
-                    "Sie stammt aus den Soundtracks freier Fantasy-Spiele, steht unter GPL oder Creative Commons " +
-                    "und wird unverändert aus deren Archiven geladen. Danach spielt sie offline, passend zur Szene.",
+                "Echte Musik, von Menschen komponiert und eingespielt – keine KI-Musik. Sie stammt aus den " +
+                    "Soundtracks freier Spiele, steht unter GPL oder Creative Commons und wird unverändert aus deren " +
+                    "Archiven geladen. Die App wählt passend zu Stimmung, Ort und Spannung jeder Szene – vom ruhigen " +
+                    "Kerker-Rundgang bis zum Kampf, vom Wald bis zum Weltraum. Danach spielt alles offline.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(16.dp),
@@ -113,8 +118,16 @@ fun MusicLibraryScreen(vm: MainViewModel) {
                 if (download?.running != true) {
                     Spacer(Modifier.height(10.dp))
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        if (starterMissing.isNotEmpty()) {
+                            RetroButton(onClick = { vm.downloadMusic(starterMissing.map { it.id }) }) {
+                                Text("Starterpaket (${starterMissing.size} Stücke, ${megabytes(MusicCatalog.totalBytes(starterMissing))})")
+                            }
+                        }
                         if (missing.isNotEmpty()) {
-                            RetroButton(onClick = { vm.downloadMusic(missing.map { it.id }) }) {
+                            RetroButton(
+                                onClick = { vm.downloadMusic(missing.map { it.id }) },
+                                style = if (starterMissing.isEmpty()) RetroButtonStyle.PRIMARY else RetroButtonStyle.SECONDARY,
+                            ) {
                                 Text(if (installed.isEmpty()) "Alles laden (${megabytes(MusicCatalog.totalBytes(missing))})" else "Rest laden (${megabytes(MusicCatalog.totalBytes(missing))})")
                             }
                         }
@@ -127,7 +140,7 @@ fun MusicLibraryScreen(vm: MainViewModel) {
 
             SwitchRow(
                 "Für die Hintergrundmusik verwenden",
-                if (installed.isEmpty()) "Lade zuerst Stücke herunter" else "Wo einer Stimmung Stücke fehlen, spielt der Synthesizer",
+                if (installed.isEmpty()) "Lade zuerst Stücke herunter" else "Fehlt ein passendes Stück, spielt der Synthesizer",
                 s.source == MusicSource.LIBRARY,
                 enabled = installed.isNotEmpty(),
             ) { on -> vm.updateMusic { it.copy(source = if (on) MusicSource.LIBRARY else MusicSource.SYNTH) } }
@@ -140,21 +153,49 @@ fun MusicLibraryScreen(vm: MainViewModel) {
                 )
             }
 
-            SectionHeader("Stimmungen")
-            Mood.entries.forEach { mood ->
-                MoodPack(
-                    mood = mood,
-                    tracks = MusicCatalog.forMood(mood),
-                    installed = installed,
-                    expanded = expanded == mood.name,
-                    playingId = np.musicTrackId.takeIf { np.musicPlaying },
-                    busy = download?.running == true,
-                    onToggle = { expanded = if (expanded == mood.name) null else mood.name },
-                    onDownload = vm::downloadMusic,
-                    onPreview = vm::previewTrack,
-                    onStop = vm::stopMusicPreview,
-                    onDelete = { vm.deleteMusic(listOf(it.id)) },
-                )
+            SectionHeader("Pakete")
+            Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(selected = !byPlace, onClick = { byPlace = false }, label = { Text("Nach Stimmung") })
+                FilterChip(selected = byPlace, onClick = { byPlace = true }, label = { Text("Nach Ort") })
+            }
+            Spacer(Modifier.height(8.dp))
+            val playingId = np.musicTrackId.takeIf { np.musicPlaying }
+            val busy = download?.running == true
+            if (byPlace) {
+                Setting.entries.forEach { place ->
+                    val tracks = MusicCatalog.forSetting(place)
+                    Pack(
+                        key = "place-" + place.name,
+                        badge = { PixelBadge(place.label, MaterialTheme.colorScheme.surfaceContainerHighest, MaterialTheme.colorScheme.onSurface) },
+                        hint = if (tracks.isEmpty()) {
+                            place.hint + " – eigene Stücke fehlen noch, es spielen: " + place.related.joinToString { it.label }
+                        } else {
+                            place.hint
+                        },
+                        tracks = tracks,
+                        installed = installed,
+                        expanded = expanded,
+                        playingId = playingId,
+                        busy = busy,
+                        onToggle = { expanded = if (expanded == it) null else it },
+                        vm = vm,
+                    )
+                }
+            } else {
+                Mood.entries.forEach { mood ->
+                    Pack(
+                        key = "mood-" + mood.name,
+                        badge = { PixelBadge(mood.label, moodColor(mood), onMoodColor(mood)) },
+                        hint = mood.hint,
+                        tracks = MusicCatalog.forMood(mood),
+                        installed = installed,
+                        expanded = expanded,
+                        playingId = playingId,
+                        busy = busy,
+                        onToggle = { expanded = if (expanded == it) null else it },
+                        vm = vm,
+                    )
+                }
             }
 
             SectionHeader("Herkunft und Lizenzen")
@@ -189,21 +230,21 @@ private fun DownloadProgress(download: LibraryDownload?, onCancel: () -> Unit, o
 }
 
 @Composable
-private fun MoodPack(
-    mood: Mood,
+private fun Pack(
+    key: String,
+    badge: @Composable () -> Unit,
+    hint: String,
     tracks: List<LibraryTrack>,
     installed: Set<String>,
-    expanded: Boolean,
+    expanded: String?,
     playingId: String?,
     busy: Boolean,
-    onToggle: () -> Unit,
-    onDownload: (List<String>) -> Unit,
-    onPreview: (LibraryTrack) -> Unit,
-    onStop: () -> Unit,
-    onDelete: (LibraryTrack) -> Unit,
+    onToggle: (String) -> Unit,
+    vm: MainViewModel,
 ) {
     val have = tracks.count { it.id in installed }
     val missing = tracks.filter { it.id !in installed }
+    val open = expanded == key
     Column(
         Modifier
             .fillMaxWidth()
@@ -211,40 +252,41 @@ private fun MoodPack(
             .block(MaterialTheme.colorScheme.surfaceContainerLow, shadow = 3.dp),
     ) {
         Row(
-            Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(start = 12.dp, top = 10.dp, bottom = 10.dp, end = 4.dp),
+            Modifier.fillMaxWidth().clickable(enabled = tracks.isNotEmpty()) { onToggle(key) }.padding(start = 12.dp, top = 10.dp, bottom = 10.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    PixelBadge(mood.label, moodColor(mood), onMoodColor(mood))
+                    badge()
                     Spacer(Modifier.width(8.dp))
                     Text("$have/${tracks.size} geladen", style = MaterialTheme.typography.labelSmall)
                 }
                 Spacer(Modifier.height(4.dp))
-                Text(mood.hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Icon(if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, contentDescription = if (expanded) "Zuklappen" else "Aufklappen")
+            if (tracks.isNotEmpty()) {
+                Icon(if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, contentDescription = if (open) "Zuklappen" else "Aufklappen")
+            }
         }
         if (missing.isNotEmpty() && !busy) {
             RetroButton(
-                onClick = { onDownload(missing.map { it.id }) },
+                onClick = { vm.downloadMusic(missing.map { it.id }) },
                 style = RetroButtonStyle.SECONDARY,
                 modifier = Modifier.padding(start = 12.dp, bottom = 12.dp),
             ) { Text("${missing.size} Stücke laden (${megabytes(MusicCatalog.totalBytes(missing))})") }
         }
-        if (expanded) {
+        if (open) {
             HorizontalDivider(thickness = 2.dp, color = MaterialTheme.colorScheme.outline)
             tracks.forEach { t ->
                 TrackRow(
                     track = t,
-                    mood = mood,
                     installed = t.id in installed,
                     playing = t.id == playingId,
                     busy = busy,
-                    onDownload = { onDownload(listOf(t.id)) },
-                    onPreview = { onPreview(t) },
-                    onStop = onStop,
-                    onDelete = { onDelete(t) },
+                    onDownload = { vm.downloadMusic(listOf(t.id)) },
+                    onPreview = { vm.previewTrack(t) },
+                    onStop = vm::stopMusicPreview,
+                    onDelete = { vm.deleteMusic(listOf(t.id)) },
                 )
             }
         }
@@ -254,7 +296,6 @@ private fun MoodPack(
 @Composable
 private fun TrackRow(
     track: LibraryTrack,
-    mood: Mood,
     installed: Boolean,
     playing: Boolean,
     busy: Boolean,
@@ -272,9 +313,14 @@ private fun TrackRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                "${formatClock(track.seconds * 1000L)} · ${megabytes(track.bytes)} · ${track.license.label}" +
-                    (track.moods.filter { it != mood }.takeIf { it.isNotEmpty() }?.joinToString(", ", prefix = " · auch ") { it.label } ?: ""),
+                "${formatClock(track.seconds * 1000L)} · ${megabytes(track.bytes)} · ${track.license.label}",
                 style = MaterialTheme.typography.labelSmall,
+            )
+            Text(
+                track.moods.joinToString(", ") { it.label } +
+                    (track.settings.takeIf { it.isNotEmpty() }?.joinToString(", ", prefix = " · ") { it.label } ?: ""),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
             )
         }
         when {

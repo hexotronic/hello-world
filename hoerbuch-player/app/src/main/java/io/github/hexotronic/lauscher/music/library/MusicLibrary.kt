@@ -7,10 +7,12 @@ import io.github.hexotronic.lauscher.music.MusicSettingsStore
 import io.github.hexotronic.lauscher.music.MusicSource
 import io.github.hexotronic.lauscher.music.library.core.LibraryTrack
 import io.github.hexotronic.lauscher.music.library.core.MusicCatalog
+import io.github.hexotronic.lauscher.music.library.core.TrackFile
 import io.github.hexotronic.lauscher.music.library.core.TrackPicker
 import io.github.hexotronic.lauscher.music.synth.Mood
 import io.github.hexotronic.lauscher.music.synth.PcmStream
 import io.github.hexotronic.lauscher.music.synth.RecordingSource
+import io.github.hexotronic.lauscher.music.synth.Setting
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -68,15 +70,16 @@ class MusicLibrary(
         scope.launch(Dispatchers.IO) { rescan() }
     }
 
-    fun fileFor(id: String): File? {
-        val track = MusicCatalog.byId(id) ?: return null
-        return File(dir, fileName(track)).takeIf { it.isFile && it.length() == track.bytes }
+    /** The piece's files on the device, or null unless all of them are complete. */
+    fun filesFor(track: LibraryTrack): List<File>? {
+        val files = track.files.indices.map { File(dir, fileName(track, it)) }
+        return files.takeIf { list -> list.indices.all { list[it].isFile && list[it].length() == track.files[it].bytes } }
     }
 
     fun installedBytes(): Long = installedTracks.sumOf { it.bytes }
 
     private fun rescan() {
-        val present = MusicCatalog.tracks.filter { t -> File(dir, fileName(t)).let { it.isFile && it.length() == t.bytes } }
+        val present = MusicCatalog.tracks.filter { filesFor(it) != null }
         installedTracks = present
         _installed.value = present.map { it.id }.toSet()
     }
@@ -150,9 +153,17 @@ class MusicLibrary(
     }
 
     private suspend fun fetch(track: LibraryTrack) {
-        val target = File(dir, fileName(track))
-        val part = File(dir, fileName(track) + ".part")
-        val conn = URL(track.url).openConnection() as HttpURLConnection
+        var before = 0L
+        track.files.forEachIndexed { index, file ->
+            val target = File(dir, fileName(track, index))
+            if (!(target.isFile && target.length() == file.bytes)) fetchFile(track, file, target, before)
+            before += file.bytes
+        }
+    }
+
+    private suspend fun fetchFile(track: LibraryTrack, file: TrackFile, target: File, before: Long) {
+        val part = File(target.path + ".part")
+        val conn = URL(file.url).openConnection() as HttpURLConnection
         conn.connectTimeout = 20_000
         conn.readTimeout = 30_000
         conn.setRequestProperty("User-Agent", "Lauscher-Android")
@@ -174,13 +185,13 @@ class MusicLibrary(
                         got += n
                         if (got - lastReport > 128 * 1024) {
                             lastReport = got
-                            synchronized(queue) { if (currentId == track.id) publishLocked(track.title, got) }
+                            synchronized(queue) { if (currentId == track.id) publishLocked(track.title, before + got) }
                         }
                     }
                 }
             }
             val sha = digest.digest().joinToString("") { "%02x".format(it) }
-            if (got != track.bytes || sha != track.sha256) {
+            if (got != file.bytes || sha != file.sha256) {
                 part.delete()
                 error("Datei ist beschädigt (Prüfsumme stimmt nicht)")
             }
@@ -202,7 +213,7 @@ class MusicLibrary(
 
     fun delete(ids: Collection<String>) {
         val tracks = ids.mapNotNull { MusicCatalog.byId(it) }
-        tracks.forEach { File(dir, fileName(it)).delete() }
+        tracks.forEach { t -> t.files.indices.forEach { File(dir, fileName(t, it)).delete() } }
         val gone = tracks.map { it.id }.toSet()
         installedTracks = installedTracks.filter { it.id !in gone }
         _installed.value = _installed.value - gone
@@ -210,24 +221,24 @@ class MusicLibrary(
 
     // ------------------------------------------------------------------ RecordingSource
 
-    override fun open(mood: Mood, intensity: Float, trackId: String?): PcmStream? {
+    override fun open(mood: Mood, setting: Setting?, intensity: Float, trackId: String?): PcmStream? {
         val track = if (trackId != null) {
             MusicCatalog.byId(trackId)
         } else {
             if (settings.current.source != MusicSource.LIBRARY) return null
-            picker.pick(installedTracks, mood, intensity)
+            picker.pick(installedTracks, mood, setting, intensity)
         } ?: return null
-        val file = File(dir, fileName(track))
-        if (!file.isFile) return null
+        val files = filesFor(track) ?: return null
         // Quieter scenes get the piece a little softer.
         val gain = 10f.pow(track.gainDb / 20f) * (0.8f + 0.2f * intensity.coerceIn(0f, 1f))
-        Log.i(TAG, "Spielt: ${track.id} (${mood.name})")
-        return DecodedFileStream(file, track.id, gain, MusicEngine.SAMPLE_RATE)
+        Log.i(TAG, "Spielt: ${track.id} (${mood.name}, ${setting?.name ?: "ohne Ort"})")
+        return DecodedFileStream(files, track.plan, track.id, gain, MusicEngine.SAMPLE_RATE)
     }
 
     companion object {
         private const val TAG = "LauscherMusik"
 
-        private fun fileName(track: LibraryTrack) = track.id.replace('/', '-') + ".ogg"
+        private fun fileName(track: LibraryTrack, index: Int) =
+            track.id.replace('/', '-') + (if (index > 0) "-$index" else "") + ".ogg"
     }
 }

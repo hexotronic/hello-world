@@ -10,6 +10,7 @@ import io.github.hexotronic.lauscher.analysis.core.SceneMerger
 import io.github.hexotronic.lauscher.analysis.core.TranscriptWindow
 import io.github.hexotronic.lauscher.analysis.core.WindowMood
 import io.github.hexotronic.lauscher.music.synth.Mood
+import io.github.hexotronic.lauscher.music.synth.Setting
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +20,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
-private class LauscherDatabase(context: Context) : SQLiteOpenHelper(context, "lauscher.db", null, 2) {
+private class LauscherDatabase(context: Context) : SQLiteOpenHelper(context, "lauscher.db", null, 3) {
     override fun onConfigure(db: SQLiteDatabase) {
         db.setForeignKeyConstraintsEnabled(true)
     }
@@ -108,6 +109,7 @@ private class LauscherDatabase(context: Context) : SQLiteOpenHelper(context, "la
                 level INTEGER NOT NULL,
                 title TEXT NOT NULL,
                 source TEXT NOT NULL,
+                setting TEXT,
                 PRIMARY KEY(book_id, start_ms))""",
         )
         db.execSQL(
@@ -119,7 +121,11 @@ private class LauscherDatabase(context: Context) : SQLiteOpenHelper(context, "la
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        if (oldVersion < 2) createAnalysisTables(db)
+        if (oldVersion < 2) {
+            createAnalysisTables(db)
+        } else if (oldVersion < 3) {
+            db.execSQL("ALTER TABLE window_moods ADD COLUMN setting TEXT")
+        }
     }
 }
 
@@ -505,6 +511,7 @@ class LibraryRepository(context: Context) {
                     level = c.int("level"),
                     title = c.str("title").orEmpty(),
                     source = c.str("source").orEmpty(),
+                    setting = Setting.parse(c.str("setting")),
                 )
             }
         }
@@ -534,6 +541,7 @@ class LibraryRepository(context: Context) {
                     put("level", m.level)
                     put("title", m.title)
                     put("source", m.source)
+                    put("setting", m.setting?.name)
                 }, SQLiteDatabase.CONFLICT_REPLACE)
             }
             db.setTransactionSuccessful()
@@ -543,10 +551,10 @@ class LibraryRepository(context: Context) {
     }.also { notifyChanged() }
 
     /** Manual correction of a whole scene from the mood map. */
-    suspend fun overrideScene(bookId: Long, startMs: Long, endMs: Long, mood: Mood?, level: Int, title: String) = io {
+    suspend fun overrideScene(bookId: Long, startMs: Long, endMs: Long, mood: Mood?, level: Int, title: String, setting: Setting?) = io {
         db.execSQL(
-            "UPDATE window_moods SET mood = ?, level = ?, title = ?, source = ? WHERE book_id = ? AND start_ms >= ? AND start_ms < ?",
-            arrayOf<Any?>(mood?.name, level, title, SceneMerger.SOURCE_MANUAL, bookId, startMs, endMs),
+            "UPDATE window_moods SET mood = ?, level = ?, title = ?, source = ?, setting = ? WHERE book_id = ? AND start_ms >= ? AND start_ms < ?",
+            arrayOf<Any?>(mood?.name, level, title, SceneMerger.SOURCE_MANUAL, setting?.name, bookId, startMs, endMs),
         )
     }.also { notifyChanged() }
 

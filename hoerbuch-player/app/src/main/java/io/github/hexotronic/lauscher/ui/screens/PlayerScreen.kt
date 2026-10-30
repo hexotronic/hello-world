@@ -320,6 +320,10 @@ private fun PlayerContent(
                 Icon(Icons.Filled.MusicNote, contentDescription = null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.width(4.dp))
                 PixelBadge(scene.mood.label, moodColor(scene.mood), onMoodColor(scene.mood))
+                scene.setting?.let { place ->
+                    Spacer(Modifier.width(4.dp))
+                    PixelBadge(place.label, MaterialTheme.colorScheme.surfaceContainerHighest, MaterialTheme.colorScheme.onSurface)
+                }
                 if (scene.title.isNotBlank()) {
                     Spacer(Modifier.width(6.dp))
                     Text(

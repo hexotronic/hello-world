@@ -140,6 +140,7 @@ class MusicMixer(private val sampleRate: Int) {
             var gainSum = 0f
             var playingTrack: String? = null
             var playingGain = 0f
+            var recordingGain = 0f
             val it = layers.iterator()
             while (it.hasNext()) {
                 val layer = it.next()
@@ -167,6 +168,7 @@ class MusicMixer(private val sampleRate: Int) {
                     busL[i] += tmpL[i] * g
                     busR[i] += tmpR[i] * g
                 }
+                if (recording != null) recordingGain += g
                 if (recording != null && layer.target > 0f && g >= playingGain) {
                     playingGain = g
                     playingTrack = recording.trackId
@@ -176,6 +178,7 @@ class MusicMixer(private val sampleRate: Int) {
             }
             if (gainSum > 0f) reverbWet = wetSum / gainSum
             currentTrackId = playingTrack
+            synthUnderRecording = recordingGain.coerceIn(0f, 1f)
         }
 
         // Slow automatic gain on the synthesizer: every mood ends up equally loud.
@@ -189,9 +192,11 @@ class MusicMixer(private val sampleRate: Int) {
         val agcTarget = (TARGET_RMS / sqrt(max(meanPower, 1e-9f))).coerceIn(0.25f, 6f)
         val agcStep = exp(-n / (0.8f * sampleRate))
         agcGain = agcStep * agcGain + (1 - agcStep) * agcTarget
+        // Background sounds stay well below a recorded piece instead of matching its level.
+        val synthGain = agcGain * (1f - (1f - AMBIENCE_UNDER_RECORDING) * synthUnderRecording)
         for (i in 0 until n) {
-            left[i] = left[i] * agcGain + recLeft[i]
-            right[i] = right[i] * agcGain + recRight[i]
+            left[i] = left[i] * synthGain + recLeft[i]
+            right[i] = right[i] * synthGain + recRight[i]
         }
         reverb.process(left, right, n, reverbWet)
 
@@ -208,6 +213,8 @@ class MusicMixer(private val sampleRate: Int) {
         }
     }
 
+    private var synthUnderRecording = 0f
+
     private val scratchL = FloatArray(MAX_BLOCK)
     private val scratchR = FloatArray(MAX_BLOCK)
 
@@ -216,19 +223,24 @@ class MusicMixer(private val sampleRate: Int) {
         current = spec
         synchronized(layers) {
             val mood = spec?.mood
-            // A recorded piece keeps playing across scenes of the same mood instead of restarting.
+            // A recorded piece keeps playing while mood, place and tension stay the same; any of
+            // them changing brings in a piece that fits the new scene.
             val keep = if (force || mood == null || spec.trackId != null) {
                 null
             } else {
-                layers.firstOrNull { l -> l.target > 0f && (l.generator as? RecordingGenerator)?.mood == mood }
+                layers.firstOrNull { l ->
+                    val r = l.generator as? RecordingGenerator
+                    l.target > 0f && r != null && r.mood == mood && r.setting == spec.setting &&
+                        abs(r.intensity - spec.intensity) < SAME_TENSION
+                }
             }
             for (l in layers) if (l.generator !is ChimeGenerator && l !== keep) l.target = 0f
             if (spec != null) {
                 if (mood != null && keep == null) {
                     val source = recordings
-                    val stream = source?.open(mood, spec.intensity, spec.trackId)
+                    val stream = source?.open(mood, spec.setting, spec.intensity, spec.trackId)
                     val generator = if (source != null && stream != null) {
-                        RecordingGenerator(sampleRate, source, mood, spec.intensity, stream)
+                        RecordingGenerator(sampleRate, source, mood, spec.setting, spec.intensity, stream)
                     } else {
                         MoodGenerator(sampleRate, mood, spec.intensity, spec.seed)
                     }
@@ -252,6 +264,8 @@ class MusicMixer(private val sampleRate: Int) {
         private const val MASTER = 0.9f
         private const val AGC_SECONDS = 4f
         private const val SPEECH_THRESHOLD_DB = -42f
+        private const val AMBIENCE_UNDER_RECORDING = 0.35f
+        private const val SAME_TENSION = 0.2f
         private val SILENCE_POWER = 1e-7f
 
         fun dbOf(power: Float): Float = 10f * log10(max(power, 1e-12f))
