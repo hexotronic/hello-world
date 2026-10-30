@@ -73,6 +73,8 @@ class MusicLibraryTest {
         val primary = picks.count { MusicCatalog.byId(it)!!.primaryMood == Mood.CALM }
         assertTrue("primary $primary of ${picks.size}", primary > picks.size / 3)
         assertNull(picker.pick(emptyList(), Mood.CALM, null, 0.5f))
+        // A dungeon loop is no music for a merry tavern, even if it is the only piece there is.
+        assertNull(picker.pick(listOf(MusicCatalog.byId("spd/sewers_1")!!), Mood.HAPPY, Setting.TAVERN, 0.5f))
         // Nothing even close to the mood: better silence (or the synthesizer) than a misfit.
         assertNull(picker.pick(MusicCatalog.forMood(Mood.ACTION).filter { it.moods.all { m -> m == Mood.ACTION } }, Mood.SAD, null, 0.5f))
     }

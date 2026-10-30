@@ -141,15 +141,10 @@ object ScenePrompt {
 
         level: 1 = subtle, 2 = clear, 3 = strong (how tense or intense the scene is).
 
-        place values (where the scene happens, or its cultural colour):
-        FOREST, JUNGLE (also swamp), OPEN_LAND (meadows, fields, roads, travelling), MOUNTAINS, WINTER (snow, ice),
-        DESERT, SEA (coast, ship, harbour, lake), UNDERWATER, CAVE (also mine, tunnels), DUNGEON (prison, crypt,
-        sewers), CASTLE (palace, throne room, fortress), TOWN (village, market, streets of old times), TAVERN (inn,
-        feast), HOME (living room, family, fireplace), BATTLEFIELD (war, army, siege), TEMPLE (church, monastery),
-        MAGIC (fairies, wizard tower, dreams), HAUNTED (graveyard, ghosts, hell), ORIENT (Arabia, Persia, Egypt,
-        bazaar), ASIA (China, Japan, India), ANCIENT (Greece, Rome), NORTH (Celts, Vikings, highlands),
-        WESTERN (wild west, prairie, saloon), SPACE (spaceship, stars, future), CITY (modern city, office, cars),
-        OTHER (unclear or none of these).
+        place values (where the scene happens): FOREST, JUNGLE, OPEN_LAND (fields, roads, travel), MOUNTAINS, WINTER,
+        DESERT, SEA (also ship, coast), UNDERWATER, CAVE (also mine), DUNGEON (also prison, crypt), CASTLE, TOWN, TAVERN
+        (also feast), HOME, BATTLEFIELD, TEMPLE (also church), MAGIC (also fairies), HAUNTED (also graveyard, hell),
+        ORIENT, ASIA, ANCIENT (Greece, Rome), NORTH (Celts, Vikings), WESTERN, SPACE, CITY (modern), OTHER (unclear).
 
         title: a short scene title in the language of the book, at most five words.
         Neighbouring windows of the same scene keep the same mood and place; only change them when the scene really

@@ -169,8 +169,9 @@ class TrackPicker(seed: Long = System.nanoTime()) {
     @Synchronized
     fun pick(installed: Collection<LibraryTrack>, mood: Mood, setting: Setting?, intensity: Float): LibraryTrack? {
         if (installed.isEmpty()) return null
-        // Only reasonably fitting pieces: the mood itself or a close one.
-        val candidates = installed.filter { moodCost(it, mood) < MAX_MOOD_COST }
+        // Only reasonably fitting pieces: the mood itself or a close one, and mood and place together
+        // not too far off. Otherwise the synthesizer is the better choice.
+        val candidates = installed.filter { moodCost(it, mood) < MAX_MOOD_COST && moodCost(it, mood) + placeCost(it, setting) < MAX_FIT }
         if (candidates.isEmpty()) return null
         val history = recent.getOrPut("$mood/$setting") { ArrayDeque() }
         val fitting = candidates.count { mood in it.moods && placeCost(it, setting) < 0.3f }
@@ -202,6 +203,7 @@ class TrackPicker(seed: Long = System.nanoTime()) {
     companion object {
         private const val MAX_MEMORY = 4
         private const val MAX_MOOD_COST = 1.4f
+        private const val MAX_FIT = 1.7f
 
         /** 0 for the piece's own mood, growing with the distance between moods. */
         fun moodCost(t: LibraryTrack, mood: Mood): Float {
