@@ -134,14 +134,16 @@ private fun AnalysisHeader(d: AnalysisTabData, vm: MainViewModel, bookId: Long, 
         }
         val covered = d.scenes.sumOf { it.endMs - it.startMs }
         val percent = if (d.durationMs > 0) (covered * 100 / d.durationMs).toInt() else 0
+        val withMusic = d.scenes.count { it.mood != null }
         Text(
-            "$percent % des Buchs analysiert · ${d.scenes.count { it.mood != null }} Szenen mit Musik",
+            "$percent % des Buchs analysiert · $withMusic ${if (withMusic == 1) "Szene" else "Szenen"} mit Musik",
             style = MaterialTheme.typography.labelMedium,
             modifier = Modifier.padding(top = 8.dp),
         )
-        val until = SceneMerger.coveredUntil(d.scenes, d.positionMs)
+        val until = SceneMerger.coveredUntil(d.scenes, d.positionMs, d.durationMs)
         Text(
             when {
+                until != null && until >= d.durationMs -> "Bis zum Ende des Buchs analysiert"
                 until != null && d.isCurrent -> "Vorausgelesen bis ${formatClock(until)} – ${formatHuman(until - d.positionMs)} vor dir"
                 until != null -> "Ab deiner Stelle (${formatClock(d.positionMs)}) lückenlos analysiert bis ${formatClock(until)}"
                 s.analyzeAhead -> "Deine Stelle (${formatClock(d.positionMs)}) ist noch nicht analysiert – beim Abspielen liest die KI sie zuerst"

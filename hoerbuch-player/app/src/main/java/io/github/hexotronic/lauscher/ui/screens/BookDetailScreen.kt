@@ -1,7 +1,8 @@
-@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 
 package io.github.hexotronic.lauscher.ui.screens
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import io.github.hexotronic.lauscher.ui.BOOK_TAB_ANALYSIS
 import io.github.hexotronic.lauscher.analysis.core.Scene
 import androidx.compose.runtime.LaunchedEffect
@@ -182,112 +183,116 @@ private fun BookDetailBody(
     onTab: (Int) -> Unit,
 ) {
     val book = d.book
-    Column {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
-            BookCover(book.coverPath, book.title, Modifier.size(132.dp).hardShadow(LocalRetro.current.shadow, 5.dp))
-            Spacer(Modifier.width(16.dp))
-            Column(Modifier.weight(1f)) {
-                Text(book.title, style = MaterialTheme.typography.titleLarge, maxLines = 3, overflow = TextOverflow.Ellipsis)
-                book.author?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
-                book.narrator?.let {
-                    Text("Gelesen von $it", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Text(
-                    listOfNotNull(book.year, formatHuman(book.durationMs), "${d.chapters.size} Kapitel", "${book.fileCount} Dateien")
-                        .joinToString(" · "),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
-                if (book.audioSettingsJson != null) {
-                    Text(
-                        "Eigene Klangeinstellungen",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(top = 4.dp),
-                    )
-                }
-                Spacer(Modifier.height(8.dp))
-                RetroProgress(book.progress)
-                Text(
-                    if (book.finished) "Beendet" else "${formatClock(book.positionMs)} von ${formatClock(book.durationMs)}",
-                    style = MaterialTheme.typography.labelSmall,
-                )
-            }
-        }
-        Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            RetroButton(onClick = { vm.playBook(book.id) }) {
-                Icon(Icons.Filled.PlayArrow, contentDescription = null)
-                Text(if (book.isStarted) "Weiterhören" else "Abspielen")
-            }
-        }
-        book.description?.takeIf { it.isNotBlank() }?.let {
-            Text(
-                it,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 5,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(16.dp),
-            )
-        }
-
-        PrimaryScrollableTabRow(selectedTabIndex = tab, modifier = Modifier.padding(top = 8.dp), edgePadding = 8.dp) {
-            Tab(selected = tab == 0, onClick = { onTab(0) }, text = { Text("Kapitel") })
-            Tab(selected = tab == 1, onClick = { onTab(1) }, text = { Text("Lesezeichen (${bookmarks.size})") })
-            Tab(selected = tab == 2, onClick = { onTab(2) }, text = { Text("Dateien") })
-            Tab(selected = tab == 3, onClick = { onTab(3) }, text = { Text("Buchtext") })
-            Tab(selected = tab == BOOK_TAB_ANALYSIS, onClick = { onTab(BOOK_TAB_ANALYSIS) }, text = { Text("KI-Analyse") })
-        }
-        val analysis = if (tab == BOOK_TAB_ANALYSIS) rememberAnalysisTabData(vm, book) else null
-        var editScene by remember { mutableStateOf<Scene?>(null) }
-        LazyColumn(Modifier.fillMaxSize()) {
-            when (tab) {
-                BOOK_TAB_ANALYSIS -> if (analysis != null) analysisTab(analysis, vm, book.id) { editScene = it }
-                0 -> items(d.chapters) { ch ->
-                    val current = book.positionMs >= ch.startMs && book.positionMs < ch.endMs && !book.finished
-                    ListItem(
-                        headlineContent = { Text(ch.title, maxLines = 2, overflow = TextOverflow.Ellipsis) },
-                        supportingContent = { Text("${formatClock(ch.startMs)} · ${formatClock(ch.durationMs)}") },
-                        leadingContent = {
+    val analysis = if (tab == BOOK_TAB_ANALYSIS) rememberAnalysisTabData(vm, book) else null
+    var editScene by remember { mutableStateOf<Scene?>(null) }
+    // One list: the book's header scrolls away, the tabs stay at the top.
+    LazyColumn(Modifier.fillMaxSize()) {
+        item(key = "header") {
+            Column {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
+                    BookCover(book.coverPath, book.title, Modifier.size(132.dp).hardShadow(LocalRetro.current.shadow, 5.dp))
+                    Spacer(Modifier.width(16.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(book.title, style = MaterialTheme.typography.titleLarge, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                        book.author?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
+                        book.narrator?.let {
+                            Text("Gelesen von $it", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Text(
+                            listOfNotNull(book.year, formatHuman(book.durationMs), "${d.chapters.size} Kapitel", "${book.fileCount} Dateien")
+                                .joinToString(" · "),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                        if (book.audioSettingsJson != null) {
                             Text(
-                                "%02d".format(ch.index + 1),
-                                fontFamily = PixelFont,
-                                color = if (current) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                "Eigene Klangeinstellungen",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(top = 4.dp),
                             )
-                        },
-                        modifier = Modifier.clickable { vm.playBook(book.id, startAtMs = ch.startMs) },
-                    )
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        RetroProgress(book.progress)
+                        Text(
+                            if (book.finished) "Beendet" else "${formatClock(book.positionMs)} von ${formatClock(book.durationMs)}",
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    }
                 }
-                1 -> items(bookmarks, key = { it.id }) { mark ->
-                    ListItem(
-                        headlineContent = { Text(mark.title) },
-                        supportingContent = { if (mark.note.isNotBlank()) Text(mark.note) },
-                        leadingContent = { Text(formatClock(mark.positionMs)) },
-                        modifier = Modifier.clickable { vm.playBook(book.id, startAtMs = mark.positionMs) },
-                    )
+                Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    RetroButton(onClick = { vm.playBook(book.id) }) {
+                        Icon(Icons.Filled.PlayArrow, contentDescription = null)
+                        Text(if (book.isStarted) "Weiterhören" else "Abspielen")
+                    }
                 }
-                3 -> item { BookTextPanel(vm, book.id) }
-                else -> items(d.tracks) { t ->
-                    ListItem(
-                        headlineContent = { Text(t.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                        supportingContent = { Text(formatClock(t.durationMs)) },
-                        leadingContent = { Text("${t.index + 1}") },
-                        modifier = Modifier.clickable { vm.playBook(book.id, startAtMs = t.startMs) },
+                book.description?.takeIf { it.isNotBlank() }?.let {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 5,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(16.dp),
                     )
                 }
             }
         }
-        editScene?.let { scene ->
-            SceneEditDialog(
-                scene,
-                onDismiss = { editScene = null },
-                onConfirm = { vm.confirmScene(scene, book.id); editScene = null },
-                onReanalyze = { vm.deleteScene(scene, reanalyze = true, bookId = book.id); editScene = null },
-                onDelete = { vm.deleteScene(scene, reanalyze = false, bookId = book.id); editScene = null },
-            ) { mood, level, title, setting ->
-                vm.overrideScene(scene, mood, level, title, setting, book.id)
-                editScene = null
+        stickyHeader(key = "tabs") {
+            PrimaryScrollableTabRow(selectedTabIndex = tab, modifier = Modifier.padding(top = 8.dp), edgePadding = 8.dp) {
+                Tab(selected = tab == 0, onClick = { onTab(0) }, text = { Text("Kapitel") })
+                Tab(selected = tab == 1, onClick = { onTab(1) }, text = { Text("Lesezeichen (${bookmarks.size})") })
+                Tab(selected = tab == 2, onClick = { onTab(2) }, text = { Text("Dateien") })
+                Tab(selected = tab == 3, onClick = { onTab(3) }, text = { Text("Buchtext") })
+                Tab(selected = tab == BOOK_TAB_ANALYSIS, onClick = { onTab(BOOK_TAB_ANALYSIS) }, text = { Text("KI-Analyse") })
             }
+        }
+        when (tab) {
+            BOOK_TAB_ANALYSIS -> if (analysis != null) analysisTab(analysis, vm, book.id) { editScene = it }
+            0 -> items(d.chapters) { ch ->
+                val current = book.positionMs >= ch.startMs && book.positionMs < ch.endMs && !book.finished
+                ListItem(
+                    headlineContent = { Text(ch.title, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+                    supportingContent = { Text("${formatClock(ch.startMs)} · ${formatClock(ch.durationMs)}") },
+                    leadingContent = {
+                        Text(
+                            "%02d".format(ch.index + 1),
+                            fontFamily = PixelFont,
+                            color = if (current) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    modifier = Modifier.clickable { vm.playBook(book.id, startAtMs = ch.startMs) },
+                )
+            }
+            1 -> items(bookmarks, key = { it.id }) { mark ->
+                ListItem(
+                    headlineContent = { Text(mark.title) },
+                    supportingContent = { if (mark.note.isNotBlank()) Text(mark.note) },
+                    leadingContent = { Text(formatClock(mark.positionMs)) },
+                    modifier = Modifier.clickable { vm.playBook(book.id, startAtMs = mark.positionMs) },
+                )
+            }
+            3 -> item { BookTextPanel(vm, book.id) }
+            else -> items(d.tracks) { t ->
+                ListItem(
+                    headlineContent = { Text(t.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    supportingContent = { Text(formatClock(t.durationMs)) },
+                    leadingContent = { Text("${t.index + 1}") },
+                    modifier = Modifier.clickable { vm.playBook(book.id, startAtMs = t.startMs) },
+                )
+            }
+        }
+    }
+    editScene?.let { scene ->
+        SceneEditDialog(
+            scene,
+            onDismiss = { editScene = null },
+            onConfirm = { vm.confirmScene(scene, book.id); editScene = null },
+            onReanalyze = { vm.deleteScene(scene, reanalyze = true, bookId = book.id); editScene = null },
+            onDelete = { vm.deleteScene(scene, reanalyze = false, bookId = book.id); editScene = null },
+        ) { mood, level, title, setting ->
+            vm.overrideScene(scene, mood, level, title, setting, book.id)
+            editScene = null
         }
     }
 }

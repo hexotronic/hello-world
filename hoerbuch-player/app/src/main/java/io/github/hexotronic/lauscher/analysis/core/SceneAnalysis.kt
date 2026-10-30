@@ -208,16 +208,23 @@ object SceneMerger {
 
     /**
      * How far the analysis reaches without a gap from [positionMs] (gaps up to a second are
-     * ignored); null if the position itself is not analysed yet.
+     * ignored); null if the position itself is not analysed yet. The last seconds of a book of
+     * [durationMs], too short for a window of their own, count as analysed.
      */
-    fun coveredUntil(scenes: List<Scene>, positionMs: Long): Long? {
+    fun coveredUntil(scenes: List<Scene>, positionMs: Long, durationMs: Long = Long.MAX_VALUE): Long? {
         val sorted = scenes.sortedBy { it.startMs }
-        var i = sorted.indexOfFirst { positionMs >= it.startMs && positionMs < it.endMs }
+        val last = sorted.lastOrNull() ?: return null
+        val reachesEnd = durationMs != Long.MAX_VALUE && durationMs - last.endMs < END_TAIL_MS
+        val p = if (reachesEnd && positionMs >= last.endMs) last.endMs - 1 else positionMs
+        var i = sorted.indexOfFirst { p >= it.startMs && p < it.endMs }
         if (i < 0) return null
         var end = sorted[i].endMs
         while (++i < sorted.size && sorted[i].startMs - end <= 1_000) end = maxOf(end, sorted[i].endMs)
-        return end
+        return if (reachesEnd && end == last.endMs) durationMs else end
     }
+
+    /** Book endings shorter than this get no window of their own (see [WindowPlanner.windows]). */
+    const val END_TAIL_MS = 5_000L
 
     /** Share of the analysed time per [key] (e.g. place or mood), largest first; null keys are left out. */
     fun <K> shares(scenes: List<Scene>, key: (Scene) -> K?): List<Pair<K, Float>> {

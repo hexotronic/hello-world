@@ -217,6 +217,11 @@ class SceneAnalysisTest {
         assertEquals(360_000L, SceneMerger.coveredUntil(scenes, 90_000))
         assertEquals(720_000L, SceneMerger.coveredUntil(scenes, 650_000))
         assertNull(SceneMerger.coveredUntil(scenes, 400_000))
+        // The last 3 s of a 12:03 book have no window: at the very end it counts as analysed to the end.
+        assertEquals(723_000L, SceneMerger.coveredUntil(scenes, 723_000, durationMs = 723_000))
+        assertEquals(723_000L, SceneMerger.coveredUntil(scenes, 650_000, durationMs = 723_000))
+        assertEquals(360_000L, SceneMerger.coveredUntil(scenes, 90_000, durationMs = 723_000))
+        assertNull(SceneMerger.coveredUntil(scenes, 723_000, durationMs = 740_000))
 
         val places = SceneMerger.shares(scenes) { it.setting }
         assertEquals(Setting.FOREST, places[0].first)

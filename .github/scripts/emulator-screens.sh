@@ -17,6 +17,12 @@ adb logcat -c
 start() { adb shell am start -W -n "$PKG/.MainActivity" "$@" > /dev/null; }
 shot() {
   sleep "$2"
+  # A busy emulator sometimes shows "… isn't responding" for the launcher; close such dialogs
+  # (not for the notification screenshot, which needs the open shade).
+  if [ "$1" != "10-benachrichtigung" ]; then
+    adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS > /dev/null 2>&1 || true
+    sleep 1
+  fi
   adb exec-out screencap -p > "$OUT/$1.png"
   echo "screenshot $1"
 }
