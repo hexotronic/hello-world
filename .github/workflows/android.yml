@@ -151,4 +151,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="lauscher-latest-${GITHUB_REF_NAME//\//-}"
-          gh release upload "$TAG" screenshots/*.png --clobber
+          # GitHub's upload server sometimes answers 500; try again before giving up.
+          for attempt in 1 2 3; do
+            gh release upload "$TAG" screenshots/*.png --clobber && exit 0
+            sleep 15
+          done
+          exit 1
