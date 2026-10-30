@@ -306,6 +306,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /** Test aid: recognises an audio file at 1×, 1.5×, 2× and 2.5× and logs the results. */
+    fun speechCheck(path: String) = app.analysis.speechCheck(java.io.File(path), listOf(1f, 1.5f, 2f, 2.5f))
+
     fun removeFolder(uri: String) {
         viewModelScope.launch { scanner.removeFolder(uri) }
     }

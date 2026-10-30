@@ -257,11 +257,47 @@ class AnalysisManager(
             val track = tracks.getOrNull(index) ?: return@joinToString ""
             val length = minOf(chunk.last + 1 - chunk.first, (track.durationMs - offset).coerceAtLeast(0))
             if (length < 2_000) return@joinToString ""
-            val decoded = AudioSegmentDecoder.decode(context, Uri.parse(track.uri), offset, length)
-            val pcm = TimeStretch.speedUp(decoded, WhisperNative.SAMPLE_RATE, speed)
-            if (pcm.size < WhisperNative.SAMPLE_RATE) return@joinToString ""
-            whisper.transcribe(pcm, language).joinToString(" ") { it.text }.trim()
+            recognize(whisper, AudioSegmentDecoder.decode(context, Uri.parse(track.uri), offset, length), language, speed)
         }.trim()
+    }
+
+    /** Speeds [decoded] (16 kHz mono, at most 30 s × [speed]) up and recognises it. */
+    private fun recognize(whisper: WhisperNative, decoded: FloatArray, language: String, speed: Float): String {
+        val pcm = TimeStretch.speedUp(decoded, WhisperNative.SAMPLE_RATE, speed)
+        if (pcm.size < WhisperNative.SAMPLE_RATE) return ""
+        return whisper.transcribe(pcm, language).joinToString(" ") { it.text }.trim()
+    }
+
+    /**
+     * Test aid (adb extra "speech_check"): recognises the start of [file] at each of [speeds] and
+     * logs time and text, so the effect of the speed setting can be compared on a real device.
+     */
+    fun speechCheck(file: java.io.File, speeds: List<Float>) {
+        val previous = job
+        scope.launch(native) {
+            previous?.join()
+            val model = models.fileFor(settings.current.whisperModel)
+            val whisper = model?.let { WhisperNative.load(it.absolutePath) }
+            if (whisper == null) {
+                Log.w(TAG, "Sprachtest fertig: kein Spracherkennungsmodell")
+                return@launch
+            }
+            try {
+                val decoded = AudioSegmentDecoder.decode(context, Uri.fromFile(file), 0, SPEECH_CHECK_MS)
+                for (speed in speeds) {
+                    val started = System.nanoTime()
+                    val chunk = (WhisperNative.SAMPLE_RATE * 30 * speed).toInt()
+                    val text = (decoded.indices step chunk).joinToString(" ") { from ->
+                        recognize(whisper, decoded.copyOfRange(from, minOf(decoded.size, from + chunk)), settings.current.language, speed)
+                    }.trim()
+                    val words = text.split(' ').count { it.isNotBlank() }
+                    Log.i(TAG, "Sprachtest $speed×: ${(System.nanoTime() - started) / 1_000_000} ms, $words Wörter: $text")
+                }
+                Log.i(TAG, "Sprachtest fertig")
+            } finally {
+                whisper.close()
+            }
+        }
     }
 
     private suspend fun classify(book: Book, windows: List<TranscriptWindow>, llm: LlamaNative?): List<WindowMood> {
@@ -338,6 +374,7 @@ class AnalysisManager(
         /** Windows per language-model call: the instructions are read once for all of them. */
         private const val BATCH = 8
         private const val CONTEXT = 4096
+        private const val SPEECH_CHECK_MS = 90_000L
         private const val AHEAD_MS = 8 * 60_000L
 
         /** With a book text: listen briefly where the nearest anchor is further away than this. */

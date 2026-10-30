@@ -68,6 +68,7 @@ class MainActivity : ComponentActivity() {
         applyMusicExtras(intent)
         intent.getStringExtra(EXTRA_IMPORT_PATH)?.let { vm.importLocalFile(it, intent.getBooleanExtra(EXTRA_ANALYZE, false)) }
         intent.getStringExtra(EXTRA_BOOK_TEXT_PATH)?.let { vm.importBookTextFile(it, intent.getBooleanExtra(EXTRA_ANALYZE, false)) }
+        intent.getStringExtra(EXTRA_SPEECH_CHECK)?.let { vm.speechCheck(it) }
         // "Teilen → Lauscher" from an e-book app: text or a TXT/EPUB/HTML file becomes a book text.
         if (intent.action == Intent.ACTION_SEND) {
             val stream = if (Build.VERSION.SDK_INT >= 33) {
@@ -145,5 +146,6 @@ class MainActivity : ComponentActivity() {
         const val EXTRA_MUSIC_PREVIEW = "music_preview"
         const val EXTRA_BOOK_TEXT_PATH = "book_text_path"
         const val EXTRA_SPEECH_SPEED = "speech_speed"
+        const val EXTRA_SPEECH_CHECK = "speech_check"
     }
 }

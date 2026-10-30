@@ -117,6 +117,32 @@ if [ -n "${E2E_DIR:-}" ] && [ -f "$E2E_DIR/story.wav" ]; then
     echo "::error::Die Analyse mit Buchtext hat nicht funktioniert"
     E2E_FAILED=1
   fi
+
+  # Speech recognition of the same recording at 1×, 1.5×, 2× and 2.5×: time and words recognised.
+  adb logcat -c
+  start --es speech_check "$DATA/test/story.wav"
+  echo "Warte auf den Sprachtest …"
+  for i in $(seq 1 60); do
+    if adb logcat -d -s LauscherAnalyse:* | grep -q "Sprachtest fertig"; then break; fi
+    sleep 5
+  done
+  adb logcat -d -s LauscherAnalyse:* | grep "Sprachtest" > "$OUT/sprachtest.txt" || true
+  python3 - "$E2E_DIR/story.txt" "$OUT/sprachtest.txt" <<'PY' | tee "$OUT/sprachtest-auswertung.txt"
+import difflib, re, sys
+words = lambda t: re.findall(r"[a-z]+", t.lower())
+ref = words(open(sys.argv[1]).read())
+for line in open(sys.argv[2]):
+    m = re.search(r"Sprachtest ([\d.]+)×: (\d+) ms, (\d+) Wörter: (.*)", line)
+    if not m:
+        continue
+    heard = words(m.group(4))
+    hit = sum(b.size for b in difflib.SequenceMatcher(None, ref, heard, autojunk=False).get_matching_blocks())
+    print(f"Tempo {m.group(1)}×: {int(m.group(2)) / 1000:.1f} s, {100 * hit / len(ref):.0f} % der {len(ref)} Wörter erkannt")
+PY
+  if ! grep -q "Sprachtest fertig" "$OUT/sprachtest.txt" || ! grep -q "Tempo 2.0" "$OUT/sprachtest-auswertung.txt"; then
+    echo "::error::Der Sprachtest bei mehreren Tempi hat nicht funktioniert"
+    E2E_FAILED=1
+  fi
 fi
 
 adb shell dumpsys media_session > "$OUT/media_session.txt" || true
