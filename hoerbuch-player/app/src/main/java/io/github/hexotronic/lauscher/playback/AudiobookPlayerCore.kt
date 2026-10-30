@@ -24,6 +24,7 @@ import io.github.hexotronic.lauscher.music.MusicEngine
 import io.github.hexotronic.lauscher.music.MusicMode
 import io.github.hexotronic.lauscher.music.synth.Mood
 import io.github.hexotronic.lauscher.music.synth.SoundSpec
+import io.github.hexotronic.lauscher.music.synth.Transitions
 import io.github.hexotronic.lauscher.widget.WidgetUpdater
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
@@ -595,16 +596,30 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
                     else -> null
                 }
             }
-            MusicMode.SCENES -> when {
-                scene == null -> if (s.neutralFallback) SoundSpec(Mood.NEUTRAL, null, 0.3f, d.book.id) else null
-                scene.mood == null -> null
-                else -> SoundSpec(
-                    mood = scene.mood,
-                    atmosphere = if (s.placeSounds) scene.setting?.atmosphere else null,
-                    intensity = scene.intensity,
-                    seed = scene.startMs,
-                    setting = scene.setting,
-                )
+            MusicMode.SCENES -> {
+                fun specOf(sc: Scene?): SoundSpec? = when {
+                    sc == null -> if (s.neutralFallback) SoundSpec(Mood.NEUTRAL, null, 0.3f, d.book.id) else null
+                    sc.mood == null -> null
+                    else -> SoundSpec(
+                        mood = sc.mood,
+                        atmosphere = if (s.placeSounds) sc.setting?.atmosphere else null,
+                        intensity = sc.intensity,
+                        seed = sc.startMs,
+                        setting = sc.setting,
+                    )
+                }
+                val here = specOf(scene)
+                // The cross-fade is centred on the scene change: the next scene's music starts half
+                // a fade early (a short one for sudden changes, see Transitions).
+                val speed = exoPlayer.playbackParameters.speed
+                val upcoming = SceneMerger.sceneAt(scenes, pos + (s.crossfadeSeconds * 500 * speed).toLong())
+                if (upcoming != null && upcoming != scene) {
+                    val next = specOf(upcoming)
+                    val leadMs = (Transitions.fadeSeconds(here, next, s.crossfadeSeconds) * 500 * speed).toLong()
+                    if (upcoming.startMs - pos <= leadMs) next else here
+                } else {
+                    here
+                }
             }
         }
         music.setSpec(spec)

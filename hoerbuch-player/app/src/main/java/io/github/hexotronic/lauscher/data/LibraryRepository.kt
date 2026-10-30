@@ -6,6 +6,8 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import io.github.hexotronic.lauscher.analysis.core.Scene
+import io.github.hexotronic.lauscher.analysis.core.SceneCut
+import io.github.hexotronic.lauscher.analysis.core.SceneCuts
 import io.github.hexotronic.lauscher.analysis.core.SceneMerger
 import io.github.hexotronic.lauscher.analysis.core.TranscriptWindow
 import io.github.hexotronic.lauscher.analysis.core.WindowMood
@@ -23,7 +25,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
-private class LauscherDatabase(context: Context) : SQLiteOpenHelper(context, "lauscher.db", null, 4) {
+private class LauscherDatabase(context: Context) : SQLiteOpenHelper(context, "lauscher.db", null, 5) {
     override fun onConfigure(db: SQLiteDatabase) {
         db.setForeignKeyConstraintsEnabled(true)
     }
@@ -92,6 +94,7 @@ private class LauscherDatabase(context: Context) : SQLiteOpenHelper(context, "la
         db.execSQL("CREATE TABLE folders(uri TEXT PRIMARY KEY, name TEXT NOT NULL, added_at INTEGER NOT NULL)")
         createAnalysisTables(db)
         createBookTextTable(db)
+        createSceneCutsTable(db)
     }
 
     /** Version 4: the written text of a book (imported by the listener) and its alignment to the audio. */
@@ -104,6 +107,17 @@ private class LauscherDatabase(context: Context) : SQLiteOpenHelper(context, "la
                 anchors TEXT NOT NULL DEFAULT '',
                 source TEXT NOT NULL,
                 imported_at INTEGER NOT NULL)""",
+        )
+    }
+
+    /** Version 5: scene changes found more precisely than the window grid (see SceneCuts). */
+    private fun createSceneCutsTable(db: SQLiteDatabase) {
+        db.execSQL(
+            """CREATE TABLE IF NOT EXISTS scene_cuts(
+                book_id INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+                after_ms INTEGER NOT NULL,
+                cut_ms INTEGER NOT NULL,
+                PRIMARY KEY(book_id, after_ms))""",
         )
     }
 
@@ -144,6 +158,7 @@ private class LauscherDatabase(context: Context) : SQLiteOpenHelper(context, "la
             db.execSQL("ALTER TABLE window_moods ADD COLUMN setting TEXT")
         }
         if (oldVersion < 4) createBookTextTable(db)
+        if (oldVersion < 5) createSceneCutsTable(db)
     }
 }
 
@@ -515,9 +530,34 @@ class LibraryRepository(context: Context) {
 
     // ---------------------------------------------------------------- analysis
 
-    fun observeScenes(bookId: Long): Flow<List<Scene>> = observe { SceneMerger.merge(windowMoods(bookId)) }
+    fun observeScenes(bookId: Long): Flow<List<Scene>> = observe { SceneMerger.merge(SceneCuts.apply(windowMoods(bookId), cutsOf(bookId))) }
 
-    suspend fun scenes(bookId: Long): List<Scene> = io { SceneMerger.merge(windowMoods(bookId)) }
+    suspend fun scenes(bookId: Long): List<Scene> = io { SceneMerger.merge(SceneCuts.apply(windowMoods(bookId), cutsOf(bookId))) }
+
+    /** The analysed windows on their grid, without refined scene changes. */
+    suspend fun analysedWindows(bookId: Long): List<WindowMood> = io { windowMoods(bookId) }
+
+    suspend fun sceneCuts(bookId: Long): List<SceneCut> = io { cutsOf(bookId) }
+
+    suspend fun saveSceneCut(bookId: Long, cut: SceneCut) = io {
+        db.insertWithOnConflict("scene_cuts", null, ContentValues().apply {
+            put("book_id", bookId)
+            put("after_ms", cut.afterMs)
+            put("cut_ms", cut.cutMs)
+        }, SQLiteDatabase.CONFLICT_REPLACE)
+        Unit
+    }.also { notifyChanged() }
+
+    private fun cutsOf(bookId: Long): List<SceneCut> =
+        db.rawQuery("SELECT after_ms, cut_ms FROM scene_cuts WHERE book_id = ?", arrayOf(bookId.toString())).use { c ->
+            c.map { SceneCut(c.getLong(0), c.getLong(1)) }
+        }
+
+    /** A scene's range on the window grid (its edges may have been moved by a refined cut). */
+    private fun plannedRange(bookId: Long, startMs: Long, endMs: Long): Pair<Long, Long> {
+        val cuts = cutsOf(bookId)
+        return SceneCuts.planned(startMs, cuts) to SceneCuts.planned(endMs, cuts)
+    }
 
     private fun windowMoods(bookId: Long): List<WindowMood> =
         db.query("window_moods", null, "book_id = ?", arrayOf(bookId.toString()), null, null, "start_ms").use { c ->
@@ -642,9 +682,10 @@ class LibraryRepository(context: Context) {
 
     /** Manual correction of a whole scene from the mood map. */
     suspend fun overrideScene(bookId: Long, startMs: Long, endMs: Long, mood: Mood?, level: Int, title: String, setting: Setting?) = io {
+        val (from, to) = plannedRange(bookId, startMs, endMs)
         db.execSQL(
             "UPDATE window_moods SET mood = ?, level = ?, title = ?, source = ?, setting = ? WHERE book_id = ? AND start_ms >= ? AND start_ms < ?",
-            arrayOf<Any?>(mood?.name, level, title, SceneMerger.SOURCE_MANUAL, setting?.name, bookId, startMs, endMs),
+            arrayOf<Any?>(mood?.name, level, title, SceneMerger.SOURCE_MANUAL, setting?.name, bookId, from, to),
         )
     }.also { notifyChanged() }
 
@@ -707,22 +748,27 @@ class LibraryRepository(context: Context) {
         }
         if (transcripts) db.delete("transcripts", where, args)
         db.delete("analysis_state", where, args)
+        db.delete("scene_cuts", where, args)
         Unit
     }.also { notifyChanged() }
 
     /** Removes the analysis of one scene, so it can be analysed again (or stays without music). */
     suspend fun deleteSceneAnalysis(bookId: Long, startMs: Long, endMs: Long, transcripts: Boolean = false) = io {
-        val args = arrayOf(bookId.toString(), startMs.toString(), endMs.toString())
+        val (from, to) = plannedRange(bookId, startMs, endMs)
+        val args = arrayOf(bookId.toString(), from.toString(), to.toString())
         db.delete("window_moods", "book_id = ? AND start_ms >= ? AND start_ms < ?", args)
+        // The edges of this scene are looked for again after the new analysis.
+        db.delete("scene_cuts", "book_id = ? AND after_ms >= ? AND after_ms <= ?", args)
         if (transcripts) db.delete("transcripts", "book_id = ? AND start_ms >= ? AND start_ms < ?", args)
         Unit
     }.also { notifyChanged() }
 
     /** "Fits": keeps a scene as it is, a later analysis will not change it. */
     suspend fun confirmScene(bookId: Long, startMs: Long, endMs: Long) = io {
+        val (from, to) = plannedRange(bookId, startMs, endMs)
         db.execSQL(
             "UPDATE window_moods SET source = ? WHERE book_id = ? AND start_ms >= ? AND start_ms < ?",
-            arrayOf<Any?>(SceneMerger.SOURCE_MANUAL, bookId, startMs, endMs),
+            arrayOf<Any?>(SceneMerger.SOURCE_MANUAL, bookId, from, to),
         )
     }.also { notifyChanged() }
 

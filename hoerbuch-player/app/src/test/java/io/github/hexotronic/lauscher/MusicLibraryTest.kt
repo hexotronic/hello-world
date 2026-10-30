@@ -11,6 +11,8 @@ import io.github.hexotronic.lauscher.music.synth.PcmStream
 import io.github.hexotronic.lauscher.music.synth.RecordingSource
 import io.github.hexotronic.lauscher.music.synth.Setting
 import io.github.hexotronic.lauscher.music.synth.SoundSpec
+import io.github.hexotronic.lauscher.music.synth.Transitions
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
@@ -229,5 +231,40 @@ class MusicLibraryTest {
     fun creditNamesComposerAndLicence() {
         val t: LibraryTrack = MusicCatalog.byId("wesnoth/silvan_sanctuary")!!
         assertTrue(t.credit, "Mattias Westlund" in t.credit && "GPL" in t.credit && "Wesnoth" in t.credit)
+    }
+
+    @Test
+    fun suddenScenesCutFastCalmingDownFadesSlowly() {
+        val calm = SoundSpec(Mood.CALM, intensity = 0.2f, seed = 1)
+        val action = SoundSpec(Mood.ACTION, intensity = 0.9f, seed = 2)
+        assertTrue(Transitions.isSudden(calm, action))
+        assertTrue(Transitions.isSudden(SoundSpec(Mood.TENSE, intensity = 0.55f), SoundSpec(Mood.ACTION, intensity = 0.55f)))
+        assertTrue(Transitions.isSudden(SoundSpec(Mood.HAPPY, intensity = 0.55f), SoundSpec(Mood.SAD, intensity = 0.55f)))
+        assertFalse(Transitions.isSudden(action, calm))
+        assertFalse(Transitions.isSudden(calm, SoundSpec(Mood.IDYLLIC, intensity = 0.2f)))
+        assertFalse(Transitions.isSudden(calm, SoundSpec(Mood.ROMANTIC, intensity = 0.2f)))
+        assertFalse(Transitions.isSudden(null, action))
+        assertEquals(Transitions.FAST_FADE_SECONDS, Transitions.fadeSeconds(calm, action, 4f), 1e-6f)
+        assertEquals(4f, Transitions.fadeSeconds(action, calm, 4f), 1e-6f)
+        assertEquals(0.5f, Transitions.fadeSeconds(calm, action, 0.5f), 1e-6f)
+
+        val source = FakeSource(seconds = 60f, available = setOf(Mood.CALM, Mood.ACTION))
+        val mixer = MusicMixer(rate).apply {
+            recordings = source
+            crossfadeSeconds = 4f
+        }
+        mixer.setTarget(calm)
+        render(mixer, 5f)
+        // Calm → action: the calm piece is gone after the short fade.
+        mixer.setTarget(action)
+        render(mixer, 1.6f)
+        assertTrue(source.opened[0].closed)
+        assertEquals("ACTION-1", mixer.currentTrackId)
+        // Action → calm: the slow fade of the settings.
+        mixer.setTarget(calm.copy(seed = 3))
+        render(mixer, 1.6f)
+        assertFalse(source.opened[1].closed)
+        render(mixer, 3f)
+        assertTrue(source.opened[1].closed)
     }
 }

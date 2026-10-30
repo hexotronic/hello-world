@@ -141,6 +141,13 @@ oder **nur für ein bestimmtes Hörbuch** speichern.
   Stichprobe 5 s … alles“, dazu Schnellwahl (Turbo, Ausgewogen, Gründlich, Vollständig). Die App zeigt, wie viel
   des Buchs gehört wird und wie viel Rechenzeit eine Stunde Hörbuch braucht – nach der ersten Analyse auf dem
   eigenen Gerät gemessen.
+- **Szenenwechsel genau finden:** Wo die Musik zwischen zwei Abschnitten wechselt, hört die App an der Grenze
+  zweimal kurz nach (12 s, oder liest im Buchtext) und fragt das Sprachmodell nur „gehört das noch zur alten
+  oder schon zur neuen Szene?“ (eine Antwort, A oder B). So wechselt die Musik auf etwa ±15 s genau statt im
+  2-Minuten-Raster. Abschaltbar; korrigierte Szenen bleiben, wie sie sind.
+- **Übergänge passend zur Szene:** Plötzliche Wendungen – ruhig → spannend, spannend → Kampf, fröhlich → traurig –
+  werden in 1,2 s übergeblendet, Beruhigung nach einem Kampf weiter langsam (Einstellung „Übergänge“). Der
+  Übergang liegt mittig auf dem Szenenwechsel, die neue Musik beginnt also schon kurz davor.
 - **Spracherkennung bis 2× schneller:** die Stimme wird vor der Erkennung zeitlich gestaucht (WSOLA, gleiche
   Tonhöhe), die Spracherkennung hat entsprechend weniger zu tun. Das kostet Genauigkeit – im CI-Test (Whisper Tiny,
   synthetische Stimme) fiel die Erkennung schon bei 1,5× von 83 % auf 17 % der Wörter. Deshalb macht Lauscher bei

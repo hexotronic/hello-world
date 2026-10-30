@@ -115,6 +115,70 @@ object WindowPlanner {
 }
 
 /** Groups windows into scenes; manual corrections win. */
+/** A refined scene change: the window planned to start at [afterMs] really begins at [cutMs]. */
+data class SceneCut(val afterMs: Long, val cutMs: Long)
+
+/**
+ * Scene changes found more precisely than the window grid: between the samples of two windows
+ * with different music, a few short probes decide where the second scene begins.
+ */
+object SceneCuts {
+    /** Neighbouring windows whose music differs and whose edge was not refined yet ([done]: their starts). */
+    fun candidates(windows: List<WindowMood>, done: Set<Long>): List<Pair<WindowMood, WindowMood>> =
+        windows.sortedBy { it.startMs }.zipWithNext().filter { (a, b) ->
+            a.endMs == b.startMs && b.startMs !in done &&
+                a.source != SceneMerger.SOURCE_MANUAL && b.source != SceneMerger.SOURCE_MANUAL &&
+                musicDiffers(a, b)
+        }
+
+    /** Different mood, or (with music) a different place or tension: the music would change here. */
+    fun musicDiffers(a: WindowMood, b: WindowMood): Boolean =
+        a.mood != b.mood || (a.mood != null && (a.setting != b.setting || a.level != b.level))
+
+    /**
+     * Narrows the change down between [low] (still the first scene) and [high] (already the
+     * second): [steps] times the middle is probed with [isSecond] (null: undecidable, stop).
+     * Returns the middle of the remaining interval.
+     */
+    inline fun bisect(low: Long, high: Long, steps: Int, isSecond: (Long) -> Boolean?): Long {
+        var lo = low
+        var hi = high
+        for (i in 0 until steps) {
+            val mid = (lo + hi) / 2
+            when (isSecond(mid)) {
+                true -> hi = mid
+                false -> lo = mid
+                null -> break
+            }
+        }
+        return (lo + hi) / 2
+    }
+
+    /** Moves the shared edge of two windows to the refined cut. */
+    fun apply(windows: List<WindowMood>, cuts: List<SceneCut>): List<WindowMood> {
+        if (cuts.isEmpty()) return windows
+        val byAfter = cuts.associateBy { it.afterMs }
+        val sorted = windows.sortedBy { it.startMs }
+        return sorted.mapIndexed { i, w ->
+            var x = w
+            val prev = sorted.getOrNull(i - 1)
+            byAfter[w.startMs]?.let { c ->
+                if (prev != null && prev.endMs == w.startMs && c.cutMs > prev.startMs && c.cutMs < w.endMs) x = x.copy(startMs = c.cutMs)
+            }
+            val next = sorted.getOrNull(i + 1)
+            if (next != null) {
+                byAfter[next.startMs]?.let { c ->
+                    if (w.endMs == next.startMs && c.cutMs > w.startMs && c.cutMs < next.endMs) x = x.copy(endMs = c.cutMs)
+                }
+            }
+            x
+        }
+    }
+
+    /** The window grid position behind a (possibly moved) scene edge, for edits by scene. */
+    fun planned(positionMs: Long, cuts: List<SceneCut>): Long = cuts.firstOrNull { it.cutMs == positionMs }?.afterMs ?: positionMs
+}
+
 object SceneMerger {
     fun merge(windows: List<WindowMood>): List<Scene> {
         val sorted = windows.sortedBy { it.startMs }
@@ -307,6 +371,38 @@ object ScenePrompt {
     /** Small models sometimes copy a phrase of their instructions ("a short scene title in the") instead of a title. */
     private fun echoesInstructions(title: String): Boolean =
         title.split(' ').count { it.isNotBlank() } >= 3 && SYSTEM.replace(Regex("\\s+"), " ").contains(title, ignoreCase = true)
+
+    val CUT_SYSTEM = """
+        You compare a short passage of an audiobook with two consecutive scenes. Scene A comes first, scene B
+        follows. Answer A if the passage still belongs to scene A, B if scene B has already begun.
+    """.trimIndent()
+
+    /** Only "A" or "B". */
+    const val CUT_GRAMMAR = "root ::= \"A\" | \"B\"\n"
+
+    fun cutUser(a: WindowMood, b: WindowMood, textA: String?, textB: String?, passage: String): String = buildString {
+        fun scene(label: String, w: WindowMood, text: String?) {
+            append("Scene ").append(label).append(": ").append(w.mood?.name ?: "NONE")
+            append(", place ").append(w.setting?.name ?: "OTHER").append(", level ").append(w.level)
+            if (w.title.isNotBlank()) append(" – ").append(w.title)
+            if (!text.isNullOrBlank()) append("\n  e.g. \"").append(excerpt(text, CUT_CONTEXT_CHARS)).append('"')
+            append('\n')
+        }
+        scene("A", a, textA)
+        scene("B", b, textB)
+        append("\nPassage: \"").append(excerpt(passage, CUT_PASSAGE_CHARS)).append("\"\n")
+        append("Does the passage belong to scene A or B?")
+    }
+
+    /** true: the passage belongs to the second scene; null: no usable answer. */
+    fun parseCut(output: String?): Boolean? = when (output?.trim()?.firstOrNull()?.uppercaseChar()) {
+        'A' -> false
+        'B' -> true
+        else -> null
+    }
+
+    private const val CUT_CONTEXT_CHARS = 220
+    private const val CUT_PASSAGE_CHARS = 400
 
     val RECAP_SYSTEM = """
         You summarise audiobooks for listeners who return after a break. Write in the language of the book.

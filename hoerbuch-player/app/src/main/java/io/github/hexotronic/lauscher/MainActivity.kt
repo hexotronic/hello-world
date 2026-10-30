@@ -113,6 +113,7 @@ class MainActivity : ComponentActivity() {
         intent.getStringExtra(EXTRA_LLM_MODEL)?.let { id -> vm.updateMusic { it.copy(llmModel = id) } }
         intent.getStringExtra(EXTRA_LANGUAGE)?.let { lang -> vm.updateMusic { it.copy(language = lang) } }
         intent.getStringExtra(EXTRA_SPEECH_SPEED)?.toFloatOrNull()?.let { v -> vm.updateMusic { it.copy(speechSpeed = v.coerceIn(1f, 2f)) } }
+        intent.getStringExtra(EXTRA_SAMPLE_EVERY)?.toFloatOrNull()?.let { v -> vm.updateMusic { it.copy(sampleEveryMinutes = v.coerceIn(0.25f, 10f)) } }
         intent.getStringExtra(EXTRA_MUSIC_DOWNLOAD)?.let { ids -> vm.downloadMusic(ids.split(',').map { it.trim() }) }
         // "TENSE" or "TENSE@DUNGEON": a fixed mood, optionally at a place.
         intent.getStringExtra(EXTRA_MUSIC_FIXED)?.let { value ->
@@ -152,6 +153,7 @@ class MainActivity : ComponentActivity() {
         const val EXTRA_MUSIC_PREVIEW = "music_preview"
         const val EXTRA_BOOK_TEXT_PATH = "book_text_path"
         const val EXTRA_SPEECH_SPEED = "speech_speed"
+        const val EXTRA_SAMPLE_EVERY = "sample_every"
         const val EXTRA_SPEECH_CHECK = "speech_check"
         const val EXTRA_DOWNLOAD_AUDIOBOOK = "download_audiobook"
         const val EXTRA_DOWNLOAD_MEDIA = "download_media"

@@ -260,6 +260,12 @@ object MoodSpace {
         Mood.ACTION to (-0.2f to 0.9f),
     )
 
+    /** How pleasant a mood is (-1 dark … 1 bright). */
+    fun valence(m: Mood): Float = points.getValue(m).first
+
+    /** How agitated a mood is (-1 calm … 1 excited). */
+    fun arousal(m: Mood): Float = points.getValue(m).second
+
     fun distance(a: Mood, b: Mood): Float {
         val (va, aa) = points.getValue(a)
         val (vb, ab) = points.getValue(b)

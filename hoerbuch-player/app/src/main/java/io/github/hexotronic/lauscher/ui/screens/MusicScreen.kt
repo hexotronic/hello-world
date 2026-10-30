@@ -486,7 +486,16 @@ private fun SamplingSettings(vm: MainViewModel, s: MusicSettings) {
         "Mit eingefügtem Buchtext alle 10 Minuten 12 Sekunden hören, damit Text und Zeit genau zusammenpassen",
         s.alignWithSpeech,
     ) { v -> vm.updateMusic { it.copy(alignWithSpeech = v) } }
+    SwitchRow(
+        "Szenenwechsel genau finden",
+        "Wo die Musik wechselt, wird zweimal kurz nachgehört – so wechselt sie auf etwa " +
+            "${formatSeconds(plan.windowMs / 8)} genau statt im Raster von ${formatMinutes(s.sampleEveryMinutes)} " +
+            "(kostet je Szenenwechsel ein paar Sekunden Rechenzeit)",
+        s.refineSceneCuts,
+    ) { v -> vm.updateMusic { it.copy(refineSceneCuts = v) } }
 }
+
+private fun formatSeconds(ms: Long): String = "±${(ms / 1000).coerceAtLeast(1)} s"
 
 private fun speedText(v: Float): String =
     String.format(java.util.Locale.GERMANY, "%.2f", v).trimEnd('0').trimEnd(',')

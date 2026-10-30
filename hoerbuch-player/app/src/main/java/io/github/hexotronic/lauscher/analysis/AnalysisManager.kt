@@ -5,6 +5,8 @@ import android.net.Uri
 import android.util.Log
 import io.github.hexotronic.lauscher.analysis.core.Anchor
 import io.github.hexotronic.lauscher.analysis.core.KeywordMoods
+import io.github.hexotronic.lauscher.analysis.core.SceneCut
+import io.github.hexotronic.lauscher.analysis.core.SceneCuts
 import io.github.hexotronic.lauscher.analysis.core.SceneMerger
 import io.github.hexotronic.lauscher.analysis.core.ScenePrompt
 import io.github.hexotronic.lauscher.analysis.core.TextAligner
@@ -244,6 +246,55 @@ class AnalysisManager(
                     "Zeit für ${batch.size} Abschnitte: Spracherkennung ${(t1 - t0) / 1_000_000} ms, " +
                         "Modell laden ${(t2 - t1) / 1_000_000} ms, Sprachmodell ${(t3 - t2) / 1_000_000} ms",
                 )
+
+                // Where the music changes, find the scene change more precisely than the window grid:
+                // probe between the two samples and ask the model which scene the passage belongs to.
+                val model = llm
+                if (model != null && s.refineSceneCuts && (bookText != null || hasSpeechModel)) {
+                    val batchStarts = batch.map { it.first }.toSet()
+                    val done = repo.sceneCuts(bookId).map { it.afterMs }.toSet()
+                    val candidates = SceneCuts.candidates(repo.analysedWindows(bookId), done)
+                        .filter { (a, b) -> a.startMs in batchStarts || b.startMs in batchStarts }
+                    for ((a, b) in candidates) {
+                        coroutineContext.ensureActive()
+                        _status.value = AnalysisStatus.Running(
+                            bookId, "Suche den Szenenwechsel bei ${ScenePrompt.clock(b.startMs)} …", analysed, todo.size, automatic, remaining(),
+                        )
+                        val cutStarted = System.nanoTime()
+                        val textA = repo.transcriptAt(bookId, a.startMs)?.text
+                        val textB = repo.transcriptAt(bookId, b.startMs)?.text
+                        val known = anchors
+                        var questions = 0
+                        val cut = try {
+                            SceneCuts.bisect(sampleCentre(a, plan.sampleMs), sampleCentre(b, plan.sampleMs), CUT_STEPS) { t ->
+                                val probe = (t - CUT_PROBE_MS / 2) until (t + CUT_PROBE_MS / 2)
+                                val passage = if (bookText != null && known != null) {
+                                    TextAligner.slice(bookText.text.text, known, probe.first, probe.last + 1)
+                                } else {
+                                    listen(probe, Long.MAX_VALUE)
+                                }
+                                if (TextAligner.words(passage).size < 4) {
+                                    null
+                                } else {
+                                    questions++
+                                    val prompt = model.chatPrompt(ScenePrompt.CUT_SYSTEM, ScenePrompt.cutUser(a, b, textA, textB, passage))
+                                    ScenePrompt.parseCut(model.generate(prompt, ScenePrompt.CUT_GRAMMAR, maxTokens = 2, temperature = 0f))
+                                }
+                            }
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Szenenwechsel bei ${ScenePrompt.clock(b.startMs)} nicht gefunden", e)
+                            b.startMs
+                        }
+                        repo.saveSceneCut(bookId, SceneCut(b.startMs, cut))
+                        Log.i(
+                            TAG,
+                            "Szenenwechsel bei ${ScenePrompt.clock(cut)} statt ${ScenePrompt.clock(b.startMs)} " +
+                                "(${a.mood ?: "NONE"} → ${b.mood ?: "NONE"}, $questions Fragen, ${(System.nanoTime() - cutStarted) / 1_000_000} ms)",
+                        )
+                    }
+                }
             }
             _status.value = AnalysisStatus.Finished(bookId, analysed, llm != null)
             Log.i(TAG, "Analyse fertig: $analysed Abschnitte in ${(System.nanoTime() - started) / 1_000_000} ms")
@@ -253,6 +304,12 @@ class AnalysisManager(
             currentLlm = null
             rememberSpeed(speechNanos, speechAudioMs, modelNanos, modelWindows)
         }
+    }
+
+    /** Middle of the part of [w] that was listened to (or read). */
+    private fun sampleCentre(w: WindowMood, sampleMs: Long): Long {
+        val r = WindowPlanner.sampleOf(w.startMs until w.endMs, sampleMs)
+        return (r.first + r.last) / 2
     }
 
     /** Keeps a running average of this device's speed for the time estimate in the settings. */
@@ -400,6 +457,12 @@ class AnalysisManager(
         private const val BATCH = 8
         private const val CONTEXT = 4096
         private const val SPEECH_CHECK_MS = 90_000L
+
+        /** Bisection steps per scene change: the error shrinks to an eighth of a window. */
+        private const val CUT_STEPS = 2
+
+        /** Length of each probe (listened to or read) while looking for a scene change. */
+        private const val CUT_PROBE_MS = 12_000L
 
         /** A faster speed must recognise at least this share of the words heard at normal speed. */
         private const val MIN_SPEED_AGREEMENT = 0.7f

@@ -55,6 +55,8 @@ data class MusicSettings(
     val speechSpeed: Float = 1f,
     /** With an imported book text: a few short speech samples line the text up with the audio. */
     val alignWithSpeech: Boolean = true,
+    /** Where the music changes, a few short probes find the scene change more precisely than the window grid. */
+    val refineSceneCuts: Boolean = true,
     /** Measured on this device (0 = not yet): computing seconds per second of audio, model seconds per window. */
     val measuredSpeechFactor: Float = 0f,
     val measuredModelSeconds: Float = 0f,
@@ -112,6 +114,7 @@ class MusicSettingsStore(context: Context) {
             .putInt("sampleSeconds", next.sampleSeconds)
             .putFloat("speechSpeed", next.speechSpeed)
             .putBoolean("alignWithSpeech", next.alignWithSpeech)
+            .putBoolean("refineSceneCuts", next.refineSceneCuts)
             .putFloat("measuredSpeechFactor", next.measuredSpeechFactor)
             .putFloat("measuredModelSeconds", next.measuredModelSeconds)
             .putString("language", next.language)
@@ -148,6 +151,7 @@ class MusicSettingsStore(context: Context) {
             },
             speechSpeed = prefs.getFloat("speechSpeed", d.speechSpeed),
             alignWithSpeech = prefs.getBoolean("alignWithSpeech", d.alignWithSpeech),
+            refineSceneCuts = prefs.getBoolean("refineSceneCuts", d.refineSceneCuts),
             measuredSpeechFactor = prefs.getFloat("measuredSpeechFactor", 0f),
             measuredModelSeconds = prefs.getFloat("measuredModelSeconds", 0f),
             language = prefs.getString("language", d.language) ?: d.language,

@@ -3,6 +3,8 @@ package io.github.hexotronic.lauscher
 import io.github.hexotronic.lauscher.analysis.core.Correction
 import io.github.hexotronic.lauscher.analysis.core.KeywordMoods
 import io.github.hexotronic.lauscher.analysis.core.MiniJson
+import io.github.hexotronic.lauscher.analysis.core.SceneCut
+import io.github.hexotronic.lauscher.analysis.core.SceneCuts
 import io.github.hexotronic.lauscher.analysis.core.SceneMerger
 import io.github.hexotronic.lauscher.analysis.core.ScenePrompt
 import io.github.hexotronic.lauscher.analysis.core.TranscriptWindow
@@ -153,5 +155,51 @@ class SceneAnalysisTest {
         val v = MiniJson.parse("""{"a":[1,-2.5e1,true,null],"b":"ä\n"}""") as Map<*, *>
         assertEquals(listOf(1.0, -25.0, true, null), v["a"])
         assertEquals("ä\n", v["b"])
+    }
+
+    @Test
+    fun sceneChangesAreFoundBetweenTheSamples() {
+        fun w(start: Long, mood: Mood?, level: Int = 2, setting: Setting? = Setting.FOREST, source: String = SceneMerger.SOURCE_LLM) =
+            WindowMood(start, start + 120_000, mood, level, "t$start", source, setting)
+        val all = listOf(
+            w(0, Mood.CALM), w(120_000, Mood.CALM), w(240_000, Mood.ACTION), w(360_000, Mood.ACTION, level = 3),
+            w(480_000, Mood.SAD, source = SceneMerger.SOURCE_MANUAL), w(600_000, null), w(720_000, null, level = 1, setting = Setting.CAVE),
+        )
+        // Music changes: mood (2:00 → 4:00) and tension (4:00 → 6:00); not next to corrections or in silence.
+        assertEquals(listOf(240_000L, 360_000L), SceneCuts.candidates(all, emptySet()).map { it.second.startMs })
+        assertEquals(listOf(360_000L), SceneCuts.candidates(all, setOf(240_000L)).map { it.second.startMs })
+
+        // The story turns at 3:20; the samples were at 3:00 and 5:00. Two probes find it to ±15 s.
+        val probes = ArrayList<Long>()
+        val cut = SceneCuts.bisect(180_000, 300_000, 2) { t -> probes += t; t >= 200_000 }
+        assertEquals(listOf(240_000L, 210_000L), probes)
+        assertTrue("cut at $cut", kotlin.math.abs(cut - 200_000) <= 15_000)
+        // Undecidable probe (silence): stays in the middle.
+        assertEquals(240_000L, SceneCuts.bisect(180_000, 300_000, 2) { null })
+
+        val moved = SceneCuts.apply(all, listOf(SceneCut(240_000, cut), SceneCut(360_000, 100_000)))
+        val scenes = SceneMerger.merge(moved)
+        assertEquals(cut, scenes[1].startMs)
+        assertEquals(Mood.ACTION, scenes[1].mood)
+        assertEquals(cut, scenes[0].endMs)
+        // A cut outside its two windows is ignored.
+        assertEquals(360_000L, scenes[2].startMs)
+        // Edits by scene find the window grid again.
+        assertEquals(240_000L, SceneCuts.planned(cut, listOf(SceneCut(240_000, cut))))
+        assertEquals(123L, SceneCuts.planned(123, listOf(SceneCut(240_000, cut))))
+    }
+
+    @Test
+    fun theModelOnlyAnswersAOrB() {
+        val a = WindowMood(0, 120_000, Mood.CALM, 1, "Morgen am See", SceneMerger.SOURCE_LLM, Setting.SEA)
+        val b = WindowMood(120_000, 240_000, Mood.ACTION, 3, "Flucht durch den Wald", SceneMerger.SOURCE_LLM, Setting.FOREST)
+        val prompt = ScenePrompt.cutUser(a, b, "Sie trank Tee am Steg.", null, "Plötzlich Schritte – sie rannte los.")
+        assertTrue(prompt, prompt.contains("Scene A: CALM, place SEA, level 1 – Morgen am See") && prompt.contains("Scene B: ACTION, place FOREST"))
+        assertTrue(prompt.contains("Passage: \"Plötzlich Schritte – sie rannte los.\""))
+        assertEquals("root ::= \"A\" | \"B\"\n", ScenePrompt.CUT_GRAMMAR)
+        assertEquals(true, ScenePrompt.parseCut(" B"))
+        assertEquals(false, ScenePrompt.parseCut("a"))
+        assertNull(ScenePrompt.parseCut("?"))
+        assertNull(ScenePrompt.parseCut(null))
     }
 }

@@ -15,7 +15,8 @@ import kotlin.math.sqrt
  * audio thread.
  */
 class MusicMixer(private val sampleRate: Int) {
-    private class Layer(val generator: Generator, var gain: Float, var target: Float)
+    /** [fadeSeconds] 0 follows [crossfadeSeconds]; scene changes may set a shorter fade. */
+    private class Layer(val generator: Generator, var gain: Float, var target: Float, var fadeSeconds: Float = 0f)
 
     private val layers = ArrayList<Layer>()
     private val reverb = Reverb(sampleRate)
@@ -132,7 +133,6 @@ class MusicMixer(private val sampleRate: Int) {
         right.fill(0f, 0, n)
         recLeft.fill(0f, 0, n)
         recRight.fill(0f, 0, n)
-        val fadeStep = n / (crossfadeSeconds.coerceAtLeast(0.2f) * sampleRate)
         synchronized(layers) {
             val tmpL = scratchL
             val tmpR = scratchR
@@ -144,6 +144,8 @@ class MusicMixer(private val sampleRate: Int) {
             val it = layers.iterator()
             while (it.hasNext()) {
                 val layer = it.next()
+                val fade = if (layer.fadeSeconds > 0f) layer.fadeSeconds else crossfadeSeconds
+                val fadeStep = n / (fade.coerceAtLeast(0.2f) * sampleRate)
                 layer.gain = when {
                     layer.gain < layer.target -> minOf(layer.target, layer.gain + fadeStep)
                     layer.gain > layer.target -> maxOf(layer.target, layer.gain - fadeStep)
@@ -220,7 +222,10 @@ class MusicMixer(private val sampleRate: Int) {
 
     private fun applySpec(spec: SoundSpec?, force: Boolean) {
         if (spec == current && !force) return
+        val previous = current
         current = spec
+        // A sudden change (calm → action) cuts fast, everything else fades slowly.
+        val fade = Transitions.fadeSeconds(previous, spec, crossfadeSeconds)
         synchronized(layers) {
             val mood = spec?.mood
             // A recorded piece keeps playing while mood, place and tension stay the same; any of
@@ -234,7 +239,12 @@ class MusicMixer(private val sampleRate: Int) {
                         abs(r.intensity - spec.intensity) < SAME_TENSION
                 }
             }
-            for (l in layers) if (l.generator !is ChimeGenerator && l !== keep) l.target = 0f
+            for (l in layers) {
+                if (l.generator !is ChimeGenerator && l !== keep) {
+                    l.target = 0f
+                    l.fadeSeconds = fade
+                }
+            }
             if (spec != null) {
                 if (mood != null && keep == null) {
                     val source = recordings
@@ -244,9 +254,9 @@ class MusicMixer(private val sampleRate: Int) {
                     } else {
                         MoodGenerator(sampleRate, mood, spec.intensity, spec.seed)
                     }
-                    layers.add(Layer(generator, 0f, 1f))
+                    layers.add(Layer(generator, 0f, 1f, fade))
                 }
-                spec.atmosphere?.let { layers.add(Layer(AtmosphereGenerator(sampleRate, it, 1f, spec.seed), 0f, 1f)) }
+                spec.atmosphere?.let { layers.add(Layer(AtmosphereGenerator(sampleRate, it, 1f, spec.seed), 0f, 1f, fade)) }
             }
         }
     }

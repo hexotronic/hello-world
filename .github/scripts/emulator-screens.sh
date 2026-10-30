@@ -109,9 +109,10 @@ if [ -n "${E2E_DIR:-}" ] && [ -f "$E2E_DIR/story.wav" ]; then
     E2E_FAILED=1
   fi
 
-  # The same book with its text: the analysis reads instead of listening.
+  # The same book with its text: the analysis reads instead of listening. Windows of 30 s, so the
+  # story has two and a change of music between them is looked for more precisely.
   adb logcat -c
-  start --es book_text_path "$DATA/test/story.txt" --ez analyze true
+  start --es sample_every 0.5 --es book_text_path "$DATA/test/story.txt" --ez analyze true
   echo "Warte auf die Analyse mit Buchtext …"
   for i in $(seq 1 120); do
     if adb logcat -d -s LauscherAnalyse:* | grep -qE "Analyse fertig|Analysis failed"; then break; fi
@@ -121,6 +122,16 @@ if [ -n "${E2E_DIR:-}" ] && [ -f "$E2E_DIR/story.wav" ]; then
   if ! grep -q "Buchtext" "$OUT/analyse-buchtext.txt" || ! grep -q "Szenen" "$OUT/analyse-buchtext.txt"; then
     echo "::error::Die Analyse mit Buchtext hat nicht funktioniert"
     E2E_FAILED=1
+  fi
+  # Two windows with different music: the scene change must have been looked for.
+  KINDS=$(grep "Szenen:" "$OUT/analyse-buchtext.txt" | grep -oE "[0-9]+:[0-9]+=[A-Z]+/[0-9]@[A-Z_?]+" | cut -d= -f2 | sort -u | wc -l)
+  if [ "$KINDS" -gt 1 ]; then
+    if ! grep -q "Szenenwechsel bei" "$OUT/analyse-buchtext.txt"; then
+      echo "::error::Der Szenenwechsel wurde nicht genauer gesucht"
+      E2E_FAILED=1
+    fi
+  else
+    echo "::notice::Beide Abschnitte bekamen dieselbe Musik – kein Szenenwechsel zu verfeinern"
   fi
 
   # Speech recognition of the same recording at 1×, 1.25×, 1.5× and 2×: time and words recognised.
