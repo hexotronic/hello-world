@@ -2,6 +2,7 @@
 <resources>
     <string name="app_name">Lauscher</string>
     <string name="open_with">In Lauscher abspielen</string>
+    <string name="book_text_share">Als Buchtext in Lauscher</string>
     <string name="widget_name">Lauscher – Hörbuch</string>
     <string name="widget_empty">Noch kein Hörbuch gestartet</string>
     <string name="action_rewind">Zurückspulen</string>

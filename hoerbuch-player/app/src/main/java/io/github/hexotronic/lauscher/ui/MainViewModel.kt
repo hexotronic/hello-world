@@ -14,6 +14,9 @@ import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import io.github.hexotronic.lauscher.LauscherApp
 import io.github.hexotronic.lauscher.music.synth.SoundSpec
+import io.github.hexotronic.lauscher.analysis.BookTextReader
+import io.github.hexotronic.lauscher.analysis.core.BookText
+import io.github.hexotronic.lauscher.analysis.core.BookTextParser
 import io.github.hexotronic.lauscher.music.synth.Mood
 import io.github.hexotronic.lauscher.music.synth.Setting
 import io.github.hexotronic.lauscher.music.MusicSettings
@@ -42,7 +45,9 @@ import io.github.hexotronic.lauscher.playback.NowPlaying
 import io.github.hexotronic.lauscher.playback.PlaybackHub
 import io.github.hexotronic.lauscher.playback.PlaybackService
 import io.github.hexotronic.lauscher.playback.SleepState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -386,12 +391,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun analyzeBook(fromCurrentPosition: Boolean) {
         val np = nowPlaying.value
         val book = np.book ?: lastBook.value ?: return
-        if (!app.analysis.hasSpeechModel) {
-            toast("Bitte zuerst ein Spracherkennungsmodell laden")
-            return
+        viewModelScope.launch {
+            // With an imported book text no speech recognition is needed.
+            if (!app.analysis.hasSpeechModel && !repository.hasBookText(book.id)) {
+                toast("Bitte zuerst ein Spracherkennungsmodell laden oder den Buchtext einfügen")
+                return@launch
+            }
+            val from = if (fromCurrentPosition && np.book != null) np.positionMs else 0L
+            app.analysis.analyze(book.id, fromMs = from)
         }
-        val from = if (fromCurrentPosition && np.book != null) np.positionMs else 0L
-        app.analysis.analyze(book.id, fromMs = from)
     }
 
     fun stopAnalysis() = app.analysis.stop()
@@ -442,6 +450,100 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun skipMusicTrack() = withCore { it.skipMusicTrack() }
+
+    // ------------------------------------------------------------------ book texts
+
+    fun bookTextInfo(bookId: Long) = repository.observeBookTextInfo(bookId)
+
+    /** Reads a TXT, HTML or EPUB file as the written text of the book. */
+    fun importBookText(bookId: Long, uri: Uri) {
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) { runCatching { BookTextReader.read(getApplication<Application>(), uri) } }
+            result.onSuccess { (text, source) -> saveBookText(bookId, text, source) }
+                .onFailure { toast("Text konnte nicht gelesen werden: ${it.message}") }
+        }
+    }
+
+    /** Takes the text from the clipboard, e.g. copied from an e-book app. */
+    fun pasteBookText(bookId: Long) {
+        val clipboard = getApplication<Application>().getSystemService(android.content.ClipboardManager::class.java)
+        val text = clipboard?.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(getApplication<Application>())?.toString()
+        if (text.isNullOrBlank()) {
+            toast("Die Zwischenablage enthält keinen Text")
+            return
+        }
+        viewModelScope.launch {
+            val parsed = withContext(Dispatchers.Default) { BookTextParser.fromPlain(text) }
+            saveBookText(bookId, parsed, "Zwischenablage")
+        }
+    }
+
+    private suspend fun saveBookText(bookId: Long, text: BookText, source: String) {
+        if (text.text.length < 200) {
+            toast("Das ist zu wenig Text für ein Buch")
+            return
+        }
+        repository.saveBookText(bookId, text, source)
+        toast("Buchtext übernommen: ${text.text.length / 1000} Tsd. Zeichen, ${text.chapters.size} Kapitel erkannt")
+    }
+
+    /** Analyses the whole book again, now reading its text (corrections are kept). */
+    fun reanalyzeWithText(bookId: Long) {
+        app.analysis.stop()
+        viewModelScope.launch {
+            repository.clearAnalysis(bookId, keepCorrections = true, transcripts = true)
+            app.analysis.analyze(bookId)
+            toast("Szenen werden mit dem Buchtext neu analysiert")
+        }
+    }
+
+    /** For tests and adb: a text file on the device becomes the text of the current book. */
+    fun importBookTextFile(path: String, reanalyze: Boolean) {
+        viewModelScope.launch {
+            val book = nowPlaying.value.book ?: lastBook.value ?: allBooks.value.firstOrNull() ?: return@launch
+            val result = withContext(Dispatchers.IO) { runCatching { BookTextReader.read(getApplication<Application>(), Uri.fromFile(java.io.File(path))) } }
+            val (text, source) = result.getOrElse {
+                toast("Text konnte nicht gelesen werden: ${it.message}")
+                return@launch
+            }
+            saveBookText(book.id, text, source)
+            if (reanalyze) reanalyzeWithText(book.id)
+        }
+    }
+
+    fun removeBookText(bookId: Long) {
+        viewModelScope.launch {
+            repository.deleteBookText(bookId)
+            toast("Buchtext entfernt")
+        }
+    }
+
+    /** Text shared from another app, waiting for the listener to pick its book. */
+    data class SharedText(val text: BookText, val source: String)
+
+    private val _sharedText = MutableStateFlow<SharedText?>(null)
+    val sharedText: StateFlow<SharedText?> = _sharedText
+
+    fun receiveSharedText(text: String?, uri: Uri?) {
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    when {
+                        uri != null -> BookTextReader.read(getApplication<Application>(), uri).let { (t, src) -> SharedText(t, src) }
+                        !text.isNullOrBlank() -> SharedText(BookTextParser.fromPlain(text), "Geteilter Text")
+                        else -> null
+                    }
+                }
+            }
+            result.onSuccess { _sharedText.value = it }.onFailure { toast("Text konnte nicht gelesen werden: ${it.message}") }
+        }
+    }
+
+    fun assignSharedText(bookId: Long?) {
+        val shared = _sharedText.value ?: return
+        _sharedText.value = null
+        if (bookId != null) viewModelScope.launch { saveBookText(bookId, shared.text, shared.source) }
+    }
 
     /** Set by a deep link: the player opens its "Passt die Musik?" sheet. */
     var openFeedback by mutableStateOf(false)

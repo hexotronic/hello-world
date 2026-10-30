@@ -36,6 +36,31 @@ data class Scene(
     val intensity: Float get() = (level.coerceIn(1, 3) - 1) / 2f * 0.7f + 0.2f
 }
 
+/**
+ * How the book is sampled: every [windowMs] one sample of [sampleMs] (or all of it), which the
+ * speech recognition hears [speed] times faster.
+ */
+data class SamplingPlan(val windowMs: Long, val sampleMs: Long, val speed: Float) {
+    val full: Boolean get() = sampleMs >= windowMs
+    val heardMs: Long get() = minOf(sampleMs, windowMs)
+
+    /** Share of the book that is listened to (0..1). */
+    val coverage: Float get() = heardMs.toFloat() / windowMs
+
+    /** Windows per hour of audiobook. */
+    val windowsPerHour: Float get() = 3_600_000f / windowMs
+
+    /**
+     * Computing time per hour of audiobook in seconds, from [speechFactor] (seconds of computing
+     * per second of audio handed to the recognition) and [modelSecondsPerWindow]. Without speech
+     * recognition (book text available) only the language model counts.
+     */
+    fun secondsPerHour(speechFactor: Float, modelSecondsPerWindow: Float, withSpeech: Boolean = true): Float {
+        val speech = if (withSpeech) heardMs / 1000f / speed * speechFactor else 0f
+        return windowsPerHour * (speech + modelSecondsPerWindow)
+    }
+}
+
 object WindowPlanner {
     /** Scenes rarely change faster than this; longer windows mean fewer model calls. */
     const val WINDOW_MS = 120_000L
@@ -58,6 +83,22 @@ object WindowPlanner {
         if (length <= sampleMs) return window
         val start = window.first + (length - sampleMs) / 2
         return start until start + sampleMs
+    }
+
+    /**
+     * The windows of [planned] that still need an analysis: those whose middle no analysed
+     * window covers. This keeps earlier results when the window length is changed.
+     */
+    fun pending(planned: List<LongRange>, analysed: List<LongRange>): List<LongRange> {
+        if (analysed.isEmpty()) return planned
+        val sorted = analysed.sortedBy { it.first }
+        val starts = LongArray(sorted.size) { sorted[it].first }
+        return planned.filter { w ->
+            val mid = (w.first + w.last) / 2
+            var idx = starts.binarySearch(mid)
+            if (idx < 0) idx = -idx - 2
+            idx < 0 || mid > sorted[idx].last
+        }
     }
 
     /** Whisper works on 30 s blocks; longer clips are cut into such chunks. */
@@ -181,7 +222,7 @@ object ScenePrompt {
             append("\n\nWindows:\n")
             windows.forEachIndexed { i, w ->
                 append('[').append(i).append("] (").append(clock(w.startMs)).append(") ")
-                append(w.text.replace('\n', ' ').trim().take(maxCharsPerWindow).ifBlank { "(no speech)" })
+                append(excerpt(w.text, maxCharsPerWindow).ifBlank { "(no speech)" })
                 append('\n')
             }
         }
@@ -208,6 +249,24 @@ object ScenePrompt {
     }
 
     data class Result(val windows: List<WindowMood>, val story: String)
+
+    /**
+     * Shortens a long passage for the prompt: beginning, middle and end, so the model sees how the
+     * whole window develops and not only its first seconds.
+     */
+    fun excerpt(text: String, maxChars: Int): String {
+        val t = text.replace('\n', ' ').replace(Regex(" {2,}"), " ").trim()
+        if (t.length <= maxChars) return t
+        val part = (maxChars - 6) / 3
+        fun cut(from: Int): String {
+            var a = from.coerceIn(0, t.length)
+            while (a > 0 && t[a - 1] != ' ' && from - a < 20) a--
+            var b = (a + part).coerceAtMost(t.length)
+            while (b < t.length && t[b] != ' ' && b - a < part + 20) b++
+            return t.substring(a, b).trim()
+        }
+        return cut(0) + " … " + cut(t.length / 2 - part / 2) + " … " + cut(t.length - part)
+    }
 
     const val MAX_CORRECTIONS = 3
     private const val CORRECTION_CHARS = 160

@@ -9,6 +9,8 @@ import io.github.hexotronic.lauscher.analysis.core.Scene
 import io.github.hexotronic.lauscher.analysis.core.SceneMerger
 import io.github.hexotronic.lauscher.analysis.core.TranscriptWindow
 import io.github.hexotronic.lauscher.analysis.core.WindowMood
+import io.github.hexotronic.lauscher.analysis.core.Anchor
+import io.github.hexotronic.lauscher.analysis.core.BookText
 import io.github.hexotronic.lauscher.analysis.core.Correction
 import io.github.hexotronic.lauscher.music.synth.Mood
 import io.github.hexotronic.lauscher.music.synth.Setting
@@ -21,7 +23,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
-private class LauscherDatabase(context: Context) : SQLiteOpenHelper(context, "lauscher.db", null, 3) {
+private class LauscherDatabase(context: Context) : SQLiteOpenHelper(context, "lauscher.db", null, 4) {
     override fun onConfigure(db: SQLiteDatabase) {
         db.setForeignKeyConstraintsEnabled(true)
     }
@@ -89,6 +91,20 @@ private class LauscherDatabase(context: Context) : SQLiteOpenHelper(context, "la
         )
         db.execSQL("CREATE TABLE folders(uri TEXT PRIMARY KEY, name TEXT NOT NULL, added_at INTEGER NOT NULL)")
         createAnalysisTables(db)
+        createBookTextTable(db)
+    }
+
+    /** Version 4: the written text of a book (imported by the listener) and its alignment to the audio. */
+    private fun createBookTextTable(db: SQLiteDatabase) {
+        db.execSQL(
+            """CREATE TABLE IF NOT EXISTS book_texts(
+                book_id INTEGER PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
+                text TEXT NOT NULL,
+                chapters TEXT NOT NULL,
+                anchors TEXT NOT NULL DEFAULT '',
+                source TEXT NOT NULL,
+                imported_at INTEGER NOT NULL)""",
+        )
     }
 
     /** Version 2: transcripts and scene analysis for background music. */
@@ -127,6 +143,7 @@ private class LauscherDatabase(context: Context) : SQLiteOpenHelper(context, "la
         } else if (oldVersion < 3) {
             db.execSQL("ALTER TABLE window_moods ADD COLUMN setting TEXT")
         }
+        if (oldVersion < 4) createBookTextTable(db)
     }
 }
 
@@ -517,11 +534,83 @@ class LibraryRepository(context: Context) {
             }
         }
 
-    suspend fun analyzedWindowStarts(bookId: Long): Set<Long> = io {
-        db.rawQuery("SELECT start_ms FROM window_moods WHERE book_id = ?", arrayOf(bookId.toString())).use { c ->
-            HashSet<Long>().apply { while (c.moveToNext()) add(c.getLong(0)) }
+    /** Time ranges that already have an analysis result. */
+    suspend fun analyzedRanges(bookId: Long): List<LongRange> = io {
+        db.rawQuery("SELECT start_ms, end_ms FROM window_moods WHERE book_id = ?", arrayOf(bookId.toString())).use { c ->
+            c.map { c.getLong(0) until c.getLong(1) }
         }
     }
+
+    // ---------------------------------------------------------------- book texts
+
+    data class StoredBookText(val text: BookText, val anchors: List<Anchor>, val source: String)
+
+    suspend fun bookText(bookId: Long): StoredBookText? = io {
+        db.rawQuery("SELECT text, chapters, anchors, source FROM book_texts WHERE book_id = ?", arrayOf(bookId.toString())).use { c ->
+            if (!c.moveToFirst()) return@use null
+            val chapters = c.getString(1).lineSequence().mapNotNull { line ->
+                val tab = line.indexOf('\t')
+                val start = if (tab > 0) line.substring(0, tab).toIntOrNull() else null
+                if (start == null) null else BookText.TextChapter(line.substring(tab + 1), start)
+            }.toList()
+            val anchors = c.getString(2).split(';').mapNotNull { part ->
+                val pieces = part.split(':')
+                val t = pieces.getOrNull(0)?.toLongOrNull()
+                val ch = pieces.getOrNull(1)?.toIntOrNull()
+                if (pieces.size == 2 && t != null && ch != null) Anchor(t, ch) else null
+            }
+            StoredBookText(BookText(c.getString(0), chapters), anchors, c.getString(3))
+        }
+    }
+
+    /** Short facts for the UI without loading the whole text. */
+    data class BookTextInfo(val chars: Int, val chapters: Int, val anchors: Int, val source: String)
+
+    fun observeBookTextInfo(bookId: Long): Flow<BookTextInfo?> = observe {
+        db.rawQuery(
+            "SELECT LENGTH(text), chapters, anchors, source FROM book_texts WHERE book_id = ?",
+            arrayOf(bookId.toString()),
+        ).use { c ->
+            if (!c.moveToFirst()) {
+                null
+            } else {
+                BookTextInfo(
+                    chars = c.getInt(0),
+                    chapters = c.getString(1).lineSequence().count { it.isNotBlank() },
+                    anchors = c.getString(2).split(';').count { it.contains(':') },
+                    source = c.getString(3),
+                )
+            }
+        }
+    }
+
+    suspend fun saveBookText(bookId: Long, text: BookText, source: String) = io {
+        db.insertWithOnConflict("book_texts", null, ContentValues().apply {
+            put("book_id", bookId)
+            put("text", text.text)
+            put("chapters", text.chapters.joinToString("\n") { "${it.start}\t${it.title.replace('\n', ' ').replace('\t', ' ')}" })
+            put("anchors", "")
+            put("source", source)
+            put("imported_at", System.currentTimeMillis())
+        }, SQLiteDatabase.CONFLICT_REPLACE)
+        Unit
+    }.also { notifyChanged() }
+
+    suspend fun hasBookText(bookId: Long): Boolean = io {
+        db.rawQuery("SELECT 1 FROM book_texts WHERE book_id = ?", arrayOf(bookId.toString())).use { it.moveToFirst() }
+    }
+
+    suspend fun saveAnchors(bookId: Long, anchors: List<Anchor>) = io {
+        db.execSQL(
+            "UPDATE book_texts SET anchors = ? WHERE book_id = ?",
+            arrayOf<Any?>(anchors.joinToString(";") { "${it.timeMs}:${it.char}" }, bookId),
+        )
+    }.also { notifyChanged() }
+
+    suspend fun deleteBookText(bookId: Long) = io {
+        db.delete("book_texts", "book_id = ?", arrayOf(bookId.toString()))
+        Unit
+    }.also { notifyChanged() }
 
     suspend fun saveWindowMoods(bookId: Long, moods: List<WindowMood>, keepManual: Boolean = true) = io {
         db.beginTransaction()

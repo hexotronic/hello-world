@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 
 package io.github.hexotronic.lauscher.ui.screens
 
@@ -8,6 +8,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import io.github.hexotronic.lauscher.ui.components.RetroButtonStyle
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -222,6 +225,7 @@ private fun BookDetailBody(
             Tab(selected = tab == 0, onClick = { onTab(0) }, text = { Text("Kapitel") })
             Tab(selected = tab == 1, onClick = { onTab(1) }, text = { Text("Lesezeichen (${bookmarks.size})") })
             Tab(selected = tab == 2, onClick = { onTab(2) }, text = { Text("Dateien") })
+            Tab(selected = tab == 3, onClick = { onTab(3) }, text = { Text("Buchtext") })
         }
         LazyColumn(Modifier.fillMaxSize()) {
             when (tab) {
@@ -248,6 +252,7 @@ private fun BookDetailBody(
                         modifier = Modifier.clickable { vm.playBook(book.id, startAtMs = mark.positionMs) },
                     )
                 }
+                3 -> item { BookTextPanel(vm, book.id) }
                 else -> items(d.tracks) { t ->
                     ListItem(
                         headlineContent = { Text(t.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
@@ -258,5 +263,67 @@ private fun BookDetailBody(
                 }
             }
         }
+    }
+}
+
+/**
+ * The written text of the book: with it the scene analysis reads instead of listening, which is
+ * much faster and more exact; search and recap use it too.
+ */
+@Composable
+private fun BookTextPanel(vm: MainViewModel, bookId: Long) {
+    val infoFlow = remember(bookId) { vm.bookTextInfo(bookId) }
+    val info by infoFlow.collectAsStateWithLifecycle(null)
+    val pickFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) vm.importBookText(bookId, uri)
+    }
+    var confirmRemove by remember { mutableStateOf(false) }
+    Column(Modifier.padding(16.dp)) {
+        Text(
+            "Hast du das Buch auch als E-Book oder Text? Dann liest die Szenen-Analyse den echten Text, statt " +
+                "erst mitzuschreiben – viel schneller und genauer. Die App ordnet den Text über die Kapitel und, " +
+                "falls ein Spracherkennungsmodell da ist, über kurze Hörproben der Zeit zu. Suche und Rückblick " +
+                "nutzen ihn ebenfalls. Der Text bleibt auf dem Gerät.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(12.dp))
+        val i = info
+        if (i != null) {
+            Text("Buchtext vorhanden", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "${i.source} · ${i.chars / 1000} Tsd. Zeichen · ${i.chapters} Kapitel erkannt · ${i.anchors} Abgleichpunkte",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Spacer(Modifier.height(10.dp))
+        }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            RetroButton(onClick = {
+                pickFile.launch(arrayOf("text/plain", "text/html", "application/xhtml+xml", "application/epub+zip", "application/octet-stream"))
+            }) { Text(if (i == null) "Datei wählen (TXT, EPUB, HTML)" else "Andere Datei wählen") }
+            RetroButton(onClick = { vm.pasteBookText(bookId) }, style = RetroButtonStyle.SECONDARY) { Text("Aus Zwischenablage einfügen") }
+            if (i != null) {
+                RetroButton(onClick = { confirmRemove = true }, style = RetroButtonStyle.PLAIN) { Text("Entfernen") }
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        Text(
+            "Tipp: In vielen E-Book-Apps lässt sich Text markieren und über „Teilen → Lauscher“ direkt hierher schicken.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (i != null) {
+            Spacer(Modifier.height(10.dp))
+            TextButton(onClick = { vm.reanalyzeWithText(bookId) }) { Text("Szenen mit dem Buchtext neu analysieren") }
+        }
+    }
+    if (confirmRemove) {
+        AlertDialog(
+            onDismissRequest = { confirmRemove = false },
+            title = { Text("Buchtext entfernen?") },
+            text = { Text("Die bisherige Analyse bleibt erhalten. Neue Abschnitte werden wieder per Spracherkennung mitgeschrieben.") },
+            confirmButton = { TextButton(onClick = { confirmRemove = false; vm.removeBookText(bookId) }) { Text("Entfernen") } },
+            dismissButton = { TextButton(onClick = { confirmRemove = false }) { Text("Abbrechen") } },
+        )
     }
 }

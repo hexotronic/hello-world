@@ -79,6 +79,7 @@ import io.github.hexotronic.lauscher.ui.formatClock
 import io.github.hexotronic.lauscher.ui.formatHuman
 import io.github.hexotronic.lauscher.ui.theme.LocalRetro
 import io.github.hexotronic.lauscher.ui.theme.PixelFont
+import kotlin.math.roundToInt
 
 @Composable
 fun MusicScreen(vm: MainViewModel) {
@@ -345,7 +346,8 @@ private fun AnalysisBlock(vm: MainViewModel, s: MusicSettings, status: AnalysisS
     Column(Modifier.padding(horizontal = 16.dp)) {
         if (!vm.models.isInstalled(s.whisperModel)) {
             Text(
-                "Für die Szenen-Erkennung lade unten zuerst ein Spracherkennungsmodell.",
+                "Für die Szenen-Erkennung lade unten zuerst ein Spracherkennungsmodell – oder füge in den Buch-Details " +
+                    "unter „Buchtext“ den Text des Buchs ein, dann braucht es keine Spracherkennung.",
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(bottom = 8.dp),
@@ -403,15 +405,8 @@ private fun AnalysisBlock(vm: MainViewModel, s: MusicSettings, status: AnalysisS
         null,
         s.neutralFallback,
     ) { v -> vm.updateMusic { it.copy(neutralFallback = v) } }
+    SamplingSettings(vm, s)
     Column(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-        Text("Genauigkeit", style = MaterialTheme.typography.labelLarge)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            AnalysisDepth.entries.forEach { d ->
-                FilterChip(selected = s.depth == d, onClick = { vm.updateMusic { it.copy(depth = d) } }, label = { Text(d.label) })
-            }
-        }
-        Text(s.depth.hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(8.dp))
         Text("Sprache der Hörbücher", style = MaterialTheme.typography.labelLarge)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("de" to "Deutsch", "en" to "Englisch", "auto" to "Automatisch").forEach { (code, label) ->
@@ -420,6 +415,73 @@ private fun AnalysisBlock(vm: MainViewModel, s: MusicSettings, status: AnalysisS
         }
     }
 }
+
+/** How often and how long the book is sampled, how fast the recognition listens, and what it costs. */
+@Composable
+private fun SamplingSettings(vm: MainViewModel, s: MusicSettings) {
+    val plan = s.samplingPlan
+    Column(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+        Text("Stichproben", style = MaterialTheme.typography.labelLarge)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            AnalysisDepth.entries.forEach { d ->
+                FilterChip(
+                    selected = s.sampleEveryMinutes == d.everyMinutes && s.sampleSeconds == d.sampleSeconds,
+                    onClick = { vm.updateMusic { it.copy(sampleEveryMinutes = d.everyMinutes, sampleSeconds = d.sampleSeconds) } },
+                    label = { Text(d.label) },
+                )
+            }
+        }
+    }
+    LabeledSlider(
+        "Stichprobe alle",
+        s.sampleEveryMinutes,
+        formatMinutes(s.sampleEveryMinutes),
+        range = 1f..10f,
+        steps = 17,
+        subtitle = "So oft kann die Musik die Szene wechseln",
+    ) { v -> vm.updateMusic { it.copy(sampleEveryMinutes = (v * 2).roundToInt() / 2f) } }
+    LabeledSlider(
+        "Länge je Stichprobe",
+        s.sampleSeconds.toFloat(),
+        if (plan.full) "alles" else "${s.sampleSeconds} s",
+        range = 5f..MusicSettings.FULL_SAMPLE.toFloat(),
+        steps = 23,
+        subtitle = "Mehr gehörter Text erkennt Szenen sicherer, dauert aber länger",
+    ) { v -> vm.updateMusic { it.copy(sampleSeconds = (v / 5f).roundToInt() * 5) } }
+    LabeledSlider(
+        "Tempo der Spracherkennung",
+        s.speechSpeed,
+        speedText(s.speechSpeed) + "×",
+        range = 1f..2.5f,
+        steps = 5,
+        subtitle = "Die Stimme wird für die Erkennung schneller abgespielt (Tonhöhe bleibt) – spart Zeit, erkennt evtl. etwas ungenauer",
+    ) { v -> vm.updateMusic { it.copy(speechSpeed = (v * 4).roundToInt() / 4f) } }
+    val measured = s.measuredSpeechFactor > 0 && s.measuredModelSeconds > 0
+    val speech = if (s.measuredSpeechFactor > 0) s.measuredSpeechFactor else MusicSettings.DEFAULT_SPEECH_FACTOR
+    val model = if (s.measuredModelSeconds > 0) s.measuredModelSeconds else MusicSettings.DEFAULT_MODEL_SECONDS
+    val perHour = plan.secondsPerHour(speech, model)
+    val perHourText = plan.secondsPerHour(speech, model, withSpeech = false)
+    Text(
+        "Gehört werden ${(plan.coverage * 100).roundToInt()} % des Buchs (${if (plan.full) "alles" else "${plan.heardMs / 1000} s"} " +
+            "alle ${formatMinutes(s.sampleEveryMinutes)}), die Erkennung hört ${speedText(s.speechSpeed)}-fach schnell. " +
+            "Rechenzeit je Stunde Hörbuch: ca. ${formatHuman((perHour * 1000).toLong())}, mit Buchtext ca. ${formatHuman((perHourText * 1000).toLong())} " +
+            if (measured) "(auf diesem Gerät gemessen)." else "(Schätzung – nach der ersten Analyse auf diesem Gerät gemessen).",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+    )
+    SwitchRow(
+        "Buchtext per Hörprobe abgleichen",
+        "Mit eingefügtem Buchtext alle 10 Minuten 12 Sekunden hören, damit Text und Zeit genau zusammenpassen",
+        s.alignWithSpeech,
+    ) { v -> vm.updateMusic { it.copy(alignWithSpeech = v) } }
+}
+
+private fun speedText(v: Float): String =
+    String.format(java.util.Locale.GERMANY, "%.2f", v).trimEnd('0').trimEnd(',')
+
+private fun formatMinutes(m: Float): String =
+    if (m % 1f == 0f) "${m.toInt()} Min." else String.format(java.util.Locale.GERMANY, "%.1f Min.", m)
 
 @Composable
 private fun ModelSection(vm: MainViewModel, kind: ModelKind, selectedId: String?, download: DownloadState?, changes: Int) {

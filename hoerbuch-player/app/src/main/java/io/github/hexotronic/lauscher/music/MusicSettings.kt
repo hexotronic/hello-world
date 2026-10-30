@@ -1,6 +1,7 @@
 package io.github.hexotronic.lauscher.music
 
 import android.content.Context
+import io.github.hexotronic.lauscher.analysis.core.SamplingPlan
 import io.github.hexotronic.lauscher.music.synth.Atmosphere
 import io.github.hexotronic.lauscher.music.synth.Mood
 import io.github.hexotronic.lauscher.music.synth.Setting
@@ -19,10 +20,12 @@ enum class MusicSource(val label: String, val hint: String) {
     LIBRARY("Musikbibliothek", "Echte, von Menschen komponierte Stücke passend zu Stimmung, Ort und Spannung; was fehlt, erzeugt der Synthesizer"),
 }
 
-enum class AnalysisDepth(val label: String, val hint: String, val sampleMs: Long) {
-    TURBO("Turbo", "12 Sekunden je 2 Minuten – etwa zehnmal schneller als vollständig", 12_000),
-    SAMPLES("Stichproben", "25 Sekunden je 2 Minuten – guter Kompromiss", 25_000),
-    FULL("Vollständig", "Jede Sekunde wird transkribiert – am genauesten, aber langsam", Long.MAX_VALUE),
+/** Quick settings for how the book is sampled; the sliders allow everything in between. */
+enum class AnalysisDepth(val label: String, val everyMinutes: Float, val sampleSeconds: Int) {
+    TURBO("Turbo", 3f, 12),
+    SAMPLES("Ausgewogen", 2f, 25),
+    THOROUGH("Gründlich", 1.5f, 45),
+    FULL("Vollständig", 2f, MusicSettings.FULL_SAMPLE),
 }
 
 data class MusicSettings(
@@ -44,7 +47,17 @@ data class MusicSettings(
     val neutralFallback: Boolean = false,
     /** Analyse the upcoming minutes in the background while listening. */
     val analyzeAhead: Boolean = true,
-    val depth: AnalysisDepth = AnalysisDepth.SAMPLES,
+    /** One sample every so many minutes (= how often scenes can change). */
+    val sampleEveryMinutes: Float = 2f,
+    /** Length of each sample in seconds; [FULL_SAMPLE] means the whole window. */
+    val sampleSeconds: Int = 25,
+    /** The speech recognition hears the audio this many times faster (pitch stays). */
+    val speechSpeed: Float = 1f,
+    /** With an imported book text: a few short speech samples line the text up with the audio. */
+    val alignWithSpeech: Boolean = true,
+    /** Measured on this device (0 = not yet): computing seconds per second of audio, model seconds per window. */
+    val measuredSpeechFactor: Float = 0f,
+    val measuredModelSeconds: Float = 0f,
     /** Language spoken in the audiobooks, for speech recognition. */
     val language: String = "de",
     val whisperModel: String? = null,
@@ -54,7 +67,23 @@ data class MusicSettings(
     /** Library pieces the listener likes (preferred) or never wants to hear again. */
     val likedTracks: Set<String> = emptySet(),
     val hiddenTracks: Set<String> = emptySet(),
-)
+) {
+    val samplingPlan: SamplingPlan
+        get() = SamplingPlan(
+            windowMs = (sampleEveryMinutes * 60_000).toLong(),
+            sampleMs = if (sampleSeconds >= FULL_SAMPLE) Long.MAX_VALUE else sampleSeconds * 1000L,
+            speed = speechSpeed,
+        )
+
+    companion object {
+        /** Slider end value meaning "the whole window". */
+        const val FULL_SAMPLE = 125
+
+        /** Rough values for a mid-range phone until this device has measured its own. */
+        const val DEFAULT_SPEECH_FACTOR = 0.3f
+        const val DEFAULT_MODEL_SECONDS = 6f
+    }
+}
 
 class MusicSettingsStore(context: Context) {
     private val prefs = context.getSharedPreferences("music", Context.MODE_PRIVATE)
@@ -79,7 +108,12 @@ class MusicSettingsStore(context: Context) {
             .putBoolean("chapterChime", next.chapterChime)
             .putBoolean("neutralFallback", next.neutralFallback)
             .putBoolean("analyzeAhead", next.analyzeAhead)
-            .putString("depth", next.depth.name)
+            .putFloat("sampleEveryMinutes", next.sampleEveryMinutes)
+            .putInt("sampleSeconds", next.sampleSeconds)
+            .putFloat("speechSpeed", next.speechSpeed)
+            .putBoolean("alignWithSpeech", next.alignWithSpeech)
+            .putFloat("measuredSpeechFactor", next.measuredSpeechFactor)
+            .putFloat("measuredModelSeconds", next.measuredModelSeconds)
             .putString("language", next.language)
             .putString("whisperModel", next.whisperModel)
             .putString("llmModel", next.llmModel)
@@ -105,7 +139,17 @@ class MusicSettingsStore(context: Context) {
             chapterChime = prefs.getBoolean("chapterChime", d.chapterChime),
             neutralFallback = prefs.getBoolean("neutralFallback", d.neutralFallback),
             analyzeAhead = prefs.getBoolean("analyzeAhead", d.analyzeAhead),
-            depth = AnalysisDepth.entries.firstOrNull { it.name == prefs.getString("depth", null) } ?: d.depth,
+            sampleEveryMinutes = prefs.getFloat("sampleEveryMinutes", d.sampleEveryMinutes),
+            // Older versions stored a preset only.
+            sampleSeconds = if (prefs.contains("sampleSeconds")) {
+                prefs.getInt("sampleSeconds", d.sampleSeconds)
+            } else {
+                AnalysisDepth.entries.firstOrNull { it.name == prefs.getString("depth", null) }?.sampleSeconds ?: d.sampleSeconds
+            },
+            speechSpeed = prefs.getFloat("speechSpeed", d.speechSpeed),
+            alignWithSpeech = prefs.getBoolean("alignWithSpeech", d.alignWithSpeech),
+            measuredSpeechFactor = prefs.getFloat("measuredSpeechFactor", 0f),
+            measuredModelSeconds = prefs.getFloat("measuredModelSeconds", 0f),
             language = prefs.getString("language", d.language) ?: d.language,
             whisperModel = prefs.getString("whisperModel", null),
             llmModel = prefs.getString("llmModel", null),

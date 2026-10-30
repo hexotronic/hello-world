@@ -67,6 +67,18 @@ class MainActivity : ComponentActivity() {
         if (intent.getBooleanExtra(EXTRA_DEMO, false)) vm.createDemo(play = true)
         applyMusicExtras(intent)
         intent.getStringExtra(EXTRA_IMPORT_PATH)?.let { vm.importLocalFile(it, intent.getBooleanExtra(EXTRA_ANALYZE, false)) }
+        intent.getStringExtra(EXTRA_BOOK_TEXT_PATH)?.let { vm.importBookTextFile(it, intent.getBooleanExtra(EXTRA_ANALYZE, false)) }
+        // "Teilen → Lauscher" from an e-book app: text or a TXT/EPUB/HTML file becomes a book text.
+        if (intent.action == Intent.ACTION_SEND) {
+            val stream = if (Build.VERSION.SDK_INT >= 33) {
+                intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+            }
+            vm.receiveSharedText(intent.getStringExtra(Intent.EXTRA_TEXT), stream)
+            return
+        }
         intent.getStringExtra(EXTRA_PRESET)?.let { name ->
             EnhancerPreset.entries.firstOrNull { it.name == name }?.let(vm::applyPreset)
         }
@@ -93,6 +105,7 @@ class MainActivity : ComponentActivity() {
         intent.getStringExtra(EXTRA_WHISPER_MODEL)?.let { id -> vm.updateMusic { it.copy(whisperModel = id) } }
         intent.getStringExtra(EXTRA_LLM_MODEL)?.let { id -> vm.updateMusic { it.copy(llmModel = id) } }
         intent.getStringExtra(EXTRA_LANGUAGE)?.let { lang -> vm.updateMusic { it.copy(language = lang) } }
+        intent.getStringExtra(EXTRA_SPEECH_SPEED)?.toFloatOrNull()?.let { v -> vm.updateMusic { it.copy(speechSpeed = v.coerceIn(1f, 2.5f)) } }
         intent.getStringExtra(EXTRA_MUSIC_DOWNLOAD)?.let { ids -> vm.downloadMusic(ids.split(',').map { it.trim() }) }
         // "TENSE" or "TENSE@DUNGEON": a fixed mood, optionally at a place.
         intent.getStringExtra(EXTRA_MUSIC_FIXED)?.let { value ->
@@ -130,5 +143,7 @@ class MainActivity : ComponentActivity() {
         const val EXTRA_MUSIC_DOWNLOAD = "music_download"
         const val EXTRA_MUSIC_FIXED = "music_fixed"
         const val EXTRA_MUSIC_PREVIEW = "music_preview"
+        const val EXTRA_BOOK_TEXT_PATH = "book_text_path"
+        const val EXTRA_SPEECH_SPEED = "speech_speed"
     }
 }

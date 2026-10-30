@@ -109,9 +109,20 @@ oder **nur für ein bestimmtes Hörbuch** speichern.
 - **„Was bisher geschah“:** Das lokale Sprachmodell schreibt einen spoilerfreien Rückblick bis zur aktuellen Stelle
 - **Volltextsuche** im Hörbuch über alles, was bereits transkribiert wurde
 - Ohne Sprachmodell ordnet ein Schlüsselwort-Verfahren die Szenen grob ein; das Demo-Hörbuch hat fertige Szenen
-- **Tempo:** drei Stufen (Turbo 12 s, Stichproben 25 s oder vollständig je 2-Minuten-Abschnitt), schnelle
-  CPU-Variante (ARMv8.2 dotprod/fp16) mit automatischer Erkennung, nur Leistungskerne, wiederverwendeter
-  KV-Cache, Grammatik nur bei Bedarf; die App zeigt die geschätzte Restzeit an
+- **Stichproben per Schieberegler:** „Stichprobe alle 1–10 Min.“ (so oft kann die Musik wechseln) und „Länge je
+  Stichprobe 5 s … alles“, dazu Schnellwahl (Turbo, Ausgewogen, Gründlich, Vollständig). Die App zeigt, wie viel
+  des Buchs gehört wird und wie viel Rechenzeit eine Stunde Hörbuch braucht – nach der ersten Analyse auf dem
+  eigenen Gerät gemessen.
+- **Spracherkennung bis 2,5× schneller:** die Stimme wird vor der Erkennung zeitlich gestaucht (WSOLA, gleiche
+  Tonhöhe), die Spracherkennung hat entsprechend weniger zu tun.
+- **Buchtext einfügen statt mitschreiben:** in den Buch-Details unter „Buchtext“ eine TXT-, EPUB- oder HTML-Datei
+  wählen, Text aus der Zwischenablage einfügen oder aus einer E-Book-App über „Teilen → Lauscher“ schicken. Die
+  App ordnet den Text über die Kapitel (Nummern/Titel) der Zeit zu und gleicht ihn – falls ein
+  Spracherkennungsmodell da ist – alle 10 Minuten mit einer 12-Sekunden-Hörprobe ab (die gehörten Wörter werden im
+  Text gesucht). Die KI liest dann den echten Text; das spart die Spracherkennung fast ganz, Suche und
+  Rückblick nutzen ihn ebenfalls.
+- **Weitere Beschleunigung:** schnelle CPU-Variante (ARMv8.2 dotprod/fp16) mit automatischer Erkennung, nur
+  Leistungskerne, wiederverwendeter KV-Cache, Grammatik nur bei Bedarf; die App zeigt die geschätzte Restzeit an
 
 ### Musikbibliothek nach Stimmung, Ort und Spannung (echte Musik, keine KI)
 Statt des Synthesizers kann die Hintergrundmusik aus **347 handkomponierten Stücken** (rund 1 GB, gut 18 Stunden
@@ -185,7 +196,8 @@ Benötigt JDK 17 und das Android SDK (API 35).
 Die CI baut die APK (inklusive llama.cpp und whisper.cpp für arm64 und x86_64), führt die Unit-Tests aus
 und startet die App anschließend in einem Android-14-Emulator: Demo-Hörbuch abspielen, Screenshots aller
 Hauptseiten, ein Ende-zu-Ende-Test der lokalen KI (synthetische Sprache → Whisper Tiny → Qwen2.5 0.5B →
-Szenen), Laden und Abspielen von Stücken der Musikbibliothek (auch einer Schleife) und Prüfung auf Abstürze.
+Szenen, mit doppelt so schneller Spracherkennung, danach dasselbe Buch mit eingefügtem Buchtext), Laden und
+Abspielen von Stücken der Musikbibliothek (auch einer Schleife) und Prüfung auf Abstürze.
 
 ### Schriften
 

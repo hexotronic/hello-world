@@ -3,12 +3,15 @@ package io.github.hexotronic.lauscher.analysis
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import io.github.hexotronic.lauscher.analysis.core.Anchor
 import io.github.hexotronic.lauscher.analysis.core.KeywordMoods
 import io.github.hexotronic.lauscher.analysis.core.SceneMerger
 import io.github.hexotronic.lauscher.analysis.core.ScenePrompt
+import io.github.hexotronic.lauscher.analysis.core.TextAligner
 import io.github.hexotronic.lauscher.analysis.core.TranscriptWindow
 import io.github.hexotronic.lauscher.analysis.core.WindowMood
 import io.github.hexotronic.lauscher.analysis.core.WindowPlanner
+import io.github.hexotronic.lauscher.audio.dsp.TimeStretch
 import io.github.hexotronic.lauscher.data.Book
 import io.github.hexotronic.lauscher.data.LibraryRepository
 import io.github.hexotronic.lauscher.data.Track
@@ -92,15 +95,17 @@ class AnalysisManager(
     /** Called regularly while listening: keeps the next minutes analysed. */
     fun ensureAhead(bookId: Long, positionMs: Long) {
         val s = settings.current
-        if (!s.analyzeAhead || isRunning || !hasSpeechModel) return
+        if (!s.analyzeAhead || isRunning) return
         scope.launch {
-            val done = repo.analyzedWindowStarts(bookId)
+            // Without speech recognition only books with an imported text can be analysed.
+            if (!hasSpeechModel && !repo.hasBookText(bookId)) return@launch
             val book = repo.book(bookId) ?: return@launch
-            val upcoming = WindowPlanner.windows(book.durationMs).filter {
+            val windowMs = s.samplingPlan.windowMs
+            val upcoming = WindowPlanner.windows(book.durationMs, windowMs).filter {
                 it.last >= positionMs && it.first < positionMs + AHEAD_MS
             }
-            if (upcoming.any { it.first !in done }) {
-                analyze(bookId, fromMs = positionMs, untilMs = positionMs + AHEAD_MS + 4 * WindowPlanner.WINDOW_MS, automatic = true)
+            if (WindowPlanner.pending(upcoming, repo.analyzedRanges(bookId)).isNotEmpty()) {
+                analyze(bookId, fromMs = positionMs, untilMs = positionMs + AHEAD_MS + 4 * windowMs, automatic = true)
             }
         }
     }
@@ -108,25 +113,44 @@ class AnalysisManager(
     private suspend fun runAnalysis(bookId: Long, fromMs: Long, untilMs: Long, automatic: Boolean) {
         val details = repo.bookDetails(bookId) ?: return
         val s = settings.current
-        val done = repo.analyzedWindowStarts(bookId)
-        val todo = WindowPlanner.windows(details.book.durationMs)
-            .filter { it.last >= fromMs && it.first < untilMs && it.first !in done }
+        val plan = s.samplingPlan
+        val todo = WindowPlanner.pending(
+            WindowPlanner.windows(details.book.durationMs, plan.windowMs).filter { it.last >= fromMs && it.first < untilMs },
+            repo.analyzedRanges(bookId),
+        )
         if (todo.isEmpty()) {
             _status.value = AnalysisStatus.Finished(bookId, 0, hasLanguageModel)
             return
         }
         _status.value = AnalysisStatus.Running(bookId, "Bereite vor …", 0, todo.size, automatic)
-        // Speech recognition is only loaded when a window has no transcript yet (re-analysis reuses them).
+        // Speech recognition is only loaded when it is needed (no transcript or book text yet).
         var whisper: WhisperNative? = null
         fun speech(): WhisperNative = whisper ?: run {
             val file = models.fileFor(s.whisperModel)
-                ?: error("Kein Spracherkennungsmodell installiert – bitte unter „KI-Modelle“ herunterladen")
+                ?: error("Kein Spracherkennungsmodell installiert – bitte unter „KI-Modelle“ herunterladen oder den Buchtext einfügen")
             (WhisperNative.load(file.absolutePath) ?: error("Spracherkennungsmodell konnte nicht geladen werden")).also { whisper = it }
         }
-        Log.i(TAG, "Variante: Whisper ${WhisperNative.variant}, LLM ${LlamaNative.variant}, ${LlamaNative.defaultThreads()} Threads, ${s.depth.label}")
+        // An imported book text replaces listening; a few speech samples line it up with the audio.
+        val bookText = repo.bookText(bookId)
+        var anchors = bookText?.let { stored ->
+            val chapters = details.chapters.map { TextAligner.AudioChapter(it.title, it.startMs) }
+            val initial = TextAligner.initialAnchors(stored.text, chapters, details.book.durationMs)
+            stored.anchors.fold(initial) { acc, a -> TextAligner.withAnchor(acc, a) }
+        }
+        val textIndex = if (bookText != null && s.alignWithSpeech && hasSpeechModel) TextAligner.Index(bookText.text.text) else null
+        Log.i(
+            TAG,
+            "Variante: Whisper ${WhisperNative.variant}, LLM ${LlamaNative.variant}, ${LlamaNative.defaultThreads()} Threads, " +
+                "alle ${plan.windowMs / 1000} s je ${if (plan.full) "alles" else "${plan.sampleMs / 1000} s"}, Tempo ${plan.speed}×" +
+                (bookText?.let { ", Buchtext ${it.text.text.length} Zeichen, ${anchors?.size} Anker" } ?: ""),
+        )
         var llm: LlamaNative? = null
         var analysed = 0
         val started = System.nanoTime()
+        var speechNanos = 0L
+        var speechAudioMs = 0L
+        var modelNanos = 0L
+        var modelWindows = 0
         fun remaining(): Int? = if (analysed < 2) null else {
             val perWindow = (System.nanoTime() - started) / 1e9 / analysed
             (perWindow * (todo.size - analysed)).toInt()
@@ -138,11 +162,41 @@ class AnalysisManager(
                 val t0 = System.nanoTime()
                 for (w in batch) {
                     coroutineContext.ensureActive()
-                    _status.value = AnalysisStatus.Running(bookId, "Höre zu: ${ScenePrompt.clock(w.first)}", analysed, todo.size, automatic, remaining())
-                    val existing = repo.transcriptAt(bookId, w.first)
-                    val text = existing?.text ?: transcribe(speech(), details.tracks, w, s.depth.sampleMs, s.language)
+                    val known = anchors
+                    val text = if (bookText != null && known != null) {
+                        var a: List<Anchor> = known
+                        _status.value = AnalysisStatus.Running(bookId, "Lese: ${ScenePrompt.clock(w.first)}", analysed, todo.size, automatic, remaining())
+                        val mid = (w.first + w.last) / 2
+                        if (textIndex != null && TextAligner.nearestAnchorDistance(a, mid) > ALIGN_EVERY_MS) {
+                            // Listen briefly and find the heard words in the text.
+                            val heardStart = System.nanoTime()
+                            val heard = transcribe(speech(), details.tracks, mid until mid + ALIGN_SAMPLE_MS, Long.MAX_VALUE, s.language, plan.speed)
+                            speechNanos += System.nanoTime() - heardStart
+                            speechAudioMs += (ALIGN_SAMPLE_MS / plan.speed).toLong()
+                            val expected = TextAligner.charAt(a, mid)
+                            val radius = maxOf(5_000, TextAligner.charAt(a, mid + ALIGN_RADIUS_MS) - TextAligner.charAt(a, mid - ALIGN_RADIUS_MS))
+                            val found = TextAligner.locate(textIndex, heard, expected, radius)
+                            if (found != null) {
+                                a = TextAligner.withAnchor(a, Anchor(mid, found))
+                                anchors = a
+                                repo.saveAnchors(bookId, a.filter { it.timeMs != 0L && it.timeMs != details.book.durationMs })
+                            }
+                            Log.i(TAG, "Abgleich bei ${ScenePrompt.clock(mid)}: " + (found?.let { "Text gefunden (erwartet $expected, gefunden $it)" } ?: "nicht gefunden"))
+                        }
+                        TextAligner.slice(bookText.text.text, a, w.first, w.last + 1)
+                    } else {
+                        _status.value = AnalysisStatus.Running(bookId, "Höre zu: ${ScenePrompt.clock(w.first)}", analysed, todo.size, automatic, remaining())
+                        val existing = repo.transcriptAt(bookId, w.first)
+                        existing?.text ?: run {
+                            val heardStart = System.nanoTime()
+                            val heard = transcribe(speech(), details.tracks, w, plan.sampleMs, s.language, plan.speed)
+                            speechNanos += System.nanoTime() - heardStart
+                            speechAudioMs += (minOf(plan.sampleMs, w.last + 1 - w.first) / plan.speed).toLong()
+                            heard
+                        }
+                    }
                     val window = TranscriptWindow(w.first, w.last + 1, text)
-                    if (existing == null) repo.saveTranscript(bookId, window)
+                    repo.saveTranscript(bookId, window)
                     windows.add(window)
                     analysed++
                 }
@@ -156,6 +210,10 @@ class AnalysisManager(
                 val moods = classify(details.book, windows, llm)
                 repo.saveWindowMoods(bookId, moods)
                 val t3 = System.nanoTime()
+                if (llm != null) {
+                    modelNanos += t3 - t2
+                    modelWindows += batch.size
+                }
                 Log.i(
                     TAG,
                     "Zeit für ${batch.size} Abschnitte: Spracherkennung ${(t1 - t0) / 1_000_000} ms, " +
@@ -168,18 +226,39 @@ class AnalysisManager(
             whisper?.close()
             llm?.close()
             currentLlm = null
+            rememberSpeed(speechNanos, speechAudioMs, modelNanos, modelWindows)
         }
     }
 
-    private fun transcribe(whisper: WhisperNative, tracks: List<Track>, window: LongRange, sampleMs: Long, language: String): String {
+    /** Keeps a running average of this device's speed for the time estimate in the settings. */
+    private fun rememberSpeed(speechNanos: Long, speechAudioMs: Long, modelNanos: Long, modelWindows: Int) {
+        if (speechAudioMs < 5_000 && modelWindows == 0) return
+        settings.update { cur ->
+            val speech = if (speechAudioMs >= 5_000) (speechNanos / 1e6 / speechAudioMs).toFloat() else null
+            val model = if (modelWindows > 0) (modelNanos / 1e9 / modelWindows).toFloat() else null
+            cur.copy(
+                measuredSpeechFactor = speech?.let { if (cur.measuredSpeechFactor > 0) cur.measuredSpeechFactor * 0.6f + it * 0.4f else it }
+                    ?: cur.measuredSpeechFactor,
+                measuredModelSeconds = model?.let { if (cur.measuredModelSeconds > 0) cur.measuredModelSeconds * 0.6f + it * 0.4f else it }
+                    ?: cur.measuredModelSeconds,
+            )
+        }
+    }
+
+    /**
+     * Transcribes a sample of [window]. At [speed] > 1 the audio is sped up first (same pitch),
+     * so the recognition has less to listen to.
+     */
+    private fun transcribe(whisper: WhisperNative, tracks: List<Track>, window: LongRange, sampleMs: Long, language: String, speed: Float): String {
         val sample = WindowPlanner.sampleOf(window, sampleMs)
-        // One whisper pass handles 30 s; longer samples (full mode) are cut into chunks.
-        return WindowPlanner.chunks(sample).joinToString(" ") { chunk ->
+        // One whisper pass handles 30 s of (sped-up) audio; longer samples are cut into chunks.
+        return WindowPlanner.chunks(sample, (30_000 * speed).toLong()).joinToString(" ") { chunk ->
             val (index, offset) = AudiobookPlayerCore.locate(tracks, chunk.first)
             val track = tracks.getOrNull(index) ?: return@joinToString ""
             val length = minOf(chunk.last + 1 - chunk.first, (track.durationMs - offset).coerceAtLeast(0))
             if (length < 2_000) return@joinToString ""
-            val pcm = AudioSegmentDecoder.decode(context, Uri.parse(track.uri), offset, length)
+            val decoded = AudioSegmentDecoder.decode(context, Uri.parse(track.uri), offset, length)
+            val pcm = TimeStretch.speedUp(decoded, WhisperNative.SAMPLE_RATE, speed)
             if (pcm.size < WhisperNative.SAMPLE_RATE) return@joinToString ""
             whisper.transcribe(pcm, language).joinToString(" ") { it.text }.trim()
         }.trim()
@@ -260,5 +339,12 @@ class AnalysisManager(
         private const val BATCH = 8
         private const val CONTEXT = 4096
         private const val AHEAD_MS = 8 * 60_000L
+
+        /** With a book text: listen briefly where the nearest anchor is further away than this. */
+        private const val ALIGN_EVERY_MS = 10 * 60_000L
+        private const val ALIGN_SAMPLE_MS = 12_000L
+
+        /** How far around the expected place the heard words are searched (in time). */
+        private const val ALIGN_RADIUS_MS = 15 * 60_000L
     }
 }

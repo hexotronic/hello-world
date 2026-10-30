@@ -48,6 +48,7 @@ import io.github.hexotronic.lauscher.ui.screens.MusicLibraryScreen
 import io.github.hexotronic.lauscher.ui.screens.MusicScreen
 import io.github.hexotronic.lauscher.ui.screens.PlayerScreen
 import io.github.hexotronic.lauscher.ui.screens.SettingsScreen
+import io.github.hexotronic.lauscher.ui.screens.SharedTextDialog
 import io.github.hexotronic.lauscher.ui.screens.SoundStudioScreen
 import io.github.hexotronic.lauscher.ui.screens.StatsScreen
 
@@ -74,6 +75,8 @@ fun LauscherRoot(vm: MainViewModel) {
             }
         }
     }
+    val shared by vm.sharedText.collectAsStateWithLifecycle()
+    shared?.let { SharedTextDialog(vm, it) }
 }
 
 @Composable

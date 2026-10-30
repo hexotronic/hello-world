@@ -36,6 +36,14 @@
                 <data android:scheme="content" />
                 <data android:mimeType="audio/*" />
             </intent-filter>
+            <!-- Book texts shared from e-book apps (text, TXT, HTML or EPUB) for the scene analysis. -->
+            <intent-filter android:label="@string/book_text_share">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+                <data android:mimeType="text/html" />
+                <data android:mimeType="application/epub+zip" />
+            </intent-filter>
         </activity>
 
         <service

@@ -85,8 +85,10 @@ if [ -n "${E2E_DIR:-}" ] && [ -f "$E2E_DIR/story.wav" ]; then
   adb push "$E2E_DIR/ggml-tiny-q5_1.bin" "$DATA/models/" > /dev/null
   adb push "$E2E_DIR/qwen2.5-0.5b-instruct-q4_k_m.gguf" "$DATA/models/" > /dev/null
   adb push "$E2E_DIR/story.wav" "$DATA/test/" > /dev/null
+  adb push "$E2E_DIR/story.txt" "$DATA/test/" > /dev/null
   adb shell cmd uimode night no
-  start --ez music true --es whisper_model whisper-tiny --es llm_model qwen2.5-0.5b --es language en \
+  # Speech recognition at double speed (time-stretched, same pitch).
+  start --ez music true --es whisper_model whisper-tiny --es llm_model qwen2.5-0.5b --es language en --es speech_speed 2 \
     --es import_path "$DATA/test/story.wav" --ez analyze true
   echo "Warte auf die lokale Analyse …"
   for i in $(seq 1 120); do
@@ -99,6 +101,20 @@ if [ -n "${E2E_DIR:-}" ] && [ -f "$E2E_DIR/story.wav" ]; then
   shot 11-ki-analyse-hell 5
   if ! grep -q "Szenen" "$OUT/analyse.txt"; then
     echo "::error::Die lokale Analyse hat keine Szenen geliefert"
+    E2E_FAILED=1
+  fi
+
+  # The same book with its text: the analysis reads instead of listening.
+  adb logcat -c
+  start --es book_text_path "$DATA/test/story.txt" --ez analyze true
+  echo "Warte auf die Analyse mit Buchtext …"
+  for i in $(seq 1 120); do
+    if adb logcat -d -s LauscherAnalyse:* | grep -qE "Analyse fertig|Analysis failed"; then break; fi
+    sleep 5
+  done
+  adb logcat -d -s LauscherAnalyse:* | tail -20 | tee "$OUT/analyse-buchtext.txt"
+  if ! grep -q "Buchtext" "$OUT/analyse-buchtext.txt" || ! grep -q "Szenen" "$OUT/analyse-buchtext.txt"; then
+    echo "::error::Die Analyse mit Buchtext hat nicht funktioniert"
     E2E_FAILED=1
   fi
 fi
