@@ -2,6 +2,7 @@ package io.github.hexotronic.lauscher.analysis.core
 
 import io.github.hexotronic.lauscher.music.synth.Mood
 import io.github.hexotronic.lauscher.music.synth.Setting
+import kotlin.math.abs
 
 /** A transcribed stretch of the book (book-wide positions in ms). */
 data class TranscriptWindow(val startMs: Long, val endMs: Long, val text: String)
@@ -18,6 +19,9 @@ data class WindowMood(
     /** Where the window takes place, null when unclear. */
     val setting: Setting? = null,
 )
+
+/** A scene the listener corrected or confirmed, shown to the model as an example of their taste. */
+data class Correction(val text: String, val mood: Mood?, val level: Int, val setting: Setting?)
 
 /** Consecutive windows with the same mood and place, as shown on the mood map and used for music. */
 data class Scene(
@@ -154,11 +158,26 @@ object ScenePrompt {
         Answer with JSON only.
     """.trimIndent()
 
-    fun user(bookTitle: String, author: String?, story: String?, windows: List<TranscriptWindow>, maxCharsPerWindow: Int = 450): String =
+    fun user(
+        bookTitle: String,
+        author: String?,
+        story: String?,
+        windows: List<TranscriptWindow>,
+        maxCharsPerWindow: Int = 450,
+        corrections: List<Correction> = emptyList(),
+    ): String =
         buildString {
             append("Book: \"").append(bookTitle).append('"')
             if (!author.isNullOrBlank()) append(" by ").append(author)
             append("\nStory so far: ").append(story?.takeIf { it.isNotBlank() } ?: "(beginning of the book)")
+            if (corrections.isNotEmpty()) {
+                append("\n\nThe listener corrected these earlier passages; judge similar passages the same way:\n")
+                for (c in corrections.take(MAX_CORRECTIONS)) {
+                    append("- \"").append(c.text.replace('\n', ' ').trim().take(CORRECTION_CHARS)).append("\" -> mood ")
+                    append(c.mood?.name ?: "NONE").append(", place ").append(c.setting?.name ?: "OTHER")
+                    append(", level ").append(c.level.coerceIn(1, 3)).append('\n')
+                }
+            }
             append("\n\nWindows:\n")
             windows.forEachIndexed { i, w ->
                 append('[').append(i).append("] (").append(clock(w.startMs)).append(") ")
@@ -189,6 +208,15 @@ object ScenePrompt {
     }
 
     data class Result(val windows: List<WindowMood>, val story: String)
+
+    const val MAX_CORRECTIONS = 3
+    private const val CORRECTION_CHARS = 160
+
+    /** The corrections closest before [positionMs] (or else after it), at most [MAX_CORRECTIONS]. */
+    fun nearestCorrections(all: List<Pair<Long, Correction>>, positionMs: Long): List<Correction> =
+        all.sortedWith(compareBy<Pair<Long, Correction>> { if (it.first <= positionMs) 0 else 1 }.thenBy { abs(positionMs - it.first) })
+            .take(MAX_CORRECTIONS)
+            .map { it.second }
 
     /** Parses the model output; tolerant of missing entries (they fall back to NEUTRAL). */
     fun parse(output: String, windows: List<TranscriptWindow>): Result? {

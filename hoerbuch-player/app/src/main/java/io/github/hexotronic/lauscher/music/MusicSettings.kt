@@ -49,6 +49,11 @@ data class MusicSettings(
     val language: String = "de",
     val whisperModel: String? = null,
     val llmModel: String? = null,
+    /** The language model sees the listener's corrections as examples for the rest of the book. */
+    val learnFromFeedback: Boolean = true,
+    /** Library pieces the listener likes (preferred) or never wants to hear again. */
+    val likedTracks: Set<String> = emptySet(),
+    val hiddenTracks: Set<String> = emptySet(),
 )
 
 class MusicSettingsStore(context: Context) {
@@ -78,6 +83,9 @@ class MusicSettingsStore(context: Context) {
             .putString("language", next.language)
             .putString("whisperModel", next.whisperModel)
             .putString("llmModel", next.llmModel)
+            .putBoolean("learnFromFeedback", next.learnFromFeedback)
+            .putStringSet("likedTracks", HashSet(next.likedTracks))
+            .putStringSet("hiddenTracks", HashSet(next.hiddenTracks))
             .apply()
     }
 
@@ -101,6 +109,9 @@ class MusicSettingsStore(context: Context) {
             language = prefs.getString("language", d.language) ?: d.language,
             whisperModel = prefs.getString("whisperModel", null),
             llmModel = prefs.getString("llmModel", null),
+            learnFromFeedback = prefs.getBoolean("learnFromFeedback", d.learnFromFeedback),
+            likedTracks = prefs.getStringSet("likedTracks", null)?.toSet().orEmpty(),
+            hiddenTracks = prefs.getStringSet("hiddenTracks", null)?.toSet().orEmpty(),
         )
     }
 }

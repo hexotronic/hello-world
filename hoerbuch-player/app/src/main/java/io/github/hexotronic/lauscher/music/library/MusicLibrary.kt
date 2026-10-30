@@ -221,12 +221,24 @@ class MusicLibrary(
 
     // ------------------------------------------------------------------ RecordingSource
 
+    @Volatile
+    private var avoidNext: String? = null
+
+    /** The next pick avoids [trackId] (the listener asked for another piece). */
+    fun avoidNext(trackId: String) {
+        avoidNext = trackId
+    }
+
     override fun open(mood: Mood, setting: Setting?, intensity: Float, trackId: String?): PcmStream? {
         val track = if (trackId != null) {
             MusicCatalog.byId(trackId)
         } else {
-            if (settings.current.source != MusicSource.LIBRARY) return null
-            picker.pick(installedTracks, mood, setting, intensity)
+            val s = settings.current
+            if (s.source != MusicSource.LIBRARY) return null
+            val pool = if (s.hiddenTracks.isEmpty()) installedTracks else installedTracks.filter { it.id !in s.hiddenTracks }
+            val avoid = avoidNext
+            avoidNext = null
+            picker.pick(pool, mood, setting, intensity, s.likedTracks, avoid)
         } ?: return null
         val files = filesFor(track) ?: return null
         // Quieter scenes get the piece a little softer.

@@ -101,6 +101,22 @@ class MusicLibraryTest {
     }
 
     @Test
+    fun likedPiecesComeMoreOftenAndSkippedOnesWait() {
+        val forest = MusicCatalog.forSetting(Setting.FOREST).filter { Mood.IDYLLIC in it.moods }
+        val favourite = forest.last()
+        fun count(liked: Set<String>): Int {
+            val picker = TrackPicker(seed = 9)
+            return (0 until 60).count { picker.pick(forest, Mood.IDYLLIC, Setting.FOREST, 0.3f, liked)!!.id == favourite.id }
+        }
+        assertTrue(count(setOf(favourite.id)) > count(emptySet()))
+        val picker = TrackPicker(seed = 5)
+        val first = picker.pick(forest, Mood.IDYLLIC, Setting.FOREST, 0.3f)!!
+        repeat(10) { assertNotEquals(first.id, picker.pick(forest, Mood.IDYLLIC, Setting.FOREST, 0.3f, avoid = first.id)!!.id) }
+        // Only one piece left: it still plays rather than nothing.
+        assertEquals(first.id, picker.pick(listOf(first), Mood.IDYLLIC, Setting.FOREST, 0.3f, avoid = first.id)!!.id)
+    }
+
+    @Test
     fun energyFollowsTheScene() {
         val picker = TrackPicker(seed = 11)
         val tense = MusicCatalog.forMood(Mood.TENSE)

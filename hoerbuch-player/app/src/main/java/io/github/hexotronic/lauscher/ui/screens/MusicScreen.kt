@@ -230,11 +230,20 @@ fun MusicScreen(vm: MainViewModel) {
             )
             ModelSection(vm, ModelKind.SPEECH, s.whisperModel, download, changes)
             ModelSection(vm, ModelKind.LANGUAGE, s.llmModel, download, changes)
+
+            SectionHeader("Rückmeldungen und Daten")
+            AnalysisDataSection(vm)
         }
     }
 
     editScene?.let { scene ->
-        SceneEditDialog(scene, onDismiss = { editScene = null }) { mood, level, title, setting ->
+        SceneEditDialog(
+            scene,
+            onDismiss = { editScene = null },
+            onConfirm = { vm.confirmScene(scene); editScene = null },
+            onReanalyze = { vm.deleteScene(scene, reanalyze = true); editScene = null },
+            onDelete = { vm.deleteScene(scene, reanalyze = false); editScene = null },
+        ) { mood, level, title, setting ->
             vm.overrideScene(scene, mood, level, title, setting)
             editScene = null
         }
@@ -369,7 +378,14 @@ private fun AnalysisBlock(vm: MainViewModel, s: MusicSettings, status: AnalysisS
                 RetroButton(onClick = { vm.analyzeBook(fromCurrentPosition = true) }) { Text("Ab hier analysieren") }
                 RetroButton(onClick = { vm.analyzeBook(fromCurrentPosition = false) }, style = RetroButtonStyle.SECONDARY) { Text("Ganzes Buch") }
             }
-            TextButton(onClick = { vm.clearAnalysis() }) { Text("Analyse dieses Buchs löschen") }
+            var clearBook by remember { mutableStateOf(false) }
+            TextButton(onClick = { clearBook = true }) { Text("Analyse dieses Buchs löschen …") }
+            if (clearBook) {
+                ClearAnalysisDialog(allBooks = false, onDismiss = { clearBook = false }) { keep, transcripts ->
+                    vm.clearAnalysis(keepCorrections = keep, transcripts = transcripts)
+                    clearBook = false
+                }
+            }
         }
     }
     SwitchRow(
@@ -524,7 +540,14 @@ private fun ModelRow(
 }
 
 @Composable
-private fun SceneEditDialog(scene: Scene, onDismiss: () -> Unit, onSave: (Mood?, Int, String, Setting?) -> Unit) {
+internal fun SceneEditDialog(
+    scene: Scene,
+    onDismiss: () -> Unit,
+    onConfirm: (() -> Unit)? = null,
+    onReanalyze: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
+    onSave: (Mood?, Int, String, Setting?) -> Unit,
+) {
     var mood by remember { mutableStateOf(scene.mood) }
     var level by remember { mutableStateOf(scene.level) }
     var title by remember { mutableStateOf(scene.title) }
@@ -534,6 +557,14 @@ private fun SceneEditDialog(scene: Scene, onDismiss: () -> Unit, onSave: (Mood?,
         title = { Text("Szene ${formatClock(scene.startMs)} – ${formatClock(scene.endMs)}") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
+                if (onConfirm != null || onReanalyze != null || onDelete != null) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        onConfirm?.let { TextButton(onClick = it) { Text("Passt so") } }
+                        onReanalyze?.let { TextButton(onClick = it) { Text("Neu analysieren") } }
+                        onDelete?.let { TextButton(onClick = it) { Text("Analyse löschen") } }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                }
                 OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Titel") }, singleLine = true)
                 Spacer(Modifier.height(8.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

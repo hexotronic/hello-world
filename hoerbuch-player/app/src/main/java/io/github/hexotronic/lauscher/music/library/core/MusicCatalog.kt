@@ -166,8 +166,19 @@ class TrackPicker(seed: Long = System.nanoTime()) {
     private val recent = HashMap<String, ArrayDeque<String>>()
     private val lastPlayed = ArrayDeque<String>()
 
+    /**
+     * [liked] pieces are preferred a little; [avoid] (e.g. the piece the listener just skipped) is
+     * only taken when nothing else fits.
+     */
     @Synchronized
-    fun pick(installed: Collection<LibraryTrack>, mood: Mood, setting: Setting?, intensity: Float): LibraryTrack? {
+    fun pick(
+        installed: Collection<LibraryTrack>,
+        mood: Mood,
+        setting: Setting?,
+        intensity: Float,
+        liked: Set<String> = emptySet(),
+        avoid: String? = null,
+    ): LibraryTrack? {
         if (installed.isEmpty()) return null
         // Only reasonably fitting pieces: the mood itself or a close one, and mood and place together
         // not too far off. Otherwise the synthesizer is the better choice.
@@ -180,11 +191,13 @@ class TrackPicker(seed: Long = System.nanoTime()) {
         val best = candidates.minBy { t ->
             val energy = abs(t.energy - intensity.coerceIn(0f, 1f)) * 0.8f
             val repeat = when {
+                t.id == avoid -> 20f
                 t.id in blocked -> 10f
                 t.id in lastPlayed -> 0.4f
                 else -> 0f
             }
-            moodCost(t, mood) + placeCost(t, setting) + energy + repeat + nextFloat() * 0.3f
+            val favourite = if (t.id in liked) -LIKED_BONUS else 0f
+            moodCost(t, mood) + placeCost(t, setting) + energy + repeat + favourite + nextFloat() * 0.3f
         }
         history.remove(best.id)
         history.addFirst(best.id)
@@ -204,6 +217,7 @@ class TrackPicker(seed: Long = System.nanoTime()) {
         private const val MAX_MEMORY = 4
         private const val MAX_MOOD_COST = 1.4f
         private const val MAX_FIT = 1.7f
+        private const val LIKED_BONUS = 0.35f
 
         /** 0 for the piece's own mood, growing with the distance between moods. */
         fun moodCost(t: LibraryTrack, mood: Mood): Float {

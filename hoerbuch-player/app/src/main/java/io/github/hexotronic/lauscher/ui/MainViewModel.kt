@@ -4,6 +4,9 @@ import android.app.Application
 import android.content.ComponentName
 import android.net.Uri
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.session.MediaController
@@ -31,6 +34,7 @@ import io.github.hexotronic.lauscher.audio.dsp.EnhancerPreset
 import io.github.hexotronic.lauscher.audio.dsp.EnhancerSettings
 import io.github.hexotronic.lauscher.data.AppSettings
 import io.github.hexotronic.lauscher.data.Book
+import io.github.hexotronic.lauscher.data.LibraryRepository
 import io.github.hexotronic.lauscher.data.LibraryFilter
 import io.github.hexotronic.lauscher.data.LibrarySort
 import io.github.hexotronic.lauscher.playback.AudiobookPlayerCore
@@ -273,6 +277,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             "settings" -> navigate(Screen.Settings)
             "music" -> navigate(Screen.Music)
             "musiclibrary" -> navigate(Screen.MusicLibrary)
+            "feedback" -> {
+                openFeedback = true
+                navigate(Screen.Player)
+            }
             "detail" -> (nowPlaying.value.book ?: lastBook.value)?.let { navigate(Screen.BookDetail(it.id)) }
         }
     }
@@ -388,14 +396,70 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun stopAnalysis() = app.analysis.stop()
 
-    fun clearAnalysis() {
-        val book = nowPlaying.value.book ?: lastBook.value ?: return
+    /** Deletes the analysis of the current book, or of all books when [allBooks] is set. */
+    fun clearAnalysis(allBooks: Boolean = false, keepCorrections: Boolean = false, transcripts: Boolean = true) {
+        val book = nowPlaying.value.book ?: lastBook.value
+        if (!allBooks && book == null) return
         app.analysis.stop()
         viewModelScope.launch {
-            repository.clearAnalysis(book.id)
-            toast("Analyse gelöscht")
+            repository.clearAnalysis(if (allBooks) null else book!!.id, keepCorrections, transcripts)
+            refreshAnalysisStats()
+            toast(if (allBooks) "Alle Analysen gelöscht" else "Analyse dieses Buchs gelöscht")
         }
     }
+
+    // ------------------------------------------------------------------ feedback on scenes and music
+
+    private val _analysisStats = MutableStateFlow<LibraryRepository.AnalysisStats?>(null)
+    val analysisStats: StateFlow<LibraryRepository.AnalysisStats?> = _analysisStats
+
+    fun refreshAnalysisStats() {
+        viewModelScope.launch { _analysisStats.value = repository.analysisStats() }
+    }
+
+    /** "Fits": the scene stays as it is and serves as an example for the rest of the book. */
+    fun confirmScene(scene: Scene) {
+        val book = nowPlaying.value.book ?: return
+        viewModelScope.launch {
+            repository.confirmScene(book.id, scene.startMs, scene.endMs)
+            toast("Danke – die Szene bleibt so")
+        }
+    }
+
+    /** Forgets the analysis of a scene; with [reanalyze] the language model judges it again. */
+    fun deleteScene(scene: Scene, reanalyze: Boolean) {
+        val book = nowPlaying.value.book ?: return
+        viewModelScope.launch {
+            if (app.analysis.isRunning) app.analysis.stop()
+            repository.deleteSceneAnalysis(book.id, scene.startMs, scene.endMs)
+            if (reanalyze) {
+                app.analysis.analyze(book.id, fromMs = scene.startMs, untilMs = scene.endMs)
+                toast("Szene wird neu analysiert")
+            } else {
+                toast("Analyse der Szene gelöscht")
+            }
+        }
+    }
+
+    fun skipMusicTrack() = withCore { it.skipMusicTrack() }
+
+    /** Set by a deep link: the player opens its "Passt die Musik?" sheet. */
+    var openFeedback by mutableStateOf(false)
+
+    fun toggleLikedTrack(id: String) = updateMusic { s ->
+        s.copy(likedTracks = if (id in s.likedTracks) s.likedTracks - id else s.likedTracks + id, hiddenTracks = s.hiddenTracks - id)
+    }
+
+    /** Hidden pieces never play again (until shown again); a playing one is replaced right away. */
+    fun toggleHiddenTrack(id: String) {
+        val hide = id !in app.musicSettings.current.hiddenTracks
+        updateMusic { s ->
+            s.copy(hiddenTracks = if (hide) s.hiddenTracks + id else s.hiddenTracks - id, likedTracks = s.likedTracks - id)
+        }
+        if (hide) toast("Dieses Stück wird nicht mehr gespielt")
+    }
+
+    fun showAllTracks() = updateMusic { it.copy(hiddenTracks = emptySet()) }
 
     fun overrideScene(scene: Scene, mood: Mood?, level: Int, title: String, setting: Setting?) {
         val book = nowPlaying.value.book ?: return

@@ -1,5 +1,6 @@
 package io.github.hexotronic.lauscher
 
+import io.github.hexotronic.lauscher.analysis.core.Correction
 import io.github.hexotronic.lauscher.analysis.core.KeywordMoods
 import io.github.hexotronic.lauscher.analysis.core.MiniJson
 import io.github.hexotronic.lauscher.analysis.core.SceneMerger
@@ -89,6 +90,25 @@ class SceneAnalysisTest {
         val scenes = SceneMerger.merge(moods)
         assertEquals(listOf(Setting.FOREST, Setting.DUNGEON), scenes.map { it.setting })
         assertEquals(180_000, scenes[0].endMs)
+    }
+
+    @Test
+    fun correctionsGuideTheModel() {
+        val all = listOf(
+            10_000L to Correction("Er schlich durch das Verlies", Mood.TENSE, 3, Setting.DUNGEON),
+            500_000L to Correction("Später am Hafen", Mood.CALM, 1, Setting.SEA),
+            90_000L to Correction("Die Wachen schliefen", Mood.MYSTERIOUS, 1, Setting.DUNGEON),
+            200_000L to Correction("Im Thronsaal", null, 1, Setting.CASTLE),
+            150_000L to Correction("Weitere", Mood.SAD, 2, null),
+        )
+        // Nearest earlier corrections first, at most three.
+        val near = ScenePrompt.nearestCorrections(all, 210_000L)
+        assertEquals(listOf("Im Thronsaal", "Weitere", "Die Wachen schliefen"), near.map { it.text })
+        val prompt = ScenePrompt.user("Buch", null, null, windows, corrections = near)
+        assertTrue(prompt.contains("\"Im Thronsaal\" -> mood NONE, place CASTLE, level 1"))
+        assertTrue(prompt.contains("\"Weitere\" -> mood SAD, place OTHER, level 2"))
+        // Without corrections the prompt stays as it was.
+        assertTrue(!ScenePrompt.user("Buch", null, null, windows).contains("corrected"))
     }
 
     @Test

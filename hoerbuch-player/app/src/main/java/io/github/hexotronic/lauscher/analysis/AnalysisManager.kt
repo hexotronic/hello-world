@@ -115,10 +115,14 @@ class AnalysisManager(
             _status.value = AnalysisStatus.Finished(bookId, 0, hasLanguageModel)
             return
         }
-        val whisperFile = models.fileFor(s.whisperModel)
-            ?: error("Kein Spracherkennungsmodell installiert – bitte unter „KI-Modelle“ herunterladen")
-        _status.value = AnalysisStatus.Running(bookId, "Lade Spracherkennung …", 0, todo.size, automatic)
-        val whisper = WhisperNative.load(whisperFile.absolutePath) ?: error("Spracherkennungsmodell konnte nicht geladen werden")
+        _status.value = AnalysisStatus.Running(bookId, "Bereite vor …", 0, todo.size, automatic)
+        // Speech recognition is only loaded when a window has no transcript yet (re-analysis reuses them).
+        var whisper: WhisperNative? = null
+        fun speech(): WhisperNative = whisper ?: run {
+            val file = models.fileFor(s.whisperModel)
+                ?: error("Kein Spracherkennungsmodell installiert – bitte unter „KI-Modelle“ herunterladen")
+            (WhisperNative.load(file.absolutePath) ?: error("Spracherkennungsmodell konnte nicht geladen werden")).also { whisper = it }
+        }
         Log.i(TAG, "Variante: Whisper ${WhisperNative.variant}, LLM ${LlamaNative.variant}, ${LlamaNative.defaultThreads()} Threads, ${s.depth.label}")
         var llm: LlamaNative? = null
         var analysed = 0
@@ -136,7 +140,7 @@ class AnalysisManager(
                     coroutineContext.ensureActive()
                     _status.value = AnalysisStatus.Running(bookId, "Höre zu: ${ScenePrompt.clock(w.first)}", analysed, todo.size, automatic, remaining())
                     val existing = repo.transcriptAt(bookId, w.first)
-                    val text = existing?.text ?: transcribe(whisper, details.tracks, w, s.depth.sampleMs, s.language)
+                    val text = existing?.text ?: transcribe(speech(), details.tracks, w, s.depth.sampleMs, s.language)
                     val window = TranscriptWindow(w.first, w.last + 1, text)
                     if (existing == null) repo.saveTranscript(bookId, window)
                     windows.add(window)
@@ -161,7 +165,7 @@ class AnalysisManager(
             _status.value = AnalysisStatus.Finished(bookId, analysed, llm != null)
             Log.i(TAG, "Analyse fertig: $analysed Abschnitte in ${(System.nanoTime() - started) / 1_000_000} ms")
         } finally {
-            whisper.close()
+            whisper?.close()
             llm?.close()
             currentLlm = null
         }
@@ -186,8 +190,14 @@ class AnalysisManager(
             val story = repo.story(book.id)
             var maxChars = 450
             var prompt: String
+            // The listener's corrections nearest to these windows teach the model their taste.
+            val corrections = if (settings.current.learnFromFeedback) {
+                ScenePrompt.nearestCorrections(repo.corrections(book.id), windows.first().startMs)
+            } else {
+                emptyList()
+            }
             do {
-                prompt = llm.chatPrompt(ScenePrompt.SYSTEM, ScenePrompt.user(book.title, book.author, story, windows, maxChars))
+                prompt = llm.chatPrompt(ScenePrompt.SYSTEM, ScenePrompt.user(book.title, book.author, story, windows, maxChars, corrections))
                 maxChars -= 100
             } while (llm.countTokens(prompt) + maxTokens(windows.size) > llm.contextSize && maxChars > 100)
             // Greedy decoding: deterministic and the fastest path through the JSON grammar.

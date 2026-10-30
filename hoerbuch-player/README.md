@@ -96,6 +96,14 @@ oder **nur für ein bestimmtes Hörbuch** speichern.
 - Die **Musik wird live erzeugt** (Flächen, gezupfte Saiten, Glocken, Herzschlag, Natur-Geräusche, Hall),
   überblendet weich zwischen Szenen und **weicht der Stimme aus** (Ducking), Lautstärke und Übergänge einstellbar.
 - **Stimmungskarte** des ganzen Buchs; jede Szene lässt sich antippen und korrigieren
+- **„Passt die Musik?“** direkt im Player: Szene bestätigen, korrigieren (Stimmung, Ort, Spannung), „hier keine
+  Musik“, neu analysieren oder ihre Analyse löschen; zum laufenden Stück „anderes Stück“, „gefällt mir“
+  (wird bevorzugt) oder „nie mehr spielen“
+- **Die KI lernt aus Rückmeldungen:** korrigierte und bestätigte Szenen bekommt das Sprachmodell als Beispiele,
+  wenn es den Rest des Buchs analysiert (abschaltbar); bestätigte Szenen überschreibt keine neue Analyse
+- **Löschen nach Wahl:** eine Szene, ein Buch oder alle Analysen – jeweils mit oder ohne die eigenen Korrekturen
+  und die Mitschrift; Übersicht über analysierte Bücher, Korrekturen, Lieblings- und ausgeblendete Stücke in den
+  Einstellungen
 - Weitere Modi: **Kapitel-Intros** (ohne KI) oder **feste Atmosphäre** (Regen, Kaminfeuer, Wald, Meer,
   Sommernacht, Sturm – auch kombiniert mit Musik), Gong bei Kapitelwechsel, Hörproben aller Stimmungen
 - **„Was bisher geschah“:** Das lokale Sprachmodell schreibt einen spoilerfreien Rückblick bis zur aktuellen Stelle

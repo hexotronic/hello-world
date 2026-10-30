@@ -58,6 +58,8 @@ start --es music_preview spd/sewers_1 --es screen player
 sleep 32
 start --es music_fixed TENSE@DUNGEON --es screen player
 shot 06e-player-kerker-musik-hell 4
+start --ez music true --es screen feedback
+shot 06f-rueckmeldung-hell 4
 adb logcat -d -s LauscherMusik:* | tail -30 | tee "$OUT/musik.txt"
 if ! grep -q "Dekodiert: wesnoth/sad" "$OUT/musik.txt" || ! grep -q "Fortsetzung: spd/sewers_1, Teil 2" "$OUT/musik.txt"; then
   echo "::error::Die Musikbibliothek wurde nicht geladen oder nicht (in Schleife) abgespielt"

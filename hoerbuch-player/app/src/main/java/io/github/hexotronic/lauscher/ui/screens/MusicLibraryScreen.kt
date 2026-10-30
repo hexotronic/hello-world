@@ -21,6 +21,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -179,6 +183,8 @@ fun MusicLibraryScreen(vm: MainViewModel) {
                         busy = busy,
                         onToggle = { expanded = if (expanded == it) null else it },
                         vm = vm,
+                        liked = s.likedTracks,
+                        hidden = s.hiddenTracks,
                     )
                 }
             } else {
@@ -194,6 +200,8 @@ fun MusicLibraryScreen(vm: MainViewModel) {
                         busy = busy,
                         onToggle = { expanded = if (expanded == it) null else it },
                         vm = vm,
+                        liked = s.likedTracks,
+                        hidden = s.hiddenTracks,
                     )
                 }
             }
@@ -241,6 +249,8 @@ private fun Pack(
     busy: Boolean,
     onToggle: (String) -> Unit,
     vm: MainViewModel,
+    liked: Set<String>,
+    hidden: Set<String>,
 ) {
     val have = tracks.count { it.id in installed }
     val missing = tracks.filter { it.id !in installed }
@@ -283,6 +293,10 @@ private fun Pack(
                     installed = t.id in installed,
                     playing = t.id == playingId,
                     busy = busy,
+                    liked = t.id in liked,
+                    hidden = t.id in hidden,
+                    onLike = { vm.toggleLikedTrack(t.id) },
+                    onHide = { vm.toggleHiddenTrack(t.id) },
                     onDownload = { vm.downloadMusic(listOf(t.id)) },
                     onPreview = { vm.previewTrack(t) },
                     onStop = vm::stopMusicPreview,
@@ -299,6 +313,10 @@ private fun TrackRow(
     installed: Boolean,
     playing: Boolean,
     busy: Boolean,
+    liked: Boolean,
+    hidden: Boolean,
+    onLike: () -> Unit,
+    onHide: () -> Unit,
     onDownload: () -> Unit,
     onPreview: () -> Unit,
     onStop: () -> Unit,
@@ -306,7 +324,11 @@ private fun TrackRow(
 ) {
     Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text(track.title, style = MaterialTheme.typography.titleSmall)
+            Text(
+                track.title,
+                style = MaterialTheme.typography.titleSmall.copy(textDecoration = if (hidden) TextDecoration.LineThrough else null),
+                color = if (hidden) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+            )
             Text(
                 listOfNotNull(track.composer, track.year?.toString(), track.collection.title).joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall,
@@ -322,6 +344,26 @@ private fun TrackRow(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.primary,
             )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onLike, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        if (liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        contentDescription = if (liked) "Kein Lieblingsstück mehr" else "Lieblingsstück",
+                        tint = if (liked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                IconButton(onClick = onHide, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        Icons.Filled.Block,
+                        contentDescription = if (hidden) "Wieder zulassen" else "Nie spielen",
+                        tint = if (hidden) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                if (hidden) Text("ausgeblendet", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+                if (liked) Text("Lieblingsstück", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            }
         }
         when {
             installed && playing -> IconButton(onClick = onStop) { Icon(Icons.Filled.Stop, contentDescription = "Hörprobe stoppen") }

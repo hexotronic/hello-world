@@ -9,6 +9,7 @@ import io.github.hexotronic.lauscher.analysis.core.Scene
 import io.github.hexotronic.lauscher.analysis.core.SceneMerger
 import io.github.hexotronic.lauscher.analysis.core.TranscriptWindow
 import io.github.hexotronic.lauscher.analysis.core.WindowMood
+import io.github.hexotronic.lauscher.analysis.core.Correction
 import io.github.hexotronic.lauscher.music.synth.Mood
 import io.github.hexotronic.lauscher.music.synth.Setting
 import kotlinx.coroutines.Dispatchers
@@ -604,12 +605,68 @@ class LibraryRepository(context: Context) {
         Unit
     }
 
-    suspend fun clearAnalysis(bookId: Long) = io {
-        db.delete("window_moods", "book_id = ?", arrayOf(bookId.toString()))
-        db.delete("transcripts", "book_id = ?", arrayOf(bookId.toString()))
-        db.delete("analysis_state", "book_id = ?", arrayOf(bookId.toString()))
+    /**
+     * Deletes the analysis of a book (or of all books when [bookId] is null). [keepCorrections] keeps
+     * the scenes the listener corrected or confirmed; [transcripts] also removes what was transcribed.
+     */
+    suspend fun clearAnalysis(bookId: Long?, keepCorrections: Boolean = false, transcripts: Boolean = true) = io {
+        val (where, args) = if (bookId == null) "1 = 1" to emptyArray<String>() else "book_id = ?" to arrayOf(bookId.toString())
+        if (keepCorrections) {
+            db.delete("window_moods", "$where AND source != ?", args + SceneMerger.SOURCE_MANUAL)
+        } else {
+            db.delete("window_moods", where, args)
+        }
+        if (transcripts) db.delete("transcripts", where, args)
+        db.delete("analysis_state", where, args)
         Unit
     }.also { notifyChanged() }
+
+    /** Removes the analysis of one scene, so it can be analysed again (or stays without music). */
+    suspend fun deleteSceneAnalysis(bookId: Long, startMs: Long, endMs: Long, transcripts: Boolean = false) = io {
+        val args = arrayOf(bookId.toString(), startMs.toString(), endMs.toString())
+        db.delete("window_moods", "book_id = ? AND start_ms >= ? AND start_ms < ?", args)
+        if (transcripts) db.delete("transcripts", "book_id = ? AND start_ms >= ? AND start_ms < ?", args)
+        Unit
+    }.also { notifyChanged() }
+
+    /** "Fits": keeps a scene as it is, a later analysis will not change it. */
+    suspend fun confirmScene(bookId: Long, startMs: Long, endMs: Long) = io {
+        db.execSQL(
+            "UPDATE window_moods SET source = ? WHERE book_id = ? AND start_ms >= ? AND start_ms < ?",
+            arrayOf<Any?>(SceneMerger.SOURCE_MANUAL, bookId, startMs, endMs),
+        )
+    }.also { notifyChanged() }
+
+    /** The listener's corrections in a book with the transcribed text, keyed by position. */
+    suspend fun corrections(bookId: Long): List<Pair<Long, Correction>> = io {
+        db.rawQuery(
+            "SELECT w.start_ms, w.mood, w.level, w.setting, t.text FROM window_moods w " +
+                "JOIN transcripts t ON t.book_id = w.book_id AND t.start_ms = w.start_ms " +
+                "WHERE w.book_id = ? AND w.source = ? AND t.text != ''",
+            arrayOf(bookId.toString(), SceneMerger.SOURCE_MANUAL),
+        ).use { c ->
+            c.map {
+                c.getLong(0) to Correction(
+                    text = c.getString(4),
+                    mood = Mood.parse(c.getString(1)),
+                    level = c.getInt(2),
+                    setting = Setting.parse(c.getString(3)),
+                )
+            }
+        }
+    }
+
+    data class AnalysisStats(val books: Int, val windows: Int, val corrections: Int, val transcriptChars: Long)
+
+    suspend fun analysisStats(): AnalysisStats = io {
+        fun long(sql: String, vararg args: String) = db.rawQuery(sql, args).use { if (it.moveToFirst()) it.getLong(0) else 0L }
+        AnalysisStats(
+            books = long("SELECT COUNT(DISTINCT book_id) FROM window_moods").toInt(),
+            windows = long("SELECT COUNT(*) FROM window_moods").toInt(),
+            corrections = long("SELECT COUNT(*) FROM window_moods WHERE source = ?", SceneMerger.SOURCE_MANUAL).toInt(),
+            transcriptChars = long("SELECT COALESCE(SUM(LENGTH(text)), 0) FROM transcripts"),
+        )
+    }
 
     // ---------------------------------------------------------------- cursor helpers
 

@@ -185,7 +185,8 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
         scope.launch {
             var source = app.musicSettings.current.source
             app.musicSettings.settings.collect { s ->
-                if (s.source != source) {
+                // Another source, or the playing piece was just hidden: choose again.
+                if (s.source != source || music.currentTrackId in s.hiddenTracks) {
                     source = s.source
                     music.refresh()
                 }
@@ -625,6 +626,12 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
         previewUntil = SystemClock.elapsedRealtime() + seconds * 1000L
         music.setPlaying(true)
         startTicker()
+    }
+
+    /** Plays another library piece for the current scene. */
+    fun skipMusicTrack() {
+        music.currentTrackId?.let { app.musicLibrary.avoidNext(it) }
+        music.refresh()
     }
 
     fun stopPreview() {
