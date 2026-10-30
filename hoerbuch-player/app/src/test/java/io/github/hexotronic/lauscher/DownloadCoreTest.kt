@@ -7,6 +7,7 @@ import io.github.hexotronic.lauscher.download.core.Grouping
 import io.github.hexotronic.lauscher.download.core.Id3
 import io.github.hexotronic.lauscher.download.core.LinkInput
 import io.github.hexotronic.lauscher.download.core.MediaItem
+import io.github.hexotronic.lauscher.download.core.StoragePaths
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -114,5 +115,20 @@ class DownloadCoreTest {
         }
         assertEquals(listOf("TIT2", "TPE1", "TALB", "TRCK", "APIC"), ids)
         assertEquals(tag.size, pos)
+    }
+
+    @Test
+    fun storageFoldersAreComparedAndNamed() {
+        assertTrue(StoragePaths.contains("primary:Audiobooks", "primary:Audiobooks/Lauscher/Grimm - Märchen"))
+        assertTrue(StoragePaths.contains("primary:Audiobooks", "primary:Audiobooks"))
+        assertTrue(StoragePaths.contains("primary:", "primary:Music/x"))
+        assertFalse(StoragePaths.contains("primary:Audio", "primary:Audiobooks/x"))
+        assertFalse(StoragePaths.contains("primary:Audiobooks", "1A2B-3C4D:Audiobooks/x"))
+        assertEquals("Telefonspeicher › Audiobooks › Lauscher", StoragePaths.describe("primary:Audiobooks/Lauscher"))
+        assertEquals("SD-Karte › Music", StoragePaths.describe("1A2B-3C4D:Music"))
+        assertEquals("Telefonspeicher", StoragePaths.describe("primary:"))
+        assertNull(StoragePaths.describe("msf:1234"))
+        assertEquals("primary:Hörbücher/Grimm", StoragePaths.child("primary:Hörbücher", "Grimm"))
+        assertEquals("primary:Grimm", StoragePaths.child("primary:", "Grimm"))
     }
 }

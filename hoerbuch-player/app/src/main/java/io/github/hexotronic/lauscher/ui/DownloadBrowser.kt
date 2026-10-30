@@ -35,7 +35,26 @@ class DownloadBrowser(private val app: LauscherApp, private val scope: Coroutine
 
     var tab by mutableStateOf(Tab.BOOKS)
     val jobs = app.downloads.jobs
-    val location: String get() = app.downloads.location
+    /** Where new downloads are saved, shown on the screen. */
+    var location by mutableStateOf(app.downloads.location)
+        private set
+    var customFolder by mutableStateOf(app.downloads.customFolder)
+        private set
+
+    /** Saves into the folder the listener picked from now on. */
+    fun chooseFolder(tree: Uri) {
+        runCatching { app.downloads.setFolder(tree) }
+            .onSuccess { toast("Downloads landen jetzt in: ${app.downloads.location}") }
+            .onFailure { toast("Dieser Ordner kann nicht verwendet werden: ${it.message}") }
+        location = app.downloads.location
+        customFolder = app.downloads.customFolder
+    }
+
+    fun useDefaultFolder() {
+        app.downloads.setFolder(null)
+        location = app.downloads.location
+        customFolder = false
+    }
 
     // ---------------------------------------------------------------- LibriVox
 

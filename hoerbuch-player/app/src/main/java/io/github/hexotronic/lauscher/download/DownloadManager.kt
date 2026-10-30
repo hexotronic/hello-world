@@ -72,6 +72,8 @@ class DownloadManager(private val context: Context, private val scanner: Library
         var bytes = 0L
         var bytesTotal = -1L
         val meter = TransferMeter()
+        /** Storage id of the current book's folder, once its first file is written. */
+        var folderDocId: String? = null
 
         class Audiobook(val id: String, val limit: Int?) : Work() {
             var book: ArchiveOrg.Book? = null
@@ -108,6 +110,15 @@ class DownloadManager(private val context: Context, private val scanner: Library
 
     /** Where the files end up, for the screen. */
     val location: String get() = store.location
+
+    /** True when the listener picked a folder instead of the default one. */
+    val customFolder: Boolean get() = store.treeUri != null
+
+    /** Saves new downloads into [tree] (from the system's folder picker), or the default folder for null. */
+    fun setFolder(tree: Uri?) {
+        if (tree == null) store.useDefault() else store.useFolder(tree)
+        Log.i(TAG, "Speicherort: ${store.location}")
+    }
 
     fun downloadAudiobook(item: ArchiveOrg.Item, limit: Int? = null): Long =
         enqueue(item.title, "LibriVox" + (item.author?.let { " · $it" } ?: ""), 0, Work.Audiobook(item.id, limit))
@@ -271,6 +282,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
                 Net.download(f.url, temp, progress::report)
                 val name = FileNames.track(i, files.size, chapter, "mp3")
                 val target = store.create(folder, name, "audio/mpeg")
+                w.folderDocId = target.folderDocId ?: w.folderDocId
                 try {
                     target.openStream().use { out -> temp.inputStream().use { it.copyTo(out, 64 * 1024) } }
                     target.finish()
@@ -288,7 +300,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
             }
             w.next = i + 1
         }
-        importBook(jobId, "download:librivox:${book.id}", book.title, book.author, w.saved, w.cover)
+        importBook(jobId, "download:librivox:${book.id}", book.title, book.author, w.saved, w.cover, w.folderDocId)
     }
 
     // ---------------------------------------------------------------- videos, links, local files
@@ -321,7 +333,8 @@ class DownloadManager(private val context: Context, private val scanner: Library
                 w.doneItems++
             }
             val key = "download:" + sha1(book.items.joinToString("\n") { it.url })
-            importBook(jobId, key, book.title, book.author, w.saved, w.cover)
+            importBook(jobId, key, book.title, book.author, w.saved, w.cover, w.folderDocId)
+            w.folderDocId = null
             w.bookIndex++
             w.itemIndex = 0
             w.saved.clear()
@@ -372,6 +385,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
             }
             if (from != null && extension != null) {
                 val target = store.create(folder, FileNames.track(index, count, title, extension), DownloadStore.mimeOf(extension))
+                w.folderDocId = target.folderDocId ?: w.folderDocId
                 try {
                     target.openStream().use { out -> context.contentResolver.openInputStream(from)!!.use { it.copyTo(out, 64 * 1024) } }
                     target.finish()
@@ -386,6 +400,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
             // Codecs that cannot be copied as they are (e.g. AC-3 in a video) become MP3.
         }
         val target = store.create(folder, FileNames.track(index, count, title, "mp3"), "audio/mpeg")
+        w.folderDocId = target.folderDocId ?: w.folderDocId
         try {
             val start = if (w.local) 0f else 0.6f
             val progress = Progress(jobId, w, segmentStart, 0) { _, _ -> 0f }
@@ -472,12 +487,24 @@ class DownloadManager(private val context: Context, private val scanner: Library
 
     // ---------------------------------------------------------------- helpers
 
-    private suspend fun importBook(jobId: Long, key: String, title: String, author: String?, files: List<Pair<Uri, String>>, cover: File?) {
+    private suspend fun importBook(
+        jobId: Long,
+        key: String,
+        title: String,
+        author: String?,
+        files: List<Pair<Uri, String>>,
+        cover: File?,
+        folderDocId: String?,
+    ) {
         if (files.isEmpty()) return
         setJob(jobId) { it.copy(current = "In die Bibliothek …") }
-        val id = scanner.importFiles(key, title, author, files.toList(), cover)
+        // Saved inside a library folder: the key a scan of that folder would give, so the
+        // book is not added a second time.
+        val library = folderDocId?.let { scanner.libraryFolderOf(it) }
+        val bookKey = if (library != null) "dir:$folderDocId" else key
+        val id = scanner.importFiles(bookKey, title, author, files.toList(), cover, library)
         cover?.delete()
-        Log.i(TAG, "Importiert [$key]: $title (${files.size} Dateien) → Buch ${id ?: "–"}")
+        Log.i(TAG, "Importiert [$bookKey]: $title (${files.size} Dateien) → Buch ${id ?: "–"}")
         if (id != null) setJob(jobId) { it.copy(bookIds = it.bookIds + id) }
     }
 

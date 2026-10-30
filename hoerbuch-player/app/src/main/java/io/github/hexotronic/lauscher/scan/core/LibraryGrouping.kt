@@ -60,7 +60,7 @@ data class BookCandidate(
 
 object LibraryGrouping {
     private val AUDIO_EXTENSIONS = setOf(
-        "mp3", "m4a", "m4b", "aac", "ogg", "oga", "opus", "flac", "wav", "mka", "amr", "awb", "3gp", "mp2", "weba",
+        "mp3", "m4a", "m4b", "aac", "ogg", "oga", "opus", "flac", "wav", "mka", "amr", "awb", "3gp", "mp2", "weba", "webm",
     )
     private val IMAGE_EXTENSIONS = setOf("jpg", "jpeg", "png", "webp")
     private val STANDALONE_EXTENSIONS = setOf("m4b")

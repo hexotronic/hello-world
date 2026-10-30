@@ -1,5 +1,6 @@
 package io.github.hexotronic.lauscher.scan
 
+import io.github.hexotronic.lauscher.download.core.StoragePaths
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -86,21 +87,37 @@ class LibraryScanner(private val context: Context, private val repo: LibraryRepo
 
     /**
      * Imports downloaded or converted [files] (in this order) as one book named exactly [title]
-     * by [author], whatever the files' own tags say; [cover] is an optional image file.
+     * by [author], whatever the files' own tags say; [cover] is an optional image file. [rootUri]
+     * is the library folder the files lie in, if any.
      */
-    suspend fun importFiles(key: String, title: String, author: String?, files: List<Pair<Uri, String>>, cover: File?): Long? = mutex.withLock {
+    suspend fun importFiles(
+        key: String,
+        title: String,
+        author: String?,
+        files: List<Pair<Uri, String>>,
+        cover: File?,
+        rootUri: String? = null,
+    ): Long? = mutex.withLock {
         withContext(Dispatchers.IO) {
             val entries = files.map { (uri, name) -> FsEntry(id = uri.toString(), name = name, isDirectory = false) }
             val images = listOfNotNull(
                 cover?.takeIf { it.length() > 0 }?.let { FsEntry(id = Uri.fromFile(it).toString(), name = "cover.jpg", isDirectory = false, size = it.length()) },
             )
             val candidate = BookCandidate(key, title, null, entries, images)
-            runCatching { importBook(candidate, ROOT_DOWNLOADS) { Uri.parse(it.id) } }
+            runCatching { importBook(candidate, rootUri ?: ROOT_DOWNLOADS) { Uri.parse(it.id) } }
                 .onFailure { Log.w(TAG, "Import failed for $title", it) }
                 .getOrNull()
                 ?.also { id -> repo.updateInfo(id, title, author, null) }
         }
     }
+
+    /**
+     * The library folder (its URI) that contains the storage folder [docId], if any – books saved
+     * there get the key a later scan of that folder would give them, so they are not added twice.
+     */
+    suspend fun libraryFolderOf(docId: String): String? = repo.folderList().firstOrNull { folder ->
+        runCatching { StoragePaths.contains(DocumentsContract.getTreeDocumentId(Uri.parse(folder.uri)), docId) }.getOrDefault(false)
+    }?.uri
 
     suspend fun scanAll(force: Boolean) = mutex.withLock {
         withContext(Dispatchers.IO) {

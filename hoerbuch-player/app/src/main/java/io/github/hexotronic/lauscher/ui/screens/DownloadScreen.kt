@@ -78,6 +78,7 @@ fun DownloadScreen(vm: MainViewModel) {
     val d = vm.downloads
     val jobs by d.jobs.collectAsStateWithLifecycle()
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris -> d.convertFiles(uris) }
+    val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri -> if (uri != null) d.chooseFolder(uri) }
 
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
         RetroTopBar(
@@ -95,6 +96,17 @@ fun DownloadScreen(vm: MainViewModel) {
                     DownloadBrowser.Tab.entries.forEach { t ->
                         FilterChip(selected = d.tab == t, onClick = { d.tab = t }, label = { Text(t.label) })
                     }
+                }
+            }
+            item {
+                // Where new downloads go; each book gets its own subfolder there.
+                Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Speichern in", style = MaterialTheme.typography.labelMedium)
+                        Text(d.location, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                    }
+                    TextButton(onClick = { folderPicker.launch(null) }) { Text("Ordner wählen") }
+                    if (d.customFolder) TextButton(onClick = d::useDefaultFolder) { Text("Standard") }
                 }
             }
             if (jobs.isNotEmpty()) {
@@ -140,7 +152,8 @@ fun DownloadScreen(vm: MainViewModel) {
             }
             item {
                 Text(
-                    "Gespeichert in: ${d.location}\n\n" +
+                    "Tipp: Wählst du als Speicherort deinen Hörbuch-Ordner (oder einen Ordner darin), erscheinen " +
+                        "Downloads dort wie alle anderen Bücher – ohne doppelte Einträge in der Bibliothek.\n\n" +
                         "Lade nur herunter, was du darfst: gemeinfreie oder frei lizenzierte Inhalte (z. B. LibriVox, " +
                         "Creative Commons), eigene Aufnahmen oder Inhalte mit Erlaubnis der Rechteinhaber. Manche " +
                         "Plattformen, etwa YouTube, untersagen das Herunterladen in ihren Nutzungsbedingungen.",

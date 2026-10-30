@@ -1,7 +1,5 @@
 package io.github.hexotronic.lauscher
 
-import com.sun.net.httpserver.HttpExchange
-import com.sun.net.httpserver.HttpServer
 import io.github.hexotronic.lauscher.download.core.HttpFetch
 import io.github.hexotronic.lauscher.download.core.TransferEstimate
 import io.github.hexotronic.lauscher.download.core.TransferMeter
@@ -12,67 +10,115 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.io.ByteArrayOutputStream
 import java.io.File
-import java.net.InetSocketAddress
+import java.io.InputStream
+import java.net.InetAddress
+import java.net.ServerSocket
+import java.net.Socket
 import java.util.concurrent.CancellationException
+import kotlin.concurrent.thread
 import kotlin.random.Random
 
 class HttpFetchTest {
     private val data = Random(7).nextBytes(300_000)
-    private lateinit var server: HttpServer
+    private lateinit var server: MiniServer
     private val ranges = ArrayList<String?>()
     private var dropsLeft = 0
     private lateinit var base: String
     private lateinit var dir: File
 
+    /** Just enough HTTP/1.1 for these tests (java.net only, so it also runs in Android unit tests). */
+    private class MiniServer(val handle: (method: String, target: String, headers: Map<String, String>) -> Reply) {
+        class Reply(val code: Int, val headers: Map<String, String> = emptyMap(), val body: ByteArray = ByteArray(0), val sendOnly: Int = body.size)
+
+        val socket = ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"))
+        val port: Int get() = socket.localPort
+
+        init {
+            thread(isDaemon = true) {
+                while (!socket.isClosed) {
+                    val client = runCatching { socket.accept() }.getOrNull() ?: break
+                    thread(isDaemon = true) { client.use { serve(it) } }
+                }
+            }
+        }
+
+        private fun serve(client: Socket) {
+            val input = client.getInputStream()
+            val head = readHead(input) ?: return
+            val lines = head.split("\r\n")
+            val (method, target) = lines[0].split(' ').let { it[0] to it[1] }
+            val headers = lines.drop(1).filter { ':' in it }.associate { it.substringBefore(':').trim().lowercase() to it.substringAfter(':').trim() }
+            headers["content-length"]?.toIntOrNull()?.let { n -> repeat(n) { input.read() } }
+            val reply = handle(method, target, headers)
+            val out = client.getOutputStream()
+            val sb = StringBuilder("HTTP/1.1 ${reply.code} X\r\nConnection: close\r\nContent-Length: ${reply.body.size}\r\n")
+            reply.headers.forEach { (k, v) -> sb.append("$k: $v\r\n") }
+            sb.append("\r\n")
+            out.write(sb.toString().toByteArray())
+            out.write(reply.body, 0, reply.sendOnly)
+            out.flush()
+        }
+
+        private fun readHead(input: InputStream): String? {
+            val buf = ByteArrayOutputStream()
+            var last4 = 0
+            while (true) {
+                val b = input.read()
+                if (b < 0) return null
+                buf.write(b)
+                last4 = (last4 shl 8) or b
+                if (last4 == 0x0D0A0D0A) return buf.toString(Charsets.ISO_8859_1.name()).trimEnd()
+            }
+        }
+
+        fun stop() = socket.close()
+    }
+
     @Before
     fun start() {
-        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        // A normal file server with Range support; "drop" ends the first answers half-way.
-        server.createContext("/file") { ex -> serve(ex, rangeSupport = true) }
-        server.createContext("/norange") { ex -> serve(ex, rangeSupport = false) }
-        // YouTube style: POST with "&range=from-to" in the query.
-        server.createContext("/chunked") { ex ->
-            val q = ex.requestURI.rawQuery.orEmpty()
-            val m = Regex("range=(\\d+)-(\\d+)").find(q)!!
-            val from = m.groupValues[1].toInt()
-            if (from >= data.size) {
-                ex.sendResponseHeaders(416, -1)
-            } else {
-                val to = minOf(m.groupValues[2].toInt(), data.size - 1)
-                ex.requestBody.readBytes()
-                ex.sendResponseHeaders(200, (to - from + 1).toLong())
-                ex.responseBody.use { it.write(data, from, to - from + 1) }
+        server = MiniServer { method, target, headers ->
+            val path = target.substringBefore('?')
+            val query = target.substringAfter('?', "")
+            when (path) {
+                // A normal file server with Range support (or without, for "/norange").
+                "/file", "/norange" -> {
+                    val range = headers["range"]
+                    synchronized(ranges) { ranges += range }
+                    val from = if (path == "/file" && range != null) range.removePrefix("bytes=").substringBefore('-').toInt() else 0
+                    if (from >= data.size) {
+                        MiniServer.Reply(416)
+                    } else {
+                        val body = data.copyOfRange(from, data.size)
+                        val drop = dropsLeft > 0
+                        if (drop) dropsLeft--
+                        val extra = if (from > 0) mapOf("Content-Range" to "bytes $from-${data.size - 1}/${data.size}") else emptyMap()
+                        MiniServer.Reply(if (from > 0) 206 else 200, extra, body, if (drop) body.size / 2 else body.size)
+                    }
+                }
+                // YouTube style: POST with "&range=from-to" in the query.
+                "/chunked" -> {
+                    check(method == "POST")
+                    val m = Regex("range=(\\d+)-(\\d+)").find(query)!!
+                    val from = m.groupValues[1].toInt()
+                    if (from >= data.size) {
+                        MiniServer.Reply(416)
+                    } else {
+                        MiniServer.Reply(200, body = data.copyOfRange(from, minOf(m.groupValues[2].toInt(), data.size - 1) + 1))
+                    }
+                }
+                else -> MiniServer.Reply(404)
             }
-            ex.close()
         }
-        server.start()
-        base = "http://127.0.0.1:${server.address.port}"
+        base = "http://127.0.0.1:${server.port}"
         dir = java.nio.file.Files.createTempDirectory("fetch").toFile()
     }
 
     @After
     fun stop() {
-        server.stop(0)
+        server.stop()
         dir.deleteRecursively()
-    }
-
-    private fun serve(ex: HttpExchange, rangeSupport: Boolean) {
-        val range = ex.requestHeaders.getFirst("Range")
-        synchronized(ranges) { ranges += range }
-        val from = if (rangeSupport && range != null) range.removePrefix("bytes=").substringBefore('-').toInt() else 0
-        when {
-            from >= data.size -> ex.sendResponseHeaders(416, -1)
-            else -> {
-                val length = data.size - from
-                if (from > 0) ex.responseHeaders.add("Content-Range", "bytes $from-${data.size - 1}/${data.size}")
-                ex.sendResponseHeaders(if (from > 0) 206 else 200, length.toLong())
-                val drop = dropsLeft > 0
-                if (drop) dropsLeft--
-                runCatching { ex.responseBody.write(data, from, if (drop) length / 2 else length) }
-            }
-        }
-        ex.close()
     }
 
     private fun fetch(path: String, file: File, cancelAfter: Long = Long.MAX_VALUE): Long {
