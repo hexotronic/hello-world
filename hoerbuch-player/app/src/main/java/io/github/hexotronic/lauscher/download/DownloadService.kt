@@ -78,6 +78,7 @@ class DownloadService : Service() {
             append(job.current ?: "wartet")
         }
         val stats = listOfNotNull(
+            job.phase?.takeIf { it != PHASE_DOWNLOAD },
             job.bytesPerSecond.takeIf { it > 0 }?.let { TransferEstimate.size(it) + "/s" },
             job.remainingMs?.let { "noch ca. ${formatHuman(it)}" },
             (active.size - 1).takeIf { it > 0 }?.let { "+$it weitere" },

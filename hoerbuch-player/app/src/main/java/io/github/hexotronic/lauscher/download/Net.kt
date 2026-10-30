@@ -65,9 +65,9 @@ object Net {
     }.getOrNull()
 
     /**
-     * Downloads a media stream into [file], continuing a partial file from an earlier attempt.
-     * YouTube streams are fetched the way NewPipe's player does (POSTed in ranges, see
-     * [isYoutubeStream]); other servers get a Range request. Reports (bytes in the file, total
+     * Downloads a media stream into [file] over several connections at once, continuing what an
+     * earlier attempt left. YouTube streams are fetched the way NewPipe's player does (POSTed in
+     * ranges, see [isYoutubeStream]); other servers get Range requests. Reports (bytes in the file, total
      * or -1). A pause or cancel of the coroutine stops it and keeps the file.
      */
     suspend fun download(url: String, file: File, onProgress: (Long, Long) -> Unit): Long {
@@ -83,9 +83,9 @@ object Net {
                 headers["Origin"] = "https://www.youtube.com"
                 headers["Referer"] = "https://www.youtube.com"
             }
-            HttpFetch.chunkedToFile(url, file, USER_AGENT, headers, YOUTUBE_CHUNK, cancelled, onProgress)
+            HttpFetch.parallelToFile(url, file, USER_AGENT, cancelled, onProgress, CONNECTIONS, chunked = true, headers = headers, chunk = YOUTUBE_CHUNK)
         } else {
-            HttpFetch.toFile(url, file, USER_AGENT, cancelled, onProgress)
+            HttpFetch.parallelToFile(url, file, USER_AGENT, cancelled, onProgress, CONNECTIONS)
         }
     }
 
@@ -95,6 +95,9 @@ object Net {
     }.getOrDefault(false)
 
     private const val YOUTUBE_CHUNK = 4L * 1024 * 1024
+
+    /** Connections per file: servers (YouTube, archive.org) limit each one, together they are faster. */
+    private const val CONNECTIONS = 4
 }
 
 /** The extractor's HTTP access. */

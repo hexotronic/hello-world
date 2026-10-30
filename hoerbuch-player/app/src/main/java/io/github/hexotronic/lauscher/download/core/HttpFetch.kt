@@ -82,7 +82,7 @@ object HttpFetch {
         isCancelled: () -> Boolean,
         onProgress: (Long, Long) -> Unit,
     ): Long {
-        val total = Regex("[?&]clen=(\\d+)").find(url)?.groupValues?.get(1)?.toLongOrNull() ?: -1
+        val total = clenOf(url)
         var done = file.length()
         var request = 0
         var attempts = 0
@@ -110,6 +110,146 @@ object HttpFetch {
         return done
     }
 
+    /**
+     * Like [toFile] (or [chunkedToFile] with [chunked]), but over [parts] connections at once –
+     * many servers, and YouTube, limit the speed of each connection. Every part goes into its own
+     * file "<file>.N" and continues on its own after a pause; at the end they are joined into
+     * [file]. One connection is used when the size is unknown, the server cannot send pieces, the
+     * file is small, or [file] already holds a single-connection download.
+     */
+    fun parallelToFile(
+        url: String,
+        file: File,
+        userAgent: String,
+        isCancelled: () -> Boolean,
+        onProgress: (Long, Long) -> Unit,
+        parts: Int = 4,
+        chunked: Boolean = false,
+        headers: Map<String, String> = emptyMap(),
+        chunk: Long = 4L shl 20,
+    ): Long {
+        fun single() = if (chunked) chunkedToFile(url, file, userAgent, headers, chunk, isCancelled, onProgress) else toFile(url, file, userAgent, isCancelled, onProgress)
+        var partFiles = partFilesOf(file)
+        if (partFiles.isEmpty() && file.length() > 0) return single()
+        val total = if (chunked) clenOf(url) else sizeByProbe(url, userAgent)
+        if (total <= 0) return single()
+        if (partFiles.isEmpty()) {
+            val n = minOf(parts, ((total + MIN_PART - 1) / MIN_PART).toInt())
+            if (n < 2) return single()
+            partFiles = (0 until n).map { File("${file.path}.$it").apply { createNewFile() } }
+        }
+        val n = partFiles.size
+        val size = (total + n - 1) / n
+        val received = java.util.concurrent.atomic.AtomicLong(partFiles.sumOf { it.length() })
+        val lock = Any()
+        val failure = java.util.concurrent.atomic.AtomicReference<Throwable?>(null)
+        val stop = { isCancelled() || failure.get() != null }
+        val requests = java.util.concurrent.atomic.AtomicInteger(0)
+        val workers = partFiles.mapIndexed { k, part ->
+            val start = k * size
+            val end = minOf(total, start + size) - 1
+            Thread({
+                try {
+                    fetchPart(url, part, start, end, userAgent, chunked, headers, chunk, requests, stop) { bytes ->
+                        val now = received.addAndGet(bytes.toLong())
+                        synchronized(lock) { onProgress(now, total) }
+                    }
+                } catch (t: Throwable) {
+                    failure.compareAndSet(null, t)
+                }
+            }, "download-part-$k").apply { start() }
+        }
+        workers.forEach { it.join() }
+        failure.get()?.let { throw it }
+        // All parts are complete: join them into the file.
+        java.io.FileOutputStream(file).use { out -> partFiles.forEach { p -> p.inputStream().use { it.copyTo(out, 256 * 1024) } } }
+        partFiles.forEach { it.delete() }
+        return file.length()
+    }
+
+    /** Bytes already on disk for [file], including unfinished parts. */
+    fun bytesOnDisk(file: File): Long = file.length() + partFilesOf(file).sumOf { it.length() }
+
+    private fun partFilesOf(file: File): List<File> =
+        generateSequence(0) { it + 1 }.map { File("${file.path}.$it") }.takeWhile { it.exists() }.toList()
+
+    private fun clenOf(url: String): Long = Regex("[?&]clen=(\\d+)").find(url)?.groupValues?.get(1)?.toLongOrNull() ?: -1
+
+    /** Size of the file behind [url] if the server can send pieces of it, otherwise -1. */
+    private fun sizeByProbe(url: String, userAgent: String): Long {
+        val conn = open(url, userAgent, headers = mapOf("Range" to "bytes=0-0"))
+        return try {
+            if (conn.responseCode != HttpURLConnection.HTTP_PARTIAL) return -1
+            conn.inputStream.use { it.readBytes() }
+            conn.getHeaderField("Content-Range")?.substringAfterLast('/')?.trim()?.toLongOrNull() ?: -1
+        } catch (e: IOException) {
+            -1
+        } finally {
+            conn.disconnect()
+        }
+    }
+
+    /** Fetches bytes [start]..[end] into [part] (continuing it), retrying dropped connections. */
+    private fun fetchPart(
+        url: String,
+        part: File,
+        start: Long,
+        end: Long,
+        userAgent: String,
+        chunked: Boolean,
+        headers: Map<String, String>,
+        chunk: Long,
+        requests: java.util.concurrent.atomic.AtomicInteger,
+        stop: () -> Boolean,
+        onBytes: (Int) -> Unit,
+    ) {
+        var attempts = 0
+        while (true) {
+            val from = start + part.length()
+            if (from > end) return
+            if (stop()) throw CancellationException("Download angehalten")
+            val to = if (chunked) minOf(end, from + chunk - 1) else end
+            val conn = if (chunked) {
+                open("$url&range=$from-$to&rn=${requests.getAndIncrement()}", userAgent, "POST", headers, POST_BODY)
+            } else {
+                open(url, userAgent, headers = mapOf("Range" to "bytes=$from-$to"))
+            }
+            try {
+                val code = conn.responseCode
+                if (code >= 400) throw HttpStatus(code)
+                if (!chunked && code != HttpURLConnection.HTTP_PARTIAL) throw IOException("Der Server liefert keine Teilstücke")
+                val before = part.length()
+                FileOutputStream(part, true).use { out ->
+                    conn.inputStream.use { input -> copyLimited(input, out, to - from + 1, stop, onBytes) }
+                }
+                // The answer ended early: ask again for the rest, but not forever.
+                if (part.length() - before < to - from + 1 && ++attempts > 3) throw IOException("Die Verbindung bricht immer wieder ab")
+            } catch (e: HttpStatus) {
+                throw e
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: IOException) {
+                if (++attempts > 3) throw e
+            } finally {
+                conn.disconnect()
+            }
+        }
+    }
+
+    /** Copies at most [limit] bytes (a server may send more than asked for). */
+    private fun copyLimited(input: InputStream, out: FileOutputStream, limit: Long, stop: () -> Boolean, onBytes: (Int) -> Unit) {
+        val buf = ByteArray(64 * 1024)
+        var left = limit
+        while (left > 0) {
+            if (stop()) throw CancellationException("Download angehalten")
+            val n = input.read(buf, 0, minOf(buf.size.toLong(), left).toInt())
+            if (n < 0) return
+            out.write(buf, 0, n)
+            left -= n
+            onBytes(n)
+        }
+    }
+
     private fun pump(input: InputStream, out: FileOutputStream, start: Long, total: Long, isCancelled: () -> Boolean, onProgress: (Long, Long) -> Unit): Long {
         val buf = ByteArray(64 * 1024)
         var done = start
@@ -122,6 +262,9 @@ object HttpFetch {
             onProgress(done, total)
         }
     }
+
+    /** Parts smaller than this are not worth an extra connection. */
+    private const val MIN_PART = 1L shl 20
 
     private val POST_BODY = byteArrayOf(0x78, 0)
 }

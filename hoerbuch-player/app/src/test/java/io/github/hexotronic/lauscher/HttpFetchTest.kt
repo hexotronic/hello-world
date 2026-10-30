@@ -22,6 +22,7 @@ import kotlin.random.Random
 
 class HttpFetchTest {
     private val data = Random(7).nextBytes(300_000)
+    private val big = Random(9).nextBytes(3_000_000)
     private lateinit var server: MiniServer
     private val ranges = ArrayList<String?>()
     private var dropsLeft = 0
@@ -82,30 +83,37 @@ class HttpFetchTest {
             val path = target.substringBefore('?')
             val query = target.substringAfter('?', "")
             when (path) {
-                // A normal file server with Range support (or without, for "/norange").
-                "/file", "/norange" -> {
+                // A normal file server with Range support (or without, for "...norange").
+                "/file", "/norange", "/big", "/bignorange" -> {
+                    val content = if (path.startsWith("/big")) big else data
                     val range = headers["range"]
                     synchronized(ranges) { ranges += range }
-                    val from = if (path == "/file" && range != null) range.removePrefix("bytes=").substringBefore('-').toInt() else 0
-                    if (from >= data.size) {
-                        MiniServer.Reply(416)
+                    if (range == null || path.endsWith("norange")) {
+                        val drop = synchronized(ranges) { (dropsLeft > 0).also { if (it) dropsLeft-- } }
+                        MiniServer.Reply(200, body = content, sendOnly = if (drop) content.size / 2 else content.size)
                     } else {
-                        val body = data.copyOfRange(from, data.size)
-                        val drop = dropsLeft > 0
-                        if (drop) dropsLeft--
-                        val extra = if (from > 0) mapOf("Content-Range" to "bytes $from-${data.size - 1}/${data.size}") else emptyMap()
-                        MiniServer.Reply(if (from > 0) 206 else 200, extra, body, if (drop) body.size / 2 else body.size)
+                        val from = range.removePrefix("bytes=").substringBefore('-').toInt()
+                        val to = range.substringAfter('-').toIntOrNull()?.coerceAtMost(content.size - 1) ?: (content.size - 1)
+                        if (from >= content.size) {
+                            MiniServer.Reply(416)
+                        } else {
+                            val body = content.copyOfRange(from, to + 1)
+                            val drop = synchronized(ranges) { (dropsLeft > 0).also { if (it) dropsLeft-- } }
+                            MiniServer.Reply(206, mapOf("Content-Range" to "bytes $from-$to/${content.size}"), body, if (drop) body.size / 2 else body.size)
+                        }
                     }
                 }
                 // YouTube style: POST with "&range=from-to" in the query.
-                "/chunked" -> {
+                "/chunked", "/bigchunked" -> {
                     check(method == "POST")
+                    val content = if (path == "/bigchunked") big else data
                     val m = Regex("range=(\\d+)-(\\d+)").find(query)!!
                     val from = m.groupValues[1].toInt()
-                    if (from >= data.size) {
+                    synchronized(ranges) { ranges += "range=$from" }
+                    if (from >= content.size) {
                         MiniServer.Reply(416)
                     } else {
-                        MiniServer.Reply(200, body = data.copyOfRange(from, minOf(m.groupValues[2].toInt(), data.size - 1) + 1))
+                        MiniServer.Reply(200, body = content.copyOfRange(from, minOf(m.groupValues[2].toInt(), content.size - 1) + 1))
                     }
                 }
                 else -> MiniServer.Reply(404)
@@ -181,6 +189,69 @@ class HttpFetchTest {
         val other = File(dir, "e.part")
         assertEquals(data.size.toLong(), HttpFetch.chunkedToFile("$base/chunked?x=1", other, "test", emptyMap(), 100_000, { false }) { _, _ -> })
         assertArrayEquals(data, other.readBytes())
+    }
+
+    @Test
+    fun severalConnectionsAtOnceAndResumeEachPart() {
+        val file = File(dir, "p.part")
+        var seen = 0L
+        try {
+            HttpFetch.parallelToFile("$base/big", file, "test", isCancelled = { seen > 1_200_000 }, onProgress = { done, _ -> seen = done })
+            error("should have been paused")
+        } catch (e: CancellationException) {
+            // paused
+        }
+        // Three parts of 1 MB each, partly downloaded.
+        val parts = (0..3).map { File("${file.path}.$it") }.filter { it.exists() }
+        assertEquals(3, parts.size)
+        val onDisk = HttpFetch.bytesOnDisk(file)
+        assertTrue("on disk $onDisk", onDisk in 1_000_000L until big.size.toLong())
+        val pieceRequests = ranges.count { it != null && it != "bytes=0-0" }
+        assertTrue("$pieceRequests piece requests", pieceRequests >= 3)
+
+        var last = 0L
+        assertEquals(big.size.toLong(), HttpFetch.parallelToFile("$base/big", file, "test", { false }, { done, total -> last = done; assertEquals(big.size.toLong(), total) }))
+        assertArrayEquals(big, file.readBytes())
+        assertEquals(big.size.toLong(), last)
+        assertTrue(parts.none { it.exists() })
+    }
+
+    @Test
+    fun partsSurviveDroppedConnections() {
+        dropsLeft = 3
+        val file = File(dir, "q.part")
+        assertEquals(big.size.toLong(), HttpFetch.parallelToFile("$base/big", file, "test", { false }, { _, _ -> }))
+        assertArrayEquals(big, file.readBytes())
+    }
+
+    @Test
+    fun withoutPiecesOneConnectionIsUsed() {
+        val file = File(dir, "r.part")
+        assertEquals(big.size.toLong(), HttpFetch.parallelToFile("$base/bignorange", file, "test", { false }, { _, _ -> }))
+        assertArrayEquals(big, file.readBytes())
+        assertTrue(File("${file.path}.0").exists().not())
+        // Small files: one connection as well.
+        val small = File(dir, "s.part")
+        assertEquals(data.size.toLong(), HttpFetch.parallelToFile("$base/file", small, "test", { false }, { _, _ -> }))
+        assertArrayEquals(data, small.readBytes())
+    }
+
+    @Test
+    fun youtubeStylePiecesInParallel() {
+        val file = File(dir, "y.part")
+        val url = "$base/bigchunked?clen=${big.size}"
+        var seen = 0L
+        try {
+            HttpFetch.parallelToFile(url, file, "test", isCancelled = { seen > 900_000 }, onProgress = { done, _ -> seen = done }, chunked = true, chunk = 256_000)
+            error("should have been paused")
+        } catch (e: CancellationException) {
+            // paused
+        }
+        assertEquals(big.size.toLong(), HttpFetch.parallelToFile(url, file, "test", { false }, { _, _ -> }, chunked = true, chunk = 256_000))
+        assertArrayEquals(big, file.readBytes())
+        // Pieces of all three parts were asked for (they start at 0, 1 MB and 2 MB).
+        val starts = ranges.mapNotNull { it?.removePrefix("range=")?.toLongOrNull() }
+        assertTrue(starts.any { it in 1_000_000L until 1_100_000L } && starts.any { it >= 2_000_000L })
     }
 
     @Test

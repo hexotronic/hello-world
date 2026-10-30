@@ -49,6 +49,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import io.github.hexotronic.lauscher.download.DownloadJob
 import io.github.hexotronic.lauscher.download.JobState
+import io.github.hexotronic.lauscher.download.PHASE_DOWNLOAD
 import io.github.hexotronic.lauscher.download.Source
 import io.github.hexotronic.lauscher.download.core.ArchiveOrg
 import io.github.hexotronic.lauscher.download.core.Grouping
@@ -401,13 +402,14 @@ private fun JobCard(job: DownloadJob, onPause: () -> Unit, onResume: () -> Unit,
             // Network data: how much has arrived, how fast, over which connection.
             val running = job.state == JobState.RUNNING
             val data = listOfNotNull(
+                job.phase?.takeIf { running && it != PHASE_DOWNLOAD }?.replaceFirstChar { it.uppercase() },
                 when {
                     job.bytesTotal > 0 -> "${TransferEstimate.size(job.bytes)} von ${TransferEstimate.size(job.bytesTotal)}"
                     job.bytes > 0 -> "${TransferEstimate.size(job.bytes)} geladen"
                     else -> null
                 },
-                job.bytesPerSecond.takeIf { running && it > 0 }?.let { "${TransferEstimate.size(it)}/s" },
-                job.network?.takeIf { running }?.let { if (it == "offline") "keine Verbindung" else "über $it" },
+                job.bytesPerSecond.takeIf { running && job.phase == PHASE_DOWNLOAD && it > 0 }?.let { "${TransferEstimate.size(it)}/s" },
+                job.network?.takeIf { running && job.phase == PHASE_DOWNLOAD }?.let { if (it == "offline") "keine Verbindung" else "über $it" },
             ).joinToString(" · ")
             if (data.isNotEmpty()) Text(data, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 2.dp))
             if (running) {

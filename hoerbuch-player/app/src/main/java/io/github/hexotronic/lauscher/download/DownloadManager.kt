@@ -8,6 +8,7 @@ import android.os.SystemClock
 import android.util.Log
 import io.github.hexotronic.lauscher.download.core.ArchiveOrg
 import io.github.hexotronic.lauscher.download.core.FileNames
+import io.github.hexotronic.lauscher.download.core.HttpFetch
 import io.github.hexotronic.lauscher.download.core.Id3
 import io.github.hexotronic.lauscher.download.core.LinkInput
 import io.github.hexotronic.lauscher.download.core.MediaItem
@@ -31,6 +32,10 @@ import java.security.MessageDigest
 
 enum class JobState { QUEUED, RUNNING, PAUSED, DONE, FAILED, CANCELLED }
 
+const val PHASE_DOWNLOAD = "lädt herunter"
+const val PHASE_CONVERT = "wandelt in MP3 um"
+const val PHASE_SAVE = "speichert"
+
 /** One entry of the download list: a book from LibriVox, or a batch of videos or files. */
 data class DownloadJob(
     val id: Long,
@@ -53,6 +58,8 @@ data class DownloadJob(
     val remainingMs: Long? = null,
     /** "WLAN", "mobile Daten", … while running. */
     val network: String? = null,
+    /** What happens with the current item: [PHASE_DOWNLOAD], [PHASE_CONVERT], [PHASE_SAVE]. */
+    val phase: String? = null,
 ) {
     val active: Boolean get() = state == JobState.QUEUED || state == JobState.RUNNING
     val finished: Boolean get() = state == JobState.DONE || state == JobState.FAILED || state == JobState.CANCELLED
@@ -274,12 +281,17 @@ class DownloadManager(private val context: Context, private val scanner: Library
             setJob(jobId) { it.copy(done = i, current = chapter, fraction = 0f) }
             val temp = File(tempDir, "$jobId-a$i.mp3")
             try {
-                val progress = Progress(jobId, w, segmentStart, temp.length()) { done, total ->
+                val onDisk = HttpFetch.bytesOnDisk(temp)
+                setJob(jobId) { it.copy(phase = PHASE_DOWNLOAD) }
+                val progress = Progress(jobId, w, segmentStart, onDisk) { done, total ->
                     val all = if (total > 0) total else f.bytes ?: 0L
                     if (all > 0) done.toFloat() / all else 0f
                 }
-                if (temp.length() > 0) Log.i(TAG, "Fortsetzen ab ${TransferEstimate.size(temp.length())}: $chapter")
+                if (onDisk > 0) Log.i(TAG, "Fortsetzen ab ${TransferEstimate.size(onDisk)}: $chapter")
+                val fetchStart = SystemClock.elapsedRealtime()
                 Net.download(f.url, temp, progress::report)
+                logSpeed(chapter, temp.length() - onDisk, fetchStart)
+                setJob(jobId) { it.copy(phase = PHASE_SAVE, bytesPerSecond = 0) }
                 val name = FileNames.track(i, files.size, chapter, "mp3")
                 val target = store.create(folder, name, "audio/mpeg")
                 w.folderDocId = target.folderDocId ?: w.folderDocId
@@ -371,13 +383,18 @@ class DownloadManager(private val context: Context, private val scanner: Library
             Uri.parse(source.url)
         } else {
             val share = if (w.format == OutputFormat.MP3 && !(source.extension == "mp3" && !source.isVideo)) 0.6f else 1f
-            val progress = Progress(jobId, w, segmentStart, temp.length()) { done, total -> if (total > 0) share * done / total else 0f }
-            if (temp.length() > 0) Log.i(TAG, "Fortsetzen ab ${TransferEstimate.size(temp.length())}: ${item.title}")
+            val onDisk = HttpFetch.bytesOnDisk(temp)
+            setJob(jobId) { it.copy(phase = PHASE_DOWNLOAD) }
+            val progress = Progress(jobId, w, segmentStart, onDisk) { done, total -> if (total > 0) share * done / total else 0f }
+            if (onDisk > 0) Log.i(TAG, "Fortsetzen ab ${TransferEstimate.size(onDisk)}: ${item.title}")
+            val fetchStart = SystemClock.elapsedRealtime()
             Net.download(source.url, temp, progress::report)
+            logSpeed(item.title, temp.length() - onDisk, fetchStart)
             Uri.fromFile(temp)
         }
         val isMp3 = source.extension == "mp3" && !source.isVideo
         if (isMp3 || w.format == OutputFormat.ORIGINAL) {
+            setJob(jobId) { it.copy(phase = PHASE_SAVE, bytesPerSecond = 0) }
             val (from, extension) = when {
                 isMp3 -> input to "mp3"
                 else -> AudioConverter.extractAudio(context, input, extracted)?.let { Uri.fromFile(extracted) to it }
@@ -403,6 +420,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
         w.folderDocId = target.folderDocId ?: w.folderDocId
         try {
             val start = if (w.local) 0f else 0.6f
+            setJob(jobId) { it.copy(phase = PHASE_CONVERT, bytesPerSecond = 0) }
             val progress = Progress(jobId, w, segmentStart, 0) { _, _ -> 0f }
             target.openStream().use { out ->
                 out.write(Id3.tag(title, book.author, book.title, index + 1, count, cover))
@@ -459,7 +477,8 @@ class DownloadManager(private val context: Context, private val scanner: Library
                     fraction = f,
                     bytes = w.bytes,
                     bytesTotal = w.bytesTotal,
-                    bytesPerSecond = w.meter.bytesPerSecond.toLong(),
+                    // While converting or saving nothing comes over the network.
+                    bytesPerSecond = if (j.phase == PHASE_DOWNLOAD) w.meter.bytesPerSecond.toLong() else 0,
                     remainingMs = TransferEstimate.remainingMs(w.bytes, w.bytesTotal, w.meter.bytesPerSecond, overall, active),
                     network = net,
                 )
@@ -497,7 +516,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
         folderDocId: String?,
     ) {
         if (files.isEmpty()) return
-        setJob(jobId) { it.copy(current = "In die Bibliothek …") }
+        setJob(jobId) { it.copy(current = "In die Bibliothek …", phase = null, bytesPerSecond = 0) }
         // Saved inside a library folder: the key a scan of that folder would give, so the
         // book is not added a second time.
         val library = folderDocId?.let { scanner.libraryFolderOf(it) }
@@ -506,6 +525,11 @@ class DownloadManager(private val context: Context, private val scanner: Library
         cover?.delete()
         Log.i(TAG, "Importiert [$bookKey]: $title (${files.size} Dateien) → Buch ${id ?: "–"}")
         if (id != null) setJob(jobId) { it.copy(bookIds = it.bookIds + id) }
+    }
+
+    private fun logSpeed(name: String, bytes: Long, since: Long) {
+        val ms = (SystemClock.elapsedRealtime() - since).coerceAtLeast(1)
+        Log.i(TAG, "Geladen: $name – ${TransferEstimate.size(bytes)} in ${ms / 1000.0} s (${TransferEstimate.size(bytes * 1000 / ms)}/s)")
     }
 
     private fun saveCover(jobId: Long, bytes: ByteArray): File =

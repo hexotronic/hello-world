@@ -64,9 +64,12 @@ In der Bibliothek über **＋ → Herunterladen und umwandeln …** (oder in den
 - **Fortschritt mit Netzdaten:** geladene Datenmenge (bei LibriVox „12,4 MB von 48 MB“), Geschwindigkeit,
   Verbindung (WLAN/mobile Daten) und das erwartete Ende („Fertig ca. 14:32 Uhr (noch 6 Min.)“) – in der App und
   in der Benachrichtigung.
+- **Schnell:** jede Datei kommt über 4 Verbindungen gleichzeitig (YouTube und archive.org bremsen jede einzelne
+  Verbindung); kleine Dateien und Server ohne Teilstücke laden über eine. Angezeigt wird auch, was gerade passiert
+  („lädt herunter“, „wandelt in MP3 um“, „speichert“) – am schnellsten ist das Format „Original“ ohne Umwandlung.
 - **Pausieren und fortsetzen** – einzeln, alle auf einmal oder aus der Benachrichtigung. Fertige Kapitel/Videos
   bleiben, die angefangene Datei wird per HTTP-Range (bei YouTube stückweise) an der Stelle fortgesetzt, an der sie
-  stand; abgebrochene Verbindungen werden ebenso fortgesetzt. (Pausierte Aufträge gelten bis zum Beenden der App.)
+  stand – jede der 4 Verbindungen für sich; abgebrochene Verbindungen werden ebenso fortgesetzt. (Pausierte Aufträge gelten bis zum Beenden der App.)
 - Alles landet als Hörbuch in der Bibliothek. **Speicherort wählbar** („Ordner wählen“): standardmäßig
   **Audiobooks/Lauscher/<Autor – Titel>/** (Android 10+, sichtbar für andere Apps), oder ein eigener Ordner – etwa
   auf der SD-Karte oder der Hörbuch-Ordner der Bibliothek. Liegt der Ordner in einem Bibliotheksordner, bekommt
