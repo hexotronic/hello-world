@@ -138,6 +138,8 @@ jobs:
           target: google_apis
           arch: x86_64
           profile: pixel_6
+          # Four cores, so the MP3 pieces are really encoded at the same time.
+          cores: 4
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim -camera-back none
           script: E2E_DIR=e2e bash .github/scripts/emulator-screens.sh "$(ls apk/*.apk | head -1)" screenshots

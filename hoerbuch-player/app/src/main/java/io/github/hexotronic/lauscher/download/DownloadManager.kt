@@ -133,7 +133,9 @@ class DownloadManager(private val context: Context, private val scanner: Library
     private val _jobs = MutableStateFlow<List<DownloadJob>>(emptyList())
     val jobs: StateFlow<List<DownloadJob>> = _jobs.asStateFlow()
     private val work = ConcurrentHashMap<Long, Work>()
-    private val pausing = HashSet<Long>()
+    private val pausing: MutableSet<Long> = ConcurrentHashMap.newKeySet()
+    /** Continued while their pause was still taking effect: they go on as soon as it has. */
+    private val resumeAfterPause: MutableSet<Long> = ConcurrentHashMap.newKeySet()
     private var nextId = 1L
     private var worker: Job? = null
     private var running: Pair<Long, Job>? = null
@@ -175,6 +177,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
 
     fun cancel(id: Long) {
         interrupted -= id
+        resumeAfterPause -= id
         val job = _jobs.value.firstOrNull { it.id == id } ?: return
         when {
             running?.first == id -> running?.second?.cancel()
@@ -188,6 +191,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
     /** Stops a job for now; finished files and the started one are kept. */
     fun pause(id: Long) {
         interrupted -= id
+        resumeAfterPause -= id
         val job = _jobs.value.firstOrNull { it.id == id } ?: return
         when {
             running?.first == id -> {
@@ -200,6 +204,11 @@ class DownloadManager(private val context: Context, private val scanner: Library
 
     fun resume(id: Long) {
         val job = _jobs.value.firstOrNull { it.id == id } ?: return
+        if (job.state == JobState.RUNNING && id in pausing) {
+            // Paused a moment ago, but the pause has not taken effect yet (e.g. a slow server).
+            resumeAfterPause += id
+            return
+        }
         if (job.state != JobState.PAUSED) return
         setJob(id) { it.copy(state = JobState.QUEUED, message = null) }
         Log.i(TAG, "Auftrag $id fortgesetzt")
@@ -279,6 +288,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
                             it.copy(state = JobState.PAUSED, bytesPerSecond = 0, remainingMs = null, working = 0, current = it.current.takeIf { _ -> it.working <= 1 })
                         }
                         Log.i(TAG, "Auftrag ${job.id} pausiert (${TransferEstimate.size(w.bytes)} geladen)")
+                        if (resumeAfterPause.remove(job.id)) resume(job.id)
                     } else {
                         forget(job.id)
                         setJob(job.id) { it.copy(state = JobState.CANCELLED, current = null, working = 0, bytesPerSecond = 0, remainingMs = null) }
