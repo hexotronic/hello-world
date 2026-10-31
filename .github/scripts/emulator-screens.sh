@@ -15,6 +15,11 @@ adb shell svc power stayon true
 adb logcat -c
 
 start() { adb shell am start -W -n "$PKG/.MainActivity" "$@" > /dev/null; }
+# Clears the log; "logcat -c" also empties the crash buffer, so that is kept first.
+clear_log() {
+  adb logcat -d -b crash >> "$OUT/crash.txt" 2>/dev/null || true
+  adb logcat -c
+}
 shot() {
   sleep "$2"
   # A busy emulator sometimes shows "… isn't responding" for the launcher; close such dialogs
@@ -117,7 +122,7 @@ if [ -n "${E2E_DIR:-}" ] && [ -f "$E2E_DIR/story.wav" ]; then
 
   # The same book with its text: the analysis reads instead of listening. Windows of 30 s, so the
   # story has two and a change of music between them is looked for more precisely.
-  adb logcat -c
+  clear_log
   start --es sample_every 0.5 --es book_text_path "$DATA/test/story.txt" --ez analyze true
   echo "Warte auf die Analyse mit Buchtext …"
   for i in $(seq 1 120); do
@@ -143,7 +148,7 @@ if [ -n "${E2E_DIR:-}" ] && [ -f "$E2E_DIR/story.wav" ]; then
   fi
 
   # Speech recognition of the same recording at 1×, 1.25×, 1.5× and 2×: time and words recognised.
-  adb logcat -c
+  clear_log
   start --es speech_check "$DATA/test/story.wav"
   echo "Warte auf den Sprachtest …"
   for i in $(seq 1 60); do
@@ -172,7 +177,7 @@ PY
   # --- Downloads: a video from the phone as MP3, one LibriVox chapter, a PeerTube search result.
   if [ -f "$E2E_DIR/video.mp4" ]; then adb push "$E2E_DIR/video.mp4" "$DATA/test/" > /dev/null; fi
   if [ -f "$E2E_DIR/long.mp4" ]; then adb push "$E2E_DIR/long.mp4" "$DATA/test/" > /dev/null; fi
-  adb logcat -c
+  clear_log
   # Both files in one job: converted at the same time, the long one in pieces on several cores.
   start --es download_convert "$DATA/test/video.mp4,$DATA/test/long.mp4" --es screen downloads
   start --es download_audiobook "Grimm" --es download_limit 1
@@ -217,7 +222,7 @@ PY
   fi
 
   # Pause and continue: two LibriVox chapters, paused after 1.5 s and continued 3 s later.
-  adb logcat -c
+  clear_log
   start --es download_audiobook "Grimm" --es download_limit 2 --es download_pause_test 1500 --es screen downloads
   shot 12b-download-pausiert-hell 2
   for i in $(seq 1 36); do
@@ -237,7 +242,7 @@ PY
   # Closing the app: a LibriVox download is ended hard (force-stop) and must go on when the app is
   # opened again, with the chapter it was in the middle of continued from the partial file.
   adb shell dumpsys media_session > "$OUT/media_session.txt" || true
-  adb logcat -c
+  clear_log
   start --es download_audiobook "Grimm" --es download_limit 3 --es screen downloads
   for i in $(seq 1 30); do
     if adb logcat -d -s LauscherDownload:* | grep -qE "Auftrag [0-9]+: "; then break; fi
@@ -269,7 +274,7 @@ PY
   fi
 
   # YouTube (Big Buck Bunny, CC BY 3.0 Blender Foundation): best effort, YouTube often blocks CI servers.
-  adb logcat -c
+  clear_log
   start --es download_media "https://www.youtube.com/watch?v=aqz-KE-bpKQ" --es download_limit 1
   for i in $(seq 1 48); do
     if adb logcat -d -s LauscherDownload:* | grep -qE "Auftrag [0-9]+ (fertig|fehlgeschlagen)|Automatischer Download fehlgeschlagen"; then break; fi
@@ -282,7 +287,7 @@ PY
 fi
 
 [ -s "$OUT/media_session.txt" ] || adb shell dumpsys media_session > "$OUT/media_session.txt" || true
-adb logcat -d -b crash > "$OUT/crash.txt" || true
+adb logcat -d -b crash >> "$OUT/crash.txt" || true
 adb logcat -d > "$OUT/logcat-full.txt" || true
 grep -E "AndroidRuntime|lauscher|ExoPlayer|AudioTrack|MediaSession|LibraryScanner" "$OUT/logcat-full.txt" | tail -400 > "$OUT/logcat.txt" || true
 

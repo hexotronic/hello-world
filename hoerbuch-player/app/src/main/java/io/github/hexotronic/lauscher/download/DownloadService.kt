@@ -34,6 +34,8 @@ class DownloadService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var watching = false
     private var foreground = false
+    /** The newest start request; stopping with it fails if another start is already on its way. */
+    private var lastStartId = 0
     private lateinit var manager: NotificationManager
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -44,23 +46,26 @@ class DownloadService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             manager.createNotificationChannel(NotificationChannel(CHANNEL, "Downloads", NotificationManager.IMPORTANCE_LOW))
         }
-        foreground = runCatching {
-            ServiceCompat.startForeground(
-                this,
-                NOTIFICATION_ID,
-                running("Downloads", "Wird vorbereitet …", 0f),
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC else 0,
-            )
-        }.isSuccess
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val downloads = (application as LauscherApp).downloads
+        lastStartId = startId
+        // Every start (startForegroundService) must be answered with startForeground – also when
+        // the service still runs, e.g. a job continued right after the last one was paused.
+        foreground = runCatching {
+            ServiceCompat.startForeground(
+                this,
+                NOTIFICATION_ID,
+                notificationFor(downloads.jobs.value) ?: running("Downloads", "Wird vorbereitet …", 0f),
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC else 0,
+            )
+        }.isSuccess
         if (!foreground) {
             // Restarted by Android after the app was ended, but not allowed to run in the background.
             val paused = downloads.jobs.value.count { it.state == JobState.PAUSED }
             if (paused > 0) manager.notify(PAUSED_ID, pausedNote(paused))
-            stopSelf()
+            stopSelf(startId)
             return START_NOT_STICKY
         }
         when {
@@ -76,16 +81,27 @@ class DownloadService : Service() {
         return START_STICKY
     }
 
-    private fun show(jobs: List<DownloadJob>) {
-        val active = jobs.filter { it.active }
-        if (active.isEmpty()) {
+    @Suppress("UNUSED_PARAMETER")
+    private fun show(emitted: List<DownloadJob>) {
+        // The newest state rather than the emitted one: a job may have been continued meanwhile.
+        val jobs = (application as LauscherApp).downloads.jobs.value
+        val notification = notificationFor(jobs)
+        if (notification == null) {
             ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
             val paused = jobs.count { it.state == JobState.PAUSED }
             if (paused > 0) manager.notify(PAUSED_ID, pausedNote(paused)) else manager.cancel(PAUSED_ID)
-            stopSelf()
+            // Does not stop if a new start is already on its way; that one shows the service again.
+            stopSelf(lastStartId)
             return
         }
         manager.cancel(PAUSED_ID)
+        manager.notify(NOTIFICATION_ID, notification)
+    }
+
+    /** The progress notification for [jobs], or null when none is active. */
+    private fun notificationFor(jobs: List<DownloadJob>): Notification? {
+        val active = jobs.filter { it.active }
+        if (active.isEmpty()) return null
         val job = active.firstOrNull { it.state == JobState.RUNNING } ?: active.first()
         val text = buildString {
             if (job.working > 1) {
@@ -102,7 +118,7 @@ class DownloadService : Service() {
             job.remainingMs?.let { "noch ca. ${formatHuman(it)}" },
             (active.size - 1).takeIf { it > 0 }?.let { "+$it weitere" },
         ).joinToString(" · ")
-        manager.notify(NOTIFICATION_ID, running(job.title, if (stats.isEmpty()) text else "$text\n$stats", job.overall))
+        return running(job.title, if (stats.isEmpty()) text else "$text\n$stats", job.overall)
     }
 
     private fun running(title: String, text: String, progress: Float): Notification =
