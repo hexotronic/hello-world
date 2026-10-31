@@ -10,11 +10,13 @@ import io.github.hexotronic.lauscher.download.core.ArchiveOrg
 import io.github.hexotronic.lauscher.download.core.FileNames
 import io.github.hexotronic.lauscher.download.core.HttpFetch
 import io.github.hexotronic.lauscher.download.core.Id3
+import io.github.hexotronic.lauscher.download.core.JobStore
 import io.github.hexotronic.lauscher.download.core.LinkInput
 import io.github.hexotronic.lauscher.download.core.MediaItem
 import io.github.hexotronic.lauscher.download.core.Mp3Quality
 import io.github.hexotronic.lauscher.download.core.OutputFormat
 import io.github.hexotronic.lauscher.download.core.PlannedBook
+import io.github.hexotronic.lauscher.download.core.SavedJob
 import io.github.hexotronic.lauscher.download.core.TransferEstimate
 import io.github.hexotronic.lauscher.download.core.TransferMeter
 import io.github.hexotronic.lauscher.scan.LibraryScanner
@@ -22,6 +24,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,6 +32,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 import java.security.MessageDigest
+import java.util.concurrent.ConcurrentHashMap
 
 enum class JobState { QUEUED, RUNNING, PAUSED, DONE, FAILED, CANCELLED }
 
@@ -70,7 +74,8 @@ data class DownloadJob(
  * Downloads audiobooks and the sound of videos, converts to MP3 if wanted, saves the files
  * (see [DownloadStore]) and adds them to the library as books. One job runs at a time; a job
  * can be paused and continues where it stopped (finished files are kept, the current file is
- * resumed with a Range request).
+ * resumed with a Range request). Jobs are kept on disk ([JobStore]): after the app was closed
+ * they are back, and interrupted ones continue when the app is opened again.
  */
 class DownloadManager(private val context: Context, private val scanner: LibraryScanner, private val scope: CoroutineScope) {
     /** What a job has to do, and how far it got (kept while paused). */
@@ -100,20 +105,27 @@ class DownloadManager(private val context: Context, private val scanner: Library
     }
 
     private val store = DownloadStore(context)
-    private val tempDir = File(context.cacheDir, "downloads").apply {
-        // Partial files of an earlier app session cannot be continued (their jobs are gone).
-        listFiles()?.forEach { it.delete() }
-        mkdirs()
-    }
+    /** Partial files and covers of unfinished jobs; not in the cache, which Android may empty. */
+    private val tempDir = File(context.filesDir, "downloads")
+    private val jobsFile = File(context.filesDir, "download-jobs.json")
     private val _jobs = MutableStateFlow<List<DownloadJob>>(emptyList())
     val jobs: StateFlow<List<DownloadJob>> = _jobs.asStateFlow()
-    private val work = HashMap<Long, Work>()
+    private val work = ConcurrentHashMap<Long, Work>()
     private val pausing = HashSet<Long>()
     private var nextId = 1L
     private var worker: Job? = null
     private var running: Pair<Long, Job>? = null
     private var networkLabel: String? = null
     private var networkCheckedAt = 0L
+    /** Jobs that were running when the app was closed; they continue when it is opened again. */
+    private val interrupted = HashSet<Long>()
+    private var persistJob: Job? = null
+
+    init {
+        File(context.cacheDir, "downloads").deleteRecursively()
+        tempDir.mkdirs()
+        restore()
+    }
 
     /** Where the files end up, for the screen. */
     val location: String get() = store.location
@@ -138,6 +150,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
         enqueue(batchTitle(books), describe(books, format, quality), books.sumOf { it.items.size }, Work.Media(books, format, quality, local = true))
 
     fun cancel(id: Long) {
+        interrupted -= id
         val job = _jobs.value.firstOrNull { it.id == id } ?: return
         when {
             running?.first == id -> running?.second?.cancel()
@@ -150,6 +163,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
 
     /** Stops a job for now; finished files and the started one are kept. */
     fun pause(id: Long) {
+        interrupted -= id
         val job = _jobs.value.firstOrNull { it.id == id } ?: return
         when {
             running?.first == id -> {
@@ -168,16 +182,27 @@ class DownloadManager(private val context: Context, private val scanner: Library
         startWorker()
     }
 
+    /** Continues the jobs the closing of the app interrupted (called when the app is opened). */
+    fun resumeInterrupted() {
+        val ids = interrupted.toList()
+        interrupted.clear()
+        ids.forEach { resume(it) }
+    }
+
     fun pauseAll() = _jobs.value.filter { it.active }.forEach { pause(it.id) }
 
     fun resumeAll() = _jobs.value.filter { it.state == JobState.PAUSED }.forEach { resume(it.id) }
 
-    fun clearFinished() = _jobs.update { list -> list.filterNot { it.finished } }
+    fun clearFinished() {
+        _jobs.update { list -> list.filterNot { it.finished } }
+        persistSoon()
+    }
 
     private fun enqueue(title: String, detail: String, total: Int, w: Work): Long {
         val id = nextId++
         work[id] = w
         _jobs.update { it + DownloadJob(id, title, detail, total) }
+        persist()
         Log.i(TAG, "Auftrag $id: $title ($detail)")
         startWorker()
         return id
@@ -238,6 +263,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
                     setJob(job.id) { it.copy(state = JobState.FAILED, current = null, bytesPerSecond = 0, remainingMs = null, message = DownloadErrors.describe(e)) }
                 } finally {
                     w.activeMs += SystemClock.elapsedRealtime() - segmentStart
+                    persist()
                 }
             }
             running = job.id to task
@@ -260,7 +286,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
             setJob(jobId) { it.copy(current = "Inhaltsverzeichnis …") }
             val b = ArchiveOrg.parseMetadata(w.id, Net.text(ArchiveOrg.metadataUrl(w.id))) ?: error("Dieses Hörbuch hat keine MP3-Dateien")
             w.book = b
-            w.cover = Net.bytes(b.coverUrl)?.let { saveCover(jobId, it) }
+            if (w.cover == null) w.cover = Net.bytes(b.coverUrl)?.let { saveCover(jobId, it) }
             b
         }
         val files = w.limit?.let { book.files.take(it) } ?: book.files
@@ -302,7 +328,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
                     target.discard()
                     throw e
                 }
-                w.saved += target.uri to target.name
+                synchronized(w) { w.saved += target.uri to target.name }
                 temp.delete()
             } catch (e: Throwable) {
                 if (e is CancellationException) throw e
@@ -311,6 +337,8 @@ class DownloadManager(private val context: Context, private val scanner: Library
                 setJob(jobId) { it.copy(failed = it.failed + 1, message = DownloadErrors.describe(e)) }
             }
             w.next = i + 1
+            // Saved at once, so a closed app does not fetch this chapter again.
+            persist()
         }
         importBook(jobId, "download:librivox:${book.id}", book.title, book.author, w.saved, w.cover, w.folderDocId)
     }
@@ -335,23 +363,31 @@ class DownloadManager(private val context: Context, private val scanner: Library
                         w.coverBytes = (source.thumbnail ?: item.thumbnail)?.let { Net.bytes(it) }
                         w.cover = w.coverBytes?.let { saveCover(jobId, it) }
                     }
-                    w.saved += fetchAndSave(jobId, w, book, item, source, i, folder, if (i == 0) w.coverBytes else null, segmentStart)
+                    val cover = if (i == 0) w.coverBytes ?: w.cover?.takeIf { it.exists() }?.readBytes() else null
+                    val file = fetchAndSave(jobId, w, book, item, source, i, folder, cover, segmentStart)
+                    synchronized(w) { w.saved += file }
                 } catch (e: Throwable) {
                     if (e is CancellationException) throw e
                     Log.w(TAG, "„${item.title}“ fehlgeschlagen", e)
                     setJob(jobId) { it.copy(failed = it.failed + 1, message = DownloadErrors.describe(e)) }
                 }
-                w.itemIndex = i + 1
-                w.doneItems++
+                synchronized(w) {
+                    w.itemIndex = i + 1
+                    w.doneItems++
+                }
+                persist()
             }
             val key = "download:" + sha1(book.items.joinToString("\n") { it.url })
             importBook(jobId, key, book.title, book.author, w.saved, w.cover, w.folderDocId)
-            w.folderDocId = null
-            w.bookIndex++
-            w.itemIndex = 0
-            w.saved.clear()
-            w.cover = null
-            w.coverBytes = null
+            synchronized(w) {
+                w.folderDocId = null
+                w.bookIndex++
+                w.itemIndex = 0
+                w.saved.clear()
+                w.cover = null
+                w.coverBytes = null
+            }
+            persist()
         }
     }
 
@@ -545,13 +581,145 @@ class DownloadManager(private val context: Context, private val scanner: Library
         return "$items ${if (items == 1) "Datei" else "Dateien"} · " + if (format == OutputFormat.MP3) "MP3 ${quality.kbps} kbit/s" else "Original"
     }
 
-    private fun setJob(id: Long, change: (DownloadJob) -> DownloadJob) =
+    private fun setJob(id: Long, change: (DownloadJob) -> DownloadJob) {
         _jobs.update { list -> list.map { if (it.id == id) change(it) else it } }
+        persistSoon()
+    }
+
+    // ---------------------------------------------------------------- kept on disk
+
+    /** Brings back the jobs of the last app session; running ones become "interrupted". */
+    private fun restore() {
+        val saved = runCatching { JobStore.decode(jobsFile.readText()) }.getOrDefault(emptyList())
+        val jobs = saved.map { s ->
+            val wasActive = s.state == JobState.RUNNING.name || s.state == JobState.QUEUED.name
+            var state = if (wasActive) JobState.PAUSED else runCatching { JobState.valueOf(s.state) }.getOrDefault(JobState.PAUSED)
+            if (state == JobState.PAUSED) {
+                val w = workOf(s)
+                if (w == null) {
+                    state = JobState.FAILED
+                } else {
+                    work[s.id] = w
+                }
+            }
+            if (wasActive && state == JobState.PAUSED) interrupted += s.id
+            DownloadJob(
+                id = s.id,
+                title = s.title,
+                detail = s.detail,
+                total = s.total,
+                done = s.done,
+                state = state,
+                message = if (wasActive) "Unterbrochen – geht weiter, sobald die App offen ist" else s.message,
+                failed = s.failed,
+                bookIds = s.bookIds,
+                bytes = s.bytes,
+                bytesTotal = s.bytesTotal,
+            )
+        }
+        _jobs.value = jobs
+        nextId = (saved.maxOfOrNull { it.id } ?: 0L) + 1
+        // Partial files of jobs that are gone.
+        tempDir.listFiles()?.filter { f -> work.keys.none { f.name.startsWith("$it-") } }?.forEach { it.deleteRecursively() }
+        if (saved.isNotEmpty()) Log.i(TAG, "Wiederhergestellt: ${saved.size} Aufträge, ${interrupted.size} unterbrochen")
+    }
+
+    private fun workOf(s: SavedJob): Work? {
+        val w = when (s.kind) {
+            KIND_AUDIOBOOK -> Work.Audiobook(s.archiveId ?: return null, s.limit).apply { next = s.next }
+            KIND_MEDIA -> Work.Media(
+                s.books,
+                runCatching { OutputFormat.valueOf(s.format!!) }.getOrNull() ?: return null,
+                runCatching { Mp3Quality.valueOf(s.quality!!) }.getOrNull() ?: return null,
+                s.local,
+            ).apply {
+                bookIndex = s.bookIndex
+                itemIndex = s.itemIndex
+                doneItems = s.doneItems
+            }
+            else -> return null
+        }
+        w.activeMs = s.activeMs
+        w.bytes = s.bytes
+        w.bytesTotal = s.bytesTotal
+        w.folderDocId = s.folderDocId
+        val files = s.saved.map { (uri, name) -> Uri.parse(uri) to name }
+        val cover = s.cover?.let(::File)?.takeIf { it.exists() }
+        when (w) {
+            is Work.Audiobook -> {
+                w.saved += files
+                w.cover = cover
+            }
+            is Work.Media -> {
+                w.saved += files
+                w.cover = cover
+            }
+        }
+        return w
+    }
+
+    private fun savedOf(j: DownloadJob, w: Work?): SavedJob {
+        val base = SavedJob(
+            id = j.id,
+            title = j.title,
+            detail = j.detail,
+            total = j.total,
+            done = j.done,
+            failed = j.failed,
+            state = j.state.name,
+            message = j.message,
+            bookIds = j.bookIds,
+            bytes = j.bytes,
+            bytesTotal = j.bytesTotal,
+            activeMs = w?.activeMs ?: 0,
+            kind = KIND_FINISHED,
+        )
+        return when (w) {
+            null -> base
+            is Work.Audiobook -> synchronized(w) {
+                base.copy(kind = KIND_AUDIOBOOK, archiveId = w.id, limit = w.limit, next = w.next, saved = w.saved.map { it.first.toString() to it.second },
+                    cover = w.cover?.path, folderDocId = w.folderDocId)
+            }
+            is Work.Media -> synchronized(w) {
+                base.copy(kind = KIND_MEDIA, books = w.books, format = w.format.name, quality = w.quality.name, local = w.local,
+                    bookIndex = w.bookIndex, itemIndex = w.itemIndex, doneItems = w.doneItems,
+                    saved = w.saved.map { it.first.toString() to it.second }, cover = w.cover?.path, folderDocId = w.folderDocId)
+            }
+        }
+    }
+
+    /** Writes all jobs to disk now (atomically: a half-written file is never read back). */
+    @Synchronized
+    private fun persist() {
+        val jobs = _jobs.value
+        val finished = jobs.filter { it.finished }.takeLast(MAX_FINISHED_KEPT).map { it.id }.toSet()
+        val list = jobs.filter { !it.finished || it.id in finished }.map { savedOf(it, work[it.id]) }
+        runCatching {
+            val tmp = File(jobsFile.path + ".tmp")
+            tmp.writeText(JobStore.encode(list))
+            tmp.renameTo(jobsFile)
+        }.onFailure { Log.w(TAG, "Aufträge nicht gespeichert", it) }
+    }
+
+    /** Saves a moment later, so frequent progress updates cost one write. */
+    private fun persistSoon() {
+        if (persistJob?.isActive == true) return
+        persistJob = scope.launch(Dispatchers.IO) {
+            delay(1_500)
+            persist()
+        }
+    }
 
     private fun sha1(text: String): String =
         MessageDigest.getInstance("SHA-1").digest(text.toByteArray()).joinToString("") { "%02x".format(it) }.take(16)
 
     private companion object {
         const val TAG = "LauscherDownload"
+        const val KIND_AUDIOBOOK = "audiobook"
+        const val KIND_MEDIA = "media"
+        const val KIND_FINISHED = "finished"
+
+        /** Finished jobs shown again after a restart (until "Erledigte entfernen"). */
+        const val MAX_FINISHED_KEPT = 30
     }
 }

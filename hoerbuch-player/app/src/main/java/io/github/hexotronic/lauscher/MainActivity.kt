@@ -54,6 +54,8 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         vm.connect()
+        // Downloads stopped by the app being closed go on now.
+        (application as LauscherApp).downloads.resumeInterrupted()
     }
 
     override fun onStop() {

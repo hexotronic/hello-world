@@ -6,7 +6,10 @@ import io.github.hexotronic.lauscher.download.core.FileNames
 import io.github.hexotronic.lauscher.download.core.Grouping
 import io.github.hexotronic.lauscher.download.core.Id3
 import io.github.hexotronic.lauscher.download.core.LinkInput
+import io.github.hexotronic.lauscher.download.core.JobStore
 import io.github.hexotronic.lauscher.download.core.MediaItem
+import io.github.hexotronic.lauscher.download.core.PlannedBook
+import io.github.hexotronic.lauscher.download.core.SavedJob
 import io.github.hexotronic.lauscher.download.core.StoragePaths
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -130,5 +133,32 @@ class DownloadCoreTest {
         assertNull(StoragePaths.describe("msf:1234"))
         assertEquals("primary:Hörbücher/Grimm", StoragePaths.child("primary:Hörbücher", "Grimm"))
         assertEquals("primary:Grimm", StoragePaths.child("primary:", "Grimm"))
+    }
+
+    @Test
+    fun jobsSurviveTheAppBeingClosed() {
+        val media = SavedJob(
+            id = 12, title = "Die \"drei\" ???", detail = "3 Dateien · MP3 64 kbit/s", total = 3, done = 1, failed = 0,
+            state = "RUNNING", message = null, bookIds = listOf(4L, 9L), bytes = 5_123_456_789L, bytesTotal = -1, activeMs = 61_000,
+            kind = "media",
+            books = listOf(
+                PlannedBook("Folge 1–3", "Kanal\nZwei", listOf(MediaItem("https://y/1?a=1&b=2", "Tëil 1", "Kanal", 1234, null), MediaItem("u2", "Teil 2"))),
+                PlannedBook("Extra", null, emptyList()),
+            ),
+            format = "MP3", quality = "SPEECH", local = false, bookIndex = 0, itemIndex = 1, doneItems = 1,
+            saved = listOf("content://media/external/audio/media/77" to "01 Tëil 1.mp3"),
+            cover = "/data/files/downloads/12-cover.jpg", folderDocId = "primary:Audiobooks/Lauscher/Kanal - Folge 1–3",
+        )
+        val book = SavedJob(
+            id = 13, title = "Märchen", detail = "LibriVox", total = 12, done = 4, failed = 1, state = "PAUSED",
+            message = "1 von 12 fehlgeschlagen", bookIds = emptyList(), bytes = 40_000_000, bytesTotal = 98_000_000, activeMs = 0,
+            kind = "audiobook", archiveId = "grimm_maerchen_1_librivox", limit = null, next = 4,
+        )
+        val text = JobStore.encode(listOf(media, book))
+        assertEquals(listOf(media, book), JobStore.decode(text))
+        // Broken or foreign files do not crash the app.
+        assertTrue(JobStore.decode("").isEmpty())
+        assertTrue(JobStore.decode("{\"jobs\":[{\"title\":\"ohne id\"}]}").isEmpty())
+        assertTrue(JobStore.decode("nicht json").isEmpty())
     }
 }

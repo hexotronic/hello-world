@@ -69,7 +69,13 @@ In der Bibliothek über **＋ → Herunterladen und umwandeln …** (oder in den
   („lädt herunter“, „wandelt in MP3 um“, „speichert“) – am schnellsten ist das Format „Original“ ohne Umwandlung.
 - **Pausieren und fortsetzen** – einzeln, alle auf einmal oder aus der Benachrichtigung. Fertige Kapitel/Videos
   bleiben, die angefangene Datei wird per HTTP-Range (bei YouTube stückweise) an der Stelle fortgesetzt, an der sie
-  stand – jede der 4 Verbindungen für sich; abgebrochene Verbindungen werden ebenso fortgesetzt. (Pausierte Aufträge gelten bis zum Beenden der App.)
+  stand – jede der 4 Verbindungen für sich; abgebrochene Verbindungen werden ebenso fortgesetzt.
+- **Bleiben über das Schließen der App hinaus:** die Auftragsliste samt Fortschritt liegt auf dem Gerät
+  (`download-jobs.json`, angefangene Dateien in einem Ordner, den Android nicht von selbst leert). Wird die App beendet
+  oder vom System geschlossen, sind die Aufträge beim nächsten Öffnen wieder da und laufen von selbst weiter – fertige
+  Kapitel werden nicht neu geladen, das angefangene geht an seiner Stelle weiter. Beendet Android nur den
+  Hintergrunddienst, startet er neu und lädt weiter (wo Android das nicht erlaubt, bleibt eine Nachricht mit
+  „Fortsetzen“). Pausierte Aufträge bleiben pausiert, erledigte stehen bis „Erledigte entfernen“ in der Liste.
 - Alles landet als Hörbuch in der Bibliothek. **Speicherort wählbar** („Ordner wählen“): standardmäßig
   **Audiobooks/Lauscher/<Autor – Titel>/** (Android 10+, sichtbar für andere Apps), oder ein eigener Ordner – etwa
   auf der SD-Karte oder der Hörbuch-Ordner der Bibliothek. Liegt der Ordner in einem Bibliotheksordner, bekommt

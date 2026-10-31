@@ -213,6 +213,40 @@ PY
     echo "::notice::Der Download war schon fertig, bevor er pausiert werden konnte"
   fi
 
+  # Closing the app: a LibriVox download is ended hard (force-stop) and must go on when the app is
+  # opened again, with the chapter it was in the middle of continued from the partial file.
+  adb shell dumpsys media_session > "$OUT/media_session.txt" || true
+  adb logcat -c
+  start --es download_audiobook "Grimm" --es download_limit 3 --es screen downloads
+  for i in $(seq 1 30); do
+    if adb logcat -d -s LauscherDownload:* | grep -qE "Auftrag [0-9]+: "; then break; fi
+    sleep 1
+  done
+  sleep 4
+  adb shell am force-stop "$PKG"
+  echo "App beendet (force-stop)"
+  sleep 2
+  start --es screen downloads
+  shot 12c-download-nach-neustart-hell 3
+  for i in $(seq 1 48); do
+    if adb logcat -d -s LauscherDownload:* | grep -qE "Auftrag [0-9]+ (fertig|fehlgeschlagen)"; then break; fi
+    sleep 5
+  done
+  adb logcat -d -s LauscherDownload:* > "$OUT/downloads-neustart.txt"
+  tail -20 "$OUT/downloads-neustart.txt"
+  if grep -qE "Wiederhergestellt: .*, [1-9][0-9]* unterbrochen" "$OUT/downloads-neustart.txt"; then
+    if ! grep -q "fortgesetzt" "$OUT/downloads-neustart.txt" || ! grep -qE "fertig: DONE" "$OUT/downloads-neustart.txt"; then
+      echo "::error::Ein durch das Schließen der App unterbrochener Download ging nicht weiter"
+      E2E_FAILED=1
+    fi
+    if ! grep -q "Fortsetzen ab" "$OUT/downloads-neustart.txt"; then
+      echo "::notice::Das angefangene Kapitel wurde nach dem Neustart von vorn geladen"
+    fi
+  else
+    echo "::error::Nach dem Neustart der App fehlte der unterbrochene Download"
+    E2E_FAILED=1
+  fi
+
   # YouTube (Big Buck Bunny, CC BY 3.0 Blender Foundation): best effort, YouTube often blocks CI servers.
   adb logcat -c
   start --es download_media "https://www.youtube.com/watch?v=aqz-KE-bpKQ" --es download_limit 1
@@ -226,7 +260,7 @@ PY
   fi
 fi
 
-adb shell dumpsys media_session > "$OUT/media_session.txt" || true
+[ -s "$OUT/media_session.txt" ] || adb shell dumpsys media_session > "$OUT/media_session.txt" || true
 adb logcat -d -b crash > "$OUT/crash.txt" || true
 adb logcat -d > "$OUT/logcat-full.txt" || true
 grep -E "AndroidRuntime|lauscher|ExoPlayer|AudioTrack|MediaSession|LibraryScanner" "$OUT/logcat-full.txt" | tail -400 > "$OUT/logcat.txt" || true

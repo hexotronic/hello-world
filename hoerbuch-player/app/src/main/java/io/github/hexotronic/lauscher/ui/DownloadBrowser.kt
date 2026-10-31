@@ -1,5 +1,6 @@
 package io.github.hexotronic.lauscher.ui
 
+import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Log
@@ -207,6 +208,8 @@ class DownloadBrowser(private val app: LauscherApp, private val scope: Coroutine
     fun convertFiles(uris: List<Uri>, title: String? = null) {
         if (uris.isEmpty()) return
         val resolver = app.contentResolver
+        // Kept readable after a restart, so an interrupted conversion can go on.
+        uris.forEach { runCatching { resolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION) } }
         val items = uris.map { uri ->
             val name = runCatching {
                 resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->

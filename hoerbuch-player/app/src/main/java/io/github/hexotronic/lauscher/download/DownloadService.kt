@@ -26,11 +26,14 @@ import kotlinx.coroutines.launch
 
 /**
  * Keeps Lauscher running while downloads are in progress and shows how far they are, with
- * "Pausieren"; when everything is paused it stops and leaves a note with "Fortsetzen".
+ * "Pausieren"; when everything is paused it stops and leaves a note with "Fortsetzen". If Android
+ * ends the app in between, the service is started again and the downloads go on (where Android
+ * no longer allows that from the background, the note with "Fortsetzen" stays).
  */
 class DownloadService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var watching = false
+    private var foreground = false
     private lateinit var manager: NotificationManager
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -41,25 +44,36 @@ class DownloadService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             manager.createNotificationChannel(NotificationChannel(CHANNEL, "Downloads", NotificationManager.IMPORTANCE_LOW))
         }
-        ServiceCompat.startForeground(
-            this,
-            NOTIFICATION_ID,
-            running("Downloads", "Wird vorbereitet …", 0f),
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC else 0,
-        )
+        foreground = runCatching {
+            ServiceCompat.startForeground(
+                this,
+                NOTIFICATION_ID,
+                running("Downloads", "Wird vorbereitet …", 0f),
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC else 0,
+            )
+        }.isSuccess
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val downloads = (application as LauscherApp).downloads
-        when (intent?.action) {
-            ACTION_PAUSE -> downloads.pauseAll()
-            ACTION_RESUME -> downloads.resumeAll()
+        if (!foreground) {
+            // Restarted by Android after the app was ended, but not allowed to run in the background.
+            val paused = downloads.jobs.value.count { it.state == JobState.PAUSED }
+            if (paused > 0) manager.notify(PAUSED_ID, pausedNote(paused))
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        when {
+            // No intent: Android started the service again after ending the app.
+            intent == null -> downloads.resumeInterrupted()
+            intent.action == ACTION_PAUSE -> downloads.pauseAll()
+            intent.action == ACTION_RESUME -> downloads.resumeAll()
         }
         if (!watching) {
             watching = true
             scope.launch { downloads.jobs.collect(::show) }
         }
-        return START_NOT_STICKY
+        return START_STICKY
     }
 
     private fun show(jobs: List<DownloadJob>) {
