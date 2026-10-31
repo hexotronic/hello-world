@@ -5,10 +5,11 @@ import io.github.hexotronic.lauscher.download.core.DownloadPlan
 import io.github.hexotronic.lauscher.download.core.FileNames
 import io.github.hexotronic.lauscher.download.core.Grouping
 import io.github.hexotronic.lauscher.download.core.Id3
-import io.github.hexotronic.lauscher.download.core.LinkInput
 import io.github.hexotronic.lauscher.download.core.JobStore
+import io.github.hexotronic.lauscher.download.core.LinkInput
 import io.github.hexotronic.lauscher.download.core.MediaItem
 import io.github.hexotronic.lauscher.download.core.PlannedBook
+import io.github.hexotronic.lauscher.download.core.SavedBook
 import io.github.hexotronic.lauscher.download.core.SavedJob
 import io.github.hexotronic.lauscher.download.core.StoragePaths
 import org.junit.Assert.assertEquals
@@ -145,14 +146,20 @@ class DownloadCoreTest {
                 PlannedBook("Folge 1–3", "Kanal\nZwei", listOf(MediaItem("https://y/1?a=1&b=2", "Tëil 1", "Kanal", 1234, null), MediaItem("u2", "Teil 2"))),
                 PlannedBook("Extra", null, emptyList()),
             ),
-            format = "MP3", quality = "SPEECH", local = false, bookIndex = 0, itemIndex = 1, doneItems = 1,
-            saved = listOf("content://media/external/audio/media/77" to "01 Tëil 1.mp3"),
-            cover = "/data/files/downloads/12-cover.jpg", folderDocId = "primary:Audiobooks/Lauscher/Kanal - Folge 1–3",
+            format = "MP3", quality = "SPEECH", local = false,
+            bookStates = listOf(
+                SavedBook(
+                    done = listOf(1), saved = listOf(Triple(1, "content://media/external/audio/media/77", "02 Teil 2.mp3")),
+                    cover = "/data/files/downloads/12-cover.jpg", folderDocId = "primary:Audiobooks/Lauscher/Kanal - Folge 1–3",
+                ),
+                SavedBook(done = emptyList(), imported = false),
+            ),
         )
         val book = SavedJob(
             id = 13, title = "Märchen", detail = "LibriVox", total = 12, done = 4, failed = 1, state = "PAUSED",
             message = "1 von 12 fehlgeschlagen", bookIds = emptyList(), bytes = 40_000_000, bytesTotal = 98_000_000, activeMs = 0,
             kind = "audiobook", archiveId = "grimm_maerchen_1_librivox", limit = null, next = 4,
+            saved = listOf("content://x/1" to "01 Eins.mp3"), cover = "/data/c.jpg", folderDocId = "primary:A",
         )
         val text = JobStore.encode(listOf(media, book))
         assertEquals(listOf(media, book), JobStore.decode(text))
@@ -160,5 +167,27 @@ class DownloadCoreTest {
         assertTrue(JobStore.decode("").isEmpty())
         assertTrue(JobStore.decode("{\"jobs\":[{\"title\":\"ohne id\"}]}").isEmpty())
         assertTrue(JobStore.decode("nicht json").isEmpty())
+    }
+
+    @Test
+    fun videoJobsOfTheEarlierFormatAreRead() {
+        // Written when the items of a video job ran one after the other.
+        val old = """{"version":1,"jobs":[{"id":3,"title":"Zwei","detail":"","total":4,"done":3,"failed":0,"state":"RUNNING",
+            "message":null,"bookIds":[8],"bytes":10,"bytesTotal":-1,"activeMs":5,"kind":"media","archiveId":null,"limit":null,"next":0,
+            "books":[{"title":"A","author":null,"items":[{"url":"u1","title":"a1","uploader":null,"duration":-1,"thumbnail":null},
+            {"url":"u2","title":"a2","uploader":null,"duration":-1,"thumbnail":null}]},
+            {"title":"B","author":null,"items":[{"url":"u3","title":"b1","uploader":null,"duration":-1,"thumbnail":null},
+            {"url":"u4","title":"b2","uploader":null,"duration":-1,"thumbnail":null}]}],
+            "format":"MP3","quality":"STANDARD","local":false,"bookIndex":1,"itemIndex":1,"doneItems":3,
+            "saved":[["content://s/3","01 b1.mp3"]],"cover":"/c.jpg","folderDocId":"primary:B"}]}"""
+        val job = JobStore.decode(old).single()
+        assertEquals(
+            listOf(
+                SavedBook(done = listOf(0, 1), imported = true),
+                SavedBook(done = listOf(0), saved = listOf(Triple(0, "content://s/3", "01 b1.mp3")), cover = "/c.jpg", folderDocId = "primary:B"),
+            ),
+            job.bookStates,
+        )
+        assertTrue(job.saved.isEmpty() && job.cover == null)
     }
 }

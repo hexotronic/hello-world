@@ -29,13 +29,24 @@ data class SavedJob(
     val format: String? = null,
     val quality: String? = null,
     val local: Boolean = false,
-    val bookIndex: Int = 0,
-    val itemIndex: Int = 0,
-    val doneItems: Int = 0,
-    /** Files of the current book already saved: (uri, name). */
+    /** Videos and files: how far each of [books] got (several items are worked on at once). */
+    val bookStates: List<SavedBook> = emptyList(),
+    /** Audiobook: chapters already saved, (uri, name). */
     val saved: List<Pair<String, String>> = emptyList(),
     val cover: String? = null,
     val folderDocId: String? = null,
+)
+
+/** How far one book of a video or file job got. */
+data class SavedBook(
+    /** Items that are finished (saved or failed). */
+    val done: List<Int> = emptyList(),
+    /** Saved files: (item, uri, name). */
+    val saved: List<Triple<Int, String, String>> = emptyList(),
+    val cover: String? = null,
+    val folderDocId: String? = null,
+    /** Already added to the library. */
+    val imported: Boolean = false,
 )
 
 object JobStore {
@@ -83,9 +94,21 @@ object JobStore {
             field("format", j.format)
             field("quality", j.quality)
             field("local", j.local)
-            field("bookIndex", j.bookIndex)
-            field("itemIndex", j.itemIndex)
-            field("doneItems", j.doneItems)
+            append("\"bookStates\":[")
+            j.bookStates.forEachIndexed { b, state ->
+                if (b > 0) append(',')
+                append("{\"done\":[").append(state.done.joinToString(",")).append("],\"saved\":[")
+                state.saved.forEachIndexed { k, (item, uri, name) ->
+                    if (k > 0) append(',')
+                    append('[').append(item).append(',').append(quote(uri)).append(',').append(quote(name)).append(']')
+                }
+                append("],")
+                field("cover", state.cover)
+                field("folderDocId", state.folderDocId)
+                field("imported", state.imported, last = true)
+                append('}')
+            }
+            append("],")
             append("\"saved\":[")
             j.saved.forEachIndexed { k, (uri, name) ->
                 if (k > 0) append(',')
@@ -105,24 +128,8 @@ object JobStore {
         return (root["jobs"] as? List<*>).orEmpty().mapNotNull { e -> runCatching { job(e as Map<*, *>) }.getOrNull() }
     }
 
-    private fun job(m: Map<*, *>): SavedJob = SavedJob(
-        id = long(m["id"]) ?: error("no id"),
-        title = m["title"] as? String ?: "",
-        detail = m["detail"] as? String ?: "",
-        total = long(m["total"])?.toInt() ?: 0,
-        done = long(m["done"])?.toInt() ?: 0,
-        failed = long(m["failed"])?.toInt() ?: 0,
-        state = m["state"] as? String ?: "PAUSED",
-        message = m["message"] as? String,
-        bookIds = (m["bookIds"] as? List<*>).orEmpty().mapNotNull { long(it) },
-        bytes = long(m["bytes"]) ?: 0,
-        bytesTotal = long(m["bytesTotal"]) ?: -1,
-        activeMs = long(m["activeMs"]) ?: 0,
-        kind = m["kind"] as? String ?: error("no kind"),
-        archiveId = m["archiveId"] as? String,
-        limit = long(m["limit"])?.toInt(),
-        next = long(m["next"])?.toInt() ?: 0,
-        books = (m["books"] as? List<*>).orEmpty().mapNotNull { b ->
+    private fun job(m: Map<*, *>): SavedJob {
+        val books = (m["books"] as? List<*>).orEmpty().mapNotNull { b ->
             val bm = b as? Map<*, *> ?: return@mapNotNull null
             PlannedBook(
                 title = bm["title"] as? String ?: "",
@@ -138,21 +145,81 @@ object JobStore {
                     )
                 },
             )
-        },
-        format = m["format"] as? String,
-        quality = m["quality"] as? String,
-        local = m["local"] as? Boolean ?: false,
-        bookIndex = long(m["bookIndex"])?.toInt() ?: 0,
-        itemIndex = long(m["itemIndex"])?.toInt() ?: 0,
-        doneItems = long(m["doneItems"])?.toInt() ?: 0,
-        saved = (m["saved"] as? List<*>).orEmpty().mapNotNull { p ->
-            val pair = p as? List<*> ?: return@mapNotNull null
-            val uri = pair.getOrNull(0) as? String ?: return@mapNotNull null
-            uri to (pair.getOrNull(1) as? String ?: "")
-        },
-        cover = m["cover"] as? String,
-        folderDocId = m["folderDocId"] as? String,
-    )
+        }
+        val saved = pairs(m["saved"])
+        val states = (m["bookStates"] as? List<*>)?.mapNotNull { e ->
+            val sm = e as? Map<*, *> ?: return@mapNotNull null
+            SavedBook(
+                done = (sm["done"] as? List<*>).orEmpty().mapNotNull { long(it)?.toInt() },
+                saved = (sm["saved"] as? List<*>).orEmpty().mapNotNull { p ->
+                    val t = p as? List<*> ?: return@mapNotNull null
+                    Triple(long(t.getOrNull(0))?.toInt() ?: return@mapNotNull null, t.getOrNull(1) as? String ?: return@mapNotNull null, t.getOrNull(2) as? String ?: "")
+                },
+                cover = sm["cover"] as? String,
+                folderDocId = sm["folderDocId"] as? String,
+                imported = sm["imported"] as? Boolean ?: false,
+            )
+        } ?: oldBookStates(m, books, saved)
+        return SavedJob(
+            id = long(m["id"]) ?: error("no id"),
+            title = m["title"] as? String ?: "",
+            detail = m["detail"] as? String ?: "",
+            total = long(m["total"])?.toInt() ?: 0,
+            done = long(m["done"])?.toInt() ?: 0,
+            failed = long(m["failed"])?.toInt() ?: 0,
+            state = m["state"] as? String ?: "PAUSED",
+            message = m["message"] as? String,
+            bookIds = (m["bookIds"] as? List<*>).orEmpty().mapNotNull { long(it) },
+            bytes = long(m["bytes"]) ?: 0,
+            bytesTotal = long(m["bytesTotal"]) ?: -1,
+            activeMs = long(m["activeMs"]) ?: 0,
+            kind = m["kind"] as? String ?: error("no kind"),
+            archiveId = m["archiveId"] as? String,
+            limit = long(m["limit"])?.toInt(),
+            next = long(m["next"])?.toInt() ?: 0,
+            books = books,
+            format = m["format"] as? String,
+            quality = m["quality"] as? String,
+            local = m["local"] as? Boolean ?: false,
+            bookStates = states,
+            saved = if (m["kind"] == "media") emptyList() else saved,
+            // Videos keep these per book (see [oldBookStates] for jobs written before).
+            cover = (m["cover"] as? String).takeIf { m["kind"] != "media" },
+            folderDocId = (m["folderDocId"] as? String).takeIf { m["kind"] != "media" },
+        )
+    }
+
+    private fun pairs(v: Any?): List<Pair<String, String>> = (v as? List<*>).orEmpty().mapNotNull { p ->
+        val pair = p as? List<*> ?: return@mapNotNull null
+        val uri = pair.getOrNull(0) as? String ?: return@mapNotNull null
+        uri to (pair.getOrNull(1) as? String ?: "")
+    }
+
+    /**
+     * Video jobs written before items ran in parallel: one book at a time ("bookIndex"), its
+     * first "itemIndex" items finished and their files in "saved".
+     */
+    private fun oldBookStates(m: Map<*, *>, books: List<PlannedBook>, saved: List<Pair<String, String>>): List<SavedBook> {
+        if (m["kind"] != "media") return emptyList()
+        val bookIndex = long(m["bookIndex"])?.toInt() ?: 0
+        val itemIndex = long(m["itemIndex"])?.toInt() ?: 0
+        return books.mapIndexed { b, book ->
+            when {
+                b < bookIndex -> SavedBook(done = book.items.indices.toList(), imported = true)
+                b > bookIndex -> SavedBook()
+                else -> {
+                    val done = (0 until minOf(itemIndex, book.items.size)).toList()
+                    // Failed items left no file; the files keep their order, which is what counts.
+                    SavedBook(
+                        done = done,
+                        saved = saved.mapIndexed { k, (uri, name) -> Triple(done.getOrElse(k) { k }, uri, name) },
+                        cover = m["cover"] as? String,
+                        folderDocId = m["folderDocId"] as? String,
+                    )
+                }
+            }
+        }
+    }
 
     private fun long(v: Any?): Long? = (v as? Number)?.toLong()
 

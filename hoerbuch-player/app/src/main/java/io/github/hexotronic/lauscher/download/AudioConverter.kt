@@ -7,18 +7,41 @@ import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMuxer
 import android.net.Uri
+import io.github.hexotronic.lauscher.download.core.EncodedPiece
+import io.github.hexotronic.lauscher.download.core.Mp3Joiner
+import io.github.hexotronic.lauscher.download.core.Mp3Pieces
 import io.github.hexotronic.lauscher.download.core.Mp3Quality
+import io.github.hexotronic.lauscher.download.core.PcmPiece
+import io.github.hexotronic.lauscher.download.core.PcmPieces
 import io.github.hexotronic.lauscher.mp3.Mp3Encoder
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import java.io.OutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-/** Turns the sound of any audio or video file the phone can decode into MP3, or copies it unchanged. */
+/** What a conversion to MP3 did, for the log. */
+data class Mp3Result(val durationMs: Long, val pieces: Int, val roughJoints: Int)
+
+/**
+ * Turns the sound of any audio or video file the phone can decode into MP3, or copies it unchanged.
+ * Long recordings are encoded in pieces on several cores at once (see [Mp3Pieces]); [encoders]
+ * is shared by all conversions, so two files converted at the same time split the cores.
+ */
 object AudioConverter {
+    /** Encoders running at the same time: all cores but one, at most four. */
+    val threads = (Runtime.getRuntime().availableProcessors() - 1).coerceIn(1, 4)
+    private val encoders = Semaphore(threads)
+
     /** MIME type of the first audio track, or null if there is none. */
     fun audioMime(context: Context, source: Uri): String? {
         val extractor = MediaExtractor()
@@ -33,10 +56,16 @@ object AudioConverter {
     }
 
     /** Decodes the first audio track of [source] and writes it as MP3 frames to [out]. */
-    suspend fun toMp3(context: Context, source: Uri, out: OutputStream, quality: Mp3Quality, onProgress: (Float) -> Unit) {
+    suspend fun toMp3(context: Context, source: Uri, out: OutputStream, quality: Mp3Quality, onProgress: (Float) -> Unit): Mp3Result = coroutineScope {
         val extractor = MediaExtractor()
         var codec: MediaCodec? = null
         var encoder: Mp3Encoder? = null
+        // Pieces mode (MPEG-1 sample rates): decoded sound is cut into pieces that are encoded in parallel.
+        var pieces: PcmPieces? = null
+        val running = ArrayDeque<Deferred<EncodedPiece>>()
+        val joiner = Mp3Joiner(out)
+        var pieceCount = 0
+        var lastFrame = 0L
         try {
             extractor.setDataSource(context, source, null)
             val track = audioTrack(extractor) ?: throw IOException("Die Datei hat keine Tonspur")
@@ -53,6 +82,20 @@ object AudioConverter {
             val info = MediaCodec.BufferInfo()
             var inputDone = false
             var pcm = ShortArray(0)
+            val totalSeconds = durationUs / 1e6
+            // Writes finished pieces in order; waits for the oldest while too many are running.
+            suspend fun drain(keep: Int) {
+                while (running.size > keep) {
+                    val done = running.removeFirst().await()
+                    joiner.add(done)
+                    if (totalSeconds > 0) onProgress((done.nominalStart * Mp3Pieces.SAMPLES_PER_FRAME / (rate * totalSeconds)).toFloat().coerceIn(0f, 1f))
+                }
+            }
+            suspend fun submit(piece: PcmPiece, pieceChannels: Int, pieceRate: Int) {
+                drain(threads)
+                pieceCount++
+                running += async(Dispatchers.Default) { encoders.withPermit { encodePiece(piece, pieceRate, pieceChannels, quality) } }
+            }
             while (true) {
                 currentCoroutineContext().ensureActive()
                 if (!inputDone) {
@@ -87,19 +130,36 @@ object AudioConverter {
                     val outChannels = minOf(channels, 2)
                     if (pcm.size < frames * outChannels) pcm = ShortArray(frames * outChannels)
                     readFrames(buf, floatPcm, channels, frames, outChannels, pcm)
-                    val enc = encoder ?: (
-                        Mp3Encoder.create(rate, outChannels, quality.kbps, quality.mono)
-                            ?: throw IOException("MP3-Umwandlung bei $rate Hz nicht möglich")
-                        ).also { encoder = it }
-                    out.write(enc.encode(pcm, frames))
+                    lastFrame += frames
+                    if (pieces == null && encoder == null && Mp3Pieces.supports(rate)) pieces = PcmPieces(outChannels)
+                    val collector = pieces
+                    if (collector != null) {
+                        for (piece in collector.add(pcm, frames)) submit(piece, outChannels, rate)
+                    } else {
+                        val enc = encoder ?: (
+                            Mp3Encoder.create(rate, outChannels, quality.kbps, quality.mono)
+                                ?: throw IOException("MP3-Umwandlung bei $rate Hz nicht möglich")
+                            ).also { encoder = it }
+                        out.write(enc.encode(pcm, frames))
+                    }
                 }
-                if (durationUs > 0) onProgress((info.presentationTimeUs.toFloat() / durationUs).coerceIn(0f, 1f))
+                if (durationUs > 0 && pieces == null) onProgress((info.presentationTimeUs.toFloat() / durationUs).coerceIn(0f, 1f))
                 decoder.releaseOutputBuffer(outIndex, false)
                 if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) break
             }
-            val enc = encoder ?: throw IOException("Die Tonspur ist leer")
-            out.write(enc.flush())
+            val collector = pieces
+            if (collector != null) {
+                collector.finish()?.let { submit(it, minOf(channels, 2), rate) }
+                drain(0)
+                joiner.finish()
+            } else {
+                val enc = encoder ?: throw IOException("Die Tonspur ist leer")
+                out.write(enc.flush())
+            }
+            onProgress(1f)
+            Mp3Result(lastFrame * 1000 / rate, maxOf(pieceCount, 1), joiner.roughJoints)
         } finally {
+            running.forEach { it.cancel() }
             codec?.let {
                 runCatching { it.stop() }
                 runCatching { it.release() }
@@ -108,6 +168,30 @@ object AudioConverter {
             extractor.release()
         }
     }
+
+    /** Encodes one piece with an encoder of its own (at the input rate, so pieces share the frame grid). */
+    private suspend fun encodePiece(piece: PcmPiece, rate: Int, channels: Int, quality: Mp3Quality): EncodedPiece {
+        val enc = Mp3Encoder.create(rate, channels, quality.kbps, quality.mono, outRate = rate)
+            ?: throw IOException("MP3-Umwandlung bei $rate Hz nicht möglich")
+        try {
+            val out = ByteArrayOutputStream((piece.frames.toLong() * quality.kbps * 125 / rate).toInt() + 8192)
+            val block = ShortArray(BLOCK_FRAMES * channels)
+            var pos = 0
+            while (pos < piece.frames) {
+                currentCoroutineContext().ensureActive()
+                val n = minOf(BLOCK_FRAMES, piece.frames - pos)
+                System.arraycopy(piece.samples, pos * channels, block, 0, n * channels)
+                out.write(enc.encode(block, n))
+                pos += n
+            }
+            out.write(enc.flush())
+            return EncodedPiece(piece.index, piece.firstFrame, piece.nominalStart, out.toByteArray())
+        } finally {
+            enc.close()
+        }
+    }
+
+    private const val BLOCK_FRAMES = 48_000
 
     /**
      * Copies the audio track of [source] into [target] without re-encoding (AAC → MP4/M4A,

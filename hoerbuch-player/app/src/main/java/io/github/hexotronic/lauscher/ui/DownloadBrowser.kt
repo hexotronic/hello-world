@@ -262,9 +262,12 @@ class DownloadBrowser(private val app: LauscherApp, private val scope: Coroutine
                         app.downloads.downloadMedia(DownloadPlan.books(items, Grouping.ONE_BOOK, listing.title), format, Mp3Quality.SPEECH)
                     }
                     "convert" -> {
-                        val file = java.io.File(value)
-                        val book = PlannedBook(file.name.substringBeforeLast('.'), null, listOf(MediaItem(Uri.fromFile(file).toString(), file.name)))
-                        app.downloads.convertFiles(listOf(book), format, Mp3Quality.SPEECH)
+                        // Several paths (comma-separated) become one job with a book for each file.
+                        val books = value.split(',').map { path ->
+                            val file = java.io.File(path.trim())
+                            PlannedBook(file.name.substringBeforeLast('.'), null, listOf(MediaItem(Uri.fromFile(file).toString(), file.name)))
+                        }
+                        app.downloads.convertFiles(books, format, Mp3Quality.SPEECH)
                     }
                 }
             }.onFailure { Log.w(TAG, "Automatischer Download fehlgeschlagen: ${it.message}", it) }

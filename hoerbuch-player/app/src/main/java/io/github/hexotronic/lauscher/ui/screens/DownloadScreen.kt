@@ -390,14 +390,26 @@ private fun JobCard(job: DownloadJob, onPause: () -> Unit, onResume: () -> Unit,
         if (job.active || paused) {
             Spacer(Modifier.height(8.dp))
             RetroProgress(job.overall, Modifier.fillMaxWidth())
-            job.current?.let {
+            if (job.working > 1) {
+                // Several items at once: one line each, with what happens to it.
                 Text(
-                    (if (job.total > 1) "${minOf(job.done + 1, job.total)} von ${job.total}: " else "") + it,
+                    "${job.done} von ${job.total} fertig · ${job.working} gleichzeitig",
                     style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = 4.dp),
                 )
+                job.current.orEmpty().lines().forEach { line ->
+                    Text("▸ $line", style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            } else {
+                job.current?.let {
+                    Text(
+                        (if (job.total > 1) "${minOf(job.done + 1, job.total)} von ${job.total}: " else "") + it,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
             }
             // Network data: how much has arrived, how fast, over which connection.
             val running = job.state == JobState.RUNNING

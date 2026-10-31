@@ -16,22 +16,30 @@ import io.github.hexotronic.lauscher.download.core.MediaItem
 import io.github.hexotronic.lauscher.download.core.Mp3Quality
 import io.github.hexotronic.lauscher.download.core.OutputFormat
 import io.github.hexotronic.lauscher.download.core.PlannedBook
+import io.github.hexotronic.lauscher.download.core.SavedBook
 import io.github.hexotronic.lauscher.download.core.SavedJob
 import io.github.hexotronic.lauscher.download.core.TransferEstimate
 import io.github.hexotronic.lauscher.download.core.TransferMeter
 import io.github.hexotronic.lauscher.scan.LibraryScanner
+import io.github.hexotronic.lauscher.ui.formatClock
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import java.io.File
 import java.security.MessageDigest
+import java.util.Locale
+import java.util.TreeMap
+import java.util.TreeSet
 import java.util.concurrent.ConcurrentHashMap
 
 enum class JobState { QUEUED, RUNNING, PAUSED, DONE, FAILED, CANCELLED }
@@ -39,6 +47,7 @@ enum class JobState { QUEUED, RUNNING, PAUSED, DONE, FAILED, CANCELLED }
 const val PHASE_DOWNLOAD = "lädt herunter"
 const val PHASE_CONVERT = "wandelt in MP3 um"
 const val PHASE_SAVE = "speichert"
+const val PHASE_WAIT = "wartet"
 
 /** One entry of the download list: a book from LibriVox, or a batch of videos or files. */
 data class DownloadJob(
@@ -64,6 +73,8 @@ data class DownloadJob(
     val network: String? = null,
     /** What happens with the current item: [PHASE_DOWNLOAD], [PHASE_CONVERT], [PHASE_SAVE]. */
     val phase: String? = null,
+    /** Items worked on at the same time; with more than one, [current] has a line for each. */
+    val working: Int = 0,
 ) {
     val active: Boolean get() = state == JobState.QUEUED || state == JobState.RUNNING
     val finished: Boolean get() = state == JobState.DONE || state == JobState.FAILED || state == JobState.CANCELLED
@@ -84,7 +95,8 @@ class DownloadManager(private val context: Context, private val scanner: Library
         var bytes = 0L
         var bytesTotal = -1L
         val meter = TransferMeter()
-        /** Storage id of the current book's folder, once its first file is written. */
+        var lastPublish = 0L
+        /** Storage id of the book's folder, once its first file is written (LibriVox). */
         var folderDocId: String? = null
 
         class Audiobook(val id: String, val limit: Int?) : Work() {
@@ -95,13 +107,23 @@ class DownloadManager(private val context: Context, private val scanner: Library
         }
 
         class Media(val books: List<PlannedBook>, val format: OutputFormat, val quality: Mp3Quality, val local: Boolean) : Work() {
-            var bookIndex = 0
-            var itemIndex = 0
-            var doneItems = 0
-            var cover: File? = null
-            var coverBytes: ByteArray? = null
-            val saved = ArrayList<Pair<Uri, String>>()
+            /** How far each book got; changed while holding this object's lock. */
+            val state = books.map { BookState() }
+            /** Items being worked on now (book to item). */
+            val active = ConcurrentHashMap<Pair<Int, Int>, ItemStatus>()
+            val doneItems: Int get() = state.sumOf { it.done.size }
         }
+    }
+
+    /** One book of a video job: finished items, their files (in item order), cover and folder. */
+    private class BookState {
+        val done = TreeSet<Int>()
+        val saved = TreeMap<Int, Pair<Uri, String>>()
+        var cover: File? = null
+        var coverBytes: ByteArray? = null
+        var folderDocId: String? = null
+        var imported = false
+        var importing = false
     }
 
     private val store = DownloadStore(context)
@@ -120,6 +142,8 @@ class DownloadManager(private val context: Context, private val scanner: Library
     /** Jobs that were running when the app was closed; they continue when it is opened again. */
     private val interrupted = HashSet<Long>()
     private var persistJob: Job? = null
+    /** Downloads running at the same time (each over several connections). */
+    private val downloads = Semaphore(DOWNLOADS_AT_ONCE)
 
     init {
         File(context.cacheDir, "downloads").deleteRecursively()
@@ -236,6 +260,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
                             state = if (ok) JobState.DONE else JobState.FAILED,
                             done = j.total,
                             current = null,
+                            working = 0,
                             fraction = 0f,
                             bytesPerSecond = 0,
                             remainingMs = null,
@@ -250,17 +275,19 @@ class DownloadManager(private val context: Context, private val scanner: Library
                     Log.i(TAG, "Auftrag ${job.id} fertig: ${_jobs.value.firstOrNull { it.id == job.id }?.let { "${it.state}, Bücher ${it.bookIds}, Fehler ${it.failed}" }}")
                 } catch (e: CancellationException) {
                     if (pausing.remove(job.id)) {
-                        setJob(job.id) { it.copy(state = JobState.PAUSED, bytesPerSecond = 0, remainingMs = null) }
+                        setJob(job.id) {
+                            it.copy(state = JobState.PAUSED, bytesPerSecond = 0, remainingMs = null, working = 0, current = it.current.takeIf { _ -> it.working <= 1 })
+                        }
                         Log.i(TAG, "Auftrag ${job.id} pausiert (${TransferEstimate.size(w.bytes)} geladen)")
                     } else {
                         forget(job.id)
-                        setJob(job.id) { it.copy(state = JobState.CANCELLED, current = null, bytesPerSecond = 0, remainingMs = null) }
+                        setJob(job.id) { it.copy(state = JobState.CANCELLED, current = null, working = 0, bytesPerSecond = 0, remainingMs = null) }
                     }
                     throw e
                 } catch (e: Throwable) {
                     Log.w(TAG, "Auftrag ${job.id} fehlgeschlagen", e)
                     forget(job.id)
-                    setJob(job.id) { it.copy(state = JobState.FAILED, current = null, bytesPerSecond = 0, remainingMs = null, message = DownloadErrors.describe(e)) }
+                    setJob(job.id) { it.copy(state = JobState.FAILED, current = null, working = 0, bytesPerSecond = 0, remainingMs = null, message = DownloadErrors.describe(e)) }
                 } finally {
                     w.activeMs += SystemClock.elapsedRealtime() - segmentStart
                     persist()
@@ -345,50 +372,92 @@ class DownloadManager(private val context: Context, private val scanner: Library
 
     // ---------------------------------------------------------------- videos, links, local files
 
-    private suspend fun runMedia(jobId: Long, w: Work.Media, segmentStart: Long) {
-        while (w.bookIndex < w.books.size) {
-            val book = w.books[w.bookIndex]
-            val folder = folderName(book.title, book.author)
-            while (w.itemIndex < book.items.size) {
-                val i = w.itemIndex
-                val item = book.items[i]
-                setJob(jobId) { it.copy(done = w.doneItems, current = item.title, fraction = 0f) }
-                try {
-                    val source = if (w.local) {
-                        localSource(item)
-                    } else {
-                        MediaSources.audioOf(item.url, compatible = w.format == OutputFormat.ORIGINAL)
-                    }
-                    if (w.cover == null && !w.local) {
-                        w.coverBytes = (source.thumbnail ?: item.thumbnail)?.let { Net.bytes(it) }
-                        w.cover = w.coverBytes?.let { saveCover(jobId, it) }
-                    }
-                    val cover = if (i == 0) w.coverBytes ?: w.cover?.takeIf { it.exists() }?.readBytes() else null
-                    val file = fetchAndSave(jobId, w, book, item, source, i, folder, cover, segmentStart)
-                    synchronized(w) { w.saved += file }
-                } catch (e: Throwable) {
-                    if (e is CancellationException) throw e
-                    Log.w(TAG, "„${item.title}“ fehlgeschlagen", e)
-                    setJob(jobId) { it.copy(failed = it.failed + 1, message = DownloadErrors.describe(e)) }
-                }
-                synchronized(w) {
-                    w.itemIndex = i + 1
-                    w.doneItems++
-                }
-                persist()
+    /**
+     * Works on several items at once ([ITEMS_AT_ONCE], files on the phone [LOCAL_AT_ONCE]), also
+     * across books: while one item is converted the next one downloads. At most
+     * [DOWNLOADS_AT_ONCE] downloads run at the same time, and all conversions share the encoders
+     * of [AudioConverter]. A book goes into the library as soon as all its items are finished.
+     */
+    private suspend fun runMedia(jobId: Long, w: Work.Media, segmentStart: Long) = coroutineScope {
+        val todo = ArrayDeque<Pair<Int, Int>>()
+        synchronized(w) {
+            w.books.forEachIndexed { b, book ->
+                val state = w.state[b]
+                if (!state.imported) book.items.indices.filter { it !in state.done }.forEach { todo += b to it }
             }
-            val key = "download:" + sha1(book.items.joinToString("\n") { it.url })
-            importBook(jobId, key, book.title, book.author, w.saved, w.cover, w.folderDocId)
-            synchronized(w) {
-                w.folderDocId = null
-                w.bookIndex++
-                w.itemIndex = 0
-                w.saved.clear()
-                w.cover = null
-                w.coverBytes = null
-            }
-            persist()
         }
+        // Books that were finished before an interruption but are not in the library yet.
+        w.books.indices.forEach { importIfComplete(jobId, w, it) }
+        repeat(minOf(if (w.local) LOCAL_AT_ONCE else ITEMS_AT_ONCE, todo.size)) {
+            launch {
+                while (true) {
+                    val (b, i) = synchronized(todo) { todo.removeFirstOrNull() } ?: break
+                    runItem(jobId, w, b, i, segmentStart)
+                    importIfComplete(jobId, w, b)
+                }
+            }
+        }
+    }
+
+    private suspend fun runItem(jobId: Long, w: Work.Media, b: Int, i: Int, segmentStart: Long) {
+        val book = w.books[b]
+        val item = book.items[i]
+        val state = w.state[b]
+        val status = ItemStatus(item.title)
+        w.active[b to i] = status
+        publish(jobId, w, segmentStart, force = true)
+        try {
+            val source = if (w.local) {
+                localSource(item)
+            } else {
+                MediaSources.audioOf(item.url, compatible = w.format == OutputFormat.ORIGINAL)
+            }
+            if (!w.local && synchronized(w) { state.cover == null }) {
+                val bytes = (source.thumbnail ?: item.thumbnail)?.let { Net.bytes(it) }
+                val file = bytes?.let { saveCover(jobId, it) }
+                synchronized(w) {
+                    if (state.cover == null) {
+                        state.cover = file
+                        state.coverBytes = bytes
+                    } else {
+                        file?.delete()
+                    }
+                }
+            }
+            val cover = if (i == 0) synchronized(w) { state.coverBytes ?: state.cover?.takeIf { it.exists() }?.readBytes() } else null
+            val file = fetchAndSave(jobId, w, b, book, item, source, i, cover, segmentStart, status)
+            synchronized(w) { state.saved[i] = file }
+        } catch (e: Throwable) {
+            if (e is CancellationException) throw e
+            Log.w(TAG, "„${item.title}“ fehlgeschlagen", e)
+            setJob(jobId) { it.copy(failed = it.failed + 1, message = DownloadErrors.describe(e)) }
+        } finally {
+            w.active.remove(b to i)
+        }
+        synchronized(w) { state.done += i }
+        publish(jobId, w, segmentStart, force = true)
+        // Saved at once, so a closed app does not do this item again.
+        persist()
+    }
+
+    /** Adds book [b] to the library once all its items are finished (and only once). */
+    private suspend fun importIfComplete(jobId: Long, w: Work.Media, b: Int) {
+        val book = w.books[b]
+        val state = w.state[b]
+        val files = synchronized(w) {
+            if (state.imported || state.importing || state.done.size < book.items.size) return
+            state.importing = true
+            state.saved.values.toList()
+        }
+        val key = "download:" + sha1(book.items.joinToString("\n") { it.url })
+        importBook(jobId, key, book.title, book.author, files, state.cover, state.folderDocId)
+        synchronized(w) {
+            state.imported = true
+            state.importing = false
+            state.cover = null
+            state.coverBytes = null
+        }
+        persist()
     }
 
     private fun localSource(item: MediaItem): AudioSource {
@@ -402,35 +471,45 @@ class DownloadManager(private val context: Context, private val scanner: Library
     private suspend fun fetchAndSave(
         jobId: Long,
         w: Work.Media,
+        b: Int,
         book: PlannedBook,
         item: MediaItem,
         source: AudioSource,
         index: Int,
-        folder: String,
         cover: ByteArray?,
         segmentStart: Long,
+        status: ItemStatus,
     ): Pair<Uri, String> {
+        val state = w.state[b]
+        val folder = folderName(book.title, book.author)
         val title = if (w.local) item.title.substringBeforeLast('.') else item.title
         val count = book.items.size
+        fun phase(p: String) {
+            status.phase = p
+            publish(jobId, w, segmentStart, force = true)
+        }
         // Same name on every attempt, so a paused download continues.
-        val temp = File(tempDir, "$jobId-${w.bookIndex}-$index.${source.extension.ifEmpty { "bin" }}")
-        val extracted = File(tempDir, "$jobId-${w.bookIndex}-$index-audio")
+        val temp = File(tempDir, "$jobId-$b-$index.${source.extension.ifEmpty { "bin" }}")
+        val extracted = File(tempDir, "$jobId-$b-$index-audio")
         val input: Uri = if (w.local) {
             Uri.parse(source.url)
         } else {
             val share = if (w.format == OutputFormat.MP3 && !(source.extension == "mp3" && !source.isVideo)) 0.6f else 1f
-            val onDisk = HttpFetch.bytesOnDisk(temp)
-            setJob(jobId) { it.copy(phase = PHASE_DOWNLOAD) }
-            val progress = Progress(jobId, w, segmentStart, onDisk) { done, total -> if (total > 0) share * done / total else 0f }
-            if (onDisk > 0) Log.i(TAG, "Fortsetzen ab ${TransferEstimate.size(onDisk)}: ${item.title}")
-            val fetchStart = SystemClock.elapsedRealtime()
-            Net.download(source.url, temp, progress::report)
-            logSpeed(item.title, temp.length() - onDisk, fetchStart)
+            phase(PHASE_WAIT)
+            downloads.withPermit {
+                val onDisk = HttpFetch.bytesOnDisk(temp)
+                phase(PHASE_DOWNLOAD)
+                val progress = Progress(jobId, w, segmentStart, onDisk, status) { done, total -> if (total > 0) share * done / total else 0f }
+                if (onDisk > 0) Log.i(TAG, "Fortsetzen ab ${TransferEstimate.size(onDisk)}: ${item.title}")
+                val fetchStart = SystemClock.elapsedRealtime()
+                Net.download(source.url, temp, progress::report)
+                logSpeed(item.title, temp.length() - onDisk, fetchStart)
+            }
             Uri.fromFile(temp)
         }
         val isMp3 = source.extension == "mp3" && !source.isVideo
         if (isMp3 || w.format == OutputFormat.ORIGINAL) {
-            setJob(jobId) { it.copy(phase = PHASE_SAVE, bytesPerSecond = 0) }
+            phase(PHASE_SAVE)
             val (from, extension) = when {
                 isMp3 -> input to "mp3"
                 else -> AudioConverter.extractAudio(context, input, extracted)?.let { Uri.fromFile(extracted) to it }
@@ -438,7 +517,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
             }
             if (from != null && extension != null) {
                 val target = store.create(folder, FileNames.track(index, count, title, extension), DownloadStore.mimeOf(extension))
-                w.folderDocId = target.folderDocId ?: w.folderDocId
+                synchronized(w) { state.folderDocId = target.folderDocId ?: state.folderDocId }
                 try {
                     target.openStream().use { out -> context.contentResolver.openInputStream(from)!!.use { it.copyTo(out, 64 * 1024) } }
                     target.finish()
@@ -453,16 +532,18 @@ class DownloadManager(private val context: Context, private val scanner: Library
             // Codecs that cannot be copied as they are (e.g. AC-3 in a video) become MP3.
         }
         val target = store.create(folder, FileNames.track(index, count, title, "mp3"), "audio/mpeg")
-        w.folderDocId = target.folderDocId ?: w.folderDocId
-        try {
+        synchronized(w) { state.folderDocId = target.folderDocId ?: state.folderDocId }
+        val started = SystemClock.elapsedRealtime()
+        val result = try {
             val start = if (w.local) 0f else 0.6f
-            setJob(jobId) { it.copy(phase = PHASE_CONVERT, bytesPerSecond = 0) }
-            val progress = Progress(jobId, w, segmentStart, 0) { _, _ -> 0f }
-            target.openStream().use { out ->
+            phase(PHASE_CONVERT)
+            val progress = Progress(jobId, w, segmentStart, 0, status) { _, _ -> 0f }
+            val r = target.openStream().use { out ->
                 out.write(Id3.tag(title, book.author, book.title, index + 1, count, cover))
                 AudioConverter.toMp3(context, input, out, w.quality) { f -> progress.fraction(start + (1 - start) * f) }
             }
             target.finish()
+            r
         } catch (e: Throwable) {
             target.discard()
             // A pause keeps the downloaded file; converting starts again on resume.
@@ -472,53 +553,98 @@ class DownloadManager(private val context: Context, private val scanner: Library
         }
         temp.delete()
         extracted.delete()
-        Log.i(TAG, "Umgewandelt: ${target.name}")
+        val seconds = (SystemClock.elapsedRealtime() - started) / 1000.0
+        Log.i(
+            TAG,
+            "Umgewandelt: ${target.name} – ${formatClock(result.durationMs)} in ${"%.1f".format(Locale.ROOT, seconds)} s" +
+                (if (result.pieces > 1) " (${result.pieces} Teile, ${AudioConverter.threads} gleichzeitig, ${result.roughJoints} unsaubere Nähte)" else ""),
+        )
         return target.uri to target.name
     }
 
     // ---------------------------------------------------------------- progress, speed, network
 
+    /** One item of a video job while it is worked on. */
+    private class ItemStatus(val title: String) {
+        @Volatile var phase: String = PHASE_WAIT
+        /** Share of the item that is done (download and conversion together). */
+        @Volatile var fraction = 0f
+    }
+
     /**
      * Turns the byte counts of one file into the job's numbers: data received, speed, share of
-     * the current item ([share] of (bytes, total)) and the expected remaining time.
+     * the item ([share] of (bytes, total)) and the expected remaining time.
      */
     private inner class Progress(
         private val jobId: Long,
         private val w: Work,
         private val segmentStart: Long,
         startBytes: Long,
+        private val status: ItemStatus? = null,
         private val share: (Long, Long) -> Float,
     ) {
         private var last = startBytes
-        private var lastReport = 0L
 
         fun report(done: Long, total: Long) {
-            w.bytes += (done - last).coerceAtLeast(0)
+            synchronized(w) { w.bytes += (done - last).coerceAtLeast(0) }
             last = done
-            publish(share(done, total))
+            fraction(share(done, total))
         }
 
-        fun fraction(f: Float) = publish(f)
+        fun fraction(f: Float) {
+            status?.fraction = f
+            publish(jobId, w, segmentStart, f)
+        }
+    }
 
-        private fun publish(f: Float) {
-            val now = SystemClock.elapsedRealtime()
-            if (now - lastReport < 250) return
-            lastReport = now
-            w.meter.add(now, w.bytes)
-            val active = w.activeMs + (now - segmentStart)
-            val net = network(now)
-            setJob(jobId) { j ->
-                val overall = if (j.total <= 0) 0f else ((j.done + f) / j.total).coerceIn(0f, 1f)
-                j.copy(
-                    fraction = f,
-                    bytes = w.bytes,
-                    bytesTotal = w.bytesTotal,
-                    // While converting or saving nothing comes over the network.
-                    bytesPerSecond = if (j.phase == PHASE_DOWNLOAD) w.meter.bytesPerSecond.toLong() else 0,
-                    remainingMs = TransferEstimate.remainingMs(w.bytes, w.bytesTotal, w.meter.bytesPerSecond, overall, active),
-                    network = net,
-                )
+    /**
+     * Shows the job's numbers (at most four times a second unless [force]). Video jobs sum up
+     * the items being worked on; [single] is the share of the current file otherwise.
+     */
+    private fun publish(jobId: Long, w: Work, segmentStart: Long, single: Float = 0f, force: Boolean = false) {
+        val now = SystemClock.elapsedRealtime()
+        val (bytes, speed) = synchronized(w) {
+            if (!force && now - w.lastPublish < 250) {
+                null
+            } else {
+                w.lastPublish = now
+                w.meter.add(now, w.bytes)
+                w.bytes to w.meter.bytesPerSecond
             }
+        } ?: return
+        val active = w.activeMs + (now - segmentStart)
+        val net = network(now)
+        val items = (w as? Work.Media)?.let { m ->
+            m.active.entries.sortedBy { it.key.first * 100_000L + it.key.second }.map { it.value }
+        }
+        val done = (w as? Work.Media)?.let { synchronized(it) { it.doneItems } }
+        setJob(jobId) { j ->
+            val fraction = items?.sumOf { it.fraction.toDouble() }?.toFloat() ?: single
+            val phase = when {
+                items == null -> j.phase
+                items.any { it.phase == PHASE_DOWNLOAD } -> PHASE_DOWNLOAD
+                else -> items.firstOrNull()?.phase
+            }
+            val current = when {
+                items == null -> j.current
+                items.size <= 1 -> items.firstOrNull()?.title
+                else -> items.joinToString("\n") { "${it.title} – ${it.phase} ${(it.fraction * 100).toInt()} %" }
+            }
+            val finished = done ?: j.done
+            val overall = if (j.total <= 0) 0f else ((finished + fraction) / j.total).coerceIn(0f, 1f)
+            j.copy(
+                done = finished,
+                fraction = fraction,
+                current = current,
+                phase = phase,
+                working = items?.size ?: j.working,
+                bytes = bytes,
+                bytesTotal = w.bytesTotal,
+                // While converting or saving nothing comes over the network.
+                bytesPerSecond = if (phase == PHASE_DOWNLOAD) speed.toLong() else 0,
+                remainingMs = TransferEstimate.remainingMs(bytes, w.bytesTotal, speed, overall, active),
+                network = net,
+            )
         }
     }
 
@@ -633,9 +759,14 @@ class DownloadManager(private val context: Context, private val scanner: Library
                 runCatching { Mp3Quality.valueOf(s.quality!!) }.getOrNull() ?: return null,
                 s.local,
             ).apply {
-                bookIndex = s.bookIndex
-                itemIndex = s.itemIndex
-                doneItems = s.doneItems
+                s.bookStates.forEachIndexed { b, saved ->
+                    val st = state.getOrNull(b) ?: return@forEachIndexed
+                    st.done += saved.done.filter { it in books[b].items.indices }
+                    saved.saved.forEach { (i, uri, name) -> st.saved[i] = Uri.parse(uri) to name }
+                    st.cover = saved.cover?.let(::File)?.takeIf { it.exists() }
+                    st.folderDocId = saved.folderDocId
+                    st.imported = saved.imported
+                }
             }
             else -> return null
         }
@@ -643,17 +774,9 @@ class DownloadManager(private val context: Context, private val scanner: Library
         w.bytes = s.bytes
         w.bytesTotal = s.bytesTotal
         w.folderDocId = s.folderDocId
-        val files = s.saved.map { (uri, name) -> Uri.parse(uri) to name }
-        val cover = s.cover?.let(::File)?.takeIf { it.exists() }
-        when (w) {
-            is Work.Audiobook -> {
-                w.saved += files
-                w.cover = cover
-            }
-            is Work.Media -> {
-                w.saved += files
-                w.cover = cover
-            }
+        if (w is Work.Audiobook) {
+            w.saved += s.saved.map { (uri, name) -> Uri.parse(uri) to name }
+            w.cover = s.cover?.let(::File)?.takeIf { it.exists() }
         }
         return w
     }
@@ -681,9 +804,18 @@ class DownloadManager(private val context: Context, private val scanner: Library
                     cover = w.cover?.path, folderDocId = w.folderDocId)
             }
             is Work.Media -> synchronized(w) {
-                base.copy(kind = KIND_MEDIA, books = w.books, format = w.format.name, quality = w.quality.name, local = w.local,
-                    bookIndex = w.bookIndex, itemIndex = w.itemIndex, doneItems = w.doneItems,
-                    saved = w.saved.map { it.first.toString() to it.second }, cover = w.cover?.path, folderDocId = w.folderDocId)
+                base.copy(
+                    kind = KIND_MEDIA, books = w.books, format = w.format.name, quality = w.quality.name, local = w.local,
+                    bookStates = w.state.map { st ->
+                        SavedBook(
+                            done = st.done.toList(),
+                            saved = st.saved.map { (i, file) -> Triple(i, file.first.toString(), file.second) },
+                            cover = st.cover?.path,
+                            folderDocId = st.folderDocId,
+                            imported = st.imported,
+                        )
+                    },
+                )
             }
         }
     }
@@ -721,5 +853,13 @@ class DownloadManager(private val context: Context, private val scanner: Library
 
         /** Finished jobs shown again after a restart (until "Erledigte entfernen"). */
         const val MAX_FINISHED_KEPT = 30
+
+        /** Items of a video job worked on at once (one converts while the next downloads). */
+        const val ITEMS_AT_ONCE = 3
+
+        /** Files from the phone converted at once (each one on several cores already). */
+        const val LOCAL_AT_ONCE = 2
+
+        const val DOWNLOADS_AT_ONCE = 2
     }
 }

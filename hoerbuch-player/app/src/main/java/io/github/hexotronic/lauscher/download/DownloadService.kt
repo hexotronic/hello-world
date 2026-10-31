@@ -88,8 +88,13 @@ class DownloadService : Service() {
         manager.cancel(PAUSED_ID)
         val job = active.firstOrNull { it.state == JobState.RUNNING } ?: active.first()
         val text = buildString {
-            if (job.total > 1) append("${minOf(job.done + 1, job.total)} von ${job.total}: ")
-            append(job.current ?: "wartet")
+            if (job.working > 1) {
+                append("${job.done} von ${job.total} fertig · ${job.working} gleichzeitig")
+                job.current?.let { append('\n').append(it) }
+            } else {
+                if (job.total > 1) append("${minOf(job.done + 1, job.total)} von ${job.total}: ")
+                append(job.current ?: "wartet")
+            }
         }
         val stats = listOfNotNull(
             job.phase?.takeIf { it != PHASE_DOWNLOAD },

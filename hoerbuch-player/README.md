@@ -67,6 +67,16 @@ In der Bibliothek über **＋ → Herunterladen und umwandeln …** (oder in den
 - **Schnell:** jede Datei kommt über 4 Verbindungen gleichzeitig (YouTube und archive.org bremsen jede einzelne
   Verbindung); kleine Dateien und Server ohne Teilstücke laden über eine. Angezeigt wird auch, was gerade passiert
   („lädt herunter“, „wandelt in MP3 um“, „speichert“) – am schnellsten ist das Format „Original“ ohne Umwandlung.
+- **Mehrere Umwandlungen gleichzeitig:** in einem Auftrag laufen bis zu 3 Videos zugleich (2 Downloads, die
+  Umwandlungen teilen sich die Kerne) – während eins umgewandelt wird, lädt schon das nächste; jedes Buch kommt in
+  die Bibliothek, sobald seine Teile fertig sind. Lange Aufnahmen (32/44,1/48 kHz) werden zusätzlich in Stücke von
+  20 s geteilt, die bis zu 4 Kerne gleichzeitig mit LAME kodieren (jedes Stück mit 1,5 s Vorlauf). Die Stücke werden
+  nahtlos zusammengesetzt: alle Encoder arbeiten im selben Rahmenraster, und an der Naht wird ein Rahmen gewählt,
+  dessen Bit-Reservoir-Daten in die freien Bytes des vorigen Stücks passen (dorthin kopiert). Gemessen mit echtem
+  LAME bei 64–320 kbit/s: gleiche Dateigröße und Qualität wie in einem Stück kodiert, an den Nähten höchstens 1,14×
+  das normale Kodierrauschen in einem einzigen 24-ms-Rahmen, keine Knackser; ab der Naht sind die Rahmen meist sogar
+  bitgleich. LAME schafft je Kern grob 50–100× Echtzeit; mit 4 Kernen wird eine lange Datei rechnerisch etwa
+  3,5× so schnell umgewandelt (der Vorlauf kostet ~15 %).
 - **Pausieren und fortsetzen** – einzeln, alle auf einmal oder aus der Benachrichtigung. Fertige Kapitel/Videos
   bleiben, die angefangene Datei wird per HTTP-Range (bei YouTube stückweise) an der Stelle fortgesetzt, an der sie
   stand – jede der 4 Verbindungen für sich; abgebrochene Verbindungen werden ebenso fortgesetzt.

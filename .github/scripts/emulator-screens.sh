@@ -171,8 +171,10 @@ PY
 
   # --- Downloads: a video from the phone as MP3, one LibriVox chapter, a PeerTube search result.
   if [ -f "$E2E_DIR/video.mp4" ]; then adb push "$E2E_DIR/video.mp4" "$DATA/test/" > /dev/null; fi
+  if [ -f "$E2E_DIR/long.mp4" ]; then adb push "$E2E_DIR/long.mp4" "$DATA/test/" > /dev/null; fi
   adb logcat -c
-  start --es download_convert "$DATA/test/video.mp4" --es screen downloads
+  # Both files in one job: converted at the same time, the long one in pieces on several cores.
+  start --es download_convert "$DATA/test/video.mp4,$DATA/test/long.mp4" --es screen downloads
   start --es download_audiobook "Grimm" --es download_limit 1
   start --es download_media "peertube:peertube" --es download_limit 1
   echo "Warte auf die Downloads …"
@@ -182,9 +184,28 @@ PY
   done
   start --es screen downloads
   shot 12-herunterladen-hell 4
-  adb logcat -d -s LauscherDownload:* | tail -40 | tee "$OUT/downloads.txt"
+  adb logcat -d -s LauscherDownload:* | tail -60 | tee "$OUT/downloads.txt"
   if ! grep -q "Umgewandelt: .*video.mp3" "$OUT/downloads.txt" || ! grep -qE "Importiert \[download:[0-9a-f]+\]: video .*Buch [0-9]" "$OUT/downloads.txt"; then
     echo "::error::Das Video wurde nicht in MP3 umgewandelt"
+    E2E_FAILED=1
+  fi
+  # The long video: several pieces, joined cleanly, and the MP3 decodes without errors at full length.
+  if ! grep -qE "Umgewandelt: .*long.mp3 – 1:1[45] in .* \(([3-9]|[1-9][0-9]) Teile, [0-9]+ gleichzeitig, 0 unsaubere" "$OUT/downloads.txt"; then
+    echo "::error::Das lange Video wurde nicht in Stücken parallel umgewandelt"
+    E2E_FAILED=1
+  fi
+  LONG_MP3=$(adb shell find /sdcard/Audiobooks -iname "*long*.mp3" 2>/dev/null | tr -d '\r' | head -1)
+  if [ -n "$LONG_MP3" ] && adb pull "$LONG_MP3" "$OUT/long.mp3" > /dev/null; then
+    ffmpeg -nostdin -v error -i "$OUT/long.mp3" -f null - 2> "$OUT/long-decode.txt"
+    LONG_SECONDS=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$OUT/long.mp3")
+    echo "long.mp3: $LONG_SECONDS s, Dekodierfehler: $(wc -l < "$OUT/long-decode.txt")"
+    if [ -s "$OUT/long-decode.txt" ] || ! awk -v d="$LONG_SECONDS" 'BEGIN { exit !(d > 74.5 && d < 75.5) }'; then
+      echo "::error::Die in Stücken umgewandelte MP3 ist fehlerhaft"
+      cat "$OUT/long-decode.txt"
+      E2E_FAILED=1
+    fi
+  else
+    echo "::error::Die umgewandelte long.mp3 wurde nicht gefunden"
     E2E_FAILED=1
   fi
   if ! grep -qE "Importiert \[download:librivox:.*Buch [0-9]" "$OUT/downloads.txt"; then
