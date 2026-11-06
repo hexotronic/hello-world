@@ -66,8 +66,8 @@ In der Bibliothek über **＋ → Herunterladen und umwandeln …** (oder in den
   in der Benachrichtigung. Bei Videos wird die Restzeit wie ein Fließband gerechnet: Download = Restbytes ÷
   Netzgeschwindigkeit, Umwandlung = Tonlänge ÷ MP3-Geschwindigkeit; während das eine Video umgewandelt wird, lädt
   schon das nächste. Beide Geschwindigkeiten misst die App auf dem Gerät und merkt sie sich (die MP3-Geschwindigkeit
-  nur aus Umwandlungen ab 30 s, die die Kerne für sich hatten), eine laufende Umwandlung korrigiert die Schätzung
-  mit ihrer eigenen Geschwindigkeit. Fertige Aufträge zeigen, wie lange es wirklich gedauert hat
+  über die ganze Zeit, in der Umwandlungen liefen – mehrere gleichzeitig teilen sich ja die Kerne; Startwert 50×
+  Echtzeit), eine laufende Umwandlung korrigiert die Schätzung mit ihrer eigenen Geschwindigkeit. Fertige Aufträge zeigen, wie lange es wirklich gedauert hat
   („Fertig nach 0:42 · 10:05 Ton mit 43× Echtzeit umgewandelt“).
 - **Schnell:** jede Datei kommt über 4 Verbindungen gleichzeitig (YouTube und archive.org bremsen jede einzelne
   Verbindung); kleine Dateien und Server ohne Teilstücke laden über eine. Angezeigt wird auch, was gerade passiert

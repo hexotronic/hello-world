@@ -35,11 +35,14 @@ object WorkEstimate {
  * spoil them). [load] and [save] connect them to the app's settings.
  */
 class Rates(private val load: (String) -> Float?, private val save: (String, Float) -> Unit) {
-    /** Ms of sound converted to MP3 per ms when a recording is encoded in pieces on several cores. */
-    val convert: Double get() = value(CONVERT, 30f)
+    /**
+     * Ms of sound converted to MP3 per ms when recordings are encoded in pieces on several cores
+     * (until measured: 50, the CI emulator does about 65 with three encoders).
+     */
+    val convert: Double get() = value(CONVERT, 50f)
 
     /** The same when a recording is encoded in one go (rates other than 32/44.1/48 kHz). */
-    val convertSingle: Double get() = value(CONVERT_SINGLE, 12f)
+    val convertSingle: Double get() = value(CONVERT_SINGLE, 20f)
 
     /** Network speed in bytes per second. */
     val network: Double get() = value(NETWORK, 1_000_000f)

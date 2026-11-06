@@ -278,12 +278,12 @@ PY
   # opened again, with the chapter it was in the middle of continued from the partial file.
   adb shell dumpsys media_session > "$OUT/media_session.txt" || true
   clear_log
-  start --es download_audiobook "Grimm" --es download_limit 3 --es screen downloads
-  for i in $(seq 1 30); do
-    if adb logcat -d -s LauscherDownload:* | grep -qE "Auftrag [0-9]+: "; then break; fi
-    sleep 1
+  # Five chapters; the app is ended right after the first one is in, so some are surely left.
+  start --es download_audiobook "Grimm" --es download_limit 5 --es screen downloads
+  for i in $(seq 1 200); do
+    if adb logcat -d -s LauscherDownload:* | grep -qE "Geladen: "; then break; fi
+    sleep 0.3
   done
-  sleep 4
   adb shell am force-stop "$PKG"
   echo "App beendet (force-stop)"
   sleep 2

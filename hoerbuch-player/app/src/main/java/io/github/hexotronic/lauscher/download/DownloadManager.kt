@@ -117,9 +117,15 @@ class DownloadManager(private val context: Context, private val scanner: Library
             val doneItems: Int get() = state.sumOf { it.done.size }
             /** Length of each item's sound in ms where known (book to item), for the remaining time. */
             val audioMs = ConcurrentHashMap<Pair<Int, Int>, Long>()
-            /** Sound converted in this job and the time the conversions took, for the summary. */
+            /** Sound converted in this job, and the time during which at least one conversion ran. */
             var convertedAudioMs = 0L
-            var convertWallMs = 0L
+            var convertUnionMs = 0L
+            /** Conversions running now; a stretch with at least one is measured as a whole (they share the cores). */
+            var converting = 0
+            var convertingSince = 0L
+            var stretchAudioMs = 0L
+            var stretchInPieces = false
+            var stretchBroken = false
             var estimateLogged = false
         }
     }
@@ -594,8 +600,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
         val target = store.create(folder, FileNames.track(index, count, title, "mp3"), "audio/mpeg")
         synchronized(w) { state.folderDocId = target.folderDocId ?: state.folderDocId }
         val started = SystemClock.elapsedRealtime()
-        // Learn the MP3 speed only from conversions that had the cores to themselves.
-        var alone = w.active.values.none { it !== status && it.phase == PHASE_CONVERT }
+        synchronized(w) { if (w.converting++ == 0) w.convertingSince = started }
         val result = try {
             val start = share.coerceIn(0f, 0.95f)
             status.convertStart = started
@@ -610,24 +615,25 @@ class DownloadManager(private val context: Context, private val scanner: Library
                 }
             }
             target.finish()
-            alone = alone && w.active.values.none { it !== status && it.phase == PHASE_CONVERT }
+            synchronized(w) {
+                w.convertedAudioMs += r.durationMs
+                w.stretchAudioMs += r.durationMs
+                if (r.pieces > 1) w.stretchInPieces = true
+            }
             r
         } catch (e: Throwable) {
+            synchronized(w) { w.stretchBroken = true }
             target.discard()
             // A pause keeps the downloaded file; converting starts again on resume.
             if (e !is CancellationException) temp.delete()
             extracted.delete()
             throw e
+        } finally {
+            convertingEnded(w)
         }
         temp.delete()
         extracted.delete()
-        val wallMs = SystemClock.elapsedRealtime() - started
-        if (alone) rates.converted(result.durationMs, wallMs, inPieces = result.pieces > 1)
-        synchronized(w) {
-            w.convertedAudioMs += result.durationMs
-            w.convertWallMs += wallMs
-        }
-        val seconds = wallMs / 1000.0
+        val seconds = (SystemClock.elapsedRealtime() - started) / 1000.0
         Log.i(
             TAG,
             "Umgewandelt: ${target.name} – ${formatClock(result.durationMs)} in ${"%.1f".format(Locale.ROOT, seconds)} s" +
@@ -648,6 +654,25 @@ class DownloadManager(private val context: Context, private val scanner: Library
         /** Sound converted so far (ms), and when the conversion began. */
         @Volatile var convertedMs = 0L
         @Volatile var convertStart = 0L
+    }
+
+    /**
+     * One conversion ended. When none is left running, the stretch since the first one began tells
+     * how fast this device converts (several at once share the cores, so they count together).
+     */
+    private fun convertingEnded(w: Work.Media) {
+        val now = SystemClock.elapsedRealtime()
+        val stretch = synchronized(w) {
+            if (--w.converting > 0) return
+            val ms = now - w.convertingSince
+            w.convertUnionMs += ms
+            val measured = Triple(w.stretchAudioMs, ms, w.stretchInPieces).takeIf { !w.stretchBroken }
+            w.stretchAudioMs = 0
+            w.stretchInPieces = false
+            w.stretchBroken = false
+            measured
+        } ?: return
+        rates.converted(stretch.first, stretch.second, inPieces = stretch.third)
     }
 
     /** Share of an item's time that the download of [bytes] takes, the rest being the conversion. */
@@ -713,7 +738,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
 
     /** "Fertig nach 1:12 · 10:05 Ton mit 43× Echtzeit umgewandelt" */
     private fun summary(w: Work, tookMs: Long): String {
-        val converted = (w as? Work.Media)?.let { m -> synchronized(m) { m.convertedAudioMs to m.convertWallMs } }
+        val converted = (w as? Work.Media)?.let { m -> synchronized(m) { m.convertedAudioMs to m.convertUnionMs } }
         return "Fertig nach ${formatClock(tookMs)}" + if (converted != null && converted.first > 0 && converted.second > 0) {
             " · ${formatClock(converted.first)} Ton mit ${converted.first / converted.second}× Echtzeit umgewandelt"
         } else {
