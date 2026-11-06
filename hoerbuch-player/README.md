@@ -63,7 +63,12 @@ In der Bibliothek über **＋ → Herunterladen und umwandeln …** (oder in den
   als MP3** schicken) – sie werden zu MP3 bzw. ihre Tonspur wird herausgelöst.
 - **Fortschritt mit Netzdaten:** geladene Datenmenge (bei LibriVox „12,4 MB von 48 MB“), Geschwindigkeit,
   Verbindung (WLAN/mobile Daten) und das erwartete Ende („Fertig ca. 14:32 Uhr (noch 6 Min.)“) – in der App und
-  in der Benachrichtigung.
+  in der Benachrichtigung. Bei Videos wird die Restzeit wie ein Fließband gerechnet: Download = Restbytes ÷
+  Netzgeschwindigkeit, Umwandlung = Tonlänge ÷ MP3-Geschwindigkeit; während das eine Video umgewandelt wird, lädt
+  schon das nächste. Beide Geschwindigkeiten misst die App auf dem Gerät und merkt sie sich (die MP3-Geschwindigkeit
+  nur aus Umwandlungen ab 30 s, die die Kerne für sich hatten), eine laufende Umwandlung korrigiert die Schätzung
+  mit ihrer eigenen Geschwindigkeit. Fertige Aufträge zeigen, wie lange es wirklich gedauert hat
+  („Fertig nach 0:42 · 10:05 Ton mit 43× Echtzeit umgewandelt“).
 - **Schnell:** jede Datei kommt über 4 Verbindungen gleichzeitig (YouTube und archive.org bremsen jede einzelne
   Verbindung); kleine Dateien und Server ohne Teilstücke laden über eine. Angezeigt wird auch, was gerade passiert
   („lädt herunter“, „wandelt in MP3 um“, „speichert“) – am schnellsten ist das Format „Original“ ohne Umwandlung.

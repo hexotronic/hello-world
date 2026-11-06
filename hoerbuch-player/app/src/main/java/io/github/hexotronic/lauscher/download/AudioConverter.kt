@@ -55,8 +55,15 @@ object AudioConverter {
         }
     }
 
-    /** Decodes the first audio track of [source] and writes it as MP3 frames to [out]. */
-    suspend fun toMp3(context: Context, source: Uri, out: OutputStream, quality: Mp3Quality, onProgress: (Float) -> Unit): Mp3Result = coroutineScope {
+    /** Decodes the first audio track of [source] and writes it as MP3 frames to [out]; [onLength] gets the sound's length in ms. */
+    suspend fun toMp3(
+        context: Context,
+        source: Uri,
+        out: OutputStream,
+        quality: Mp3Quality,
+        onLength: (Long) -> Unit = {},
+        onProgress: (Float) -> Unit,
+    ): Mp3Result = coroutineScope {
         val extractor = MediaExtractor()
         var codec: MediaCodec? = null
         var encoder: Mp3Encoder? = null
@@ -72,6 +79,7 @@ object AudioConverter {
             extractor.selectTrack(track)
             val format = extractor.getTrackFormat(track)
             val durationUs = if (format.containsKey(MediaFormat.KEY_DURATION)) format.getLong(MediaFormat.KEY_DURATION) else 0L
+            onLength(durationUs / 1000)
             val decoder = MediaCodec.createDecoderByType(format.getString(MediaFormat.KEY_MIME)!!)
             codec = decoder
             decoder.configure(format, null, null, 0)
@@ -96,56 +104,65 @@ object AudioConverter {
                 pieceCount++
                 running += async(Dispatchers.Default) { encoders.withPermit { encodePiece(piece, pieceRate, pieceChannels, quality) } }
             }
-            while (true) {
+            var outputDone = false
+            while (!outputDone) {
                 currentCoroutineContext().ensureActive()
-                if (!inputDone) {
-                    val inIndex = decoder.dequeueInputBuffer(10_000)
-                    if (inIndex >= 0) {
-                        val n = extractor.readSampleData(decoder.getInputBuffer(inIndex)!!, 0)
-                        if (n < 0) {
-                            decoder.queueInputBuffer(inIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
-                            inputDone = true
+                var busy = false
+                // Hand the decoder every free input buffer, so it always has several to work on
+                // (one at a time leaves it waiting for each round trip).
+                while (!inputDone) {
+                    val inIndex = decoder.dequeueInputBuffer(0)
+                    if (inIndex < 0) break
+                    val n = extractor.readSampleData(decoder.getInputBuffer(inIndex)!!, 0)
+                    if (n < 0) {
+                        decoder.queueInputBuffer(inIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+                        inputDone = true
+                    } else {
+                        decoder.queueInputBuffer(inIndex, 0, n, extractor.sampleTime, 0)
+                        extractor.advance()
+                    }
+                    busy = true
+                }
+                // Take every finished output; wait a little only when there was nothing to do.
+                while (!outputDone) {
+                    val outIndex = decoder.dequeueOutputBuffer(info, if (busy) 0 else 5_000)
+                    if (outIndex == MediaCodec.INFO_TRY_AGAIN_LATER) break
+                    if (outIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                        val f = decoder.outputFormat
+                        channels = f.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
+                        rate = f.getInteger(MediaFormat.KEY_SAMPLE_RATE)
+                        floatPcm = f.containsKey(MediaFormat.KEY_PCM_ENCODING) &&
+                            f.getInteger(MediaFormat.KEY_PCM_ENCODING) == AudioFormat.ENCODING_PCM_FLOAT
+                        continue
+                    }
+                    if (outIndex < 0) continue
+                    busy = true
+                    val buf = decoder.getOutputBuffer(outIndex)!!.order(ByteOrder.nativeOrder())
+                    buf.position(info.offset)
+                    buf.limit(info.offset + info.size)
+                    val samples = if (floatPcm) info.size / 4 else info.size / 2
+                    val frames = samples / channels
+                    if (frames > 0) {
+                        val outChannels = minOf(channels, 2)
+                        if (pcm.size < frames * outChannels) pcm = ShortArray(frames * outChannels)
+                        readFrames(buf, floatPcm, channels, frames, outChannels, pcm)
+                        lastFrame += frames
+                        if (pieces == null && encoder == null && Mp3Pieces.supports(rate)) pieces = PcmPieces(outChannels)
+                        val collector = pieces
+                        if (collector != null) {
+                            for (piece in collector.add(pcm, frames)) submit(piece, outChannels, rate)
                         } else {
-                            decoder.queueInputBuffer(inIndex, 0, n, extractor.sampleTime, 0)
-                            extractor.advance()
+                            val enc = encoder ?: (
+                                Mp3Encoder.create(rate, outChannels, quality.kbps, quality.mono)
+                                    ?: throw IOException("MP3-Umwandlung bei $rate Hz nicht möglich")
+                                ).also { encoder = it }
+                            out.write(enc.encode(pcm, frames))
                         }
                     }
+                    if (durationUs > 0 && pieces == null) onProgress((info.presentationTimeUs.toFloat() / durationUs).coerceIn(0f, 1f))
+                    decoder.releaseOutputBuffer(outIndex, false)
+                    if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) outputDone = true
                 }
-                val outIndex = decoder.dequeueOutputBuffer(info, 10_000)
-                if (outIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-                    val f = decoder.outputFormat
-                    channels = f.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
-                    rate = f.getInteger(MediaFormat.KEY_SAMPLE_RATE)
-                    floatPcm = f.containsKey(MediaFormat.KEY_PCM_ENCODING) &&
-                        f.getInteger(MediaFormat.KEY_PCM_ENCODING) == AudioFormat.ENCODING_PCM_FLOAT
-                    continue
-                }
-                if (outIndex < 0) continue
-                val buf = decoder.getOutputBuffer(outIndex)!!.order(ByteOrder.nativeOrder())
-                buf.position(info.offset)
-                buf.limit(info.offset + info.size)
-                val samples = if (floatPcm) info.size / 4 else info.size / 2
-                val frames = samples / channels
-                if (frames > 0) {
-                    val outChannels = minOf(channels, 2)
-                    if (pcm.size < frames * outChannels) pcm = ShortArray(frames * outChannels)
-                    readFrames(buf, floatPcm, channels, frames, outChannels, pcm)
-                    lastFrame += frames
-                    if (pieces == null && encoder == null && Mp3Pieces.supports(rate)) pieces = PcmPieces(outChannels)
-                    val collector = pieces
-                    if (collector != null) {
-                        for (piece in collector.add(pcm, frames)) submit(piece, outChannels, rate)
-                    } else {
-                        val enc = encoder ?: (
-                            Mp3Encoder.create(rate, outChannels, quality.kbps, quality.mono)
-                                ?: throw IOException("MP3-Umwandlung bei $rate Hz nicht möglich")
-                            ).also { encoder = it }
-                        out.write(enc.encode(pcm, frames))
-                    }
-                }
-                if (durationUs > 0 && pieces == null) onProgress((info.presentationTimeUs.toFloat() / durationUs).coerceIn(0f, 1f))
-                decoder.releaseOutputBuffer(outIndex, false)
-                if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) break
             }
             val collector = pieces
             if (collector != null) {

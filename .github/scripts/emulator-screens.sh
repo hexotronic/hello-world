@@ -213,6 +213,41 @@ PY
     echo "::error::Die umgewandelte long.mp3 wurde nicht gefunden"
     E2E_FAILED=1
   fi
+  # Remaining time: what the app expected when a conversion began (and when the job began)
+  # against how long the job then really took.
+  if python3 - "$OUT/downloads.txt" > "$OUT/restzeit.txt" <<'PY'
+import re, sys
+def at(line):
+    m = re.match(r"\d\d-\d\d (\d\d):(\d\d):(\d\d\.\d+)", line)
+    return int(m.group(1)) * 3600 + int(m.group(2)) * 60 + float(m.group(3)) if m else None
+lines = open(sys.argv[1], encoding="utf-8", errors="replace").read().splitlines()
+done = {m.group(1): at(l) for l in lines for m in [re.search(r"Auftrag (\d+) fertig nach", l)] if m}
+bad = 0
+for l in lines:
+    first = re.search(r"Erste Schätzung für Auftrag (\d+): ([0-9.]+) s", l)
+    conv = re.search(r"Umwandlung beginnt: (.*) – Restzeit geschätzt ([0-9.]+) s \(Auftrag (\d+)", l)
+    if first:
+        job, guess, what = first.group(1), float(first.group(2)), "Start des Auftrags"
+    elif conv:
+        job, guess, what = conv.group(3), float(conv.group(2)), "Beginn der Umwandlung von " + conv.group(1)[:40]
+    else:
+        continue
+    if job not in done or at(l) is None:
+        continue
+    real = done[job] - at(l)
+    ratio = guess / real if real > 0 else float("inf")
+    print(f"Auftrag {job}, {what}: geschätzt {guess:.1f} s, tatsächlich {real:.1f} s ({ratio:.2f}×)")
+    if conv and real >= 3 and not (1 / 3 <= ratio <= 3):
+        bad += 1
+sys.exit(1 if bad else 0)
+PY
+  then
+    cat "$OUT/restzeit.txt"
+  else
+    cat "$OUT/restzeit.txt"
+    echo "::error::Die geschätzte Restzeit lag weit neben der tatsächlichen Dauer"
+    E2E_FAILED=1
+  fi
   if ! grep -qE "Importiert \[download:librivox:.*Buch [0-9]" "$OUT/downloads.txt"; then
     echo "::error::Das LibriVox-Hörbuch wurde nicht geladen"
     E2E_FAILED=1
@@ -231,7 +266,7 @@ PY
   done
   adb logcat -d -s LauscherDownload:* | tail -15 | tee "$OUT/downloads-pause.txt"
   if grep -q "pausiert" "$OUT/downloads-pause.txt"; then
-    if ! grep -q "fortgesetzt" "$OUT/downloads-pause.txt" || ! grep -qE "fertig: DONE" "$OUT/downloads-pause.txt"; then
+    if ! grep -q "fortgesetzt" "$OUT/downloads-pause.txt" || ! grep -qE "fertig nach [0-9.]+ s: DONE" "$OUT/downloads-pause.txt"; then
       echo "::error::Ein pausierter Download wurde nicht fortgesetzt und beendet"
       E2E_FAILED=1
     fi
@@ -261,7 +296,7 @@ PY
   adb logcat -d -s LauscherDownload:* > "$OUT/downloads-neustart.txt"
   tail -20 "$OUT/downloads-neustart.txt"
   if grep -qE "Wiederhergestellt: .*, [1-9][0-9]* unterbrochen" "$OUT/downloads-neustart.txt"; then
-    if ! grep -q "fortgesetzt" "$OUT/downloads-neustart.txt" || ! grep -qE "fertig: DONE" "$OUT/downloads-neustart.txt"; then
+    if ! grep -q "fortgesetzt" "$OUT/downloads-neustart.txt" || ! grep -qE "fertig nach [0-9.]+ s: DONE" "$OUT/downloads-neustart.txt"; then
       echo "::error::Ein durch das Schließen der App unterbrochener Download ging nicht weiter"
       E2E_FAILED=1
     fi

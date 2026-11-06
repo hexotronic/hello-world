@@ -3,6 +3,7 @@ package io.github.hexotronic.lauscher.download
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.SystemClock
 import android.util.Log
@@ -16,10 +17,12 @@ import io.github.hexotronic.lauscher.download.core.MediaItem
 import io.github.hexotronic.lauscher.download.core.Mp3Quality
 import io.github.hexotronic.lauscher.download.core.OutputFormat
 import io.github.hexotronic.lauscher.download.core.PlannedBook
+import io.github.hexotronic.lauscher.download.core.Rates
 import io.github.hexotronic.lauscher.download.core.SavedBook
 import io.github.hexotronic.lauscher.download.core.SavedJob
 import io.github.hexotronic.lauscher.download.core.TransferEstimate
 import io.github.hexotronic.lauscher.download.core.TransferMeter
+import io.github.hexotronic.lauscher.download.core.WorkEstimate
 import io.github.hexotronic.lauscher.scan.LibraryScanner
 import io.github.hexotronic.lauscher.ui.formatClock
 import kotlinx.coroutines.CancellationException
@@ -112,6 +115,12 @@ class DownloadManager(private val context: Context, private val scanner: Library
             /** Items being worked on now (book to item). */
             val active = ConcurrentHashMap<Pair<Int, Int>, ItemStatus>()
             val doneItems: Int get() = state.sumOf { it.done.size }
+            /** Length of each item's sound in ms where known (book to item), for the remaining time. */
+            val audioMs = ConcurrentHashMap<Pair<Int, Int>, Long>()
+            /** Sound converted in this job and the time the conversions took, for the summary. */
+            var convertedAudioMs = 0L
+            var convertWallMs = 0L
+            var estimateLogged = false
         }
     }
 
@@ -146,6 +155,10 @@ class DownloadManager(private val context: Context, private val scanner: Library
     private var persistJob: Job? = null
     /** Downloads running at the same time (each over several connections). */
     private val downloads = Semaphore(DOWNLOADS_AT_ONCE)
+    /** Network and MP3 speeds measured on this device, for the remaining time. */
+    private val rates = context.getSharedPreferences("download-speeds", Context.MODE_PRIVATE).let { prefs ->
+        Rates({ key -> if (prefs.contains(key)) prefs.getFloat(key, 0f) else null }, { key, value -> prefs.edit().putFloat(key, value).apply() })
+    }
 
     init {
         File(context.cacheDir, "downloads").deleteRecursively()
@@ -263,6 +276,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
                         is Work.Audiobook -> runAudiobook(job.id, w, segmentStart)
                         is Work.Media -> runMedia(job.id, w, segmentStart)
                     }
+                    val tookMs = w.activeMs + (SystemClock.elapsedRealtime() - segmentStart)
                     setJob(job.id) { j ->
                         val ok = j.bookIds.isNotEmpty()
                         j.copy(
@@ -276,12 +290,16 @@ class DownloadManager(private val context: Context, private val scanner: Library
                             message = when {
                                 !ok -> j.message ?: "Nichts heruntergeladen"
                                 j.failed > 0 -> "${j.failed} von ${j.total} fehlgeschlagen" + (j.message?.let { ": $it" } ?: "")
-                                else -> null
+                                else -> summary(w, tookMs)
                             },
                         )
                     }
                     forget(job.id)
-                    Log.i(TAG, "Auftrag ${job.id} fertig: ${_jobs.value.firstOrNull { it.id == job.id }?.let { "${it.state}, Bücher ${it.bookIds}, Fehler ${it.failed}" }}")
+                    Log.i(
+                        TAG,
+                        "Auftrag ${job.id} fertig nach ${"%.1f".format(Locale.ROOT, tookMs / 1000.0)} s: " +
+                            "${_jobs.value.firstOrNull { it.id == job.id }?.let { "${it.state}, Bücher ${it.bookIds}, Fehler ${it.failed}" }}",
+                    )
                 } catch (e: CancellationException) {
                     if (pausing.remove(job.id)) {
                         setJob(job.id) {
@@ -354,6 +372,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
                 val fetchStart = SystemClock.elapsedRealtime()
                 Net.download(f.url, temp, progress::report)
                 logSpeed(chapter, temp.length() - onDisk, fetchStart)
+                rates.downloaded(temp.length() - onDisk, SystemClock.elapsedRealtime() - fetchStart, -1)
                 setJob(jobId) { it.copy(phase = PHASE_SAVE, bytesPerSecond = 0) }
                 val name = FileNames.track(i, files.size, chapter, "mp3")
                 val target = store.create(folder, name, "audio/mpeg")
@@ -394,6 +413,13 @@ class DownloadManager(private val context: Context, private val scanner: Library
             w.books.forEachIndexed { b, book ->
                 val state = w.state[b]
                 if (!state.imported) book.items.indices.filter { it !in state.done }.forEach { todo += b to it }
+            }
+        }
+        // Lengths of the sound for the remaining time: from the listing, or read from the files.
+        w.books.forEachIndexed { b, book ->
+            book.items.forEachIndexed { i, item ->
+                val ms = if (w.local) localDurationMs(item) else item.durationSeconds * 1000
+                if (ms > 0) w.audioMs[b to i] = ms
             }
         }
         // Books that were finished before an interruption but are not in the library yet.
@@ -470,6 +496,16 @@ class DownloadManager(private val context: Context, private val scanner: Library
         persist()
     }
 
+    private fun localDurationMs(item: MediaItem): Long = runCatching {
+        val retriever = MediaMetadataRetriever()
+        try {
+            retriever.setDataSource(context, Uri.parse(item.url))
+            retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: -1L
+        } finally {
+            retriever.release()
+        }
+    }.getOrDefault(-1L)
+
     private fun localSource(item: MediaItem): AudioSource {
         val uri = Uri.parse(item.url)
         val type = context.contentResolver.getType(uri).orEmpty()
@@ -501,19 +537,33 @@ class DownloadManager(private val context: Context, private val scanner: Library
         // Same name on every attempt, so a paused download continues.
         val temp = File(tempDir, "$jobId-$b-$index.${source.extension.ifEmpty { "bin" }}")
         val extracted = File(tempDir, "$jobId-$b-$index-audio")
+        val audioMs = w.audioMs[b to index] ?: -1L
+        // Share of the item that is the download (the rest is converting), from the measured speeds.
+        var share = if (w.local) 0f else 1f
         val input: Uri = if (w.local) {
             Uri.parse(source.url)
         } else {
-            val share = if (w.format == OutputFormat.MP3 && !(source.extension == "mp3" && !source.isVideo)) 0.6f else 1f
+            val converts = w.format == OutputFormat.MP3 && !(source.extension == "mp3" && !source.isVideo)
             phase(PHASE_WAIT)
             downloads.withPermit {
                 val onDisk = HttpFetch.bytesOnDisk(temp)
                 phase(PHASE_DOWNLOAD)
-                val progress = Progress(jobId, w, segmentStart, onDisk, status) { done, total -> if (total > 0) share * done / total else 0f }
+                var shareKnown = false
+                val progress = Progress(jobId, w, segmentStart, onDisk, status) { done, total ->
+                    status.bytesDone = done
+                    status.bytesTotal = total
+                    if (!shareKnown && total > 0) {
+                        shareKnown = true
+                        share = if (converts) downloadShare(total, audioMs) else 1f
+                    }
+                    if (total > 0) share * done / total else 0f
+                }
                 if (onDisk > 0) Log.i(TAG, "Fortsetzen ab ${TransferEstimate.size(onDisk)}: ${item.title}")
                 val fetchStart = SystemClock.elapsedRealtime()
                 Net.download(source.url, temp, progress::report)
-                logSpeed(item.title, temp.length() - onDisk, fetchStart)
+                val fetched = temp.length() - onDisk
+                logSpeed(item.title, fetched, fetchStart)
+                rates.downloaded(fetched, SystemClock.elapsedRealtime() - fetchStart, audioMs)
             }
             Uri.fromFile(temp)
         }
@@ -544,15 +594,23 @@ class DownloadManager(private val context: Context, private val scanner: Library
         val target = store.create(folder, FileNames.track(index, count, title, "mp3"), "audio/mpeg")
         synchronized(w) { state.folderDocId = target.folderDocId ?: state.folderDocId }
         val started = SystemClock.elapsedRealtime()
+        // Learn the MP3 speed only from conversions that had the cores to themselves.
+        var alone = w.active.values.none { it !== status && it.phase == PHASE_CONVERT }
         val result = try {
-            val start = if (w.local) 0f else 0.6f
+            val start = share.coerceIn(0f, 0.95f)
+            status.convertStart = started
             phase(PHASE_CONVERT)
+            logEstimate(jobId, w, "Umwandlung beginnt: ${item.title}")
             val progress = Progress(jobId, w, segmentStart, 0, status) { _, _ -> 0f }
             val r = target.openStream().use { out ->
                 out.write(Id3.tag(title, book.author, book.title, index + 1, count, cover))
-                AudioConverter.toMp3(context, input, out, w.quality) { f -> progress.fraction(start + (1 - start) * f) }
+                AudioConverter.toMp3(context, input, out, w.quality, onLength = { ms -> if (ms > 0) w.audioMs[b to index] = ms }) { f ->
+                    status.convertedMs = ((w.audioMs[b to index] ?: 0L) * f).toLong()
+                    progress.fraction(start + (1 - start) * f)
+                }
             }
             target.finish()
+            alone = alone && w.active.values.none { it !== status && it.phase == PHASE_CONVERT }
             r
         } catch (e: Throwable) {
             target.discard()
@@ -563,7 +621,13 @@ class DownloadManager(private val context: Context, private val scanner: Library
         }
         temp.delete()
         extracted.delete()
-        val seconds = (SystemClock.elapsedRealtime() - started) / 1000.0
+        val wallMs = SystemClock.elapsedRealtime() - started
+        if (alone) rates.converted(result.durationMs, wallMs, inPieces = result.pieces > 1)
+        synchronized(w) {
+            w.convertedAudioMs += result.durationMs
+            w.convertWallMs += wallMs
+        }
+        val seconds = wallMs / 1000.0
         Log.i(
             TAG,
             "Umgewandelt: ${target.name} – ${formatClock(result.durationMs)} in ${"%.1f".format(Locale.ROOT, seconds)} s" +
@@ -579,6 +643,82 @@ class DownloadManager(private val context: Context, private val scanner: Library
         @Volatile var phase: String = PHASE_WAIT
         /** Share of the item that is done (download and conversion together). */
         @Volatile var fraction = 0f
+        @Volatile var bytesDone = 0L
+        @Volatile var bytesTotal = -1L
+        /** Sound converted so far (ms), and when the conversion began. */
+        @Volatile var convertedMs = 0L
+        @Volatile var convertStart = 0L
+    }
+
+    /** Share of an item's time that the download of [bytes] takes, the rest being the conversion. */
+    private fun downloadShare(bytes: Long, audioMs: Long): Float {
+        val download = bytes * 1000.0 / rates.network
+        val sound = if (audioMs > 0) audioMs.toDouble() else bytes / rates.bytesPerAudioMs
+        val convert = sound / rates.convert
+        return (download / (download + convert)).toFloat().coerceIn(0.05f, 0.95f)
+    }
+
+    /**
+     * Remaining time of a video job: what is left of each item (bytes to fetch, sound to convert)
+     * at the speeds measured now or learned before; null while no item's length is known.
+     */
+    private fun mediaRemainingMs(w: Work.Media, measuredBytesPerSecond: Double): Long? {
+        val known = w.audioMs.values.filter { it > 0 }
+        if (known.isEmpty()) return null
+        val typical = known.average().toLong()
+        val converts = w.format == OutputFormat.MP3
+        val now = SystemClock.elapsedRealtime()
+        val items = ArrayList<WorkEstimate.Item>()
+        var downloading = false
+        var convertSpeed = rates.convert
+        synchronized(w) {
+            w.books.forEachIndexed { b, book ->
+                val state = w.state[b]
+                if (state.imported) return@forEachIndexed
+                for (i in book.items.indices) {
+                    if (i in state.done) continue
+                    val audio = w.audioMs[b to i]?.takeIf { it > 0 } ?: typical
+                    val bytes = if (w.local) 0L else (audio * rates.bytesPerAudioMs).toLong()
+                    val s = w.active[b to i]
+                    items += if (s == null || s.phase == PHASE_WAIT) {
+                        WorkEstimate.Item(bytes, if (converts) audio else 0L, if (w.local) 0L else LOOKUP_MS)
+                    } else when (s.phase) {
+                        PHASE_DOWNLOAD -> {
+                            downloading = true
+                            val total = if (s.bytesTotal > 0) s.bytesTotal else bytes
+                            WorkEstimate.Item((total - s.bytesDone).coerceAtLeast(0L), if (converts) audio else 0L)
+                        }
+                        PHASE_CONVERT -> {
+                            // One conversion alone shows its own speed once it has run a little.
+                            val ran = now - s.convertStart
+                            if (s.convertedMs >= 20_000 && ran >= 1_500 && w.active.values.count { it.phase == PHASE_CONVERT } == 1) {
+                                convertSpeed = s.convertedMs.toDouble() / ran
+                            }
+                            WorkEstimate.Item(0L, (audio - s.convertedMs).coerceAtLeast(0L))
+                        }
+                        else -> WorkEstimate.Item(0L, 0L)
+                    }
+                }
+            }
+        }
+        val network = if (downloading && measuredBytesPerSecond > 0) measuredBytesPerSecond else rates.network
+        return WorkEstimate.remainingMs(items, network, convertSpeed)
+    }
+
+    /** Logs the remaining time (the CI compares it with how long the job really takes). */
+    private fun logEstimate(jobId: Long, w: Work.Media, what: String) {
+        val ms = mediaRemainingMs(w, 0.0) ?: return
+        Log.i(TAG, "$what – Restzeit geschätzt ${"%.1f".format(Locale.ROOT, ms / 1000.0)} s (Auftrag $jobId, MP3 ${"%.0f".format(Locale.ROOT, rates.convert)}× Echtzeit)")
+    }
+
+    /** "Fertig nach 1:12 · 10:05 Ton mit 43× Echtzeit umgewandelt" */
+    private fun summary(w: Work, tookMs: Long): String {
+        val converted = (w as? Work.Media)?.let { m -> synchronized(m) { m.convertedAudioMs to m.convertWallMs } }
+        return "Fertig nach ${formatClock(tookMs)}" + if (converted != null && converted.first > 0 && converted.second > 0) {
+            " · ${formatClock(converted.first)} Ton mit ${converted.first / converted.second}× Echtzeit umgewandelt"
+        } else {
+            ""
+        }
     }
 
     /**
@@ -628,6 +768,14 @@ class DownloadManager(private val context: Context, private val scanner: Library
             m.active.entries.sortedBy { it.key.first * 100_000L + it.key.second }.map { it.value }
         }
         val done = (w as? Work.Media)?.let { synchronized(it) { it.doneItems } }
+        val mediaEstimate = (w as? Work.Media)?.let { m ->
+            mediaRemainingMs(m, speed)?.also { ms ->
+                if (!m.estimateLogged) {
+                    m.estimateLogged = true
+                    Log.i(TAG, "Erste Schätzung für Auftrag $jobId: ${"%.1f".format(Locale.ROOT, ms / 1000.0)} s")
+                }
+            }
+        }
         setJob(jobId) { j ->
             val fraction = items?.sumOf { it.fraction.toDouble() }?.toFloat() ?: single
             val phase = when {
@@ -642,6 +790,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
             }
             val finished = done ?: j.done
             val overall = if (j.total <= 0) 0f else ((finished + fraction) / j.total).coerceIn(0f, 1f)
+            val estimate = mediaEstimate ?: TransferEstimate.remainingMs(bytes, w.bytesTotal, speed, overall, active)
             j.copy(
                 done = finished,
                 fraction = fraction,
@@ -652,7 +801,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
                 bytesTotal = w.bytesTotal,
                 // While converting or saving nothing comes over the network.
                 bytesPerSecond = if (phase == PHASE_DOWNLOAD) speed.toLong() else 0,
-                remainingMs = TransferEstimate.remainingMs(bytes, w.bytesTotal, speed, overall, active),
+                remainingMs = estimate,
                 network = net,
             )
         }
@@ -871,5 +1020,8 @@ class DownloadManager(private val context: Context, private val scanner: Library
         const val LOCAL_AT_ONCE = 2
 
         const val DOWNLOADS_AT_ONCE = 2
+
+        /** Looking up a video's stream before its download (NewPipe), roughly. */
+        const val LOOKUP_MS = 3_000L
     }
 }
