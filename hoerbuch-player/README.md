@@ -88,8 +88,11 @@ In der Bibliothek über **＋ → Herunterladen und umwandeln …** (oder in den
   schlechter. „Ausgewogen“ (Standard) nimmt bis 128 kbit/s -q 5 und ab 192 kbit/s -q 7 – dort klingt es
   gleich und wird gratis schneller. Eine „gründliche“ Stufe (-q 2) gibt es nicht: 2,5× langsamer, laut
   Hörmodell nicht besser. Die Speech-Prüfung mit PESQ (ITU-T P.862) liegt bei allen Stufen an der
-  Skalen-Obergrenze (4,5–4,6). Die CI wandelt dieselbe Aufnahme in beiden Modi um und bewertet die MP3s
-  vom Gerät mit ViSQOL.
+  Skalen-Obergrenze (4,5–4,6). Die CI wandelt dieselbe Aufnahme (6 Min, Sprache über Musik und Geräuschen)
+  in beiden Modi um und bewertet die MP3s vom Gerät mit ViSQOL – im Emulator: 64 kbit/s 3,63 → 3,15,
+  128 kbit/s 4,23 → 4,04, aber nur 4–7 % schneller (30× → 32× Echtzeit), weil dort das Entpacken der
+  AAC-Quelle bremst, nicht LAME. Die App zeigt deshalb bei der Auswahl die auf dem Handy gemessenen
+  Geschwindigkeiten beider Modi an, sobald sie bekannt sind.
 - **Mehrere Umwandlungen gleichzeitig:** in einem Auftrag laufen bis zu 3 Videos zugleich (2 Downloads, die
   Umwandlungen teilen sich die Kerne) – während eins umgewandelt wird, lädt schon das nächste; jedes Buch kommt in
   die Bibliothek, sobald seine Teile fertig sind. Lange Aufnahmen (32/44,1/48 kHz) werden zusätzlich in Stücke von

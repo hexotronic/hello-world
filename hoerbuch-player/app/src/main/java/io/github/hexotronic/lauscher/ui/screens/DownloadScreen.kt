@@ -361,14 +361,23 @@ private fun DownloadOptions(d: DownloadBrowser, grouping: Boolean) {
         // What the modes cost and bring, measured with an objective listening model (ViSQOL, scale 1–5).
         val fastDiffers = d.quality.kbps < 192
         val loss = if (d.quality.kbps < 128) "bis 0,6" else "bis 0,2"
+        // The encoder alone is up to 1.5× as fast; how much the whole conversion gains depends on how
+        // fast the phone unpacks the source, so the speeds measured here are shown once known.
+        val balanced = d.measuredSpeed(EncoderMode.BALANCED)
+        val fast = d.measuredSpeed(EncoderMode.FAST)
+        val measured = if (fastDiffers && balanced != null && fast != null) {
+            " Auf diesem Handy gemessen: Ausgewogen ${balanced.toInt()}×, Schnell ${fast.toInt()}× Echtzeit."
+        } else {
+            ""
+        }
         Text(
             when {
                 d.encoderMode == EncoderMode.FAST && fastDiffers ->
-                    "Etwa 1,5× so schnell. Bei reiner Sprache klingt es laut Hörmodell gleich, bei Musik oder " +
-                        "Geräuschen im Hintergrund schlechter ($loss Punkte von 5 bei ${d.quality.kbps} kbit/s)."
+                    "Kodiert bis zu 1,5× so schnell. Bei reiner Sprache klingt es laut Hörmodell gleich, bei Musik oder " +
+                        "Geräuschen im Hintergrund schlechter ($loss Punkte von 5 bei ${d.quality.kbps} kbit/s)." + measured
                 d.encoderMode == EncoderMode.FAST -> "Bei ${d.quality.kbps} kbit/s klingt „Schnell“ laut Hörmodell wie „Ausgewogen“."
-                fastDiffers -> "Beste Qualität für ${d.quality.kbps} kbit/s. „Schnell“ ist etwa 1,5× so schnell – gut für reine " +
-                    "Sprache, bei Musik oder Geräuschen im Hintergrund hörbar schlechter."
+                fastDiffers -> "Beste Qualität für ${d.quality.kbps} kbit/s. „Schnell“ kodiert bis zu 1,5× so schnell – gut für reine " +
+                    "Sprache, bei Musik oder Geräuschen im Hintergrund hörbar schlechter." + measured
                 else -> "Ab 192 kbit/s nutzt „Ausgewogen“ schon den schnellen Modus – laut Hörmodell klingt er dort gleich."
             },
             style = MaterialTheme.typography.bodySmall,

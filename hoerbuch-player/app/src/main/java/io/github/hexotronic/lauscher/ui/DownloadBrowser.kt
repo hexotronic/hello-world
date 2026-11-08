@@ -144,6 +144,9 @@ class DownloadBrowser(private val app: LauscherApp, private val scope: Coroutine
             keep("mode", value)
         }
 
+    /** How fast [mode] converted on this phone so far (× real time), null until measured. */
+    fun measuredSpeed(mode: EncoderMode): Double? = app.downloads.measuredMp3Speed(mode.lameQuality(quality.kbps))
+
     private inline fun <reified T : Enum<T>> saved(key: String, default: T): T =
         options.getString(key, null)?.let { name -> runCatching { enumValueOf<T>(name) }.getOrNull() } ?: default
 

@@ -182,6 +182,9 @@ class DownloadManager(private val context: Context, private val scanner: Library
         restore()
     }
 
+    /** MP3 speed (× real time) measured on this device for LAME quality [lameQuality], null until known. */
+    fun measuredMp3Speed(lameQuality: Int): Double? = rates.measuredConvert(lameQuality)
+
     /** Where the files end up, for the screen. */
     val location: String get() = store.location
 

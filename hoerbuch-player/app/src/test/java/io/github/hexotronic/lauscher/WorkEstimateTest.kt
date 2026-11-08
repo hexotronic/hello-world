@@ -42,8 +42,10 @@ class WorkEstimateTest {
         rates.converted(600_000, 6_000, inPieces = true)
         assertEquals(100.0, rates.convert(), 0.01)
         assertEquals(75.0, rates.convert(7), 0.0)
+        assertEquals(null, rates.measuredConvert(7))
         rates.converted(600_000, 4_000, inPieces = true, lameQuality = 7)
         assertEquals(150.0, rates.convert(7), 0.01)
+        assertEquals(150.0, rates.measuredConvert(7)!!, 0.01)
         // … later measurements are averaged in.
         rates.converted(600_000, 12_000, inPieces = true)
         assertEquals(75.0, rates.convert(), 0.01)

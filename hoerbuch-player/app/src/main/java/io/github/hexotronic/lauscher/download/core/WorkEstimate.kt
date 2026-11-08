@@ -42,6 +42,9 @@ class Rates(private val load: (String) -> Float?, private val save: (String, Flo
      */
     fun convert(lameQuality: Int = 5): Double = value(convertKey(CONVERT, lameQuality), 50f * speedUp(lameQuality))
 
+    /** What was really measured on this device for LAME quality [lameQuality], null before the first conversion. */
+    fun measuredConvert(lameQuality: Int): Double? = load(convertKey(CONVERT, lameQuality))?.takeIf { it > 0f }?.toDouble()
+
     /** The same when a recording is encoded in one go (rates other than 32/44.1/48 kHz). */
     fun convertSingle(lameQuality: Int = 5): Double = value(convertKey(CONVERT_SINGLE, lameQuality), 20f * speedUp(lameQuality))
 
