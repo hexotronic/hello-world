@@ -308,6 +308,43 @@ PY
     E2E_FAILED=1
   fi
 
+  # Conversion modes: the same six minutes as MP3 at 64 and 128 kbit/s, "Ausgewogen" and
+  # "Schnell", one job after the other; time from the log, sound judged on the runner with ViSQOL.
+  if [ -f "$E2E_DIR/modes.m4a" ]; then
+    clear_log
+    n=0
+    for spec in "speech balanced" "speech fast" "standard balanced" "standard fast"; do
+      set -- $spec
+      adb push "$E2E_DIR/modes.m4a" "$DATA/test/modes-$1-$2.m4a" > /dev/null
+      start --es download_convert "$DATA/test/modes-$1-$2.m4a" --es download_quality "$1" --es download_mode "$2" --es screen downloads
+      n=$((n + 1))
+      for i in $(seq 1 90); do
+        if [ "$(adb logcat -d -s LauscherDownload:* | grep -cE "Auftrag [0-9]+ (fertig|fehlgeschlagen)")" -ge "$n" ]; then break; fi
+        sleep 2
+      done
+    done
+    shot 12d-umwandlung-modi-hell 2
+    adb logcat -d -s LauscherDownload:* > "$OUT/downloads-modi.txt"
+    grep -E "Umgewandelt: .*modes|Auftrag" "$OUT/downloads-modi.txt" | tail -12
+    mkdir -p "$OUT/modi"
+    for v in speech-balanced speech-fast standard-balanced standard-fast; do
+      f=$(adb shell find /sdcard/Audiobooks -iname "*modes-$v.mp3" 2>/dev/null | tr -d '\r' | head -1)
+      if [ -n "$f" ]; then adb pull "$f" "$OUT/modi/modes-$v.mp3" > /dev/null; fi
+    done
+    if [ -x "$E2E_DIR/venv/bin/python" ]; then
+      "$E2E_DIR/venv/bin/python" .github/scripts/modes_quality.py "$E2E_DIR/modes.m4a" "$OUT/downloads-modi.txt" "$OUT/modi" > "$OUT/umwandlung-modi.txt" 2>&1
+      status=$?
+      cat "$OUT/umwandlung-modi.txt"
+      if [ "$status" -ne 0 ]; then
+        echo "::error::Die Umwandlungs-Modi haben den Test nicht bestanden (siehe umwandlung-modi.txt)"
+        E2E_FAILED=1
+      fi
+    else
+      echo "::warning::ViSQOL ist nicht installiert, die Klangprüfung der Modi fällt aus"
+    fi
+    rm -rf "$OUT/modi"
+  fi
+
   # YouTube (Big Buck Bunny, CC BY 3.0 Blender Foundation): best effort, YouTube often blocks CI servers.
   clear_log
   start --es download_media "https://www.youtube.com/watch?v=aqz-KE-bpKQ" --es download_limit 1

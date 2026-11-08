@@ -72,6 +72,24 @@ In der Bibliothek über **＋ → Herunterladen und umwandeln …** (oder in den
 - **Schnell:** jede Datei kommt über 4 Verbindungen gleichzeitig (YouTube und archive.org bremsen jede einzelne
   Verbindung); kleine Dateien und Server ohne Teilstücke laden über eine. Angezeigt wird auch, was gerade passiert
   („lädt herunter“, „wandelt in MP3 um“, „speichert“) – am schnellsten ist das Format „Original“ ohne Umwandlung.
+- **Optionen merken sich:** Format, Bitrate, Umwandlung und Gruppierung bleiben gewählt, auch nach einem Neustart.
+- **Umwandlung „Ausgewogen“ oder „Schnell“:** „Schnell“ nutzt LAMEs schnelle Stufe (-q 7, ohne
+  Rauschformung), etwa 1,3–1,7× so schnell. Gemessen mit ViSQOL (objektives Hörmodell, 1–5; je Bitrate
+  Änderung gegenüber -q 5):
+
+  | Bitrate | reine Sprache | Sprache + Raumrauschen | Sprache + Musik + Geräusche | dichte Musik |
+  |---|---|---|---|---|
+  | 64 kbit/s | −0,01 | −0,06 | −0,57 | −0,39 |
+  | 128 kbit/s | ±0 | +0,01 | −0,23 | −0,23 |
+  | 192 kbit/s | ±0 | ±0 | −0,02 | −0,01 |
+  | 320 kbit/s | ±0 | ±0 | ±0 | ±0 |
+
+  „Schnell“ ist also für reine Sprache verlustfrei, bei Musik oder Geräuschen unter der Stimme hörbar
+  schlechter. „Ausgewogen“ (Standard) nimmt bis 128 kbit/s -q 5 und ab 192 kbit/s -q 7 – dort klingt es
+  gleich und wird gratis schneller. Eine „gründliche“ Stufe (-q 2) gibt es nicht: 2,5× langsamer, laut
+  Hörmodell nicht besser. Die Speech-Prüfung mit PESQ (ITU-T P.862) liegt bei allen Stufen an der
+  Skalen-Obergrenze (4,5–4,6). Die CI wandelt dieselbe Aufnahme in beiden Modi um und bewertet die MP3s
+  vom Gerät mit ViSQOL.
 - **Mehrere Umwandlungen gleichzeitig:** in einem Auftrag laufen bis zu 3 Videos zugleich (2 Downloads, die
   Umwandlungen teilen sich die Kerne) – während eins umgewandelt wird, lädt schon das nächste; jedes Buch kommt in
   die Bibliothek, sobald seine Teile fertig sind. Lange Aufnahmen (32/44,1/48 kHz) werden zusätzlich in Stücke von

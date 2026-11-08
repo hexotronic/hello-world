@@ -121,6 +121,15 @@ jobs:
           # A longer one with 48 kHz stereo sound: converted in pieces on several cores at once.
           ffmpeg -nostdin -loglevel error -f lavfi -i testsrc=size=160x120:rate=5 -stream_loop 3 -i e2e/story.wav -t 75 \
             -c:v libx264 -pix_fmt yuv420p -af aresample=48000 -ac 2 -c:a aac -b:a 128k e2e/long.mp4
+          # Six minutes of speech over music with noise bursts (48 kHz, AAC like on video sites) for
+          # the conversion modes, and ViSQOL (objective listening model) to judge the MP3s.
+          flite -voice slt -f e2e/story.txt -o e2e/story-slt.wav
+          ffmpeg -nostdin -loglevel error -stream_loop 6 -i e2e/story-slt.wav \
+            -f lavfi -i "aevalsrc=0.06*sin(2*PI*220*t)*sin(2*PI*0.3*t)+0.05*sin(2*PI*330*t+sin(2*PI*2*t))|0.06*sin(2*PI*277*t)*cos(2*PI*0.2*t)+0.04*sin(2*PI*165*t):s=48000:d=360" \
+            -f lavfi -i "anoisesrc=c=pink:a=0.2:r=48000:d=360" \
+            -filter_complex "[0]aresample=48000,aformat=channel_layouts=stereo[s];[2]volume='if(lt(mod(t,1.7),0.04),1,0.03)':eval=frame,aformat=channel_layouts=stereo[n];[s][1][n]amix=inputs=3:normalize=0:duration=longest,atrim=0:360" \
+            -c:a aac -b:a 160k e2e/modes.m4a
+          python3 -m venv e2e/venv && e2e/venv/bin/pip install -q "visqol-python[accel]" soundfile scipy numpy
           curl -sSL --retry 3 -o e2e/ggml-tiny-q5_1.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny-q5_1.bin
           curl -sSL --retry 3 -o e2e/qwen2.5-0.5b-instruct-q4_k_m.gguf https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf
           ls -la e2e

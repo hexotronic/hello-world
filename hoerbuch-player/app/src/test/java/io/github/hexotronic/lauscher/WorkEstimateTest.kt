@@ -34,22 +34,27 @@ class WorkEstimateTest {
     fun speedsAreLearnedAndKept() {
         val store = HashMap<String, Float>()
         val rates = Rates({ store[it] }, { k, v -> store[k] = v })
-        assertEquals(50.0, rates.convert, 0.0)
+        assertEquals(50.0, rates.convert(), 0.0)
+        // The fast LAME setting starts out 1.5× as fast and is learned on its own.
+        assertEquals(75.0, rates.convert(7), 0.0)
         assertEquals(1_000_000.0, rates.network, 0.0)
         // 10 minutes in 6 s: 100× real time is taken as it is the first time …
         rates.converted(600_000, 6_000, inPieces = true)
-        assertEquals(100.0, rates.convert, 0.01)
+        assertEquals(100.0, rates.convert(), 0.01)
+        assertEquals(75.0, rates.convert(7), 0.0)
+        rates.converted(600_000, 4_000, inPieces = true, lameQuality = 7)
+        assertEquals(150.0, rates.convert(7), 0.01)
         // … later measurements are averaged in.
         rates.converted(600_000, 12_000, inPieces = true)
-        assertEquals(75.0, rates.convert, 0.01)
+        assertEquals(75.0, rates.convert(), 0.01)
         // Short files say little about the speed (start-up costs dominate).
         rates.converted(10_000, 1_000, inPieces = true)
-        assertEquals(75.0, rates.convert, 0.01)
-        assertEquals(20.0, rates.convertSingle, 0.0)
+        assertEquals(75.0, rates.convert(), 0.01)
+        assertEquals(20.0, rates.convertSingle(), 0.0)
         rates.downloaded(8_000_000, 2_000, audioMs = 400_000)
         assertEquals(4_000_000.0, rates.network, 1.0)
         assertEquals(20.0, rates.bytesPerAudioMs, 0.01)
         // A fresh start reads the same values back.
-        assertEquals(75.0, Rates({ store[it] }, { _, _ -> }).convert, 0.01)
+        assertEquals(75.0, Rates({ store[it] }, { _, _ -> }).convert(), 0.01)
     }
 }

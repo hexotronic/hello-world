@@ -2,12 +2,14 @@ package io.github.hexotronic.lauscher
 
 import io.github.hexotronic.lauscher.download.core.ArchiveOrg
 import io.github.hexotronic.lauscher.download.core.DownloadPlan
+import io.github.hexotronic.lauscher.download.core.EncoderMode
 import io.github.hexotronic.lauscher.download.core.FileNames
 import io.github.hexotronic.lauscher.download.core.Grouping
 import io.github.hexotronic.lauscher.download.core.Id3
 import io.github.hexotronic.lauscher.download.core.JobStore
 import io.github.hexotronic.lauscher.download.core.LinkInput
 import io.github.hexotronic.lauscher.download.core.MediaItem
+import io.github.hexotronic.lauscher.download.core.Mp3Quality
 import io.github.hexotronic.lauscher.download.core.PlannedBook
 import io.github.hexotronic.lauscher.download.core.SavedBook
 import io.github.hexotronic.lauscher.download.core.SavedJob
@@ -146,7 +148,7 @@ class DownloadCoreTest {
                 PlannedBook("Folge 1–3", "Kanal\nZwei", listOf(MediaItem("https://y/1?a=1&b=2", "Tëil 1", "Kanal", 1234, null), MediaItem("u2", "Teil 2"))),
                 PlannedBook("Extra", null, emptyList()),
             ),
-            format = "MP3", quality = "SPEECH", local = false,
+            format = "MP3", quality = "SPEECH", mode = "FAST", local = false,
             bookStates = listOf(
                 SavedBook(
                     done = listOf(1), saved = listOf(Triple(1, "content://media/external/audio/media/77", "02 Teil 2.mp3")),
@@ -188,6 +190,13 @@ class DownloadCoreTest {
             ),
             job.bookStates,
         )
-        assertTrue(job.saved.isEmpty() && job.cover == null)
+        assertTrue(job.saved.isEmpty() && job.cover == null && job.mode == null)
+    }
+
+    @Test
+    fun theFastModeIsUsedWhereTheListeningModelHearsNoDifference() {
+        // Normal LAME below 192 kbit/s, its fast setting from there on (ViSQOL: same score).
+        assertEquals(listOf(5, 5, 7, 7), Mp3Quality.entries.map { EncoderMode.BALANCED.lameQuality(it.kbps) })
+        assertEquals(listOf(7, 7, 7, 7), Mp3Quality.entries.map { EncoderMode.FAST.lameQuality(it.kbps) })
     }
 }

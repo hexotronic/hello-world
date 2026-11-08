@@ -61,6 +61,25 @@ enum class Mp3Quality(val label: String, val kbps: Int, val mono: Boolean) {
     MAX("Maximal · 320 kbit/s", 320, false),
 }
 
+/**
+ * How thoroughly LAME works when converting to MP3. Measured with ViSQOL (an objective listening
+ * model, scale 1–5): LAME's fast setting (-q 7, no noise shaping) sounds the same as the normal
+ * one (-q 5) for pure speech at every bitrate and for everything from 192 kbit/s on (≤ 0.02);
+ * with music or noise under the voice it is worse at 64 kbit/s (up to −0.57) and 128 kbit/s
+ * (up to −0.23). The thorough setting (-q 2) is 2.5× slower and not better, so it is not offered.
+ * Speed per core (× real time): 64 kbit/s 313× → 541×, 128 kbit/s 139× → 210×.
+ */
+enum class EncoderMode(val label: String) {
+    /** Normal LAME below 192 kbit/s, the fast one from there on (no difference measured there). */
+    BALANCED("Ausgewogen"),
+
+    /** Always the fast LAME setting: about 1.5× as fast; at 64–128 kbit/s only right for pure speech. */
+    FAST("Schnell");
+
+    /** LAME's -q for a conversion at [kbps]. */
+    fun lameQuality(kbps: Int): Int = if (this == FAST || kbps >= 192) 7 else 5
+}
+
 /** How selected items become books in the library. */
 enum class Grouping(val label: String) {
     ONE_BOOK("Ein Hörbuch (Kapitel)"),

@@ -28,6 +28,8 @@ data class SavedJob(
     val books: List<PlannedBook> = emptyList(),
     val format: String? = null,
     val quality: String? = null,
+    /** Name of the [EncoderMode]; null for jobs written before there was a choice. */
+    val mode: String? = null,
     val local: Boolean = false,
     /** Videos and files: how far each of [books] got (several items are worked on at once). */
     val bookStates: List<SavedBook> = emptyList(),
@@ -93,6 +95,7 @@ object JobStore {
             append("],")
             field("format", j.format)
             field("quality", j.quality)
+            field("mode", j.mode)
             field("local", j.local)
             append("\"bookStates\":[")
             j.bookStates.forEachIndexed { b, state ->
@@ -180,6 +183,7 @@ object JobStore {
             books = books,
             format = m["format"] as? String,
             quality = m["quality"] as? String,
+            mode = m["mode"] as? String,
             local = m["local"] as? Boolean ?: false,
             bookStates = states,
             saved = if (m["kind"] == "media") emptyList() else saved,

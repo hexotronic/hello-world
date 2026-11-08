@@ -15,6 +15,8 @@ import androidx.compose.runtime.getValue
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.hexotronic.lauscher.audio.dsp.EnhancerPreset
+import io.github.hexotronic.lauscher.download.core.EncoderMode
+import io.github.hexotronic.lauscher.download.core.Mp3Quality
 import io.github.hexotronic.lauscher.music.MusicMode
 import io.github.hexotronic.lauscher.music.MusicSource
 import io.github.hexotronic.lauscher.music.library.core.MusicCatalog
@@ -75,9 +77,11 @@ class MainActivity : ComponentActivity() {
         val limit = intent.getStringExtra(EXTRA_DOWNLOAD_LIMIT)?.toIntOrNull() ?: 1
         val original = intent.getStringExtra(EXTRA_DOWNLOAD_FORMAT) == "original"
         val pauseTest = intent.getStringExtra(EXTRA_DOWNLOAD_PAUSE_TEST)?.toLongOrNull()
+        val mode = intent.getStringExtra(EXTRA_DOWNLOAD_MODE)?.let { runCatching { EncoderMode.valueOf(it.uppercase()) }.getOrNull() } ?: EncoderMode.BALANCED
+        val quality = intent.getStringExtra(EXTRA_DOWNLOAD_QUALITY)?.let { runCatching { Mp3Quality.valueOf(it.uppercase()) }.getOrNull() } ?: Mp3Quality.SPEECH
         intent.getStringExtra(EXTRA_DOWNLOAD_AUDIOBOOK)?.let { vm.downloads.automate("audiobook", it, limit, original, pauseTest) }
-        intent.getStringExtra(EXTRA_DOWNLOAD_MEDIA)?.let { vm.downloads.automate("media", it, limit, original) }
-        intent.getStringExtra(EXTRA_DOWNLOAD_CONVERT)?.let { vm.downloads.automate("convert", it, limit, original) }
+        intent.getStringExtra(EXTRA_DOWNLOAD_MEDIA)?.let { vm.downloads.automate("media", it, limit, original, mode = mode, quality = quality) }
+        intent.getStringExtra(EXTRA_DOWNLOAD_CONVERT)?.let { vm.downloads.automate("convert", it, limit, original, mode = mode, quality = quality) }
         // "Teilen → Lauscher" from an e-book app: text or a TXT/EPUB/HTML file becomes a book text.
         if (intent.action == Intent.ACTION_SEND) {
             val stream = if (Build.VERSION.SDK_INT >= 33) {
@@ -162,6 +166,8 @@ class MainActivity : ComponentActivity() {
         const val EXTRA_DOWNLOAD_MEDIA = "download_media"
         const val EXTRA_DOWNLOAD_CONVERT = "download_convert"
         const val EXTRA_DOWNLOAD_LIMIT = "download_limit"
+        const val EXTRA_DOWNLOAD_MODE = "download_mode"
+        const val EXTRA_DOWNLOAD_QUALITY = "download_quality"
         const val EXTRA_DOWNLOAD_FORMAT = "download_format"
         const val EXTRA_DOWNLOAD_PAUSE_TEST = "download_pause_test"
     }

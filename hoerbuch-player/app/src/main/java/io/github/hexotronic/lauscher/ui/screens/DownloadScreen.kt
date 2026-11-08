@@ -52,6 +52,7 @@ import io.github.hexotronic.lauscher.download.JobState
 import io.github.hexotronic.lauscher.download.PHASE_DOWNLOAD
 import io.github.hexotronic.lauscher.download.Source
 import io.github.hexotronic.lauscher.download.core.ArchiveOrg
+import io.github.hexotronic.lauscher.download.core.EncoderMode
 import io.github.hexotronic.lauscher.download.core.Grouping
 import io.github.hexotronic.lauscher.download.core.LinkInput
 import io.github.hexotronic.lauscher.download.core.MediaItem
@@ -332,7 +333,7 @@ private fun MediaRow(item: MediaItem, checked: Boolean, onToggle: () -> Unit) {
     }
 }
 
-/** Format, MP3 quality and (for several items) how they become books. */
+/** Format, MP3 quality, how fast to convert and (for several items) how they become books. */
 @Composable
 private fun DownloadOptions(d: DownloadBrowser, grouping: Boolean) {
     Text("Format", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 10.dp))
@@ -353,6 +354,27 @@ private fun DownloadOptions(d: DownloadBrowser, grouping: Boolean) {
                 modifier = Modifier.padding(top = 4.dp),
             )
         }
+        Text("Umwandlung", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 6.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            EncoderMode.entries.forEach { m -> FilterChip(selected = d.encoderMode == m, onClick = { d.encoderMode = m }, label = { Text(m.label) }) }
+        }
+        // What the modes cost and bring, measured with an objective listening model (ViSQOL, scale 1–5).
+        val fastDiffers = d.quality.kbps < 192
+        val loss = if (d.quality.kbps < 128) "bis 0,6" else "bis 0,2"
+        Text(
+            when {
+                d.encoderMode == EncoderMode.FAST && fastDiffers ->
+                    "Etwa 1,5× so schnell. Bei reiner Sprache klingt es laut Hörmodell gleich, bei Musik oder " +
+                        "Geräuschen im Hintergrund schlechter ($loss Punkte von 5 bei ${d.quality.kbps} kbit/s)."
+                d.encoderMode == EncoderMode.FAST -> "Bei ${d.quality.kbps} kbit/s klingt „Schnell“ laut Hörmodell wie „Ausgewogen“."
+                fastDiffers -> "Beste Qualität für ${d.quality.kbps} kbit/s. „Schnell“ ist etwa 1,5× so schnell – gut für reine " +
+                    "Sprache, bei Musik oder Geräuschen im Hintergrund hörbar schlechter."
+                else -> "Ab 192 kbit/s nutzt „Ausgewogen“ schon den schnellen Modus – laut Hörmodell klingt er dort gleich."
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 2.dp),
+        )
     }
     if (grouping) {
         Text("Mehrere Dateien", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 6.dp))

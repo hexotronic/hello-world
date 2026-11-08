@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.SystemClock
 import android.util.Log
 import io.github.hexotronic.lauscher.download.core.ArchiveOrg
+import io.github.hexotronic.lauscher.download.core.EncoderMode
 import io.github.hexotronic.lauscher.download.core.FileNames
 import io.github.hexotronic.lauscher.download.core.HttpFetch
 import io.github.hexotronic.lauscher.download.core.Id3
@@ -109,7 +110,16 @@ class DownloadManager(private val context: Context, private val scanner: Library
             val saved = ArrayList<Pair<Uri, String>>()
         }
 
-        class Media(val books: List<PlannedBook>, val format: OutputFormat, val quality: Mp3Quality, val local: Boolean) : Work() {
+        class Media(
+            val books: List<PlannedBook>,
+            val format: OutputFormat,
+            val quality: Mp3Quality,
+            val local: Boolean,
+            val mode: EncoderMode = EncoderMode.BALANCED,
+        ) : Work() {
+            /** LAME's -q for this job's conversions. */
+            val lameQuality: Int get() = mode.lameQuality(quality.kbps)
+
             /** How far each book got; changed while holding this object's lock. */
             val state = books.map { BookState() }
             /** Items being worked on now (book to item). */
@@ -187,12 +197,12 @@ class DownloadManager(private val context: Context, private val scanner: Library
     fun downloadAudiobook(item: ArchiveOrg.Item, limit: Int? = null): Long =
         enqueue(item.title, "LibriVox" + (item.author?.let { " · $it" } ?: ""), 0, Work.Audiobook(item.id, limit))
 
-    fun downloadMedia(books: List<PlannedBook>, format: OutputFormat, quality: Mp3Quality): Long =
-        enqueue(batchTitle(books), describe(books, format, quality), books.sumOf { it.items.size }, Work.Media(books, format, quality, local = false))
+    fun downloadMedia(books: List<PlannedBook>, format: OutputFormat, quality: Mp3Quality, mode: EncoderMode = EncoderMode.BALANCED): Long =
+        enqueue(batchTitle(books), describe(books, format, quality, mode), books.sumOf { it.items.size }, Work.Media(books, format, quality, local = false, mode = mode))
 
     /** Converts files picked on the phone; their [MediaItem.url]s are content URIs. */
-    fun convertFiles(books: List<PlannedBook>, format: OutputFormat, quality: Mp3Quality): Long =
-        enqueue(batchTitle(books), describe(books, format, quality), books.sumOf { it.items.size }, Work.Media(books, format, quality, local = true))
+    fun convertFiles(books: List<PlannedBook>, format: OutputFormat, quality: Mp3Quality, mode: EncoderMode = EncoderMode.BALANCED): Long =
+        enqueue(batchTitle(books), describe(books, format, quality, mode), books.sumOf { it.items.size }, Work.Media(books, format, quality, local = true, mode = mode))
 
     fun cancel(id: Long) {
         interrupted -= id
@@ -560,7 +570,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
                     status.bytesTotal = total
                     if (!shareKnown && total > 0) {
                         shareKnown = true
-                        share = if (converts) downloadShare(total, audioMs) else 1f
+                        share = if (converts) downloadShare(total, audioMs, w.lameQuality) else 1f
                     }
                     if (total > 0) share * done / total else 0f
                 }
@@ -609,7 +619,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
             val progress = Progress(jobId, w, segmentStart, 0, status) { _, _ -> 0f }
             val r = target.openStream().use { out ->
                 out.write(Id3.tag(title, book.author, book.title, index + 1, count, cover))
-                AudioConverter.toMp3(context, input, out, w.quality, onLength = { ms -> if (ms > 0) w.audioMs[b to index] = ms }) { f ->
+                AudioConverter.toMp3(context, input, out, w.quality, w.lameQuality, onLength = { ms -> if (ms > 0) w.audioMs[b to index] = ms }) { f ->
                     status.convertedMs = ((w.audioMs[b to index] ?: 0L) * f).toLong()
                     progress.fraction(start + (1 - start) * f)
                 }
@@ -637,7 +647,8 @@ class DownloadManager(private val context: Context, private val scanner: Library
         Log.i(
             TAG,
             "Umgewandelt: ${target.name} – ${formatClock(result.durationMs)} in ${"%.1f".format(Locale.ROOT, seconds)} s" +
-                (if (result.pieces > 1) " (${result.pieces} Teile, ${AudioConverter.threads} gleichzeitig, ${result.roughJoints} unsaubere Nähte)" else ""),
+                (if (result.pieces > 1) " (${result.pieces} Teile, ${AudioConverter.threads} gleichzeitig, ${result.roughJoints} unsaubere Nähte)" else "") +
+                " [LAME -q ${w.lameQuality}]",
         )
         return target.uri to target.name
     }
@@ -672,14 +683,14 @@ class DownloadManager(private val context: Context, private val scanner: Library
             w.stretchBroken = false
             measured
         } ?: return
-        rates.converted(stretch.first, stretch.second, inPieces = stretch.third)
+        rates.converted(stretch.first, stretch.second, inPieces = stretch.third, lameQuality = w.lameQuality)
     }
 
     /** Share of an item's time that the download of [bytes] takes, the rest being the conversion. */
-    private fun downloadShare(bytes: Long, audioMs: Long): Float {
+    private fun downloadShare(bytes: Long, audioMs: Long, lameQuality: Int): Float {
         val download = bytes * 1000.0 / rates.network
         val sound = if (audioMs > 0) audioMs.toDouble() else bytes / rates.bytesPerAudioMs
-        val convert = sound / rates.convert
+        val convert = sound / rates.convert(lameQuality)
         return (download / (download + convert)).toFloat().coerceIn(0.05f, 0.95f)
     }
 
@@ -695,7 +706,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
         val now = SystemClock.elapsedRealtime()
         val items = ArrayList<WorkEstimate.Item>()
         var downloading = false
-        var convertSpeed = rates.convert
+        var convertSpeed = rates.convert(w.lameQuality)
         synchronized(w) {
             w.books.forEachIndexed { b, book ->
                 val state = w.state[b]
@@ -733,7 +744,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
     /** Logs the remaining time (the CI compares it with how long the job really takes). */
     private fun logEstimate(jobId: Long, w: Work.Media, what: String) {
         val ms = mediaRemainingMs(w, 0.0) ?: return
-        Log.i(TAG, "$what – Restzeit geschätzt ${"%.1f".format(Locale.ROOT, ms / 1000.0)} s (Auftrag $jobId, MP3 ${"%.0f".format(Locale.ROOT, rates.convert)}× Echtzeit)")
+        Log.i(TAG, "$what – Restzeit geschätzt ${"%.1f".format(Locale.ROOT, ms / 1000.0)} s (Auftrag $jobId, MP3 ${"%.0f".format(Locale.ROOT, rates.convert(w.lameQuality))}× Echtzeit, LAME -q ${w.lameQuality})")
     }
 
     /** "Fertig nach 1:12 · 10:05 Ton mit 43× Echtzeit umgewandelt" */
@@ -886,9 +897,14 @@ class DownloadManager(private val context: Context, private val scanner: Library
     private fun batchTitle(books: List<PlannedBook>) =
         if (books.size == 1) books[0].title else "${books.size} Hörbücher"
 
-    private fun describe(books: List<PlannedBook>, format: OutputFormat, quality: Mp3Quality): String {
+    private fun describe(books: List<PlannedBook>, format: OutputFormat, quality: Mp3Quality, mode: EncoderMode): String {
         val items = books.sumOf { it.items.size }
-        return "$items ${if (items == 1) "Datei" else "Dateien"} · " + if (format == OutputFormat.MP3) "MP3 ${quality.kbps} kbit/s" else "Original"
+        val what = when {
+            format != OutputFormat.MP3 -> "Original"
+            mode == EncoderMode.FAST -> "MP3 ${quality.kbps} kbit/s · schnell"
+            else -> "MP3 ${quality.kbps} kbit/s"
+        }
+        return "$items ${if (items == 1) "Datei" else "Dateien"} · $what"
     }
 
     private fun setJob(id: Long, change: (DownloadJob) -> DownloadJob) {
@@ -942,6 +958,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
                 runCatching { OutputFormat.valueOf(s.format!!) }.getOrNull() ?: return null,
                 runCatching { Mp3Quality.valueOf(s.quality!!) }.getOrNull() ?: return null,
                 s.local,
+                s.mode?.let { runCatching { EncoderMode.valueOf(it) }.getOrNull() } ?: EncoderMode.BALANCED,
             ).apply {
                 s.bookStates.forEachIndexed { b, saved ->
                     val st = state.getOrNull(b) ?: return@forEachIndexed
@@ -989,7 +1006,7 @@ class DownloadManager(private val context: Context, private val scanner: Library
             }
             is Work.Media -> synchronized(w) {
                 base.copy(
-                    kind = KIND_MEDIA, books = w.books, format = w.format.name, quality = w.quality.name, local = w.local,
+                    kind = KIND_MEDIA, books = w.books, format = w.format.name, quality = w.quality.name, mode = w.mode.name, local = w.local,
                     bookStates = w.state.map { st ->
                         SavedBook(
                             done = st.done.toList(),

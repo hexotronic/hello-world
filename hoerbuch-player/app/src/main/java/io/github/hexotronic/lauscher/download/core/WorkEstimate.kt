@@ -36,13 +36,14 @@ object WorkEstimate {
  */
 class Rates(private val load: (String) -> Float?, private val save: (String, Float) -> Unit) {
     /**
-     * Ms of sound converted to MP3 per ms when recordings are encoded in pieces on several cores
-     * (until measured: 50, the CI emulator does about 65 with three encoders).
+     * Ms of sound converted to MP3 per ms when recordings are encoded in pieces on several cores,
+     * with LAME quality [lameQuality] (until measured: 50 for the normal setting, the CI emulator
+     * does about 65 with three encoders; the fast setting is about 1.5× as fast).
      */
-    val convert: Double get() = value(CONVERT, 50f)
+    fun convert(lameQuality: Int = 5): Double = value(convertKey(CONVERT, lameQuality), 50f * speedUp(lameQuality))
 
     /** The same when a recording is encoded in one go (rates other than 32/44.1/48 kHz). */
-    val convertSingle: Double get() = value(CONVERT_SINGLE, 20f)
+    fun convertSingle(lameQuality: Int = 5): Double = value(convertKey(CONVERT_SINGLE, lameQuality), 20f * speedUp(lameQuality))
 
     /** Network speed in bytes per second. */
     val network: Double get() = value(NETWORK, 1_000_000f)
@@ -51,10 +52,15 @@ class Rates(private val load: (String) -> Float?, private val save: (String, Flo
     val bytesPerAudioMs: Double get() = value(BYTES_PER_AUDIO, 20f)
 
     /** A conversion of [audioMs] of sound took [wallMs]; short ones say too little to count. */
-    fun converted(audioMs: Long, wallMs: Long, inPieces: Boolean) {
+    fun converted(audioMs: Long, wallMs: Long, inPieces: Boolean, lameQuality: Int = 5) {
         if (audioMs < 30_000 || wallMs <= 0) return
-        learn(if (inPieces) CONVERT else CONVERT_SINGLE, audioMs.toDouble() / wallMs)
+        learn(convertKey(if (inPieces) CONVERT else CONVERT_SINGLE, lameQuality), audioMs.toDouble() / wallMs)
     }
+
+    /** Speeds are kept per LAME setting; the normal one keeps the original key. */
+    private fun convertKey(base: String, lameQuality: Int) = if (lameQuality == 5) base else "$base-q$lameQuality"
+
+    private fun speedUp(lameQuality: Int) = if (lameQuality >= 7) 1.5f else 1f
 
     /** [bytes] arrived in [wallMs]; [audioMs] is the length of the sound if known. */
     fun downloaded(bytes: Long, wallMs: Long, audioMs: Long) {

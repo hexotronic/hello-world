@@ -61,6 +61,7 @@ object AudioConverter {
         source: Uri,
         out: OutputStream,
         quality: Mp3Quality,
+        lameQuality: Int = 5,
         onLength: (Long) -> Unit = {},
         onProgress: (Float) -> Unit,
     ): Mp3Result = coroutineScope {
@@ -102,7 +103,7 @@ object AudioConverter {
             suspend fun submit(piece: PcmPiece, pieceChannels: Int, pieceRate: Int) {
                 drain(threads)
                 pieceCount++
-                running += async(Dispatchers.Default) { encoders.withPermit { encodePiece(piece, pieceRate, pieceChannels, quality) } }
+                running += async(Dispatchers.Default) { encoders.withPermit { encodePiece(piece, pieceRate, pieceChannels, quality, lameQuality) } }
             }
             var outputDone = false
             while (!outputDone) {
@@ -153,7 +154,7 @@ object AudioConverter {
                             for (piece in collector.add(pcm, frames)) submit(piece, outChannels, rate)
                         } else {
                             val enc = encoder ?: (
-                                Mp3Encoder.create(rate, outChannels, quality.kbps, quality.mono)
+                                Mp3Encoder.create(rate, outChannels, quality.kbps, quality.mono, quality = lameQuality)
                                     ?: throw IOException("MP3-Umwandlung bei $rate Hz nicht möglich")
                                 ).also { encoder = it }
                             out.write(enc.encode(pcm, frames))
@@ -187,8 +188,8 @@ object AudioConverter {
     }
 
     /** Encodes one piece with an encoder of its own (at the input rate, so pieces share the frame grid). */
-    private suspend fun encodePiece(piece: PcmPiece, rate: Int, channels: Int, quality: Mp3Quality): EncodedPiece {
-        val enc = Mp3Encoder.create(rate, channels, quality.kbps, quality.mono, outRate = rate)
+    private suspend fun encodePiece(piece: PcmPiece, rate: Int, channels: Int, quality: Mp3Quality, lameQuality: Int): EncodedPiece {
+        val enc = Mp3Encoder.create(rate, channels, quality.kbps, quality.mono, outRate = rate, quality = lameQuality)
             ?: throw IOException("MP3-Umwandlung bei $rate Hz nicht möglich")
         try {
             val out = ByteArrayOutputStream((piece.frames.toLong() * quality.kbps * 125 / rate).toInt() + 8192)

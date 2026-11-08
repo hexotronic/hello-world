@@ -27,14 +27,15 @@ class Mp3Encoder private constructor(private var handle: Long, private val chann
 
         /**
          * [sampleRate] and [channels] (1 or 2) describe the input. With [mono] the output is
-         * downmixed; [outRate] 0 lets LAME pick a rate that suits [kbps].
+         * downmixed; [outRate] 0 lets LAME pick a rate that suits [kbps]. [quality] is LAME's -q
+         * (5 normal, 7 fast).
          */
-        fun create(sampleRate: Int, channels: Int, kbps: Int, mono: Boolean, outRate: Int = 0): Mp3Encoder? {
-            val h = nativeInit(sampleRate, channels, outRate, kbps, mono)
+        fun create(sampleRate: Int, channels: Int, kbps: Int, mono: Boolean, outRate: Int = 0, quality: Int = 5): Mp3Encoder? {
+            val h = nativeInit(sampleRate, channels, outRate, kbps, mono, quality)
             return if (h == 0L) null else Mp3Encoder(h, channels)
         }
 
-        @JvmStatic private external fun nativeInit(sampleRate: Int, channels: Int, outRate: Int, kbps: Int, mono: Boolean): Long
+        @JvmStatic private external fun nativeInit(sampleRate: Int, channels: Int, outRate: Int, kbps: Int, mono: Boolean, quality: Int): Long
         @JvmStatic private external fun nativeEncode(handle: Long, pcm: ShortArray, frames: Int): ByteArray
         @JvmStatic private external fun nativeFlush(handle: Long): ByteArray
         @JvmStatic private external fun nativeClose(handle: Long)

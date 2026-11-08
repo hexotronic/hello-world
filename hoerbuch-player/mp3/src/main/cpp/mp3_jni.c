@@ -15,7 +15,7 @@ static jbyteArray to_array(JNIEnv *env, const unsigned char *data, int size) {
 
 EXPORT JNIEXPORT jlong JNICALL
 Java_io_github_hexotronic_lauscher_mp3_Mp3Encoder_nativeInit(
-        JNIEnv *env, jclass clazz, jint sample_rate, jint channels, jint out_rate, jint kbps, jboolean mono) {
+        JNIEnv *env, jclass clazz, jint sample_rate, jint channels, jint out_rate, jint kbps, jboolean mono, jint quality) {
     lame_global_flags *gf = lame_init();
     if (gf == NULL) return 0;
     lame_set_in_samplerate(gf, sample_rate);
@@ -24,7 +24,8 @@ Java_io_github_hexotronic_lauscher_mp3_Mp3Encoder_nativeInit(
     lame_set_VBR(gf, vbr_off);
     lame_set_brate(gf, kbps);
     lame_set_mode(gf, mono ? MONO : JOINT_STEREO);
-    lame_set_quality(gf, 5);
+    // 5: LAME's normal setting; 7: its fast one (see EncoderMode for what it costs in sound).
+    lame_set_quality(gf, quality);
     // The output is streamed, so the Xing/Info header could not be rewritten at the end;
     // constant bitrate files are seekable without it.
     lame_set_bWriteVbrTag(gf, 0);

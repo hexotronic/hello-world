@@ -1,5 +1,6 @@
 package io.github.hexotronic.lauscher.ui
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -14,6 +15,7 @@ import io.github.hexotronic.lauscher.download.MediaSources
 import io.github.hexotronic.lauscher.download.Source
 import io.github.hexotronic.lauscher.download.core.ArchiveOrg
 import io.github.hexotronic.lauscher.download.core.DownloadPlan
+import io.github.hexotronic.lauscher.download.core.EncoderMode
 import io.github.hexotronic.lauscher.download.core.Grouping
 import io.github.hexotronic.lauscher.download.core.LinkInput
 import io.github.hexotronic.lauscher.download.core.MediaItem
@@ -111,9 +113,41 @@ class DownloadBrowser(private val app: LauscherApp, private val scope: Coroutine
         private set
     var hasMore by mutableStateOf(false)
         private set
-    var grouping by mutableStateOf(Grouping.ONE_BOOK)
-    var format by mutableStateOf(OutputFormat.MP3)
-    var quality by mutableStateOf(Mp3Quality.STANDARD)
+    // The chosen options are kept for the next time (also after the app was closed).
+    private val options = app.getSharedPreferences("download-options", Context.MODE_PRIVATE)
+    private var groupingState by mutableStateOf(saved("grouping", Grouping.ONE_BOOK))
+    private var formatState by mutableStateOf(saved("format", OutputFormat.MP3))
+    private var qualityState by mutableStateOf(saved("quality", Mp3Quality.STANDARD))
+    private var modeState by mutableStateOf(saved("mode", EncoderMode.BALANCED))
+    var grouping: Grouping
+        get() = groupingState
+        set(value) {
+            groupingState = value
+            keep("grouping", value)
+        }
+    var format: OutputFormat
+        get() = formatState
+        set(value) {
+            formatState = value
+            keep("format", value)
+        }
+    var quality: Mp3Quality
+        get() = qualityState
+        set(value) {
+            qualityState = value
+            keep("quality", value)
+        }
+    var encoderMode: EncoderMode
+        get() = modeState
+        set(value) {
+            modeState = value
+            keep("mode", value)
+        }
+
+    private inline fun <reified T : Enum<T>> saved(key: String, default: T): T =
+        options.getString(key, null)?.let { name -> runCatching { enumValueOf<T>(name) }.getOrNull() } ?: default
+
+    private fun keep(key: String, value: Enum<*>) = options.edit().putString(key, value.name).apply()
     private var more: (() -> Listing)? = null
     /** Name for "one book": the playlist or channel, or the search words. */
     private var collectionTitle: String? = null
@@ -197,7 +231,7 @@ class DownloadBrowser(private val app: LauscherApp, private val scope: Coroutine
         val items = mediaItems.filter { it.url in selected }
         if (items.isEmpty()) return
         val books = DownloadPlan.books(items, grouping, collectionTitle)
-        app.downloads.downloadMedia(books, format, quality)
+        app.downloads.downloadMedia(books, format, quality, encoderMode)
         toast(if (books.size == 1) "Wird geladen: ${books[0].title}" else "${books.size} Hörbücher werden geladen")
         selected = emptySet()
     }
@@ -220,7 +254,7 @@ class DownloadBrowser(private val app: LauscherApp, private val scope: Coroutine
         }
         val books = DownloadPlan.books(items, grouping, title ?: items.first().title.substringBeforeLast('.'))
             .map { b -> if (b.items.size == 1) b.copy(title = b.title.substringBeforeLast('.')) else b }
-        app.downloads.convertFiles(books, format, quality)
+        app.downloads.convertFiles(books, format, quality, encoderMode)
         toast(if (items.size == 1) "Wird umgewandelt: ${items[0].title}" else "${items.size} Dateien werden umgewandelt")
     }
 
@@ -229,7 +263,15 @@ class DownloadBrowser(private val app: LauscherApp, private val scope: Coroutine
      * "quelle:suchwörter" – and downloads the first [limit] results, or converts the file [value].
      * With [pauseAfterMs] the download is paused after that time and continued 3 s later.
      */
-    fun automate(kind: String, value: String, limit: Int, original: Boolean, pauseAfterMs: Long? = null) {
+    fun automate(
+        kind: String,
+        value: String,
+        limit: Int,
+        original: Boolean,
+        pauseAfterMs: Long? = null,
+        mode: EncoderMode = EncoderMode.BALANCED,
+        quality: Mp3Quality = Mp3Quality.SPEECH,
+    ) {
         val format = if (original) OutputFormat.ORIGINAL else OutputFormat.MP3
         scope.launch {
             runCatching {
@@ -259,7 +301,7 @@ class DownloadBrowser(private val app: LauscherApp, private val scope: Coroutine
                         }
                         Log.i(TAG, "Gefunden (${listing.title}): " + listing.items.take(5).joinToString(" | ") { it.title })
                         val items = listing.items.take(limit).ifEmpty { error("Keine Treffer") }
-                        app.downloads.downloadMedia(DownloadPlan.books(items, Grouping.ONE_BOOK, listing.title), format, Mp3Quality.SPEECH)
+                        app.downloads.downloadMedia(DownloadPlan.books(items, Grouping.ONE_BOOK, listing.title), format, quality, mode)
                     }
                     "convert" -> {
                         // Several paths (comma-separated) become one job with a book for each file.
@@ -267,7 +309,7 @@ class DownloadBrowser(private val app: LauscherApp, private val scope: Coroutine
                             val file = java.io.File(path.trim())
                             PlannedBook(file.name.substringBeforeLast('.'), null, listOf(MediaItem(Uri.fromFile(file).toString(), file.name)))
                         }
-                        app.downloads.convertFiles(books, format, Mp3Quality.SPEECH)
+                        app.downloads.convertFiles(books, format, quality, mode)
                     }
                 }
             }.onFailure { Log.w(TAG, "Automatischer Download fehlgeschlagen: ${it.message}", it) }
