@@ -76,6 +76,7 @@ sealed interface Screen {
     data object Music : Screen
     data object MusicLibrary : Screen
     data object Downloads : Screen
+    data object Voice : Screen
     data class BookDetail(val bookId: Long) : Screen
 }
 
@@ -232,6 +233,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateSettings(transform: (AppSettings) -> AppSettings) = settingsStore.update(transform)
 
+    // ---------------------------------------------------------------- voice control
+
+    val voiceSettings = app.voice.store.settings
+    val voiceStatus = app.voice.status
+    val voiceLastHeard = app.voice.lastHeard
+    val voiceHasModel: Boolean get() = app.voice.hasModel()
+
+    fun updateVoice(change: (io.github.hexotronic.lauscher.voice.VoiceSettings) -> io.github.hexotronic.lauscher.voice.VoiceSettings) {
+        app.voice.store.update(change)
+        // A running listener picks the new settings up by itself; a stopped one may start now.
+        app.voice.ensureRunning()
+    }
+
+    fun setVoiceEnabled(on: Boolean) = app.voice.setEnabled(on)
+
     fun addFolder(uri: Uri) {
         viewModelScope.launch {
             scanner.addFolder(uri)
@@ -292,6 +308,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             "music" -> navigate(Screen.Music)
             "musiclibrary" -> navigate(Screen.MusicLibrary)
             "downloads" -> navigate(Screen.Downloads)
+            "voice" -> navigate(Screen.Voice)
             "feedback" -> {
                 openFeedback = true
                 navigate(Screen.Player)

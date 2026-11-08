@@ -5,6 +5,7 @@ import androidx.media3.common.C
 import androidx.media3.common.audio.AudioProcessor
 import androidx.media3.common.audio.BaseAudioProcessor
 import androidx.media3.common.util.UnstableApi
+import io.github.hexotronic.lauscher.audio.dsp.Crossfeed
 import io.github.hexotronic.lauscher.audio.dsp.EnhancerEngine
 import java.nio.ByteBuffer
 
@@ -18,6 +19,7 @@ import java.nio.ByteBuffer
 @OptIn(UnstableApi::class)
 class EnhancerAudioProcessor : BaseAudioProcessor() {
     private var engine: EnhancerEngine? = null
+    private var crossfeed: Crossfeed? = null
     private var samples = FloatArray(0)
     private var shorts = ShortArray(0)
     private var tailPending = false
@@ -50,6 +52,10 @@ class EnhancerAudioProcessor : BaseAudioProcessor() {
         }
         inputBuffer.position(inputBuffer.position() + count * bytesPerSample)
         eng.process(samples, frames, AudioEnhancerHub.settings, AudioEnhancerHub.bypass)
+        if (channels == 2 && AudioEnhancerHub.crossfeed > 0f) {
+            val cf = crossfeed ?: Crossfeed(format.sampleRate).also { crossfeed = it }
+            cf.process(samples, frames, AudioEnhancerHub.crossfeed)
+        }
         trackLevel(count)
         write(count, isFloat)
     }
@@ -135,5 +141,6 @@ class EnhancerAudioProcessor : BaseAudioProcessor() {
     override fun onReset() {
         tailPending = false
         engine = null
+        crossfeed = null
     }
 }

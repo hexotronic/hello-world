@@ -99,7 +99,7 @@ jobs:
 
       - name: Prepare local AI test (speech + small models)
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq flite ffmpeg > /dev/null
+          sudo apt-get update -qq && sudo apt-get install -y -qq flite ffmpeg espeak-ng > /dev/null
           mkdir -p e2e
           cat > e2e/story.txt <<'TXT'
           It was a quiet morning at the lake. Mira sat on the wooden pier with a cup of tea and watched the sun rise
@@ -131,6 +131,21 @@ jobs:
             -c:a aac -b:a 160k e2e/modes.m4a
           python3 -m venv e2e/venv && e2e/venv/bin/pip install -q "visqol-python[accel]" soundfile scipy numpy
           curl -sSL --retry 3 -o e2e/ggml-tiny-q5_1.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny-q5_1.bin
+          # Voice commands: spoken German (espeak-ng) with pauses and quiet noise, one sentence
+          # without the wake word; recognised with Whisper Base as recommended in the app.
+          curl -sSL --retry 3 -o e2e/ggml-base-q5_1.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin
+          i=0
+          : > e2e/voice-list.txt
+          ffmpeg -nostdin -loglevel error -f lavfi -i anullsrc=r=22050:cl=mono -t 1.5 e2e/voice-gap.wav
+          for t in "Lauscher, Pause." "Lauscher, weiter." "Lauscher, dreißig Sekunden zurück." "Lauscher, nächstes Kapitel." \
+                   "Heute ist schönes Wetter am See." "Lauscher, wo bin ich?" "Lauscher, Pause."; do
+            espeak-ng -v de -s 140 -w e2e/voice-$i.wav "$t"
+            echo "file 'voice-$i.wav'" >> e2e/voice-list.txt
+            echo "file 'voice-gap.wav'" >> e2e/voice-list.txt
+            i=$((i + 1))
+          done
+          ffmpeg -nostdin -loglevel error -f concat -safe 0 -i e2e/voice-list.txt -f lavfi -i "anoisesrc=c=pink:a=0.004:r=22050:d=60" \
+            -filter_complex "[0][1]amix=inputs=2:normalize=0:duration=first" -ar 16000 -ac 1 e2e/voice.wav
           curl -sSL --retry 3 -o e2e/qwen2.5-0.5b-instruct-q4_k_m.gguf https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf
           ls -la e2e
 

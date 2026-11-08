@@ -7,9 +7,12 @@ class WhisperNative private constructor(private var handle: Long) : Closeable {
 
     data class Segment(val startMs: Long, val endMs: Long, val text: String)
 
-    /** Transcribes 16 kHz mono samples in the range -1..1. */
-    fun transcribe(samples: FloatArray, language: String = "de", threads: Int = defaultThreads()): List<Segment> {
-        val raw = String(nativeTranscribe(handle, samples, language, threads), Charsets.UTF_8)
+    /**
+     * Transcribes 16 kHz mono samples in the range -1..1. [prompt] is text the speech is expected
+     * to resemble (e.g. the voice commands), which steers the recogniser towards those words.
+     */
+    fun transcribe(samples: FloatArray, language: String = "de", threads: Int = defaultThreads(), prompt: String? = null): List<Segment> {
+        val raw = String(nativeTranscribe(handle, samples, language, threads, prompt), Charsets.UTF_8)
         return raw.lineSequence().mapNotNull { line ->
             val parts = line.split('\t', limit = 3)
             if (parts.size < 3) return@mapNotNull null
@@ -39,7 +42,7 @@ class WhisperNative private constructor(private var handle: Long) : Closeable {
         fun defaultThreads(): Int = NativeCpu.performanceCores
 
         @JvmStatic private external fun nativeInit(path: String): Long
-        @JvmStatic private external fun nativeTranscribe(handle: Long, samples: FloatArray, language: String, threads: Int): ByteArray
+        @JvmStatic private external fun nativeTranscribe(handle: Long, samples: FloatArray, language: String, threads: Int, prompt: String?): ByteArray
         @JvmStatic private external fun nativeFree(handle: Long)
     }
 }

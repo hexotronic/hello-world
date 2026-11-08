@@ -139,6 +139,36 @@ In der Bibliothek über **＋ → Herunterladen und umwandeln …** (oder in den
 - Homescreen-**Widget** mit Cover, Kapitel, Fortschritt und Tasten
 - Korrigiert ungenaue Längen von VBR-MP3s automatisch
 
+### Sprachsteuerung (Hände frei, auch mit dem Handy in der Tasche)
+- „**Lauscher, Pause**“, „Lauscher, weiter“, „Lauscher, 30 Sekunden zurück“, „… nächstes Kapitel“, „… lauter“,
+  „… schneller“, „… Schlaftimer 20 Minuten“, „… Lesezeichen“, „… wo bin ich?“ (wird angesagt), „… rückgängig“
+- **Eigene Befehle:** jede Aktion ein- und ausschaltbar, eigene Wörter hinzufügen oder entfernen, eigenes
+  Aktivierungswort (oder ganz ohne – dann zählen nur kurze Befehle, ein Satz mit „weiter“ darin nicht)
+- **Erkannt wird auf dem Handy** mit dem Whisper-Modell der Szenen-Analyse; die Befehlswörter werden der
+  Erkennung als Hinweis mitgegeben. Ein Sprach-Detektor schneidet kurze Äußerungen aus dem Mikrofon (alles
+  über 5 s – Gespräche, Musik – wird verworfen), nur diese kommen in die Erkennung. Nichts wird gespeichert
+  oder gesendet.
+- **Audioeingang:** Mikrofon automatisch / Handy / Kabel-Headset / Bluetooth-Headset (mit Hinweis, dass viele
+  Bluetooth-Kopfhörer dann in Telefonqualität spielen), Echo-Unterdrückung, nur mit Kopfhörern zuhören,
+  Empfindlichkeit, Hörbuch beim Sprechen leiser, Rückmeldung (Ton, Ansage, keine), wie lange nach einer Pause
+  weiter zugehört wird, Sprache der Befehle
+- Läuft als Vordergrund-Dienst mit Mikrofon (Android zeigt den Mikrofon-Punkt); Android erlaubt den Start nur,
+  während die App offen ist – danach hört sie auch bei ausgeschaltetem Bildschirm weiter
+- Getestet: echte deutsche Sprachausgabe (espeak-ng) mit Rauschen läuft in der CI durch die ganze Kette
+  (Detektor → Whisper Base → Befehle → Player); der Detektor trennt die 7 Äußerungen bei jeder Empfindlichkeit
+  richtig, ein Satz ohne Aktivierungswort löst nichts aus
+
+### Ausgabe
+- **Ausgabegerät** wählbar: automatisch, Handy-Lautsprecher, Kabel-/USB-Kopfhörer oder Bluetooth
+- **Bei Ansagen leiser statt Pause:** Navigation und Nachrichten machen das Hörbuch kurz leiser, statt es
+  anzuhalten
+- Pause beim Trennen der Kopfhörer abschaltbar; **weiterspielen, wenn sie wieder verbunden sind** (innerhalb
+  einer halben Stunde)
+- **Kopfhörer-Raumklang (Crossfeed):** jedes Ohr hört das andere leise, tiefpassgefiltert und um 0,3 ms
+  verzögert mit (wie Lautsprecher im Raum) – hart links/rechts gemischte Aufnahmen ermüden weniger; mittige
+  Stimmen behalten ihre Lautstärke
+- Dazu im Klangstudio: Lautstärke-Boost, Mono, Balance, Kompressor, Equalizer
+
 ### Schlaf-Timer
 - 1–180 Minuten oder „Ende des Kapitels“, verlängern um 5/15 Minuten
 - Sanftes Ausblenden, **Schütteln verlängert**

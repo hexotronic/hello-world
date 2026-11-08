@@ -1,9 +1,16 @@
 package io.github.hexotronic.lauscher.playback
 
 import android.content.Context
+import android.media.AudioDeviceCallback
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
 import android.net.Uri
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import androidx.annotation.OptIn
+import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.MediaItem
@@ -14,6 +21,9 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import io.github.hexotronic.lauscher.LauscherApp
+import io.github.hexotronic.lauscher.audio.AudioEnhancerHub
+import io.github.hexotronic.lauscher.data.AppSettings
+import io.github.hexotronic.lauscher.data.OutputRoute
 import io.github.hexotronic.lauscher.data.Book
 import io.github.hexotronic.lauscher.data.BookDetails
 import io.github.hexotronic.lauscher.data.Chapter
@@ -111,6 +121,14 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
     private var lastChapterIndex = -1
     private var lastAheadCheck = 0L
     private var previewUntil = 0L
+    private val audioManager = context.getSystemService(AudioManager::class.java)
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var appliedDuck: Boolean? = null
+    /** When headphones were unplugged (and the book paused because of it), for "play on when they are back". */
+    private var pausedByUnplugAt = 0L
+    /** Volume parts: the sleep timer's fade-out and the dip while a voice command is spoken. */
+    private var fadeLevel = 1f
+    private var duckLevel = 1f
 
     private val listener = object : Player.Listener {
         override fun onEvents(player: Player, events: Player.Events) = refresh()
@@ -135,6 +153,14 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
                 flushStats()
             }
             updateShake()
+        }
+
+        override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+            pausedByUnplugAt = if (!playWhenReady && reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY) {
+                SystemClock.elapsedRealtime()
+            } else {
+                0
+            }
         }
 
         override fun onPlaybackSuppressionReasonChanged(playbackSuppressionReason: Int) {
@@ -178,11 +204,33 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
         }
     }
 
+    // Declared before init, which registers it.
+    private val deviceCallback = object : AudioDeviceCallback() {
+        override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>) {
+            // A chosen output may just have appeared.
+            applyOutput(settingsStore.current)
+            val back = addedDevices.any { it.isSink && it.type in HEADPHONES }
+            if (back && settingsStore.current.resumeOnConnect && pausedByUnplugAt > 0 &&
+                SystemClock.elapsedRealtime() - pausedByUnplugAt < RESUME_WINDOW_MS && !exoPlayer.playWhenReady
+            ) {
+                pausedByUnplugAt = 0
+                // Bluetooth needs a moment before it really plays.
+                mainHandler.postDelayed({ play() }, 1_500)
+            }
+        }
+
+        override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>) = applyOutput(settingsStore.current)
+    }
+
     init {
         exoPlayer.addListener(listener)
         scope.launch {
-            settingsStore.settings.collect { s -> exoPlayer.skipSilenceEnabled = s.skipSilence }
+            settingsStore.settings.collect { s ->
+                exoPlayer.skipSilenceEnabled = s.skipSilence
+                applyOutput(s)
+            }
         }
+        audioManager.registerAudioDeviceCallback(deviceCallback, mainHandler)
         scope.launch {
             var source = app.musicSettings.current.source
             app.musicSettings.settings.collect { s ->
@@ -386,19 +434,74 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
         return repo.addBookmark(d.book.id, pos, title?.takeIf { it.isNotBlank() } ?: chapterTitle ?: "Lesezeichen", note)
     }
 
+    // ------------------------------------------------------------------ output
+
+    private fun applyOutput(s: AppSettings) {
+        if (appliedDuck != s.duckForAnnouncements) {
+            appliedDuck = s.duckForAnnouncements
+            // Media3 pauses spoken word for announcements (navigation, messages) but makes music
+            // quieter; the content type decides which.
+            exoPlayer.setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(C.USAGE_MEDIA)
+                    .setContentType(if (s.duckForAnnouncements) C.AUDIO_CONTENT_TYPE_MUSIC else C.AUDIO_CONTENT_TYPE_SPEECH)
+                    .build(),
+                true,
+            )
+        }
+        exoPlayer.setHandleAudioBecomingNoisy(s.pauseOnDisconnect)
+        exoPlayer.setPreferredAudioDevice(outputDevice(s.outputRoute))
+        AudioEnhancerHub.crossfeed = s.crossfeed
+    }
+
+    /** The device for [route] if it is connected; null lets Android choose. */
+    private fun outputDevice(route: OutputRoute): AudioDeviceInfo? {
+        val types = when (route) {
+            OutputRoute.AUTO -> return null
+            OutputRoute.SPEAKER -> setOf(AudioDeviceInfo.TYPE_BUILTIN_SPEAKER)
+            OutputRoute.WIRED -> setOf(AudioDeviceInfo.TYPE_WIRED_HEADPHONES, AudioDeviceInfo.TYPE_WIRED_HEADSET, AudioDeviceInfo.TYPE_USB_HEADSET)
+            OutputRoute.BLUETOOTH -> BLUETOOTH_OUTPUTS
+        }
+        return audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).firstOrNull { it.type in types }
+    }
+
+    // ------------------------------------------------------------------ volume
+
+    private fun setFade(level: Float) {
+        fadeLevel = level
+        exoPlayer.volume = fadeLevel * duckLevel
+    }
+
+    /** Makes the book quieter while the listener speaks a voice command, so it is heard better. */
+    fun duckForVoice(on: Boolean) {
+        duckLevel = if (on) VOICE_DUCK else 1f
+        exoPlayer.volume = fadeLevel * duckLevel
+    }
+
+    /** "Kapitel 3 von 12, Minute 12 von 40" – for the voice command "Wo bin ich?". */
+    fun describePosition(): String? {
+        val d = details ?: return null
+        val pos = currentPosition()
+        val index = chapterIndexAt(d.chapters, pos)
+        val chapter = d.chapters.getOrNull(index) ?: return "Minute ${pos / 60_000 + 1}"
+        val into = (pos - chapter.startMs).coerceAtLeast(0) / 60_000 + 1
+        val length = ((chapter.endMs - chapter.startMs) / 60_000).coerceAtLeast(1)
+        return "${chapter.title.takeIf { it.isNotBlank() } ?: "Kapitel ${index + 1}"}, Kapitel ${index + 1} von ${d.chapters.size}, Minute $into von $length"
+    }
+
     // ------------------------------------------------------------------ sleep timer
 
     fun startSleepTimer(minutes: Int) {
         val total = minutes * 60_000L
         _sleep.value = SleepState(SleepMode.TIMER, total, total)
-        exoPlayer.volume = 1f
+        setFade(1f)
         updateShake()
         startTicker()
     }
 
     fun sleepAtEndOfChapter() {
         _sleep.value = SleepState(SleepMode.END_OF_CHAPTER, chapterRemaining(), 0)
-        exoPlayer.volume = 1f
+        setFade(1f)
         updateShake()
         startTicker()
     }
@@ -410,12 +513,12 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
             return
         }
         _sleep.value = s.copy(remainingMs = s.remainingMs + minutes * 60_000L, totalMs = s.totalMs + minutes * 60_000L)
-        exoPlayer.volume = 1f
+        setFade(1f)
     }
 
     fun cancelSleepTimer() {
         _sleep.value = SleepState()
-        exoPlayer.volume = 1f
+        setFade(1f)
         updateShake()
     }
 
@@ -438,14 +541,14 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
                     fallAsleep()
                 } else {
                     _sleep.value = s.copy(remainingMs = remaining)
-                    exoPlayer.volume = if (fade && remaining < FADE_MS) max(0.05f, remaining.toFloat() / FADE_MS) else 1f
+                    setFade(if (fade && remaining < FADE_MS) max(0.05f, remaining.toFloat() / FADE_MS) else 1f)
                 }
             }
             SleepMode.END_OF_CHAPTER -> {
                 val remaining = chapterRemaining()
                 _sleep.value = s.copy(remainingMs = remaining)
                 if (exoPlayer.isPlaying) {
-                    exoPlayer.volume = if (fade && remaining < FADE_MS / 2) max(0.05f, remaining.toFloat() / (FADE_MS / 2)) else 1f
+                    setFade(if (fade && remaining < FADE_MS / 2) max(0.05f, remaining.toFloat() / (FADE_MS / 2)) else 1f)
                 }
                 if (remaining < 300 && exoPlayer.isPlaying) {
                     val d = details
@@ -460,7 +563,7 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
 
     private fun fallAsleep() {
         exoPlayer.pause()
-        exoPlayer.volume = 1f
+        setFade(1f)
         _sleep.value = SleepState()
         updateShake()
         val d = details ?: return
@@ -687,6 +790,7 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
         flushStats()
         shake.setActive(false)
         music.release()
+        audioManager.unregisterAudioDeviceCallback(deviceCallback)
         exoPlayer.removeListener(listener)
         scope.cancel()
     }
@@ -734,6 +838,17 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
         private const val SAVE_INTERVAL_MS = 5_000L
         private const val STATS_INTERVAL_MS = 30_000L
         private const val FADE_MS = 20_000L
+        private const val VOICE_DUCK = 0.25f
+        private const val RESUME_WINDOW_MS = 30 * 60_000L
+        private val BLUETOOTH_OUTPUTS = buildSet {
+            add(AudioDeviceInfo.TYPE_BLUETOOTH_A2DP)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) add(AudioDeviceInfo.TYPE_BLE_HEADSET)
+        }
+        private val HEADPHONES = BLUETOOTH_OUTPUTS + setOf(
+            AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+            AudioDeviceInfo.TYPE_WIRED_HEADSET,
+            AudioDeviceInfo.TYPE_USB_HEADSET,
+        )
         private const val UNDO_VISIBLE_MS = 30_000L
         private const val CHAPTER_INTRO_MS = 25_000L
         private const val CHAPTER_OUTRO_MS = 15_000L

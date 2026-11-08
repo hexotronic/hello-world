@@ -58,9 +58,15 @@ class MainActivity : ComponentActivity() {
         vm.connect()
         // Downloads stopped by the app being closed go on now.
         (application as LauscherApp).downloads.resumeInterrupted()
+        // Voice commands: the microphone may only be opened while the app is on screen.
+        (application as LauscherApp).voice.let {
+            it.appVisible = true
+            it.ensureRunning()
+        }
     }
 
     override fun onStop() {
+        (application as LauscherApp).voice.appVisible = false
         // Releasing the controller lets the service stop when nothing is playing.
         vm.disconnect()
         super.onStop()
@@ -73,6 +79,15 @@ class MainActivity : ComponentActivity() {
         intent.getStringExtra(EXTRA_IMPORT_PATH)?.let { vm.importLocalFile(it, intent.getBooleanExtra(EXTRA_ANALYZE, false)) }
         intent.getStringExtra(EXTRA_BOOK_TEXT_PATH)?.let { vm.importBookTextFile(it, intent.getBooleanExtra(EXTRA_ANALYZE, false)) }
         intent.getStringExtra(EXTRA_SPEECH_CHECK)?.let { vm.speechCheck(it) }
+        // Test aids for voice commands: switch them on, or send a sound file through the whole chain.
+        if (intent.getBooleanExtra(EXTRA_VOICE_ANY_OUTPUT, false)) {
+            // The emulator has no headphones: listen over the loudspeaker too.
+            (application as LauscherApp).voice.store.update { it.copy(onlyWithHeadphones = false) }
+        }
+        if (intent.hasExtra(EXTRA_VOICE_ENABLE)) {
+            (application as LauscherApp).voice.setEnabled(intent.getBooleanExtra(EXTRA_VOICE_ENABLE, false))
+        }
+        intent.getStringExtra(EXTRA_VOICE_TEST_FILE)?.let { (application as LauscherApp).voice.testFile(it) }
         // Test aid: download or convert without tapping through the screen.
         val limit = intent.getStringExtra(EXTRA_DOWNLOAD_LIMIT)?.toIntOrNull() ?: 1
         val original = intent.getStringExtra(EXTRA_DOWNLOAD_FORMAT) == "original"
@@ -162,6 +177,9 @@ class MainActivity : ComponentActivity() {
         const val EXTRA_SPEECH_SPEED = "speech_speed"
         const val EXTRA_SAMPLE_EVERY = "sample_every"
         const val EXTRA_SPEECH_CHECK = "speech_check"
+        const val EXTRA_VOICE_ENABLE = "voice_enable"
+        const val EXTRA_VOICE_TEST_FILE = "voice_test_file"
+        const val EXTRA_VOICE_ANY_OUTPUT = "voice_any_output"
         const val EXTRA_DOWNLOAD_AUDIOBOOK = "download_audiobook"
         const val EXTRA_DOWNLOAD_MEDIA = "download_media"
         const val EXTRA_DOWNLOAD_CONVERT = "download_convert"

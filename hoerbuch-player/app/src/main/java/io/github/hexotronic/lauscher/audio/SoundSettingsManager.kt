@@ -28,6 +28,10 @@ object AudioEnhancerHub {
     @Volatile
     var engine: EnhancerEngine? = null
 
+    /** Headphone crossfeed 0..1, an output setting (applied whatever the sound studio does). */
+    @Volatile
+    var crossfeed: Float = 0f
+
     /** Smoothed level of the narration (dBFS) – lets the background music duck under speech. */
     @Volatile
     var speechLevelDb: Float = -90f

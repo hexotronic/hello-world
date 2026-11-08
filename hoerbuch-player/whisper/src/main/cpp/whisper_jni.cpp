@@ -53,11 +53,18 @@ Java_io_github_hexotronic_lauscher_whisper_WhisperNative_nativeInit(JNIEnv * env
  */
 JNIEXPORT jbyteArray JNICALL
 Java_io_github_hexotronic_lauscher_whisper_WhisperNative_nativeTranscribe(
-        JNIEnv * env, jclass, jlong handle, jfloatArray samples, jstring language, jint n_threads) {
+        JNIEnv * env, jclass, jlong handle, jfloatArray samples, jstring language, jint n_threads, jstring prompt) {
     auto * ctx = reinterpret_cast<whisper_context *>(handle);
     const char * lang = env->GetStringUTFChars(language, nullptr);
     const std::string lang_code(lang);
     env->ReleaseStringUTFChars(language, lang);
+    // Words the recogniser should expect (voice commands); kept alive until whisper_full returns.
+    std::string hint;
+    if (prompt != nullptr) {
+        const char * p = env->GetStringUTFChars(prompt, nullptr);
+        hint = p;
+        env->ReleaseStringUTFChars(prompt, p);
+    }
 
     whisper_full_params params = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
     params.n_threads = n_threads;
@@ -76,6 +83,7 @@ Java_io_github_hexotronic_lauscher_whisper_WhisperNative_nativeTranscribe(
     params.no_timestamps = true;
     params.single_segment = true;
     params.temperature_inc = 0.0f;
+    if (!hint.empty()) params.initial_prompt = hint.c_str();
 
     const jsize n = env->GetArrayLength(samples);
     // Shorter clips need less encoder context (1500 frames = 30 s); this saves encoder time.

@@ -13,6 +13,14 @@ enum class ThemeMode(val label: String) {
     BLACK("Schwarz (AMOLED)"),
 }
 
+/** Where the book is heard (null device = Android decides). */
+enum class OutputRoute(val label: String) {
+    AUTO("Automatisch"),
+    SPEAKER("Handy-Lautsprecher"),
+    WIRED("Kabel-/USB-Kopfhörer"),
+    BLUETOOTH("Bluetooth"),
+}
+
 data class AppSettings(
     val rewindSeconds: Int = 15,
     val forwardSeconds: Int = 30,
@@ -37,6 +45,15 @@ data class AppSettings(
     val autoRescan: Boolean = true,
     val showRemainingWithSpeed: Boolean = true,
     val onboardingDone: Boolean = false,
+    // Output
+    val outputRoute: OutputRoute = OutputRoute.AUTO,
+    /** Navigation and other announcements make the book quieter instead of pausing it. */
+    val duckForAnnouncements: Boolean = false,
+    val pauseOnDisconnect: Boolean = true,
+    /** Plays on when headphones come back within half an hour after they were unplugged. */
+    val resumeOnConnect: Boolean = false,
+    /** Headphone crossfeed 0..1 (0 = off). */
+    val crossfeed: Float = 0f,
 )
 
 /** SharedPreferences backed settings exposed as a [StateFlow]. */
@@ -79,6 +96,11 @@ class SettingsStore(context: Context) {
             autoRescan = prefs.getBoolean("autoRescan", d.autoRescan),
             showRemainingWithSpeed = prefs.getBoolean("showRemainingWithSpeed", d.showRemainingWithSpeed),
             onboardingDone = prefs.getBoolean("onboardingDone", d.onboardingDone),
+            outputRoute = enumOr(prefs.getString("outputRoute", null), d.outputRoute),
+            duckForAnnouncements = prefs.getBoolean("duckForAnnouncements", d.duckForAnnouncements),
+            pauseOnDisconnect = prefs.getBoolean("pauseOnDisconnect", d.pauseOnDisconnect),
+            resumeOnConnect = prefs.getBoolean("resumeOnConnect", d.resumeOnConnect),
+            crossfeed = prefs.getFloat("crossfeed", d.crossfeed),
         )
     }
 
@@ -107,6 +129,11 @@ class SettingsStore(context: Context) {
             .putBoolean("autoRescan", s.autoRescan)
             .putBoolean("showRemainingWithSpeed", s.showRemainingWithSpeed)
             .putBoolean("onboardingDone", s.onboardingDone)
+            .putString("outputRoute", s.outputRoute.name)
+            .putBoolean("duckForAnnouncements", s.duckForAnnouncements)
+            .putBoolean("pauseOnDisconnect", s.pauseOnDisconnect)
+            .putBoolean("resumeOnConnect", s.resumeOnConnect)
+            .putFloat("crossfeed", s.crossfeed)
             .apply()
     }
 
@@ -137,6 +164,6 @@ class SettingsStore(context: Context) {
         name?.let { n -> enumValues<T>().firstOrNull { it.name == n } } ?: default
 
     private companion object {
-        val FLOAT_KEYS = setOf("defaultSpeed")
+        val FLOAT_KEYS = setOf("defaultSpeed", "crossfeed")
     }
 }

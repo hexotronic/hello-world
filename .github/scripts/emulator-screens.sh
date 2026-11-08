@@ -345,6 +345,42 @@ PY
     rm -rf "$OUT/modi"
   fi
 
+  # --- Voice control: the microphone service starts and listens; then spoken commands go through
+  # speech detector, whisper (base), command matcher and the player.
+  if [ -f "$E2E_DIR/voice.wav" ] && [ -f "$E2E_DIR/ggml-base-q5_1.bin" ]; then
+    adb push "$E2E_DIR/ggml-base-q5_1.bin" "$DATA/models/" > /dev/null
+    adb push "$E2E_DIR/voice.wav" "$DATA/test/" > /dev/null
+    adb shell pm grant "$PKG" android.permission.RECORD_AUDIO || true
+    clear_log
+    start --ez demo true --es whisper_model whisper-base
+    sleep 20
+    start --ez voice_any_output true --ez voice_enable true --es screen voice
+    shot 14-sprachsteuerung-hell 8
+    adb logcat -d -s LauscherVoice:* | tee "$OUT/voice-service.txt" | tail -5
+    if grep -q "Sprachsteuerung hört zu" "$OUT/voice-service.txt"; then
+      echo "Mikrofon-Dienst hört zu"
+    elif grep -q "Mikrofon ist gerade nicht verfügbar" "$OUT/voice-service.txt"; then
+      echo "::warning::Das Emulator-Mikrofon ist nicht verfügbar; der Dienst lief aber"
+    else
+      echo "::error::Der Mikrofon-Dienst der Sprachsteuerung hat nicht zugehört"
+      E2E_FAILED=1
+    fi
+    start --ez voice_enable false
+    sleep 2
+    clear_log
+    start --es voice_test_file "$DATA/test/voice.wav"
+    for i in $(seq 1 60); do
+      if adb logcat -d -s LauscherVoice:* | grep -qE "Sprachbefehl-Test (fertig|: kein)"; then break; fi
+      sleep 3
+    done
+    adb logcat -d -s LauscherVoice:* > "$OUT/voice.txt"
+    if ! python3 .github/scripts/voice_check.py "$OUT/voice.txt" > "$OUT/sprachbefehle.txt" 2>&1; then
+      echo "::error::Die Sprachbefehle haben den Test nicht bestanden (siehe sprachbefehle.txt)"
+      E2E_FAILED=1
+    fi
+    cat "$OUT/sprachbefehle.txt"
+  fi
+
   # YouTube (Big Buck Bunny, CC BY 3.0 Blender Foundation): best effort, YouTube often blocks CI servers.
   clear_log
   start --es download_media "https://www.youtube.com/watch?v=aqz-KE-bpKQ" --es download_limit 1

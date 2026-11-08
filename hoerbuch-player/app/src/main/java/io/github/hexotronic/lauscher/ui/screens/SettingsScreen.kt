@@ -32,17 +32,19 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.hexotronic.lauscher.BuildConfig
 import io.github.hexotronic.lauscher.data.LibraryFolder
+import io.github.hexotronic.lauscher.data.OutputRoute
 import io.github.hexotronic.lauscher.data.ThemeMode
 import io.github.hexotronic.lauscher.ui.MainViewModel
 import io.github.hexotronic.lauscher.ui.components.ChoiceDialog
 import io.github.hexotronic.lauscher.ui.components.ClickRow
+import io.github.hexotronic.lauscher.ui.components.LabeledSlider
 import io.github.hexotronic.lauscher.ui.components.RetroTopBar
 import io.github.hexotronic.lauscher.ui.components.SectionHeader
 import io.github.hexotronic.lauscher.ui.components.SwitchRow
 import io.github.hexotronic.lauscher.ui.formatSpeed
 import java.time.LocalDate
 
-private enum class Picker { REWIND, FORWARD, SPEED, SLEEP_DEFAULT, SLEEP_FROM, SLEEP_TO, THEME }
+private enum class Picker { REWIND, FORWARD, SPEED, SLEEP_DEFAULT, SLEEP_FROM, SLEEP_TO, THEME, OUTPUT }
 
 @Composable
 fun SettingsScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
@@ -107,6 +109,34 @@ fun SettingsScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
                 s.resumeAfterCall,
             ) { v -> vm.updateSettings { it.copy(resumeAfterCall = v) } }
             SwitchRow("Stille überspringen", null, s.skipSilence) { v -> vm.updateSettings { it.copy(skipSilence = v) } }
+
+            SectionHeader("Sprachsteuerung")
+            val voice by vm.voiceSettings.collectAsStateWithLifecycle()
+            ClickRow(
+                "Sprachsteuerung" + if (voice.enabled) " · an" else " · aus",
+                "Hände frei, auch mit dem Handy in der Tasche: „${voice.commands.wakeWord}, Pause“ – eigene Befehle, Mikrofon und Empfindlichkeit",
+            ) { vm.navigate(io.github.hexotronic.lauscher.ui.Screen.Voice) }
+
+            SectionHeader("Ausgabe")
+            ClickRow("Ausgabegerät", s.outputRoute.label + if (s.outputRoute != OutputRoute.AUTO) " (wenn verbunden)" else "") { picker = Picker.OUTPUT }
+            SwitchRow(
+                "Bei Ansagen leiser statt Pause",
+                if (s.duckForAnnouncements) "Navigation und Nachrichten machen das Hörbuch kurz leiser" else "Navigation und Nachrichten halten das Hörbuch kurz an",
+                s.duckForAnnouncements,
+            ) { v -> vm.updateSettings { it.copy(duckForAnnouncements = v) } }
+            SwitchRow("Pause, wenn Kopfhörer getrennt werden", null, s.pauseOnDisconnect) { v -> vm.updateSettings { it.copy(pauseOnDisconnect = v) } }
+            SwitchRow(
+                "Weiterspielen, wenn sie wieder verbunden sind",
+                "Innerhalb einer halben Stunde nach dem Trennen",
+                s.resumeOnConnect,
+                enabled = s.pauseOnDisconnect,
+            ) { v -> vm.updateSettings { it.copy(resumeOnConnect = v) } }
+            LabeledSlider(
+                "Kopfhörer-Raumklang (Crossfeed)",
+                s.crossfeed,
+                if (s.crossfeed <= 0f) "aus" else "${(s.crossfeed * 100).toInt()} %",
+                subtitle = "Jedes Ohr hört leise das andere mit – hart links/rechts gemischte Aufnahmen ermüden weniger",
+            ) { v -> vm.updateSettings { it.copy(crossfeed = (v * 20).toInt() / 20f) } }
 
             SectionHeader("Schlaf-Timer")
             ClickRow("Standarddauer", "${s.sleepDefaultMinutes} Minuten") { picker = Picker.SLEEP_DEFAULT }
@@ -183,6 +213,9 @@ fun SettingsScreen(vm: MainViewModel, modifier: Modifier = Modifier) {
             { picker = null }) { v -> vm.updateSettings { it.copy(sleepAutoToHour = v) } }
         Picker.THEME -> ChoiceDialog("Design", ThemeMode.entries, s.theme, { it.label }, { picker = null }) { v ->
             vm.updateSettings { it.copy(theme = v) }
+        }
+        Picker.OUTPUT -> ChoiceDialog("Ausgabegerät", OutputRoute.entries, s.outputRoute, { it.label }, { picker = null }) { v ->
+            vm.updateSettings { it.copy(outputRoute = v) }
         }
         null -> Unit
     }
