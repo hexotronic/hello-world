@@ -26,6 +26,9 @@ class HttpFetchTest {
     private lateinit var server: MiniServer
     private val ranges = ArrayList<String?>()
     private var dropsLeft = 0
+    /** The next this many requests for a file are answered with [errorCode] instead. */
+    private var errorsLeft = 0
+    private var errorCode = 500
     private lateinit var base: String
     private lateinit var dir: File
 
@@ -79,6 +82,7 @@ class HttpFetchTest {
 
     @Before
     fun start() {
+        HttpFetch.retryDelayMs = 5
         server = MiniServer { method, target, headers ->
             val path = target.substringBefore('?')
             val query = target.substringAfter('?', "")
@@ -88,7 +92,10 @@ class HttpFetchTest {
                     val content = if (path.startsWith("/big")) big else data
                     val range = headers["range"]
                     synchronized(ranges) { ranges += range }
-                    if (range == null || path.endsWith("norange")) {
+                    val fail = synchronized(ranges) { (errorsLeft > 0).also { if (it) errorsLeft-- } }
+                    if (fail) {
+                        MiniServer.Reply(errorCode)
+                    } else if (range == null || path.endsWith("norange")) {
                         val drop = synchronized(ranges) { (dropsLeft > 0).also { if (it) dropsLeft-- } }
                         MiniServer.Reply(200, body = content, sendOnly = if (drop) content.size / 2 else content.size)
                     } else {
@@ -151,6 +158,44 @@ class HttpFetchTest {
         // Asking again for a complete file: the server says 416, nothing changes.
         assertEquals(data.size.toLong(), fetch("/file", file))
         assertArrayEquals(data, file.readBytes())
+    }
+
+    @Test
+    fun passingServerErrorsAreTriedAgain() {
+        // archive.org sometimes answers 500 or 503 for a moment.
+        errorsLeft = 2
+        val file = File(dir, "t.part")
+        assertEquals(data.size.toLong(), fetch("/file", file))
+        assertArrayEquals(data, file.readBytes())
+        // Also for one of several parts.
+        errorsLeft = 1
+        errorCode = 503
+        val parts = File(dir, "u.part")
+        assertEquals(big.size.toLong(), HttpFetch.parallelToFile("$base/big", parts, "test", { false }, { _, _ -> }))
+        assertArrayEquals(big, parts.readBytes())
+    }
+
+    @Test
+    fun lastingErrorsAreNotTriedForever() {
+        errorCode = 404
+        errorsLeft = 1
+        val requestsBefore = ranges.size
+        try {
+            fetch("/file", File(dir, "v.part"))
+            error("404 should fail")
+        } catch (e: HttpFetch.HttpStatus) {
+            assertEquals(404, e.code)
+        }
+        assertEquals("a 404 is not asked again", requestsBefore + 1, ranges.size)
+        errorCode = 500
+        errorsLeft = 10
+        try {
+            fetch("/file", File(dir, "w.part"))
+            error("a server that keeps failing should fail")
+        } catch (e: HttpFetch.HttpStatus) {
+            assertEquals(500, e.code)
+        }
+        assertEquals("first try and three more", requestsBefore + 1 + 4, ranges.size)
     }
 
     @Test

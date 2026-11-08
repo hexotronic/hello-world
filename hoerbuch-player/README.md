@@ -146,8 +146,9 @@ In der Bibliothek über **＋ → Herunterladen und umwandeln …** (oder in den
   Aktivierungswort (oder ganz ohne – dann zählen nur kurze Befehle, ein Satz mit „weiter“ darin nicht)
 - **Erkannt wird auf dem Handy** mit dem Whisper-Modell der Szenen-Analyse; die Befehlswörter werden der
   Erkennung als Hinweis mitgegeben. Ein Sprach-Detektor schneidet kurze Äußerungen aus dem Mikrofon (alles
-  über 5 s – Gespräche, Musik – wird verworfen), nur diese kommen in die Erkennung. Nichts wird gespeichert
-  oder gesendet.
+  über 5 s – Gespräche, Musik – wird verworfen), nur diese kommen in die Erkennung. Wurde das Aktivierungswort
+  gehört, der Befehl aber nicht verstanden, hört die Erkennung ein zweites Mal genauer hin (Beam-Suche).
+  Nichts wird gespeichert oder gesendet.
 - **Audioeingang:** Mikrofon automatisch / Handy / Kabel-Headset / Bluetooth-Headset (mit Hinweis, dass viele
   Bluetooth-Kopfhörer dann in Telefonqualität spielen), Echo-Unterdrückung, nur mit Kopfhörern zuhören,
   Empfindlichkeit, Hörbuch beim Sprechen leiser, Rückmeldung (Ton, Ansage, keine), wie lange nach einer Pause

@@ -83,6 +83,34 @@ class VoiceCommandsTest {
     }
 
     @Test
+    fun repeatedTextFromTheRecogniserIsCollapsed() {
+        // What whisper wrote in the emulator test: the command, then the prompt's pattern again and again.
+        val loop = "Lauscher, Pause. ".repeat(36) + "Lauscher,"
+        assertEquals("Lauscher, Pause.", CommandMatcher.collapseRepeats(loop))
+        assertEquals(VoiceAction.PAUSE, action(loop))
+        // Without a wake word the repetitions would otherwise make the utterance too long to count.
+        assertEquals(VoiceAction.PLAY, action("Weiter. Weiter. Weiter. Weiter. Weiter. Weiter. Weiter. Wei", noWake))
+        val amounts = "Lauscher, 30 Sekunden zurück. ".repeat(15) + "Lauscher, 22 Sekunden zurück. ".repeat(5)
+        assertEquals("Lauscher, 30 Sekunden zurück. Lauscher, 22 Sekunden zurück.", CommandMatcher.collapseRepeats(amounts))
+        assertEquals(30, CommandMatcher.match(amounts, withWake)?.seconds)
+        // Different sentences stay.
+        assertEquals("Lauscher, Pause. Lauscher, weiter.", CommandMatcher.collapseRepeats("Lauscher, Pause. Lauscher, weiter."))
+    }
+
+    @Test
+    fun aSecondTryOnlyWhenACommandWasMeant() {
+        // Wake word heard, command misheard: worth listening again.
+        assertNull(action("Lauscher, Lesze kapitel."))
+        assertTrue(CommandMatcher.worthASecondTry("Lauscher, Lesze kapitel.", withWake))
+        // Talk without the wake word (or the book itself): no extra work.
+        assertTrue(!CommandMatcher.worthASecondTry("Heute ist schönes Wetter am See.", withWake))
+        assertTrue(!CommandMatcher.worthASecondTry("", withWake))
+        // Without wake word only short utterances.
+        assertTrue(CommandMatcher.worthASecondTry("Nächste Kapitell", noWake))
+        assertTrue(!CommandMatcher.worthASecondTry("Heute ist schönes Wetter am See.", noWake))
+    }
+
+    @Test
     fun utterancesAreCutFromTheMicrophoneSignal() {
         val rate = 16_000
         val rnd = Random(4)

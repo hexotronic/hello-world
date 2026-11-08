@@ -13,8 +13,24 @@ import java.util.concurrent.CancellationException
  * dropped connection) is continued instead of fetched again.
  */
 object HttpFetch {
-    /** An answer like 403 or 404: trying again does not help. */
-    class HttpStatus(val code: Int) : IOException("HTTP $code beim Laden")
+    /** An error answer from the server. 403 or 404 stay; 5xx, 429 and 408 are passing trouble. */
+    class HttpStatus(val code: Int) : IOException("HTTP $code beim Laden") {
+        /** Trying again a little later usually works (an overloaded server, a hiccup at archive.org). */
+        val transient: Boolean get() = code >= 500 || code == 429 || code == 408
+    }
+
+    /** Wait before asking again after a passing server error, doubled on each further try; tests shorten it. */
+    @Volatile var retryDelayMs = 1_000L
+
+    private fun pauseBeforeRetry(attempt: Int, stop: () -> Boolean) {
+        val until = System.currentTimeMillis() + retryDelayMs * (1L shl (attempt - 1).coerceIn(0, 4))
+        while (true) {
+            if (stop()) throw CancellationException("Download angehalten")
+            val left = until - System.currentTimeMillis()
+            if (left <= 0) return
+            Thread.sleep(minOf(left, 100L))
+        }
+    }
 
     fun open(url: String, userAgent: String, method: String = "GET", headers: Map<String, String> = emptyMap(), body: ByteArray? = null): HttpURLConnection {
         val conn = URL(url).openConnection() as HttpURLConnection
@@ -33,8 +49,8 @@ object HttpFetch {
     }
 
     /**
-     * One request (with a Range header to continue [file]); a dropped connection is resumed up
-     * to three times. Servers without Range support start over. Reports (bytes in the file,
+     * One request (with a Range header to continue [file]); a dropped connection or a passing
+     * server error (5xx, 429) is retried up to three times. Servers without Range support start over. Reports (bytes in the file,
      * total or -1); [isCancelled] stops with a [CancellationException], the file stays.
      */
     fun toFile(url: String, file: File, userAgent: String, isCancelled: () -> Boolean, onProgress: (Long, Long) -> Unit): Long {
@@ -58,7 +74,9 @@ object HttpFetch {
                 // The answer ended early: ask for the rest.
                 if (++attempts > 3) throw IOException("Die Verbindung bricht immer wieder ab")
             } catch (e: HttpStatus) {
-                throw e
+                if (!e.transient || ++attempts > 3) throw e
+                pauseBeforeRetry(attempts, isCancelled)
+                done = file.length()
             } catch (e: IOException) {
                 if (++attempts > 3) throw e
                 // Everything that arrived is in the file; continue after it.
@@ -98,7 +116,9 @@ object HttpFetch {
                 }
                 if (done - before < chunk) break
             } catch (e: HttpStatus) {
-                throw e
+                if (!e.transient || ++attempts > 3) throw e
+                pauseBeforeRetry(attempts, isCancelled)
+                done = file.length()
             } catch (e: IOException) {
                 if (++attempts > 3) throw e
                 // Whatever arrived of this piece stays; the next request continues after it.
@@ -225,7 +245,8 @@ object HttpFetch {
                 // The answer ended early: ask again for the rest, but not forever.
                 if (part.length() - before < to - from + 1 && ++attempts > 3) throw IOException("Die Verbindung bricht immer wieder ab")
             } catch (e: HttpStatus) {
-                throw e
+                if (!e.transient || ++attempts > 3) throw e
+                pauseBeforeRetry(attempts, stop)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IOException) {

@@ -245,22 +245,31 @@ class VoiceControl(private val app: LauscherApp) {
 
     private suspend fun handle(whisper: WhisperNative, samples: FloatArray, s: VoiceSettings) {
         val started = SystemClock.elapsedRealtime()
-        val text = runCatching { whisper.transcribe(samples, s.language, threads = 2, prompt = s.commands.recognizerHint()) }
-            .getOrDefault(emptyList())
-            .joinToString(" ") { it.text }
-            .trim()
-        val recognized = CommandMatcher.match(text, s.commands)
+        val hint = s.commands.recognizerHint()
+        fun recognize(beam: Int) = runCatching {
+            whisper.transcribe(samples, s.language, threads = 2, prompt = hint, maxTokens = MAX_TOKENS, beam = beam)
+        }.getOrDefault(emptyList()).joinToString(" ") { it.text }.let { CommandMatcher.collapseRepeats(it) }
+        val quick = recognize(beam = 0)
+        var text = quick
+        var recognized = CommandMatcher.match(quick, s.commands)
+        // The wake word was there, the command was not understood: listen again, more carefully.
+        if (recognized == null && CommandMatcher.worthASecondTry(quick, s.commands)) {
+            val careful = recognize(beam = BEAM)
+            CommandMatcher.match(careful, s.commands)?.let { recognized = it; text = careful }
+        }
+        val result = recognized
         Log.i(
             TAG,
             "Gehört (${samples.size * 1000L / RATE} ms Ton, erkannt in ${SystemClock.elapsedRealtime() - started} ms): " +
-                "„$text“ → ${recognized?.let { "${it.action}" + (it.seconds?.let { n -> " $n" } ?: "") } ?: "kein Befehl"}",
+                "„$text“" + (if (text != quick) " (erst „$quick“)" else "") +
+                " → ${result?.let { "${it.action}" + (it.seconds?.let { n -> " $n" } ?: "") } ?: "kein Befehl"}",
         )
         withContext(Dispatchers.Main) {
             PlaybackHub.core.value?.duckForVoice(false)
-            if (recognized != null) perform(recognized, s)
+            if (result != null) perform(result, s)
         }
         _lastHeard.value = when {
-            recognized != null -> "„$text“ → ${recognized.action.label}"
+            result != null -> "„$text“ → ${result.action.label}"
             text.isNotEmpty() -> "„$text“ – kein Befehl"
             else -> _lastHeard.value
         }
@@ -470,6 +479,10 @@ class VoiceControl(private val app: LauscherApp) {
     companion object {
         const val TAG = "LauscherVoice"
         private const val RATE = WhisperNative.SAMPLE_RATE
+        /** A command with wake word and amount is about 12 tokens; more is the recogniser repeating itself. */
+        private const val MAX_TOKENS = 32
+        /** Candidates of the careful second try. */
+        private const val BEAM = 4
         private val HEADPHONES = buildSet {
             add(AudioDeviceInfo.TYPE_WIRED_HEADPHONES)
             add(AudioDeviceInfo.TYPE_WIRED_HEADSET)

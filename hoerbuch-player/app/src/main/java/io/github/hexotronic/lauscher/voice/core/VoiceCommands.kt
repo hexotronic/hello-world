@@ -98,15 +98,7 @@ object CommandMatcher {
     private val UNITS = mapOf("sekunde" to 1, "sekunden" to 1, "minute" to 60, "minuten" to 60, "stunde" to 3600, "stunden" to 3600)
 
     fun match(heard: String, commands: VoiceCommands): Recognized? {
-        var words = words(heard)
-        if (commands.wakeWordEnabled) {
-            val wake = words(commands.wakeWord)
-            if (wake.isEmpty()) return null
-            val at = (0..words.size - wake.size).firstOrNull { i ->
-                similarity(words.subList(i, i + wake.size).joinToString(" "), wake.joinToString(" ")) >= 0.7
-            } ?: return null
-            words = words.drop(at + wake.size)
-        }
+        val words = afterWakeWord(words(collapseRepeats(heard)), commands) ?: return null
         val content = words.filter { it !in FILLERS }
         if (content.isEmpty()) return null
         val amount = amountSeconds(content)
@@ -141,6 +133,46 @@ object CommandMatcher {
             if (content.size > 6 || rest > 1) return null
         }
         return Recognized(setting.action, amount, phrase, heard.trim())
+    }
+
+    /**
+     * Whether it is worth listening to [heard] more carefully when [match] found nothing: the wake
+     * word was said (or, without one, the utterance was short enough to be a command).
+     */
+    fun worthASecondTry(heard: String, commands: VoiceCommands): Boolean {
+        val words = afterWakeWord(words(collapseRepeats(heard)), commands) ?: return false
+        return if (commands.wakeWordEnabled) true else words.size in 1..4
+    }
+
+    /** The words after the wake word (all words without one); null if the wake word is missing. */
+    private fun afterWakeWord(words: List<String>, commands: VoiceCommands): List<String>? {
+        if (!commands.wakeWordEnabled) return words
+        val wake = words(commands.wakeWord)
+        if (wake.isEmpty()) return null
+        val at = (0..words.size - wake.size).firstOrNull { i ->
+            similarity(words.subList(i, i + wake.size).joinToString(" "), wake.joinToString(" ")) >= 0.7
+        } ?: return null
+        return words.drop(at + wake.size)
+    }
+
+    /**
+     * Drops sentences the recogniser repeated ("Lauscher, Pause. Lauscher, Pause. Lauscher,") –
+     * with a prompt it sometimes keeps going in the prompt's pattern. A cut-off last sentence that
+     * merely begins like an earlier one goes as well.
+     */
+    fun collapseRepeats(text: String): String {
+        val sentences = text.trim().split(Regex("(?<=[.!?])\\s+")).filter { it.isNotBlank() }
+        val seen = ArrayList<List<String>>()
+        val kept = ArrayList<String>()
+        for ((i, sentence) in sentences.withIndex()) {
+            val w = words(sentence)
+            if (w.isEmpty() || w in seen) continue
+            val cutOff = i == sentences.lastIndex && !sentence.trimEnd().matches(Regex(".*[.!?]$"))
+            if (cutOff && seen.any { it.size > w.size && it.subList(0, w.size) == w }) continue
+            seen += w
+            kept += sentence.trim()
+        }
+        return kept.joinToString(" ")
     }
 
     /** Lower case, without punctuation, ß as ss and umlauts folded, so spelling variants compare equal. */

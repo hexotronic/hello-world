@@ -23,7 +23,8 @@ for i, e in enumerate(EXPECTED):
     for j, d in enumerate(done):
         table[i + 1][j + 1] = table[i][j] + 1 if e == d else max(table[i][j + 1], table[i + 1][j])
 matched = table[-1][-1]
-weather = next((h for h in heard if "Wetter" in h), None)
+# The fifth utterance is the sentence without wake word (the recogniser may well mishear it).
+weather = heard[4] if count == 7 and len(heard) == 7 else next((h for h in heard if "Wetter" in h), None)
 print(f"Richtig ausgeführt: {matched} von {len(EXPECTED)}")
 failed = False
 if count != 7:
