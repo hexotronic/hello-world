@@ -257,14 +257,16 @@ class MusicMixer(private val sampleRate: Int) {
                         r.mood = mood
                         r.setting = spec.setting
                         r.intensity = spec.intensity
+                        r.cues = spec.cues
+                        r.pace = spec.pace
                     }
                     choice = MusicChoice(spec, MusicChoice.What.KEPT, r?.trackId)
                 } else if (mood != null) {
                     val source = recordings
-                    val stream = source?.open(mood, spec.setting, spec.intensity, spec.trackId)
+                    val stream = source?.open(mood, spec.setting, spec.intensity, spec.trackId, spec.cues, spec.pace)
                     val generator = if (source != null && stream != null) {
                         choice = MusicChoice(spec, MusicChoice.What.PIECE, stream.trackId)
-                        RecordingGenerator(sampleRate, source, mood, spec.setting, spec.intensity, stream) { id ->
+                        RecordingGenerator(sampleRate, source, mood, spec.setting, spec.intensity, stream, spec.cues, spec.pace) { id ->
                             onChoice?.invoke(MusicChoice(current, MusicChoice.What.NEXT_PIECE, id))
                         }
                     } else {

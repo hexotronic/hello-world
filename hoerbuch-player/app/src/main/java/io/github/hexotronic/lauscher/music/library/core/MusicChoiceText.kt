@@ -16,7 +16,11 @@ object MusicChoiceText {
         val track = choice.trackId?.let { MusicCatalog.byId(it) }
         val name = track?.let { "„${it.title}“ (${it.composer})" } ?: choice.trackId?.let { "„$it“" }
         val mood = spec?.mood
-        val fit = if (track != null && mood != null && spec.trackId == null) TrackPicker.describeFit(track, mood, spec.setting, spec.intensity) else null
+        val fit = if (track != null && mood != null && spec.trackId == null) {
+            TrackPicker.describeFit(track, mood, spec.setting, spec.intensity, spec.cues, spec.pace)
+        } else {
+            null
+        }
         return when (choice.what) {
             MusicChoice.What.PIECE ->
                 if (spec?.trackId != null) "Hörprobe: $name" else "$scene → spielt $name" + (fit?.let { " – $it" } ?: "")

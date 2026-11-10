@@ -307,6 +307,13 @@ Fantasy-Hörbüchern passt.
 | [Moubootaur Legends](https://gitlab.com/TMW2/evol-music) | 30 | CC0, CC BY 2.0–4.0, GPL (je Stück) | Stücke vieler freier Komponisten |
 | [Invertika](https://github.com/invertika/data) | 43 | GPL v3 (Teile GPL v2) | Burg, Wüste, Höhlen, Wald, Hafen, Kirche |
 
+- **Die KI wählt mit:** Das Sprachmodell nennt je Abschnitt zusätzlich das Tempo der Musik (langsam, mittel,
+  schnell) und bis zu drei **Musik-Merkmale** aus 18: Kampf, Verfolgung, Gefahr, Grauen, Geheimnis, Magie,
+  Trauer, Liebe, Fest, Sieg, Reise, Natur, Nacht, Wasser, Hof, Heilig, Geborgenheit, Heiter (ohne Sprachmodell
+  helfen Schlüsselwörter im Text). Jedes Stück der Bibliothek trägt dieselben Merkmale (aus Titel, Spiel, Stimmung
+  und Ort) und ein gemessenes Tempo (Toneinsätze je Sekunde). Stücke mit passenden Merkmalen und passendem Tempo
+  kommen deutlich häufiger und dürfen früher wiederkommen; bei „Genau“ kommen nur sie in Frage. Die Merkmale stehen
+  in den Szenen-Stichpunkten, auf der Stimmungskarte und im KI-Protokoll („passt zu „Kampf“ · Tempo schnell“).
 - **Zufällige Auswahl je Ort:** Für jede Szene kommen alle Stücke in einen „Beutel“, die für ihren Ort und ihr
   Gefühl geschrieben sind und ungefähr zur Spannung passen; daraus wird zufällig gezogen, und ein Stück kommt erst
   wieder, wenn die anderen dran waren (Lieblingsstücke etwas früher). Hat ein Ort zu wenig Eigenes, kommen verwandte

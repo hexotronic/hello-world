@@ -1,6 +1,8 @@
 package io.github.hexotronic.lauscher.analysis.core
 
 import io.github.hexotronic.lauscher.music.synth.Mood
+import io.github.hexotronic.lauscher.music.synth.MusicCue
+import io.github.hexotronic.lauscher.music.synth.Pace
 import io.github.hexotronic.lauscher.music.synth.Setting
 import kotlin.math.abs
 
@@ -18,6 +20,10 @@ data class WindowMood(
     val source: String,
     /** Where the window takes place, null when unclear. */
     val setting: Setting? = null,
+    /** What the music should carry (fight, chase, night …), at most three. */
+    val cues: List<MusicCue> = emptyList(),
+    /** How fast the music should move, null when not known. */
+    val pace: Pace? = null,
 )
 
 /** A scene the listener corrected or confirmed, shown to the model as an example of their taste. */
@@ -32,6 +38,9 @@ data class Scene(
     val title: String,
     val manual: Boolean,
     val setting: Setting? = null,
+    /** The cues of its windows, most frequent first (at most three). */
+    val cues: List<MusicCue> = emptyList(),
+    val pace: Pace? = null,
 ) {
     val intensity: Float get() = (level.coerceIn(1, 3) - 1) / 2f * 0.7f + 0.2f
 }
@@ -192,6 +201,17 @@ object SceneMerger {
     fun merge(windows: List<WindowMood>): List<Scene> {
         val sorted = windows.sortedBy { it.startMs }
         val out = ArrayList<Scene>()
+        // Cues of the windows of the scene being built, to pick the most frequent ones.
+        val cueCounts = LinkedHashMap<MusicCue, Int>()
+        val paces = ArrayList<Pace>()
+        fun finish() {
+            val last = out.lastOrNull() ?: return
+            val cues = cueCounts.entries.sortedByDescending { it.value }.map { it.key }.take(MAX_SCENE_CUES)
+            val pace = paces.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
+            out[out.lastIndex] = last.copy(cues = cues, pace = pace)
+            cueCounts.clear()
+            paces.clear()
+        }
         for (w in sorted) {
             val last = out.lastOrNull()
             val manual = w.source == SOURCE_MANUAL
@@ -200,11 +220,18 @@ object SceneMerger {
             ) {
                 out[out.lastIndex] = last.copy(endMs = w.endMs)
             } else {
+                finish()
                 out.add(Scene(w.startMs, w.endMs, w.mood, w.level, w.title, manual, w.setting))
             }
+            w.cues.forEach { cueCounts[it] = (cueCounts[it] ?: 0) + 1 }
+            w.pace?.let { paces += it }
         }
+        finish()
         return out
     }
+
+    /** A scene keeps the cues most of its windows share. */
+    const val MAX_SCENE_CUES = 3
 
     /**
      * How far the analysis reaches without a gap from [positionMs] (gaps up to a second are
@@ -294,6 +321,11 @@ object ScenePrompt {
         (also feast), HOME, BATTLEFIELD, TEMPLE (also church), MAGIC (also fairies), HAUNTED (also graveyard, hell),
         ORIENT, ASIA, ANCIENT (Greece, Rome), NORTH (Celts, Vikings), WESTERN, SPACE, CITY (modern), OTHER (unclear).
 
+        pace: how fast the music should move: SLOW, MEDIUM or FAST.
+        cues: up to three things the music should carry in this window, from:
+        ${MusicCue.entries.joinToString("\n        ") { "${it.name} = ${it.hint}" }}
+        Use [] when none fits.
+
         title: a short scene title in the language of the book, at most five words.
         Neighbouring windows of the same scene keep the same mood and place; only change them when the scene really
         changes.
@@ -341,10 +373,14 @@ object ScenePrompt {
         for (i in 0 until count) {
             append("item").append(i).append(" ::= \"{\" ws \"\\\"w\\\":\" ws \"").append(i)
             append("\" ws \",\" ws \"\\\"mood\\\":\" ws mood ws \",\" ws \"\\\"level\\\":\" ws [1-3] ws \",\" ws ")
-            append("\"\\\"place\\\":\" ws place ws \",\" ws \"\\\"title\\\":\" ws title ws \"}\"\n")
+            append("\"\\\"place\\\":\" ws place ws \",\" ws \"\\\"pace\\\":\" ws pace ws \",\" ws ")
+            append("\"\\\"cues\\\":\" ws cues ws \",\" ws \"\\\"title\\\":\" ws title ws \"}\"\n")
         }
         append("mood ::= ").append(moods.joinToString(" | ") { "\"\\\"$it\\\"\"" }).append('\n')
         append("place ::= ").append(places.joinToString(" | ") { "\"\\\"$it\\\"\"" }).append('\n')
+        append("pace ::= ").append(Pace.entries.joinToString(" | ") { "\"\\\"${it.name}\\\"\"" }).append('\n')
+        append("cues ::= \"[\" ws (cue (ws \",\" ws cue){0,2})? ws \"]\"\n")
+        append("cue ::= ").append(MusicCue.entries.joinToString(" | ") { "\"\\\"${it.name}\\\"\"" }).append('\n')
         append("title ::= \"\\\"\" char{1,32} \"\\\"\"\n")
         append("story ::= \"\\\"\" char{0,300} \"\\\"\"\n")
         append("char ::= [^\"\\\\\\x00-\\x1F] | \"\\\\\" [\"\\\\/nt]\n")
@@ -372,6 +408,9 @@ object ScenePrompt {
     }
 
     const val MAX_CORRECTIONS = 3
+
+    /** Cues per window the model may name. */
+    const val MAX_CUES = 3
     private const val CORRECTION_CHARS = 160
 
     /** The corrections closest before [positionMs] (or else after it), at most [MAX_CORRECTIONS]. */
@@ -402,6 +441,8 @@ object ScenePrompt {
                 title = ((m?.get("title") as? String)?.trim().orEmpty().take(60)).takeUnless { echoesInstructions(it) }.orEmpty(),
                 source = SceneMerger.SOURCE_LLM,
                 setting = Setting.parse(m?.get("place") as? String),
+                cues = (m?.get("cues") as? List<*>).orEmpty().mapNotNull { MusicCue.parse(it as? String) }.distinct().take(MAX_CUES),
+                pace = Pace.parse(m?.get("pace") as? String),
             )
         }
         return Result(result, (root["story"] as? String).orEmpty().trim())
@@ -563,6 +604,37 @@ object KeywordMoods {
         val scores = places.mapValues { (_, list) -> list.sumOf { w -> occurrences(t, w) } }
         val best = scores.maxByOrNull { it.value } ?: return null
         return best.key.takeIf { best.value >= 2 }
+    }
+
+    private val cueWords: Map<MusicCue, List<String>> = mapOf(
+        MusicCue.BATTLE to listOf("kampf", "kämpf", "schwert", "schlacht", "krieg", "angriff", "duell", "fight", "sword", "battle", "war ", "attack", "duel"),
+        MusicCue.CHASE to listOf("verfolg", "flucht", "floh", "rannte", "jagte", "entkam", "chase", "escape", "fled", "pursu", "ran after"),
+        MusicCue.DANGER to listOf("gefahr", "bedroh", "hinterhalt", "lauer", "monster", "bestie", "danger", "threat", "ambush", "beast"),
+        MusicCue.HORROR to listOf("geist", "gespenst", "untot", "leiche", "blut", "albtraum", "ghost", "undead", "corpse", "blood", "nightmare"),
+        MusicCue.MYSTERY to listOf("geheimnis", "rätsel", "ruine", "verborgen", "entdeck", "secret", "riddle", "ruin", "hidden", "discover"),
+        MusicCue.MAGIC to listOf("magie", "zauber", "magier", "hexe", "fee ", "feen", "elf ", "elfen", "magic", "spell", "wizard", "witch", "fairy", "fairies"),
+        MusicCue.GRIEF to listOf("trauer", "starb", "tod ", "beerdig", "begräb", "weinte", "verzweif", "grief", "died", "death", "funeral", "wept", "despair"),
+        MusicCue.LOVE to listOf("liebe", "kuss", "küsste", "zärtlich", "sehnsucht", "love", "kiss", "tender", "longing"),
+        MusicCue.FEAST to listOf("fest ", "feier", "taverne", "gasthaus", "tanz", "markt", "musikanten", "feast", "celebrat", "tavern", "inn ", "dance", "market"),
+        MusicCue.VICTORY to listOf("sieg", "triumph", "gerettet", "jubel", "held ", "victory", "triumph", "rescued", "cheer", "hero"),
+        MusicCue.JOURNEY to listOf("reise", "aufbruch", "wanderte", "unterwegs", "straße", "pfad", "journey", "travel", "set out", "road", "path"),
+        MusicCue.NATURE to listOf("wald", "wiese", "feld", "tiere", "vögel", "blumen", "forest", "meadow", "field", "animals", "birds", "flowers"),
+        MusicCue.NIGHT to listOf("nacht", "dunkel", "mond", "sterne", "schlief", "traum", "night", "dark", "moon", "stars", "slept", "dream"),
+        MusicCue.WATER to listOf("meer", "fluss", "schiff", "regen", "hafen", "welle", "sea ", "river", "ship", "rain", "harbour", "harbor", "wave"),
+        MusicCue.ROYAL to listOf("könig", "königin", "prinz", "hof ", "palast", "thron", "king", "queen", "prince", "court", "palace", "throne"),
+        MusicCue.SACRED to listOf("tempel", "kirche", "gebet", "priester", "götter", "heilig", "temple", "church", "prayer", "priest", "gods", "holy"),
+        MusicCue.HOME to listOf("zuhause", "familie", "kamin", "stube", "mutter", "vater", "home", "family", "fireplace", "mother", "father"),
+        MusicCue.HUMOR to listOf("lachte", "witz", "streich", "kicher", "grinste", "laughed", "joke", "prank", "giggl", "grinned"),
+    )
+
+    /** Up to three cues whose words occur at least twice in [text] (fallback without a language model). */
+    fun cuesOf(text: String): List<MusicCue> {
+        val t = " " + text.lowercase() + " "
+        return cueWords.mapValues { (_, list) -> list.sumOf { w -> occurrences(t, w) } }
+            .filter { it.value >= 2 }
+            .entries.sortedByDescending { it.value }
+            .map { it.key }
+            .take(ScenePrompt.MAX_CUES)
     }
 
     private fun occurrences(text: String, word: String): Int {

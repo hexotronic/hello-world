@@ -138,6 +138,82 @@ for key, (moods, places) in catalog_more.WIDELANDS_MORE.items():
     add(tid, WIDELANDS_TITLES.get(key, 'Widelands ' + key.replace('ingame_', '')), WIDELANDS_COMPOSERS.get(key, 'Widelands-Team'),
         None, 'GPL2', 'WIDELANDS', [tid], moods, places, plan, secs)
 
+# ---------------------------------------------------------------- cues and pace
+# What a piece carries (the same cues the AI names for scenes): words of its title (English, German,
+# Spanish file names of the games), then its moods and places.
+CUE_WORDS = {
+    'BATTLE': r'battle|war\b|siege|fight|combat|attack|warrior|army|legion|heroism|accion|schlacht|kampf|gauntlet|barbarian|slaying',
+    'CHASE': r'chase|frantic|escape|pursuit|vengeful|hunting|run\b|sprint|last.minute|trouble',
+    'DANGER': r'danger|threat|boss|suspense|ominous|unrest|tension|dramatic|abyss|madness',
+    'HORROR': r'ghost|ghoul|grave|haunt|hell\b|undead|crypt|coffin|uncanny|eerie|darkness|demon|macabre|casket',
+    'MYSTERY': r'myster|secret|ruin|shadow|unknown|weird|awareness|crossroads|labyrinth|mirror|deep',
+    'MAGIC': r'magic|magick|mystic|arcane|spell|wizard|fairy|enchant|alchemist|elf|elv|ivory|surreal|monolith|codex',
+    'GRIEF': r'\bsad|lament|lonel|despair|funeral|death|dead\b|lost|sorrow|weight of|king is dead|casualties|broken|soliloquy|dreary|nunc dimittis|game over',
+    'LOVE': r'love|princess|romance|heart|lyonar|harp',
+    'FEAST': r'tavern|inn\b|feast|dance|party|celebrat|minstrel|shop|market|music box|fest\b|caketown|peasant',
+    'VICTORY': r'victory|triumph|fanfare|win\b|hero|fires of victory|risen sun|new hope|return to',
+    'JOURNEY': r'journey|travel|road|wanderer|world.map|overworld|adventure|explor|frontier|around the world|crossroads|long journey|caravan',
+    'NATURE': r'forest|wood|field|meadow|bird|garden|green|knolls|jungle|canopy|valley|grass|silvan|nature|idyll|sunrise',
+    'NIGHT': r'night|moon|luna|dream|star|dusk|evening|noche|sleep|good.night|nocturn|claro de luna',
+    'WATER': r'sea\b|ocean|port\b|docks|sail|water|island|coast|caribbean|ship|river|rain|wave|harbo|nautilus|offshore',
+    'ROYAL': r'king|queen|court|palace|royal|castle|throne|empire|emperor|knight|lord',
+    'SACRED': r'temple|church|holy|shrine|choir|bells|sacred|prayer|monaster|academy bells|deities',
+    'HOME': r'home|fireplace|house|inside|good.morning|peace|village|sempridge|hurnscald|snow village|inquisitive inn',
+    'HUMOR': r'humor|quirk|funny|jester|silly|mischief|ghoulish fun|dance monster|happy',
+}
+MOOD_CUES = {'ACTION': 'BATTLE', 'TENSE': 'DANGER', 'EERIE': 'HORROR', 'MYSTERIOUS': 'MYSTERY', 'SAD': 'GRIEF',
+             'ROMANTIC': 'LOVE', 'IDYLLIC': 'NATURE'}
+PLACE_CUES = {'BATTLEFIELD': 'BATTLE', 'MAGIC': 'MAGIC', 'HAUNTED': 'HORROR', 'SEA': 'WATER', 'UNDERWATER': 'WATER',
+              'CASTLE': 'ROYAL', 'TEMPLE': 'SACRED', 'TAVERN': 'FEAST', 'HOME': 'HOME', 'OPEN_LAND': 'JOURNEY',
+              'FOREST': 'NATURE', 'JUNGLE': 'NATURE', 'DUNGEON': 'DANGER', 'CAVE': 'MYSTERY'}
+
+
+def cues_for(t):
+    text = (t['title'] + ' ' + t['id'].split('/')[-1].replace('_', ' ').replace('-', ' ')).lower()
+    out = [c for c, rx in CUE_WORDS.items() if re.search(rx, text)]
+    if t['moods'][0] == 'HAPPY' and set(t['places']) & {'TAVERN', 'TOWN'}:
+        out.append('FEAST')
+    # From the measurements: fast fighting music also suits chases, bright driving happy music
+    # triumphs, slow dark calm or mysterious music the night.
+    f = feature(t)
+    first = t['moods'][0]
+    if first == 'ACTION' and t['pace'] == 'FAST':
+        out.append('CHASE')
+    if first == 'HAPPY' and (t['energy'] >= 0.55 or 'ACTION' in t['moods']):
+        out.append('VICTORY')
+    if first == 'HAPPY' and t['pace'] != 'SLOW' and not set(t['places']) & {'TAVERN', 'CASTLE'}:
+        out.append('HUMOR')
+    if first in ('CALM', 'MYSTERIOUS', 'ROMANTIC') and t['pace'] == 'SLOW' and f['centroid'] < 750:
+        out.append('NIGHT')
+    for m in t['moods'][:2]:
+        if m in MOOD_CUES:
+            out.append(MOOD_CUES[m])
+    for p in t['places'][:2]:
+        if p in PLACE_CUES:
+            out.append(PLACE_CUES[p])
+    seen = []
+    for c in out:
+        if c not in seen:
+            seen.append(c)
+    return seen[:4]
+
+
+def feature(t):
+    """Measurements of the piece (of its main part for pieces in several files)."""
+    return A[t['files'][min(1, len(t['files']) - 1)]['id']]['f']
+
+
+def pace_for(t):
+    """Measured: note onsets per second, with the mood as a hint."""
+    ons = feature(t)['onsets_per_s']
+    score = 0.65 * clamp((ons - 0.6) / 2.4) + 0.35 * PRIOR[t['moods'][0]]
+    return 'SLOW' if score < 0.36 else ('FAST' if score > 0.58 else 'MEDIUM')
+
+
+for t in TRACKS:
+    t['pace'] = pace_for(t)
+    t['cues'] = cues_for(t)
+
 # ---------------------------------------------------------------- checks and output
 ids = [t['id'] for t in TRACKS]
 assert len(ids) == len(set(ids)), 'duplicate ids'
@@ -164,22 +240,28 @@ def entry(t):
     files = ', '.join(f'f({kstr(x["url"])}, {x["size"]}, {kstr(x["sha256"])})' for x in t['files'])
     moods = ', '.join('M.' + m for m in t['moods'])
     places = ', '.join('S.' + p for p in t['places'])
-    plan = '' if t['plan'] == SINGLE else ', listOf(' + ', '.join(seg(s) for s in t['plan']) + ')'
+    plan = '' if t['plan'] == SINGLE else ', plan = listOf(' + ', '.join(seg(s) for s in t['plan']) + ')'
     year = t['year'] if t['year'] else 'null'
+    cues = ', '.join('Q.' + c for c in t['cues'])
     return (f'        t({kstr(t["id"])}, {kstr(t["title"])}, {kstr(t["composer"])}, {year}, L.{t["lic"]}, C.{t["coll"]}, '
-            f'listOf({files}), {round(t["seconds"])}, listOf({moods}), listOf({places}), {t["energy"]:.2f}f, {t["gain"]:.1f}f{plan}),')
+            f'listOf({files}), {round(t["seconds"])}, listOf({moods}), listOf({places}), {t["energy"]:.2f}f, {t["gain"]:.1f}f{plan}, '
+            f'cues = listOf({cues}), pace = P.{t["pace"]}),')
 
 
 print(f'// {len(TRACKS)} tracks, {sum(sum(x["size"] for x in t["files"]) for t in TRACKS) / 1e6:.0f} MB, '
       f'{sum(t["seconds"] for t in TRACKS) / 3600:.1f} h', file=sys.stderr)
 print('// moods', dict(Counter(m for t in TRACKS for m in t['moods'])), file=sys.stderr)
 print('// places', dict(Counter(p for t in TRACKS for p in t['places'])), file=sys.stderr)
+print('// cues', dict(Counter(c for t in TRACKS for c in t['cues'])), file=sys.stderr)
+print('// pace', dict(Counter(t['pace'] for t in TRACKS)), file=sys.stderr)
 
 HEADER = '''package io.github.hexotronic.lauscher.music.library.core
 
 import io.github.hexotronic.lauscher.music.library.core.MusicCollection as C
 import io.github.hexotronic.lauscher.music.library.core.MusicLicense as L
 import io.github.hexotronic.lauscher.music.synth.Mood as M
+import io.github.hexotronic.lauscher.music.synth.MusicCue as Q
+import io.github.hexotronic.lauscher.music.synth.Pace as P
 import io.github.hexotronic.lauscher.music.synth.Setting as S
 
 /**
@@ -194,7 +276,8 @@ internal object FantasyCatalog {
     private fun t(
         id: String, title: String, composer: String, year: Int?, license: L, collection: C, files: List<TrackFile>,
         seconds: Int, moods: List<M>, settings: List<S>, energy: Float, gainDb: Float, plan: List<Segment> = listOf(Segment()),
-    ) = LibraryTrack(id, title, composer, year, license, collection, files, seconds, moods, settings, energy, gainDb, plan)
+        cues: List<Q> = emptyList(), pace: P = P.MEDIUM,
+    ) = LibraryTrack(id, title, composer, year, license, collection, files, seconds, moods, settings, energy, gainDb, plan, cues, pace)
 '''
 
 # Several small functions keep each one far below the JVM's method size limit.

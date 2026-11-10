@@ -12,6 +12,8 @@ import io.github.hexotronic.lauscher.analysis.core.TranscriptWindow
 import io.github.hexotronic.lauscher.analysis.core.WindowMood
 import io.github.hexotronic.lauscher.analysis.core.WindowPlanner
 import io.github.hexotronic.lauscher.music.synth.Mood
+import io.github.hexotronic.lauscher.music.synth.MusicCue
+import io.github.hexotronic.lauscher.music.synth.Pace
 import io.github.hexotronic.lauscher.music.synth.Setting
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -37,6 +39,9 @@ class SceneAnalysisTest {
         assertTrue(g.contains("place ::="))
         assertTrue(g.contains("\"\\\"DUNGEON\\\"\""))
         assertTrue(g.contains("\"\\\"OTHER\\\"\""))
+        assertTrue(g.contains("pace ::="))
+        assertTrue(g.contains("cues ::="))
+        assertTrue(g.contains("\"\\\"BATTLE\\\"\""))
         // Written out for the Python grammar check in the harness.
         System.getProperty("grammarOut")?.let { File(it).writeText(g) }
     }
@@ -65,6 +70,53 @@ class SceneAnalysisTest {
         assertEquals(3, result.windows[2].level)
         assertEquals(listOf(Setting.HOME, null, Setting.DUNGEON), result.windows.map { it.setting })
         assertEquals("Anna wird verfolgt.\nSie flieht.", result.story)
+    }
+
+    @Test
+    fun parsesMusicCuesAndPace() {
+        val out = """{"windows":[{"w":0,"mood":"CALM","level":1,"place":"HOME","pace":"SLOW","cues":["HOME","NIGHT"],"title":"Abend"},
+            {"w":1,"mood":"TENSE","level":2,"place":"OTHER","pace":"MEDIUM","cues":[],"title":"Schritte"},
+            {"w":2,"mood":"ACTION","level":3,"place":"FOREST","pace":"FAST","cues":["CHASE","CHASE","WIZARDS","DANGER","BATTLE"],"title":"Flucht"}],"story":""}"""
+        val r = ScenePrompt.parse(out, windows)!!
+        assertEquals(listOf(MusicCue.HOME, MusicCue.NIGHT), r.windows[0].cues)
+        assertEquals(Pace.SLOW, r.windows[0].pace)
+        assertEquals(emptyList<MusicCue>(), r.windows[1].cues)
+        // Unknown names and repeats are dropped, at most three are kept.
+        assertEquals(listOf(MusicCue.CHASE, MusicCue.DANGER, MusicCue.BATTLE), r.windows[2].cues)
+        assertEquals(Pace.FAST, r.windows[2].pace)
+        // Older answers without the new fields still parse.
+        val old = ScenePrompt.parse("""{"windows":[{"w":0,"mood":"CALM","level":1,"place":"HOME","title":"x"}],"story":""}""", windows.take(1))!!
+        assertEquals(emptyList<MusicCue>(), old.windows[0].cues)
+        assertNull(old.windows[0].pace)
+        // The instructions name every cue.
+        assertTrue(MusicCue.entries.all { it.name in ScenePrompt.SYSTEM })
+    }
+
+    @Test
+    fun scenesKeepTheCuesOfMostOfTheirWindows() {
+        fun w(start: Long, cues: List<MusicCue>, pace: Pace) =
+            WindowMood(start * 60_000, (start + 2) * 60_000, Mood.ACTION, 3, "", SceneMerger.SOURCE_LLM, Setting.FOREST, cues, pace)
+        val scenes = SceneMerger.merge(
+            listOf(
+                w(0, listOf(MusicCue.CHASE, MusicCue.DANGER), Pace.FAST),
+                w(2, listOf(MusicCue.CHASE, MusicCue.BATTLE), Pace.FAST),
+                w(4, listOf(MusicCue.BATTLE, MusicCue.CHASE, MusicCue.NIGHT), Pace.MEDIUM),
+            ),
+        )
+        assertEquals(1, scenes.size)
+        assertEquals(listOf(MusicCue.CHASE, MusicCue.BATTLE, MusicCue.DANGER), scenes[0].cues)
+        assertEquals(Pace.FAST, scenes[0].pace)
+    }
+
+    @Test
+    fun keywordsGiveCuesWithoutALanguageModel() {
+        val text = "Das Schwert blitzte, der Kampf begann. Im Kampf fiel der König, sein Schwert zerbrach. Der König war tot."
+        val cues = KeywordMoods.cuesOf(text)
+        assertTrue(cues.toString(), MusicCue.BATTLE in cues && MusicCue.ROYAL in cues)
+        assertEquals(emptyList<MusicCue>(), KeywordMoods.cuesOf("Ein ganz gewöhnlicher Satz."))
+        assertEquals(Pace.FAST, Pace.of(Mood.ACTION, 2))
+        assertEquals(Pace.SLOW, Pace.of(Mood.SAD, 1))
+        assertEquals(Pace.MEDIUM, Pace.of(Mood.MYSTERIOUS, 2))
     }
 
     @Test

@@ -730,6 +730,8 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
                         intensity = sc.intensity,
                         seed = sc.startMs,
                         setting = sc.setting,
+                        cues = sc.cues,
+                        pace = sc.pace,
                     )
                 }
                 val here = specOf(scene)

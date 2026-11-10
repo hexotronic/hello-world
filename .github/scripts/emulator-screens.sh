@@ -123,6 +123,14 @@ if [ -n "${E2E_DIR:-}" ] && [ -f "$E2E_DIR/story.wav" ]; then
     echo "::error::Die lokale Analyse hat keine Szenen geliefert"
     E2E_FAILED=1
   fi
+  # Music cues and pace named by the model (e.g. "[CHASE+DANGER/FAST]"); a small model may leave the cues empty.
+  CUES=$(grep "Szenen:" "$OUT/analyse.txt" | grep -oE "\[[A-Z+]*/[A-Z?]+\]" | head -3 | tr '\n' ' ')
+  if [ -n "$CUES" ]; then
+    echo "::notice::Musik-Merkmale der Szenen: $CUES"
+  else
+    echo "::error::Die Szenen haben keine Musik-Merkmale (Tempo/Merkmale) bekommen"
+    E2E_FAILED=1
+  fi
   if ! grep -q "Tempoprobe 2.0" "$OUT/analyse.txt"; then
     echo "::error::Die Tempoprobe bei 2× fehlt"
     E2E_FAILED=1

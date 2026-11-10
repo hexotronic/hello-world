@@ -78,6 +78,9 @@ data class SoundSpec(
     val trackId: String? = null,
     /** Where the scene takes place; the music library prefers pieces for this place. */
     val setting: Setting? = null,
+    /** What the music should carry (from the AI); the library prefers pieces with these cues. */
+    val cues: List<MusicCue> = emptyList(),
+    val pace: Pace? = null,
 )
 
 /**

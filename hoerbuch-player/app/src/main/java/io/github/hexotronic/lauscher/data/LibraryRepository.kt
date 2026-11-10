@@ -15,6 +15,8 @@ import io.github.hexotronic.lauscher.analysis.core.Anchor
 import io.github.hexotronic.lauscher.analysis.core.BookText
 import io.github.hexotronic.lauscher.analysis.core.Correction
 import io.github.hexotronic.lauscher.music.synth.Mood
+import io.github.hexotronic.lauscher.music.synth.MusicCue
+import io.github.hexotronic.lauscher.music.synth.Pace
 import io.github.hexotronic.lauscher.music.synth.Setting
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -25,7 +27,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
-private class LauscherDatabase(context: Context) : SQLiteOpenHelper(context, "lauscher.db", null, 5) {
+private class LauscherDatabase(context: Context) : SQLiteOpenHelper(context, "lauscher.db", null, 6) {
     override fun onConfigure(db: SQLiteDatabase) {
         db.setForeignKeyConstraintsEnabled(true)
     }
@@ -141,6 +143,8 @@ private class LauscherDatabase(context: Context) : SQLiteOpenHelper(context, "la
                 title TEXT NOT NULL,
                 source TEXT NOT NULL,
                 setting TEXT,
+                cues TEXT,
+                pace TEXT,
                 PRIMARY KEY(book_id, start_ms))""",
         )
         db.execSQL(
@@ -159,6 +163,11 @@ private class LauscherDatabase(context: Context) : SQLiteOpenHelper(context, "la
         }
         if (oldVersion < 4) createBookTextTable(db)
         if (oldVersion < 5) createSceneCutsTable(db)
+        // Music cues and pace named by the AI (version 6); window_moods exists from version 2 on.
+        if (oldVersion in 2..5) {
+            db.execSQL("ALTER TABLE window_moods ADD COLUMN cues TEXT")
+            db.execSQL("ALTER TABLE window_moods ADD COLUMN pace TEXT")
+        }
     }
 }
 
@@ -570,6 +579,8 @@ class LibraryRepository(context: Context) {
                     title = c.str("title").orEmpty(),
                     source = c.str("source").orEmpty(),
                     setting = Setting.parse(c.str("setting")),
+                    cues = MusicCue.parseList(c.str("cues")),
+                    pace = Pace.parse(c.str("pace")),
                 )
             }
         }
@@ -672,6 +683,8 @@ class LibraryRepository(context: Context) {
                     put("title", m.title)
                     put("source", m.source)
                     put("setting", m.setting?.name)
+                    put("cues", MusicCue.toText(m.cues))
+                    put("pace", m.pace?.name)
                 }, SQLiteDatabase.CONFLICT_REPLACE)
             }
             db.setTransactionSuccessful()

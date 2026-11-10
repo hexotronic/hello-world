@@ -235,6 +235,10 @@ private fun SpotCard(
                     PixelBadge("ohne Musik", colors.surfaceContainerHighest, colors.onSurface)
                 }
                 scene.setting?.let { PixelBadge(it.label, colors.surfaceContainerHighest, colors.onSurface) }
+                if (mood != null) {
+                    scene.cues.forEach { PixelBadge(it.label, colors.secondaryContainer, colors.onSecondaryContainer) }
+                    scene.pace?.let { PixelBadge("Tempo ${it.label}", colors.secondaryContainer, colors.onSecondaryContainer) }
+                }
                 if (scene.manual) PixelBadge("von dir", colors.primary, colors.onPrimary)
             }
             if (scene.title.isNotBlank()) {

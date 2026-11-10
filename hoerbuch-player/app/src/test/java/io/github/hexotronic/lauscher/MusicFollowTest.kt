@@ -7,6 +7,8 @@ import io.github.hexotronic.lauscher.music.library.core.MusicCatalog
 import io.github.hexotronic.lauscher.music.library.core.MusicChoiceText
 import io.github.hexotronic.lauscher.music.library.core.TrackPicker
 import io.github.hexotronic.lauscher.music.synth.Mood
+import io.github.hexotronic.lauscher.music.synth.MusicCue
+import io.github.hexotronic.lauscher.music.synth.Pace
 import io.github.hexotronic.lauscher.music.synth.MusicChoice
 import io.github.hexotronic.lauscher.music.synth.MusicFollow
 import io.github.hexotronic.lauscher.music.synth.MusicMixer
@@ -42,7 +44,14 @@ class MusicFollowTest {
     /** Pieces for every mood; [fits] answers [stillFits] (null: the source cannot tell). */
     private class Source(val seconds: Float, var fits: ((Mood, Setting?) -> Boolean?)? = null, val none: Boolean = false) : RecordingSource {
         val opened = mutableListOf<String>()
-        override fun open(mood: Mood, setting: Setting?, intensity: Float, trackId: String?): PcmStream? {
+        override fun open(
+            mood: Mood,
+            setting: Setting?,
+            intensity: Float,
+            trackId: String?,
+            cues: List<MusicCue>,
+            pace: Pace?,
+        ): PcmStream? {
             if (none && trackId == null) return null
             val id = trackId ?: "${mood.name}-${opened.size}"
             opened += id
@@ -192,6 +201,56 @@ class MusicFollowTest {
         // Chance decides the order: other seeds, other orders.
         val orders = (2L..6L).map { round(TrackPicker(seed = it)) }.toSet()
         assertTrue("${orders.size} different orders", orders.size >= 4)
+    }
+
+    @Test
+    fun theAiCuesSteerTheChoice() {
+        val base = MusicCatalog.byId("wesnoth/silvan_sanctuary")!!
+        // Eight forest pieces; two of them carry "Nacht", one of those is also slow.
+        val pieces = (1..8).map { i ->
+            base.copy(
+                id = "forest-$i",
+                cues = if (i <= 2) listOf(MusicCue.NIGHT, MusicCue.NATURE) else listOf(MusicCue.NATURE),
+                pace = if (i == 1) Pace.SLOW else Pace.MEDIUM,
+            )
+        }
+        fun count(cues: List<MusicCue>, pace: Pace?, id: (String) -> Boolean): Int {
+            val picker = TrackPicker(seed = 4)
+            return (0 until 400).count { id(picker.pick(pieces, Mood.CALM, Setting.FOREST, 0.3f, cues = cues, pace = pace)!!.id) }
+        }
+        val night = { id: String -> id == "forest-1" || id == "forest-2" }
+        val withCue = count(listOf(MusicCue.NIGHT), null, night)
+        val without = count(emptyList(), null, night)
+        // Only two of eight pieces fit: they come up clearly more often, but not over and over.
+        assertTrue("night pieces $withCue with cue, $without without", withCue > without * 1.35)
+        // Half of the pieces fit: they make up most of the music.
+        val half = pieces.mapIndexed { i, t -> if (i < 4) t.copy(cues = listOf(MusicCue.BATTLE)) else t }
+        val battle = TrackPicker(seed = 8).let { p ->
+            (0 until 400).count { MusicCue.BATTLE in p.pick(half, Mood.CALM, Setting.FOREST, 0.3f, cues = listOf(MusicCue.BATTLE))!!.cues }
+        }
+        assertTrue("battle pieces $battle of 400", battle > 250)
+        // Still chance: the other forest pieces keep coming, too.
+        assertTrue(count(listOf(MusicCue.NIGHT), null) { !night(it) } > 60)
+        // The slow night piece wins over the medium one when the scene is slow.
+        assertTrue(count(listOf(MusicCue.NIGHT), Pace.SLOW) { it == "forest-1" } > count(listOf(MusicCue.NIGHT), Pace.SLOW) { it == "forest-2" })
+        // "Genau" draws only from the pieces with the cue.
+        val precise = TrackPicker(seed = 2)
+        repeat(20) {
+            assertTrue(night(precise.pick(pieces, Mood.CALM, Setting.FOREST, 0.3f, follow = MusicFollow.PRECISE, cues = listOf(MusicCue.NIGHT))!!.id))
+        }
+        // And the log says why.
+        val why = TrackPicker.describeFit(pieces[0], Mood.CALM, Setting.FOREST, 0.3f, listOf(MusicCue.NIGHT), Pace.SLOW)
+        assertTrue(why, "passt zu „Nacht“" in why && "Tempo langsam" in why)
+    }
+
+    @Test
+    fun theCatalogPiecesCarryCuesAndPace() {
+        val all = MusicCatalog.tracks
+        assertTrue(all.count { it.cues.isNotEmpty() } > all.size * 0.9)
+        for (c in MusicCue.entries) assertTrue("$c has too few pieces", all.count { c in it.cues } >= 5)
+        for (p in Pace.entries) assertTrue("$p", all.count { it.pace == p } >= 50)
+        assertTrue(MusicCue.BATTLE in MusicCatalog.byId("wesnoth/battle")!!.cues)
+        assertTrue(MusicCue.GRIEF in MusicCatalog.byId("wesnoth/sad")!!.cues)
     }
 
     @Test

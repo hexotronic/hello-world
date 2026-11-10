@@ -6,6 +6,8 @@ import io.github.hexotronic.lauscher.music.library.core.PlayPlan
 import io.github.hexotronic.lauscher.music.library.core.Segment
 import io.github.hexotronic.lauscher.music.library.core.TrackPicker
 import io.github.hexotronic.lauscher.music.synth.Mood
+import io.github.hexotronic.lauscher.music.synth.MusicCue
+import io.github.hexotronic.lauscher.music.synth.Pace
 import io.github.hexotronic.lauscher.music.synth.MusicMixer
 import io.github.hexotronic.lauscher.music.synth.PcmStream
 import io.github.hexotronic.lauscher.music.synth.RecordingSource
@@ -158,7 +160,14 @@ class MusicLibraryTest {
 
     private class FakeSource(val seconds: Float, val available: Set<Mood>) : RecordingSource {
         val opened = mutableListOf<FakeStream>()
-        override fun open(mood: Mood, setting: Setting?, intensity: Float, trackId: String?): PcmStream? {
+        override fun open(
+            mood: Mood,
+            setting: Setting?,
+            intensity: Float,
+            trackId: String?,
+            cues: List<MusicCue>,
+            pace: Pace?,
+        ): PcmStream? {
             if (trackId == null && mood !in available) return null
             return FakeStream(trackId ?: "${mood.name}-${opened.size}", (seconds * 44_100).toInt()).also { opened += it }
         }

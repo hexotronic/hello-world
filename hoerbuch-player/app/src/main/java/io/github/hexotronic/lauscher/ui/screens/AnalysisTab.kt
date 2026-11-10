@@ -312,6 +312,12 @@ private fun SceneNotes(scene: Scene, d: AnalysisTabData, onJump: () -> Unit, onE
             Bullet("Ort", scene.setting?.let { "${it.label} (${it.hint})" } ?: "unklar")
             Bullet("Gefühl", scene.mood?.let { "${it.label} – ${it.hint}" } ?: "keins – hier bewusst ohne Musik")
             if (scene.mood != null) Bullet("Spannung", "●".repeat(scene.level.coerceIn(1, 3)) + "○".repeat(3 - scene.level.coerceIn(1, 3)))
+            if (scene.mood != null && (scene.cues.isNotEmpty() || scene.pace != null)) {
+                Bullet(
+                    "Musik soll",
+                    (scene.cues.map { it.label } + listOfNotNull(scene.pace?.let { "Tempo ${it.label}" })).joinToString(" · "),
+                )
+            }
             musicLine(scene, d, now)?.let { Bullet("Musik", it) }
             if (scene.manual) Bullet("Quelle", "von dir korrigiert oder bestätigt")
             excerptOf(scene, d.texts)?.let {

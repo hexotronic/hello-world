@@ -10,6 +10,8 @@ import io.github.hexotronic.lauscher.music.library.core.MusicCatalog
 import io.github.hexotronic.lauscher.music.library.core.TrackFile
 import io.github.hexotronic.lauscher.music.library.core.TrackPicker
 import io.github.hexotronic.lauscher.music.synth.Mood
+import io.github.hexotronic.lauscher.music.synth.MusicCue
+import io.github.hexotronic.lauscher.music.synth.Pace
 import io.github.hexotronic.lauscher.music.synth.PcmStream
 import io.github.hexotronic.lauscher.music.synth.RecordingSource
 import io.github.hexotronic.lauscher.music.synth.Setting
@@ -229,7 +231,14 @@ class MusicLibrary(
         avoidNext = trackId
     }
 
-    override fun open(mood: Mood, setting: Setting?, intensity: Float, trackId: String?): PcmStream? {
+    override fun open(
+        mood: Mood,
+        setting: Setting?,
+        intensity: Float,
+        trackId: String?,
+        cues: List<MusicCue>,
+        pace: Pace?,
+    ): PcmStream? {
         val track = if (trackId != null) {
             MusicCatalog.byId(trackId)
         } else {
@@ -238,7 +247,7 @@ class MusicLibrary(
             val pool = if (s.hiddenTracks.isEmpty()) installedTracks else installedTracks.filter { it.id !in s.hiddenTracks }
             val avoid = avoidNext
             avoidNext = null
-            picker.pick(pool, mood, setting, intensity, s.likedTracks, avoid, s.follow)
+            picker.pick(pool, mood, setting, intensity, s.likedTracks, avoid, s.follow, cues, pace)
         } ?: return null
         val files = filesFor(track) ?: return null
         // Quieter scenes get the piece a little softer.

@@ -21,6 +21,7 @@ import io.github.hexotronic.lauscher.data.LibraryRepository
 import io.github.hexotronic.lauscher.data.Track
 import io.github.hexotronic.lauscher.llm.LlamaNative
 import io.github.hexotronic.lauscher.music.MusicSettingsStore
+import io.github.hexotronic.lauscher.music.synth.Pace
 import io.github.hexotronic.lauscher.playback.AudiobookPlayerCore
 import io.github.hexotronic.lauscher.whisper.WhisperNative
 import kotlinx.coroutines.CoroutineScope
@@ -486,13 +487,26 @@ class AnalysisManager(
                     repo.saveStory(book.id, parsed.story)
                     log.add(AiStep.INFO, "Zusammenfassung „Was bisher geschah“ aktualisiert", parsed.story, book.id)
                 }
-                // Where the model saw no clear place, place words in the text may still name one.
-                val result = parsed.windows.mapIndexed { i, w -> if (w.setting != null) w else w.copy(setting = KeywordMoods.settingOf(windows[i].text)) }
+                // Where the model saw no clear place or no cues, words in the text may still name them;
+                // without a pace the mood and its strength give one.
+                val result = parsed.windows.mapIndexed { i, w ->
+                    w.copy(
+                        setting = w.setting ?: KeywordMoods.settingOf(windows[i].text),
+                        cues = w.cues.ifEmpty { KeywordMoods.cuesOf(windows[i].text) },
+                        pace = w.pace ?: Pace.of(w.mood, w.level),
+                    )
+                }
                 result.forEachIndexed { i, w ->
                     val fromWords = parsed.windows[i].setting == null && w.setting != null
                     log.add(AiStep.SCENE, sceneLine(w) + if (fromWords) " (Ort aus Ortswörtern im Text)" else "", null, book.id, w.startMs)
                 }
-                Log.i(TAG, "Szenen: " + result.joinToString { "${ScenePrompt.clock(it.startMs)}=${it.mood ?: "NONE"}/${it.level}@${it.setting ?: "?"} ${it.title}" })
+                Log.i(
+                    TAG,
+                    "Szenen: " + result.joinToString {
+                        "${ScenePrompt.clock(it.startMs)}=${it.mood ?: "NONE"}/${it.level}@${it.setting ?: "?"} ${it.title} " +
+                            "[${it.cues.joinToString("+")}/${it.pace ?: "?"}]"
+                    },
+                )
                 return result
             }
             Log.w(TAG, "Language model gave no usable answer, using keywords")
@@ -500,20 +514,26 @@ class AnalysisManager(
         }
         return windows.map { w ->
             val (mood, level) = KeywordMoods.classify(w.text)
-            WindowMood(w.startMs, w.endMs, mood, level, "", SceneMerger.SOURCE_KEYWORDS, KeywordMoods.settingOf(w.text))
+            WindowMood(
+                w.startMs, w.endMs, mood, level, "", SceneMerger.SOURCE_KEYWORDS, KeywordMoods.settingOf(w.text),
+                KeywordMoods.cuesOf(w.text), Pace.of(mood, level),
+            )
         }.also { list ->
             list.forEach { log.add(AiStep.SCENE, sceneLine(it) + " (nach Schlüsselwörtern)", null, book.id, it.startMs) }
             Log.i(TAG, "Szenen (Schlüsselwörter): " + list.joinToString { "${ScenePrompt.clock(it.startMs)}=${it.mood ?: "NONE"}@${it.setting ?: "?"}" })
         }
     }
 
-    private fun maxTokens(windows: Int) = 120 + 48 * windows
+    /** Room for the answer: the story plus per window mood, level, place, pace, cues and title. */
+    private fun maxTokens(windows: Int) = 120 + 72 * windows
 
     /** "0:00–2:00: Ruhig · Spannung 1 · Ort „Wald“ – „Kindheit im Garten“" for the AI log. */
     private fun sceneLine(w: WindowMood): String {
         val what = w.mood?.let { "${it.label} · Spannung ${w.level.coerceIn(1, 3)} von 3" } ?: "keine Musik"
         val place = w.setting?.let { "Ort „${it.label}“" } ?: "Ort unklar"
-        return "${ScenePrompt.clock(w.startMs)}–${ScenePrompt.clock(w.endMs)}: $what · $place" + (w.title.takeIf { it.isNotBlank() }?.let { " – „$it“" } ?: "")
+        val music = (w.cues.map { it.label } + listOfNotNull(w.pace?.let { "Tempo ${it.label}" })).takeIf { it.isNotEmpty() }
+            ?.joinToString(", ", prefix = " · Musik: ") ?: ""
+        return "${ScenePrompt.clock(w.startMs)}–${ScenePrompt.clock(w.endMs)}: $what · $place$music" + (w.title.takeIf { it.isNotBlank() }?.let { " – „$it“" } ?: "")
     }
 
     private fun formatMinutes(ms: Long): String {

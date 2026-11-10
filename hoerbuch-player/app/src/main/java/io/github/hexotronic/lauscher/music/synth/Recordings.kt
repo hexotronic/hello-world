@@ -28,7 +28,14 @@ interface RecordingSource {
      * available, the synthesizer plays then.
      * Called on the audio thread, so it must only start work, not wait for it.
      */
-    fun open(mood: Mood, setting: Setting?, intensity: Float, trackId: String?): PcmStream?
+    fun open(
+        mood: Mood,
+        setting: Setting?,
+        intensity: Float,
+        trackId: String?,
+        cues: List<MusicCue> = emptyList(),
+        pace: Pace? = null,
+    ): PcmStream?
 
     /**
      * Whether the piece [trackId] also suits a scene of [mood], [setting] and [intensity] (its own
@@ -50,6 +57,9 @@ internal class RecordingGenerator(
     var setting: Setting?,
     var intensity: Float,
     first: PcmStream,
+    /** What the AI wants the music to carry; further pieces are picked for it, too. */
+    var cues: List<MusicCue> = emptyList(),
+    var pace: Pace? = null,
     /** Called with the id of each further piece (on the audio thread). */
     private val onNext: ((String) -> Unit)? = null,
 ) : Generator {
@@ -73,7 +83,7 @@ internal class RecordingGenerator(
                 pauseLeft -= skip
                 done += skip
                 if (pauseLeft <= 0) {
-                    val next = source.open(mood, setting, intensity, null)
+                    val next = source.open(mood, setting, intensity, null, cues, pace)
                     stream = next
                     // Nothing else to play: stay silent but try again after the next pause.
                     if (next == null) pauseLeft = (PAUSE_SECONDS * sampleRate).toInt() else onNext?.invoke(next.trackId)
