@@ -5,6 +5,7 @@ import android.media.AudioFormat
 import android.media.AudioTrack
 import android.os.Process
 import io.github.hexotronic.lauscher.audio.AudioEnhancerHub
+import io.github.hexotronic.lauscher.music.synth.MusicChoice
 import io.github.hexotronic.lauscher.music.synth.MusicMixer
 import io.github.hexotronic.lauscher.music.synth.RecordingSource
 import io.github.hexotronic.lauscher.music.synth.SoundSpec
@@ -31,7 +32,15 @@ class MusicEngine(recordings: RecordingSource? = null) {
         mixer.volume = settings.volume * volumeScale.coerceIn(0f, 1f)
         mixer.duckDepthDb = settings.duckDepthDb
         mixer.crossfadeSeconds = settings.crossfadeSeconds
+        mixer.follow = settings.follow
     }
+
+    /** Told what the mixer chose for each new scene (on the audio thread). */
+    var onChoice: ((MusicChoice) -> Unit)?
+        get() = mixer.onChoice
+        set(value) {
+            mixer.onChoice = value
+        }
 
     fun setSpec(spec: SoundSpec?) {
         if (spec == currentSpec) return

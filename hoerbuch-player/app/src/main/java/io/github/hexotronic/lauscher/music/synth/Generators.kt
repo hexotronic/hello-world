@@ -156,7 +156,7 @@ internal class AtmosphereGenerator(
 /** Plays a [MoodStyle]: chord pad, arpeggio, melody, bells, pulse and drums. */
 internal class MoodGenerator(
     private val sampleRate: Int,
-    private val mood: Mood,
+    val mood: Mood,
     intensity: Float,
     seed: Long,
 ) : Generator {

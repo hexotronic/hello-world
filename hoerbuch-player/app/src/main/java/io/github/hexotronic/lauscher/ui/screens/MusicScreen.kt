@@ -57,6 +57,7 @@ import io.github.hexotronic.lauscher.music.MusicSource
 import io.github.hexotronic.lauscher.music.library.core.MusicCatalog
 import io.github.hexotronic.lauscher.music.synth.Atmosphere
 import io.github.hexotronic.lauscher.music.synth.Mood
+import io.github.hexotronic.lauscher.music.synth.MusicFollow
 import io.github.hexotronic.lauscher.music.synth.Setting
 import io.github.hexotronic.lauscher.music.synth.SoundSpec
 import io.github.hexotronic.lauscher.ui.MainViewModel
@@ -174,6 +175,16 @@ fun MusicScreen(vm: MainViewModel) {
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
+            }
+
+            if (s.mode == MusicMode.SCENES) {
+                SectionHeader("Wie genau die Musik der Geschichte folgt")
+                MusicFollow.entries.forEach { f ->
+                    OptionBox(f.label, f.hint, s.follow == f, enabled = true) { vm.updateMusic { it.copy(follow = f) } }
+                }
+                TextButton(onClick = { vm.navigate(Screen.AiLog) }, modifier = Modifier.padding(start = 8.dp)) {
+                    Text("Im KI-Protokoll nachsehen, warum welche Musik spielt …")
+                }
             }
 
             SectionHeader("Klangquelle")

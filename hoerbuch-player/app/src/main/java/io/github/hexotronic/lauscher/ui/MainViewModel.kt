@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
+import io.github.hexotronic.lauscher.analysis.core.AiLogEntry
 import io.github.hexotronic.lauscher.LauscherApp
 import io.github.hexotronic.lauscher.music.synth.SoundSpec
 import io.github.hexotronic.lauscher.analysis.BookTextReader
@@ -77,6 +78,7 @@ sealed interface Screen {
     data object MusicLibrary : Screen
     data object Downloads : Screen
     data object Voice : Screen
+    data object AiLog : Screen
     data class BookDetail(val bookId: Long) : Screen
 }
 
@@ -309,6 +311,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             "musiclibrary" -> navigate(Screen.MusicLibrary)
             "downloads" -> navigate(Screen.Downloads)
             "voice" -> navigate(Screen.Voice)
+            "ailog" -> navigate(Screen.AiLog)
             "feedback" -> {
                 openFeedback = true
                 navigate(Screen.Player)
@@ -452,6 +455,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var requestedBookTab by mutableStateOf<Int?>(null)
 
     fun stopAnalysis() = app.analysis.stop()
+
+    /** Step by step what the AI did (heard, asked, answered, chose), for the "KI-Protokoll". */
+    val aiLog: StateFlow<List<AiLogEntry>> = app.aiLog.entries
+
+    fun clearAiLog() = app.aiLog.clear()
 
     /** Deletes the analysis of the current book, or of all books when [allBooks] is set. */
     fun clearAnalysis(allBooks: Boolean = false, keepCorrections: Boolean = false, transcripts: Boolean = true) {

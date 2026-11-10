@@ -238,7 +238,7 @@ class MusicLibrary(
             val pool = if (s.hiddenTracks.isEmpty()) installedTracks else installedTracks.filter { it.id !in s.hiddenTracks }
             val avoid = avoidNext
             avoidNext = null
-            picker.pick(pool, mood, setting, intensity, s.likedTracks, avoid)
+            picker.pick(pool, mood, setting, intensity, s.likedTracks, avoid, s.follow)
         } ?: return null
         val files = filesFor(track) ?: return null
         // Quieter scenes get the piece a little softer.
@@ -246,6 +246,9 @@ class MusicLibrary(
         Log.i(TAG, "Spielt: ${track.id} (${mood.name}, ${setting?.name ?: "ohne Ort"})")
         return DecodedFileStream(files, track.plan, track.id, gain, MusicEngine.SAMPLE_RATE)
     }
+
+    override fun stillFits(trackId: String, mood: Mood, setting: Setting?, intensity: Float): Boolean? =
+        MusicCatalog.byId(trackId)?.let { TrackPicker.stillFits(it, mood, setting, intensity) }
 
     companion object {
         private const val TAG = "LauscherMusik"

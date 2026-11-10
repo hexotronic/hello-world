@@ -232,6 +232,21 @@ oder **nur für ein bestimmtes Hörbuch** speichern.
   ist („bis 1:23:00 – 38 Min. vor dir“), Stimmungskarte, „Was bisher geschah“, ein Überblick über Orte und
   Gefühle des Buchs und jede Szene als Stichpunkte – Zeit, Titel, Ort, Gefühl, Spannung, welche Musik läuft
   und ein Auszug des Texts. Tippen springt zur Szene, der Stift korrigiert sie.
+- **KI-Protokoll – sehen, was die KI macht:** Ein Textfenster im Reiter „KI-Analyse“ zeigt live, Zeile für
+  Zeile, was die KI gerade tut. Die ganze Seite *KI-Protokoll* (auch über *Hintergrundmusik*) hat Filter
+  (Zuhören, Sprachmodell, Szenen, Musik, Probleme); ein Tipp auf einen Eintrag zeigt den vollständigen Text.
+  Protokolliert werden:
+  - was die Spracherkennung gehört hat (bzw. welcher Buchtext gelesen wurde);
+  - die vollständige Frage an das Sprachmodell und seine rohe Antwort (JSON), mit Rechenzeit;
+  - welche Szene daraus wurde (Gefühl, Spannung, Ort, Titel), und ob der Ort aus Ortswörtern stammt;
+  - jeder genauer gesuchte Szenenwechsel mit den einzelnen A/B-Fragen;
+  - die Tempoprobe und der Rückblick;
+  - **warum welche Musik spielt**, z. B. „Spannend · Spannung 2 von 3 · Ort „Kerker“ → spielt „…“ (Komponist) –
+    Gefühl passt genau · für den Ort geschrieben · Energie passt zur Spannung“, oder warum ein Stück
+    weiterläuft bzw. der Synthesizer einspringt.
+
+  Das Protokoll lässt sich als Text kopieren. Es bleibt nur im Speicher (die letzten 400 Schritte) und verlässt
+  das Gerät nicht.
 - **Szenenwechsel genau finden:** Wo die Musik zwischen zwei Abschnitten wechselt, hört die App an der Grenze
   zweimal kurz nach (12 s, oder liest im Buchtext) und fragt das Sprachmodell nur „gehört das noch zur alten
   oder schon zur neuen Szene?“ (eine Antwort, A oder B). So wechselt die Musik auf etwa ±15 s genau statt im
@@ -282,6 +297,17 @@ davon ist KI-generiert (Veloren verbietet KI-Inhalte sogar ausdrücklich in sein
   passenden Stück übergeblendet; bleibt alles gleich, läuft das Stück weiter. Die Auswahl richtet sich zuerst
   nach der Stimmung, dann nach dem Ort (sonst verwandte Orte, z. B. Wüste und Prärie für den Wilden Westen,
   für den es noch keine eigenen freien Stücke gibt), dann nach der Spannung, ohne Wiederholungen.
+- **Wählbar, wie genau die Musik der Geschichte folgt** (*Hintergrundmusik → Wie genau die Musik der Geschichte
+  folgt*):
+  - **Ruhig:** Ein Stück läuft in die nächste Szene weiter, solange es nach seinen eigenen Stimmungen, Orten
+    und seiner Energie auch dorthin passt. Erst ein deutlicher Umschwung (z. B. ruhig → Kampf) bringt ein neues
+    Stück. Das nächste Stück wird dann für die Szene gewählt, die gerade läuft. Auch der Synthesizer spielt
+    weiter, solange das Gefühl bleibt.
+  - **Ausgewogen** (wie bisher): neues Stück bei anderem Gefühl, Ort oder Spannungsstufe; bei der Wahl zählt
+    auch Abwechslung.
+  - **Genau:** Jede Änderung, auch eine kleine der Spannung, bringt ein neues Stück. Stücke, die für dieses
+    Gefühl und diesen (oder einen verwandten) Ort geschrieben sind, haben Vorrang, und die Spannung zählt mehr.
+    Der Zufall für Abwechslung ist fast aus, es gewinnt das am besten passende Stück.
 - Kurze Spielmusik-Schleifen werden an ihren Schleifenpunkten mehrmals gespielt (mit winzigen
   Überblendungen gegen Knackser) und am Ende ausgeblendet.
 - Optional **Geräusche passend zum Ort** (Wald, Meer, Wind, Kaminfeuer) leise unter der Musik.

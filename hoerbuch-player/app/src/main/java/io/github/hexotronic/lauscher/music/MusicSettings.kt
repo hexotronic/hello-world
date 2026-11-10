@@ -4,6 +4,7 @@ import android.content.Context
 import io.github.hexotronic.lauscher.analysis.core.SamplingPlan
 import io.github.hexotronic.lauscher.music.synth.Atmosphere
 import io.github.hexotronic.lauscher.music.synth.Mood
+import io.github.hexotronic.lauscher.music.synth.MusicFollow
 import io.github.hexotronic.lauscher.music.synth.Setting
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,6 +38,8 @@ data class MusicSettings(
     val fixedAtmosphere: Atmosphere? = null,
     /** Place for the fixed mode, steers which library pieces play. */
     val fixedSetting: Setting? = null,
+    /** How closely the music follows the scenes (when a piece continues, how strictly pieces must fit). */
+    val follow: MusicFollow = MusicFollow.BALANCED,
     /** Adds matching background sounds (forest, sea, fire …) to the place of each scene. */
     val placeSounds: Boolean = false,
     val volume: Float = 0.5f,
@@ -105,6 +108,7 @@ class MusicSettingsStore(context: Context) {
             .putString("fixedMood", next.fixedMood?.name)
             .putString("fixedAtmosphere", next.fixedAtmosphere?.name)
             .putString("fixedSetting", next.fixedSetting?.name)
+            .putString("follow", next.follow.name)
             .putBoolean("placeSounds", next.placeSounds)
             .putFloat("volume", next.volume)
             .putFloat("duckDepthDb", next.duckDepthDb)
@@ -138,6 +142,7 @@ class MusicSettingsStore(context: Context) {
             fixedMood = if (prefs.contains("fixedMood")) Mood.parse(prefs.getString("fixedMood", null)) else d.fixedMood,
             fixedAtmosphere = Atmosphere.entries.firstOrNull { it.name == prefs.getString("fixedAtmosphere", null) },
             fixedSetting = Setting.parse(prefs.getString("fixedSetting", null)),
+            follow = MusicFollow.entries.firstOrNull { it.name == prefs.getString("follow", null) } ?: d.follow,
             placeSounds = prefs.getBoolean("placeSounds", d.placeSounds),
             volume = prefs.getFloat("volume", d.volume),
             duckDepthDb = prefs.getFloat("duckDepthDb", d.duckDepthDb),

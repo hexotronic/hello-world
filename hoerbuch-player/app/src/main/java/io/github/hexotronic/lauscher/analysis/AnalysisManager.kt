@@ -3,6 +3,8 @@ package io.github.hexotronic.lauscher.analysis
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import io.github.hexotronic.lauscher.analysis.core.AiLogText
+import io.github.hexotronic.lauscher.analysis.core.AiStep
 import io.github.hexotronic.lauscher.analysis.core.Anchor
 import io.github.hexotronic.lauscher.analysis.core.KeywordMoods
 import io.github.hexotronic.lauscher.analysis.core.SceneCut
@@ -63,6 +65,8 @@ class AnalysisManager(
     private val models: ModelManager,
     private val settings: MusicSettingsStore,
     private val scope: CoroutineScope,
+    /** Every step is written here for the "KI-Protokoll" window. */
+    private val log: AiLog,
 ) {
     /** The native engines are not thread-safe, so all their work runs on one thread. */
     private val native = Dispatchers.IO.limitedParallelism(1)
@@ -79,6 +83,7 @@ class AnalysisManager(
     val isRunning: Boolean get() = job?.isActive == true
 
     fun stop() {
+        if (job?.isActive == true) log.add(AiStep.INFO, "Analyse angehalten")
         currentLlm?.cancel()
         job?.cancel()
         job = null
@@ -96,6 +101,7 @@ class AnalysisManager(
             } catch (e: Throwable) {
                 Log.w(TAG, "Analysis failed", e)
                 _status.value = AnalysisStatus.Failed(e.message ?: e.javaClass.simpleName)
+                log.add(AiStep.PROBLEM, "Analyse fehlgeschlagen: ${e.message ?: e.javaClass.simpleName}", bookId = bookId)
             }
         }
     }
@@ -147,6 +153,15 @@ class AnalysisManager(
             stored.anchors.fold(initial) { acc, a -> TextAligner.withAnchor(acc, a) }
         }
         val textIndex = if (bookText != null && s.alignWithSpeech && hasSpeechModel) TextAligner.Index(bookText.text.text) else null
+        log.add(
+            AiStep.INFO,
+            (if (automatic) "Liest voraus: " else "Analyse: ") +
+                "${todo.size} Abschnitte ab ${ScenePrompt.clock(todo.first().first)} – alle ${formatMinutes(plan.windowMs)} " +
+                (if (plan.full) "alles" else "je ${plan.sampleMs / 1000} s") +
+                (if (bookText != null) ", mit Buchtext" else ", Spracherkennung ${s.whisperModel ?: "–"}") +
+                ", " + (if (hasLanguageModel) "Sprachmodell ${s.llmModel}" else "ohne Sprachmodell (Schlüsselwörter)"),
+            bookId = bookId,
+        )
         Log.i(
             TAG,
             "Variante: Whisper ${WhisperNative.variant}, LLM ${LlamaNative.variant}, ${LlamaNative.defaultThreads()} Threads, " +
@@ -183,6 +198,13 @@ class AnalysisManager(
                 speedChecks[bookId] = check
                 _lastSpeedCheck.value = check
                 if (check.accepted) speed = plan.speed
+                log.add(
+                    AiStep.INFO,
+                    "Tempoprobe ${plan.speed}×: ${(agreement * 100).toInt()} % der Wörter wie bei 1× – " +
+                        if (check.accepted) "wird genutzt" else "zu ungenau, es bleibt bei 1×",
+                    bookId = bookId,
+                    positionMs = range.first,
+                )
                 Log.i(
                     TAG,
                     "Tempoprobe ${plan.speed}×: ${(agreement * 100).toInt()} % der Wörter wie bei 1× – " +
@@ -216,12 +238,41 @@ class AnalysisManager(
                                 repo.saveAnchors(bookId, a.filter { it.timeMs != 0L && it.timeMs != details.book.durationMs })
                             }
                             Log.i(TAG, "Abgleich bei ${ScenePrompt.clock(mid)}: " + (found?.let { "Text gefunden (erwartet $expected, gefunden $it)" } ?: "nicht gefunden"))
+                            log.add(
+                                AiStep.HEARD,
+                                "Abgleich mit dem Buchtext: ${AiLogText.excerpt(heard, 80)} – " + if (found != null) "Stelle im Text gefunden" else "im Text nicht gefunden",
+                                heard,
+                                bookId,
+                                mid,
+                            )
                         }
-                        TextAligner.slice(bookText.text.text, a, w.first, w.last + 1)
+                        TextAligner.slice(bookText.text.text, a, w.first, w.last + 1).also { slice ->
+                            log.add(AiStep.READ, "Buchtext ${ScenePrompt.clock(w.first)}–${ScenePrompt.clock(w.last + 1)}: ${AiLogText.excerpt(slice)}", slice, bookId, w.first)
+                        }
                     } else {
                         _status.value = AnalysisStatus.Running(bookId, "Höre zu: ${ScenePrompt.clock(w.first)}", analysed, todo.size, automatic, remaining())
                         val existing = repo.transcriptAt(bookId, w.first)
-                        existing?.text ?: listen(w, plan.sampleMs)
+                        if (existing != null) {
+                            log.add(AiStep.HEARD, "Schon gehört (gespeichert): ${AiLogText.excerpt(existing.text)}", existing.text, bookId, w.first)
+                            existing.text
+                        } else {
+                            val heardAt = System.nanoTime()
+                            listen(w, plan.sampleMs).also { heard ->
+                                val ms = (System.nanoTime() - heardAt) / 1_000_000
+                                val sample = if (plan.full) "alles" else "${minOf(plan.sampleMs, w.last + 1 - w.first) / 1000} s"
+                                log.add(
+                                    AiStep.HEARD,
+                                    if (heard.isBlank()) {
+                                        "Nichts verstanden ($sample angehört, $ms ms) – Musik, Stille oder Geräusche?"
+                                    } else {
+                                        "$sample angehört in ${"%.1f".format(ms / 1000f)} s: ${AiLogText.excerpt(heard)}"
+                                    },
+                                    heard.ifBlank { null },
+                                    bookId,
+                                    w.first,
+                                )
+                            }
+                        }
                     }
                     val window = TranscriptWindow(w.first, w.last + 1, text)
                     repo.saveTranscript(bookId, window)
@@ -266,6 +317,7 @@ class AnalysisManager(
                         val textB = repo.transcriptAt(bookId, b.startMs)?.text
                         val known = anchors
                         var questions = 0
+                        val asked = StringBuilder()
                         val cut = try {
                             SceneCuts.bisect(sampleCentre(a, plan.sampleMs), sampleCentre(b, plan.sampleMs), CUT_STEPS) { t ->
                                 val probe = (t - CUT_PROBE_MS / 2) until (t + CUT_PROBE_MS / 2)
@@ -279,7 +331,9 @@ class AnalysisManager(
                                 } else {
                                     questions++
                                     val prompt = model.chatPrompt(ScenePrompt.CUT_SYSTEM, ScenePrompt.cutUser(a, b, textA, textB, passage))
-                                    ScenePrompt.parseCut(model.generate(prompt, ScenePrompt.CUT_GRAMMAR, maxTokens = 2, temperature = 0f))
+                                    val answer = model.generate(prompt, ScenePrompt.CUT_GRAMMAR, maxTokens = 2, temperature = 0f)
+                                    asked.append("Bei ${ScenePrompt.clock(t)}: ${AiLogText.excerpt(passage, 100)} → gehört zu ${answer?.trim() ?: "?"}\n")
+                                    ScenePrompt.parseCut(answer)
                                 }
                             }
                         } catch (e: kotlinx.coroutines.CancellationException) {
@@ -289,6 +343,14 @@ class AnalysisManager(
                             b.startMs
                         }
                         repo.saveSceneCut(bookId, SceneCut(b.startMs, cut))
+                        log.add(
+                            AiStep.CUT,
+                            "Szenenwechsel bei ${ScenePrompt.clock(cut)} statt ${ScenePrompt.clock(b.startMs)} " +
+                                "(${a.mood?.label ?: "ohne Musik"} → ${b.mood?.label ?: "ohne Musik"}, $questions Fragen ans Sprachmodell)",
+                            asked.toString().trim().ifBlank { null },
+                            bookId,
+                            cut,
+                        )
                         Log.i(
                             TAG,
                             "Szenenwechsel bei ${ScenePrompt.clock(cut)} statt ${ScenePrompt.clock(b.startMs)} " +
@@ -298,6 +360,7 @@ class AnalysisManager(
                 }
             }
             _status.value = AnalysisStatus.Finished(bookId, analysed, llm != null)
+            log.add(AiStep.INFO, "Analyse fertig: $analysed Abschnitte in ${"%.0f".format((System.nanoTime() - started) / 1e9)} s", bookId = bookId)
             Log.i(TAG, "Analyse fertig: $analysed Abschnitte in ${(System.nanoTime() - started) / 1_000_000} ms")
         } finally {
             whisper?.close()
@@ -398,27 +461,65 @@ class AnalysisManager(
                 prompt = llm.chatPrompt(ScenePrompt.SYSTEM, ScenePrompt.user(book.title, book.author, story, windows, maxChars, corrections))
                 maxChars -= 100
             } while (llm.countTokens(prompt) + maxTokens(windows.size) > llm.contextSize && maxChars > 100)
+            log.add(
+                AiStep.ASKED,
+                "Sprachmodell gefragt: ${windows.size} ${if (windows.size == 1) "Abschnitt" else "Abschnitte"} ab " +
+                    "${ScenePrompt.clock(windows.first().startMs)} (${llm.countTokens(prompt)} Token" +
+                    (if (corrections.isNotEmpty()) ", ${corrections.size} deiner Korrekturen als Beispiel" else "") + ")",
+                prompt,
+                book.id,
+                windows.first().startMs,
+            )
             // Greedy decoding: deterministic and the fastest path through the JSON grammar.
+            val asked = System.nanoTime()
             val output = llm.generate(prompt, ScenePrompt.grammar(windows.size), maxTokens(windows.size), temperature = 0f)
+            log.add(
+                AiStep.ANSWER,
+                "Antwort nach ${"%.1f".format((System.nanoTime() - asked) / 1e9)} s" + if (output.isNullOrBlank()) " – leer" else "",
+                output,
+                book.id,
+                windows.first().startMs,
+            )
             val parsed = output?.let { ScenePrompt.parse(it, windows) }
             if (parsed != null) {
-                if (parsed.story.isNotBlank()) repo.saveStory(book.id, parsed.story)
+                if (parsed.story.isNotBlank()) {
+                    repo.saveStory(book.id, parsed.story)
+                    log.add(AiStep.INFO, "Zusammenfassung „Was bisher geschah“ aktualisiert", parsed.story, book.id)
+                }
                 // Where the model saw no clear place, place words in the text may still name one.
                 val result = parsed.windows.mapIndexed { i, w -> if (w.setting != null) w else w.copy(setting = KeywordMoods.settingOf(windows[i].text)) }
+                result.forEachIndexed { i, w ->
+                    val fromWords = parsed.windows[i].setting == null && w.setting != null
+                    log.add(AiStep.SCENE, sceneLine(w) + if (fromWords) " (Ort aus Ortswörtern im Text)" else "", null, book.id, w.startMs)
+                }
                 Log.i(TAG, "Szenen: " + result.joinToString { "${ScenePrompt.clock(it.startMs)}=${it.mood ?: "NONE"}/${it.level}@${it.setting ?: "?"} ${it.title}" })
                 return result
             }
             Log.w(TAG, "Language model gave no usable answer, using keywords")
+            log.add(AiStep.PROBLEM, "Antwort des Sprachmodells nicht verwertbar – Szenen nach Schlüsselwörtern", output, book.id, windows.first().startMs)
         }
         return windows.map { w ->
             val (mood, level) = KeywordMoods.classify(w.text)
             WindowMood(w.startMs, w.endMs, mood, level, "", SceneMerger.SOURCE_KEYWORDS, KeywordMoods.settingOf(w.text))
         }.also { list ->
+            list.forEach { log.add(AiStep.SCENE, sceneLine(it) + " (nach Schlüsselwörtern)", null, book.id, it.startMs) }
             Log.i(TAG, "Szenen (Schlüsselwörter): " + list.joinToString { "${ScenePrompt.clock(it.startMs)}=${it.mood ?: "NONE"}@${it.setting ?: "?"}" })
         }
     }
 
     private fun maxTokens(windows: Int) = 120 + 48 * windows
+
+    /** "0:00–2:00: Ruhig · Spannung 1 · Ort „Wald“ – „Kindheit im Garten“" for the AI log. */
+    private fun sceneLine(w: WindowMood): String {
+        val what = w.mood?.let { "${it.label} · Spannung ${w.level.coerceIn(1, 3)} von 3" } ?: "keine Musik"
+        val place = w.setting?.let { "Ort „${it.label}“" } ?: "Ort unklar"
+        return "${ScenePrompt.clock(w.startMs)}–${ScenePrompt.clock(w.endMs)}: $what · $place" + (w.title.takeIf { it.isNotBlank() }?.let { " – „$it“" } ?: "")
+    }
+
+    private fun formatMinutes(ms: Long): String {
+        val minutes = ms / 60_000f
+        return if (minutes == minutes.toInt().toFloat()) "${minutes.toInt()} Min." else "${"%.1f".format(minutes)} Min."
+    }
 
     /** "Was bisher geschah": a spoiler-free recap from the transcripts up to [positionMs]. */
     suspend fun recap(bookId: Long, positionMs: Long): Result<String> {
@@ -442,8 +543,11 @@ class AnalysisManager(
                         prompt = llm.chatPrompt(ScenePrompt.RECAP_SYSTEM, ScenePrompt.recapUser(book.title, story, recent, chars))
                         chars -= 1000
                     } while (llm.countTokens(prompt) + 400 > llm.contextSize && chars > 500)
-                    llm.generate(prompt, null, maxTokens = 400, temperature = 0.4f)?.trim()?.takeIf { it.isNotEmpty() }
+                    log.add(AiStep.ASKED, "Rückblick „Was bisher geschah“ bis ${ScenePrompt.clock(positionMs)} erbeten", prompt, bookId, positionMs)
+                    val answer = llm.generate(prompt, null, maxTokens = 400, temperature = 0.4f)?.trim()?.takeIf { it.isNotEmpty() }
                         ?: error("Das Sprachmodell hat keine Antwort geliefert")
+                    log.add(AiStep.ANSWER, "Rückblick geschrieben", answer, bookId, positionMs)
+                    answer
                 } finally {
                     currentLlm = null
                     llm.close()

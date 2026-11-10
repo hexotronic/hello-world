@@ -1,6 +1,7 @@
 package io.github.hexotronic.lauscher
 
 import android.app.Application
+import io.github.hexotronic.lauscher.analysis.AiLog
 import io.github.hexotronic.lauscher.analysis.AnalysisManager
 import io.github.hexotronic.lauscher.analysis.ModelManager
 import io.github.hexotronic.lauscher.audio.SoundSettingsManager
@@ -28,7 +29,9 @@ class LauscherApp : Application() {
     val backup by lazy { BackupManager(this, repository, settings, sound) }
     val musicSettings by lazy { MusicSettingsStore(this) }
     val models by lazy { ModelManager(this) }
-    val analysis by lazy { AnalysisManager(this, repository, models, musicSettings, appScope) }
+    /** What the AI does, for the "KI-Protokoll" window. */
+    val aiLog by lazy { AiLog() }
+    val analysis by lazy { AnalysisManager(this, repository, models, musicSettings, appScope, aiLog) }
     val musicLibrary by lazy { MusicLibrary(this, musicSettings, appScope) }
     val downloads by lazy { DownloadManager(this, scanner, appScope) }
     val voice by lazy { VoiceControl(this) }

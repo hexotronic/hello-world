@@ -1,6 +1,7 @@
 package io.github.hexotronic.lauscher.music.library.core
 
 import io.github.hexotronic.lauscher.music.synth.Mood
+import io.github.hexotronic.lauscher.music.synth.MusicFollow
 import io.github.hexotronic.lauscher.music.synth.Setting
 import kotlin.math.abs
 import kotlin.math.sqrt
@@ -178,26 +179,38 @@ class TrackPicker(seed: Long = System.nanoTime()) {
         intensity: Float,
         liked: Set<String> = emptySet(),
         avoid: String? = null,
+        follow: MusicFollow = MusicFollow.BALANCED,
     ): LibraryTrack? {
         if (installed.isEmpty()) return null
         // Only reasonably fitting pieces: the mood itself or a close one, and mood and place together
         // not too far off. Otherwise the synthesizer is the better choice.
-        val candidates = installed.filter { moodCost(it, mood) < MAX_MOOD_COST && moodCost(it, mood) + placeCost(it, setting) < MAX_FIT }
-        if (candidates.isEmpty()) return null
+        val fitting = installed.filter { moodCost(it, mood) < MAX_MOOD_COST && moodCost(it, mood) + placeCost(it, setting) < MAX_FIT }
+        if (fitting.isEmpty()) return null
+        val precise = follow == MusicFollow.PRECISE
+        // "Genau": pieces written for this mood and (a related) place first, if there are any.
+        val candidates = if (precise) {
+            fitting.filter { moodCost(it, mood) <= STRICT_MOOD && placeCost(it, setting) <= STRICT_PLACE }.ifEmpty { fitting }
+        } else {
+            fitting
+        }
         val history = recent.getOrPut("$mood/$setting") { ArrayDeque() }
-        val fitting = candidates.count { mood in it.moods && placeCost(it, setting) < 0.3f }
-        val memory = (fitting - 1).coerceIn(0, MAX_MEMORY)
+        val good = candidates.count { mood in it.moods && placeCost(it, setting) < 0.3f }
+        val memory = (good - 1).coerceIn(0, MAX_MEMORY)
         val blocked = history.take(memory).toSet()
+        // "Genau" weighs the tension more and variety less, so the best fitting piece wins.
+        val energyWeight = if (precise) 1.2f else 0.8f
+        val recentPenalty = if (precise) 0.15f else 0.4f
+        val jitter = if (precise) 0.05f else 0.3f
         val best = candidates.minBy { t ->
-            val energy = abs(t.energy - intensity.coerceIn(0f, 1f)) * 0.8f
+            val energy = abs(t.energy - intensity.coerceIn(0f, 1f)) * energyWeight
             val repeat = when {
                 t.id == avoid -> 20f
                 t.id in blocked -> 10f
-                t.id in lastPlayed -> 0.4f
+                t.id in lastPlayed -> recentPenalty
                 else -> 0f
             }
             val favourite = if (t.id in liked) -LIKED_BONUS else 0f
-            moodCost(t, mood) + placeCost(t, setting) + energy + repeat + favourite + nextFloat() * 0.3f
+            moodCost(t, mood) + placeCost(t, setting) + energy + repeat + favourite + nextFloat() * jitter
         }
         history.remove(best.id)
         history.addFirst(best.id)
@@ -218,6 +231,47 @@ class TrackPicker(seed: Long = System.nanoTime()) {
         private const val MAX_MOOD_COST = 1.4f
         private const val MAX_FIT = 1.7f
         private const val LIKED_BONUS = 0.35f
+        private const val STRICT_MOOD = 0.5f
+        private const val STRICT_PLACE = 0.45f
+
+        /** "Ruhig": a playing piece continues while its fit for the new scene stays below this. */
+        private const val KEEP_COST = 1.0f
+
+        /** How well [t] suits a scene: 0 is perfect, the same measure [pick] uses (without variety). */
+        fun fitCost(t: LibraryTrack, mood: Mood, setting: Setting?, intensity: Float): Float =
+            moodCost(t, mood) + placeCost(t, setting) + abs(t.energy - intensity.coerceIn(0f, 1f)) * 0.8f
+
+        /**
+         * Whether [t], picked for an earlier scene, also suits this one well enough to keep
+         * playing: written for this mood (or a close one), the place not foreign, energy not far off.
+         */
+        fun stillFits(t: LibraryTrack, mood: Mood, setting: Setting?, intensity: Float): Boolean =
+            moodCost(t, mood) <= STRICT_MOOD && placeCost(t, setting) <= 0.55f && fitCost(t, mood, setting, intensity) <= KEEP_COST
+
+        /** Why [t] suits (or only roughly suits) the scene, in words for the AI log. */
+        fun describeFit(t: LibraryTrack, mood: Mood, setting: Setting?, intensity: Float): String {
+            val m = t.moods.indexOf(mood)
+            val moodPart = when {
+                m == 0 -> "Gefühl „${mood.label}“ passt genau"
+                m > 0 -> "passt auch zu „${mood.label}“ (eigentlich „${t.primaryMood.label}“)"
+                else -> "„${t.primaryMood.label}“ statt „${mood.label}“ (kein besseres Stück geladen)"
+            }
+            val placePart = when {
+                setting == null -> if (t.settings.isEmpty()) "Ort unklar, Stück ohne festen Ort" else "Ort unklar"
+                t.settings.indexOf(setting) == 0 -> "für den Ort „${setting.label}“ geschrieben"
+                setting in t.settings -> "passt auch zum Ort „${setting.label}“"
+                t.settings.any { it in setting.related } -> "verwandter Ort „${t.settings.first { it in setting.related }.label}“ statt „${setting.label}“"
+                t.settings.isEmpty() -> "ohne festen Ort (für „${setting.label}“ nichts geladen)"
+                else -> "eigentlich für „${t.settings.first().label}“"
+            }
+            val diff = t.energy - intensity.coerceIn(0f, 1f)
+            val energyPart = when {
+                abs(diff) < 0.2f -> "Energie passt zur Spannung"
+                diff > 0 -> "etwas lebhafter als die Szene"
+                else -> "etwas ruhiger als die Szene"
+            }
+            return "$moodPart · $placePart · $energyPart"
+        }
 
         /** 0 for the piece's own mood, growing with the distance between moods. */
         fun moodCost(t: LibraryTrack, mood: Mood): Float {

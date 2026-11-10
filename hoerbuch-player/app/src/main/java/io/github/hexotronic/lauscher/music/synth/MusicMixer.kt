@@ -61,6 +61,14 @@ class MusicMixer(private val sampleRate: Int) {
     @Volatile
     var crossfadeSeconds = 4f
 
+    /** How closely the music follows the scenes (when a piece continues into the next one). */
+    @Volatile
+    var follow = MusicFollow.BALANCED
+
+    /** Told what was chosen for each new target (on the audio thread, keep it quick). */
+    @Volatile
+    var onChoice: ((MusicChoice) -> Unit)? = null
+
     /** Level of the narration in dBFS, updated from the audio processor. */
     @Volatile
     var speechLevelDb = -90f
@@ -226,18 +234,14 @@ class MusicMixer(private val sampleRate: Int) {
         current = spec
         // A sudden change (calm → action) cuts fast, everything else fades slowly.
         val fade = Transitions.fadeSeconds(previous, spec, crossfadeSeconds)
+        var choice = MusicChoice(spec, MusicChoice.What.OFF)
         synchronized(layers) {
             val mood = spec?.mood
-            // A recorded piece keeps playing while mood, place and tension stay the same; any of
-            // them changing brings in a piece that fits the new scene.
+            // Whether the music that is playing continues into the new scene depends on [follow].
             val keep = if (force || mood == null || spec.trackId != null) {
                 null
             } else {
-                layers.firstOrNull { l ->
-                    val r = l.generator as? RecordingGenerator
-                    l.target > 0f && r != null && r.mood == mood && r.setting == spec.setting &&
-                        abs(r.intensity - spec.intensity) < SAME_TENSION
-                }
+                layers.firstOrNull { l -> l.target > 0f && keeps(l.generator, spec) }
             }
             for (l in layers) {
                 if (l.generator !is ChimeGenerator && l !== keep) {
@@ -246,12 +250,25 @@ class MusicMixer(private val sampleRate: Int) {
                 }
             }
             if (spec != null) {
-                if (mood != null && keep == null) {
+                if (keep != null) {
+                    val r = keep.generator as? RecordingGenerator
+                    if (r != null && mood != null) {
+                        // Further pieces are picked for the scene that is playing now.
+                        r.mood = mood
+                        r.setting = spec.setting
+                        r.intensity = spec.intensity
+                    }
+                    choice = MusicChoice(spec, MusicChoice.What.KEPT, r?.trackId)
+                } else if (mood != null) {
                     val source = recordings
                     val stream = source?.open(mood, spec.setting, spec.intensity, spec.trackId)
                     val generator = if (source != null && stream != null) {
-                        RecordingGenerator(sampleRate, source, mood, spec.setting, spec.intensity, stream)
+                        choice = MusicChoice(spec, MusicChoice.What.PIECE, stream.trackId)
+                        RecordingGenerator(sampleRate, source, mood, spec.setting, spec.intensity, stream) { id ->
+                            onChoice?.invoke(MusicChoice(current, MusicChoice.What.NEXT_PIECE, id))
+                        }
                     } else {
+                        choice = MusicChoice(spec, MusicChoice.What.SYNTH)
                         MoodGenerator(sampleRate, mood, spec.intensity, spec.seed)
                     }
                     layers.add(Layer(generator, 0f, 1f, fade))
@@ -259,7 +276,38 @@ class MusicMixer(private val sampleRate: Int) {
                 spec.atmosphere?.let { layers.add(Layer(AtmosphereGenerator(sampleRate, it, 1f, spec.seed), 0f, 1f, fade)) }
             }
         }
+        onChoice?.invoke(choice)
     }
+
+    /**
+     * Whether [g] may keep playing for [spec]. Balanced: the same mood and place and about the
+     * same tension. Precise: also exactly the same tension. Calm: a recorded piece continues as
+     * long as its own moods and places suit the new scene, the synthesizer as long as the mood stays.
+     */
+    private fun keeps(g: Generator, spec: SoundSpec): Boolean {
+        val mood = spec.mood ?: return false
+        return when (g) {
+            is RecordingGenerator -> {
+                val same = g.mood == mood && g.setting == spec.setting
+                val tension = abs(g.intensity - spec.intensity)
+                when (follow) {
+                    MusicFollow.PRECISE -> same && tension < PRECISE_TENSION
+                    MusicFollow.BALANCED -> same && tension < SAME_TENSION
+                    MusicFollow.CALM -> {
+                        val id = g.trackId
+                        val fits = id?.let { recordings?.stillFits(it, mood, spec.setting, spec.intensity) }
+                        // Between two pieces (or without catalogue data): the same mood near the same place.
+                        fits ?: (g.mood == mood && closePlaces(g.setting, spec.setting))
+                    }
+                }
+            }
+            is MoodGenerator -> follow == MusicFollow.CALM && g.mood == mood
+            else -> false
+        }
+    }
+
+    private fun closePlaces(a: Setting?, b: Setting?): Boolean =
+        a == null || b == null || a == b || b in a.related || a in b.related
 
     private fun softClip(x: Float): Float {
         val a = abs(x)
@@ -276,6 +324,7 @@ class MusicMixer(private val sampleRate: Int) {
         private const val SPEECH_THRESHOLD_DB = -42f
         private const val AMBIENCE_UNDER_RECORDING = 0.35f
         private const val SAME_TENSION = 0.2f
+        private const val PRECISE_TENSION = 0.04f
         private val SILENCE_POWER = 1e-7f
 
         fun dbOf(power: Float): Float = 10f * log10(max(power, 1e-12f))

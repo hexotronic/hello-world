@@ -177,6 +177,7 @@ private fun AnalysisHeader(d: AnalysisTabData, vm: MainViewModel, bookId: Long, 
             }
         }
     }
+    AiLogWindow(vm, bookId)
     SwitchRow(
         "Beim Hören vorauslesen",
         "Die KI bereitet im Hintergrund die nächsten Minuten vor",

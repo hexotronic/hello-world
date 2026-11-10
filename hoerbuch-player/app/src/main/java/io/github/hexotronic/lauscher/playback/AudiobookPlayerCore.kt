@@ -30,8 +30,11 @@ import io.github.hexotronic.lauscher.data.Chapter
 import io.github.hexotronic.lauscher.data.Track
 import io.github.hexotronic.lauscher.analysis.core.Scene
 import io.github.hexotronic.lauscher.analysis.core.SceneMerger
+import io.github.hexotronic.lauscher.analysis.core.AiStep
 import io.github.hexotronic.lauscher.music.MusicEngine
 import io.github.hexotronic.lauscher.music.MusicMode
+import io.github.hexotronic.lauscher.music.MusicSource
+import io.github.hexotronic.lauscher.music.library.core.MusicChoiceText
 import io.github.hexotronic.lauscher.music.synth.Mood
 import io.github.hexotronic.lauscher.music.synth.SoundSpec
 import io.github.hexotronic.lauscher.music.synth.Transitions
@@ -115,11 +118,27 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
     private var undoSetAt = 0L
     private var error: String? = null
     private val shake = ShakeDetector(context) { onShake() }
-    private val music = MusicEngine(app.musicLibrary)
+    private val music = MusicEngine(app.musicLibrary).apply {
+        // Each music decision goes into the AI log, with the reason (on the audio thread).
+        onChoice = { choice ->
+            val s = app.musicSettings.current
+            val text = MusicChoiceText.describe(choice, s.follow, s.source == MusicSource.LIBRARY, app.musicLibrary.installed.value.size)
+            val preview = SystemClock.elapsedRealtime() < previewUntil && choice.spec?.trackId == null
+            app.aiLog.add(AiStep.MUSIC, if (preview) "Hörprobe – $text" else text, bookId = musicBookId, positionMs = musicPositionMs)
+        }
+    }
+
+    /** Book and position the music is chosen for, read by the AI log on the audio thread. */
+    @Volatile
+    private var musicBookId: Long? = null
+
+    @Volatile
+    private var musicPositionMs: Long? = null
     private var scenes: List<Scene> = emptyList()
     private var scenesJob: Job? = null
     private var lastChapterIndex = -1
     private var lastAheadCheck = 0L
+    @Volatile
     private var previewUntil = 0L
     private val audioManager = context.getSystemService(AudioManager::class.java)
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -687,6 +706,8 @@ class AudiobookPlayerCore(private val context: Context, val exoPlayer: ExoPlayer
         }
         // The sleep timer fades the narration; the music follows.
         music.apply(s, exoPlayer.volume)
+        musicBookId = d.book.id
+        musicPositionMs = pos
         val spec = when (s.mode) {
             MusicMode.FIXED -> if (s.fixedMood == null && s.fixedAtmosphere == null) null else {
                 SoundSpec(s.fixedMood, s.fixedAtmosphere, 0.5f, d.book.id, setting = s.fixedSetting)
