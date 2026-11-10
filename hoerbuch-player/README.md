@@ -197,6 +197,9 @@ oder **nur für ein bestimmtes Hörbuch** speichern.
 - Voreinstellungen: Klare Sprache, Verrauschte Aufnahme, Altes Tonband, Laute Umgebung, Nachtmodus, Ein Ohrhörer
 
 ### Hintergrundmusik passend zur Szene (lokale KI)
+- **Übersichtlich in Reitern:** *Überblick* (Stimmungskarte, Lautstärke, was die KI gerade macht), *Musik* (Art,
+  wie genau die Musik folgt, Klangquelle, Mischung, Hörproben), *KI* (Szenen-Analyse, Stichproben, Modelle) und
+  *Daten* (Rückmeldungen, Löschen); die Musikbibliothek hat *Laden*, *Stücke* und *Herkunft*.
 - **Alles auf dem Handy:** Die Spracherkennung (whisper.cpp) schreibt kurze Ausschnitte des Hörbuchs mit,
   ein **lokales Sprachmodell** (llama.cpp, z. B. Qwen2.5 1.5B) liest den Text, versteht die Szene und entscheidet,
   **ob** und **welche** Musik passt – ruhig, spannend, traurig, fröhlich, geheimnisvoll, dramatisch, romantisch,
@@ -269,27 +272,41 @@ oder **nur für ein bestimmtes Hörbuch** speichern.
 - **Weitere Beschleunigung:** schnelle CPU-Variante (ARMv8.2 dotprod/fp16) mit automatischer Erkennung, nur
   Leistungskerne, wiederverwendeter KV-Cache, Grammatik nur bei Bedarf; die App zeigt die geschätzte Restzeit an
 
-### Musikbibliothek nach Stimmung, Ort und Spannung (echte Musik, keine KI)
-Statt des Synthesizers kann die Hintergrundmusik aus **347 handkomponierten Stücken** (rund 1 GB, gut 18 Stunden
-mit Schleifen) kommen – Soundtracks freier Spiele. Alles ist von Menschen komponiert und eingespielt, nichts
-davon ist KI-generiert (Veloren verbietet KI-Inhalte sogar ausdrücklich in seinen Beitragsregeln):
+### Musikbibliothek nach Stimmung, Ort und Spannung (echte Fantasy-Musik, keine KI)
+Statt des Synthesizers kann die Hintergrundmusik aus **476 handkomponierten Fantasy-Stücken** (rund 1,4 GB, gut
+23 Stunden mit Schleifen) kommen – Soundtracks freier Spiele. Alles ist von Menschen komponiert und eingespielt,
+nichts davon ist KI-generiert (Veloren verbietet KI-Inhalte sogar ausdrücklich in seinen Beitragsregeln).
+Cartoon-, Großstadt- und Weltraum-Musik (SuperTux, Hedgewars, Pioneer) wurde wieder entfernt, weil sie nicht zu
+Fantasy-Hörbüchern passt.
 
 | Quelle | Stücke | Lizenz | Schwerpunkt |
 |---|---|---|---|
-| [The Battle for Wesnoth](https://github.com/wesnoth/wesnoth) 1.18.8 | 35 | GPL v2+ (1× CC BY-SA 4.0) | Orchester: Schlacht, Burg, Wald, Höhle |
-| [Widelands](https://github.com/widelands/widelands) | 24 | GPL v2+, CC BY-SA 3.0, CC BY 4.0 | Mittelalter, Dorf, Wüste, Gebirge |
-| [Flare](https://github.com/flareteam/flare-game) | 10 | CC BY-SA 3.0 | Rollenspiel: Stadt, Höhle, Verlies |
-| [Veloren](https://github.com/veloren/veloren) | 69 | GPL v3 | Landschaften je Biom, Siedlungen, Höhlen, Verliese, Kampfmusik in drei Teilen |
+| [The Battle for Wesnoth](https://github.com/wesnoth/wesnoth) | 38 | GPL v2+, CC BY-SA 4.0 | Orchester: Schlacht, Burg, Wald, Höhle, Elfenland |
+| [Widelands](https://github.com/widelands/widelands) | 31 | GPL v2+ | Mittelalter, Dorf, Wüste, Gebirge |
+| [Flare](https://github.com/flareteam/flare-game) | 11 | CC BY-SA 3.0 | Rollenspiel: Stadt, Wald, Höhle, Verlies |
+| [Veloren](https://github.com/veloren/veloren) | 80 | GPL v3 | Landschaften je Biom, Siedlungen, Höhlen, Verliese, Kampfmusik in drei Teilen |
 | [Shattered Pixel Dungeon](https://github.com/00-Evan/shattered-pixel-dungeon) | 31 | GPL v3 | Kerker, Kanalisation, Höhlen, Dämonenhallen – je ruhig, angespannt, Bosskampf |
-| [SuperTux](https://github.com/SuperTux/supertux) | 40 | CC BY-SA 3.0/4.0, GPL v2+ | Wald, Geisterwald, Eis, Festung, Unterwasser |
-| [Stendhal](https://github.com/arianne/stendhal) | 31 | GPL v2, CC0, CC BY 3.0/4.0, OGA-BY | Taverne, Markt, Kirche, Kerker, Mine, Spukwald |
+| [Stendhal](https://github.com/arianne/stendhal) | 36 | GPL v2, CC0, CC BY 3.0/4.0, OGA-BY | Taverne, Markt, Kirche, Kerker, Mine, Spukwald |
 | [0 A.D.](https://github.com/0ad/0ad) | 60 | CC BY-SA 3.0 (Wildfire Games) | Antike: Griechen, Römer, Kelten, Ägypten, Persien, Indien, China |
-| [Pioneer](https://github.com/pioneerspacesim/pioneer) | 39 | CC BY-SA 3.0/4.0 | Weltraum: Sternenflug, Station, Begegnung, Gefecht |
-| [Hedgewars](https://github.com/hedgewars/hw) | 8 | GNU FDL 1.2 | Orient, Piraten, Schnee, Dschungel, Großstadt |
+| [Duelyst](https://github.com/open-duelyst/duelyst) | 21 | CC0 | Orchestraler Soundtrack des Fantasy-Kartenspiels |
+| [HyperRogue](https://github.com/zenorogue/hyperrogue) | 17 | CC BY-SA 3.0 | Wüste, Eis, Höhlen, Dschungel, Friedhof, Hölle, Palast, Ozean |
+| [Tuxemon](https://github.com/Tuxemon/Tuxemon) (Yubatake u. a.) | 16 | CC BY 3.0 | JRPG-Sammlung: Felder, Stadt, Taverne, Tempel, Verlies, Kampf |
+| [Valyria Tear](https://github.com/ValyriaTear/ValyriaTear) | 12 | CC BY(-SA) 3.0, CC0, GPL | Matthew Pablo, HorrorPen, Alexandr Zhelanov u. a. |
+| [Wyrmsun](https://github.com/Andrettin/Wyrmsun) | 8 | CC BY 4.0 | Zwergen- und Germanen-Themen von Marcelo Fernandez |
+| [MegaGlest](https://github.com/MegaGlest/megaglest-data) | 7 | CC BY-SA 3.0 | Magie, Ritter, Nordmänner, Römer, Ägypten, Persien |
+| [Ardentryst](https://github.com/ardentryst/ardentryst) | 13 | CC BY 3.0 | Stadt, Schnee, Burg, Kampf, Weltkarte |
+| [The Mana World](https://github.com/themanaworld/tmw-music) | 22 | GPL v2, CC BY-SA 3.0, CC BY 4.0 | Wald, Höhlen, Taverne, Schneedorf, Meer |
+| [Moubootaur Legends](https://gitlab.com/TMW2/evol-music) | 30 | CC0, CC BY 2.0–4.0, GPL (je Stück) | Stücke vieler freier Komponisten |
+| [Invertika](https://github.com/invertika/data) | 43 | GPL v3 (Teile GPL v2) | Burg, Wüste, Höhlen, Wald, Hafen, Kirche |
 
+- **Zufällige Auswahl je Ort:** Für jede Szene kommen alle Stücke in einen „Beutel“, die für ihren Ort und ihr
+  Gefühl geschrieben sind und ungefähr zur Spannung passen; daraus wird zufällig gezogen, und ein Stück kommt erst
+  wieder, wenn die anderen dran waren (Lieblingsstücke etwas früher). Hat ein Ort zu wenig Eigenes, kommen verwandte
+  Orte und Stücke ohne festen Ort dazu. Bei „Genau“ ist der Beutel kleiner (nur die am besten passenden Stücke).
 - **26 Orte und Themen:** Wald, Dschungel, Draußen, Gebirge, Schnee und Eis, Wüste, Meer, Unter Wasser, Höhle,
   Kerker, Burg, Dorf und Stadt, Taverne, Zuhause, Schlacht, Tempel, Zauberwelt, Spukort, Orient, Fernost, Antike,
-  Norden, Wilder Westen, Weltraum, Großstadt. Die lokale KI erkennt neben der Stimmung auch den Ort jeder
+  Norden; für Wilder Westen, Weltraum und Großstadt gibt es keine eigene Fantasy-Musik, dort spielen verwandte
+  Orte. Die lokale KI erkennt neben der Stimmung auch den Ort jeder
   Szene (sonst helfen Ortswörter im Text); in der Stimmungskarte lässt sich beides korrigieren.
 - **Verschiedene Stücke je Spannung im selben Gebiet:** Im Kerker etwa ruhiges Erkunden, dann „angespannt“,
   dann Bosskampf; Veloren-Kampfmusik spielt Anlauf, Schleife und Ende nacheinander.
@@ -311,7 +328,7 @@ davon ist KI-generiert (Veloren verbietet KI-Inhalte sogar ausdrücklich in sein
 - Kurze Spielmusik-Schleifen werden an ihren Schleifenpunkten mehrmals gespielt (mit winzigen
   Überblendungen gegen Knackser) und am Ende ausgeblendet.
 - Optional **Geräusche passend zum Ort** (Wald, Meer, Wind, Kaminfeuer) leise unter der Musik.
-- **Laden:** Starterpaket (die passendsten Stücke je Ort und Stimmung, 66 Stücke, 209 MB), Pakete je Stimmung
+- **Laden:** Starterpaket (die passendsten Stücke je Ort und Stimmung), Pakete je Stimmung
   oder je Ort, einzelne Stücke oder alles; jeweils mit Hörprobe. Die Dateien kommen **unverändert aus den
   Repositories der Spiele** (fester Commit bzw. feste Version) und werden per **SHA-256-Prüfsumme** kontrolliert.
 - Der Player zeigt Stimmung, Ort und das laufende Stück mit Komponist; Herkunft, Komponisten und Lizenzen

@@ -99,7 +99,7 @@ fun VoiceScreen(vm: MainViewModel) {
                 ClickRow(
                     "Spracherkennungsmodell fehlt",
                     "Die Befehle erkennt das Whisper-Modell der Szenen-Analyse – unter „KI-Modelle“ laden (Whisper Base, 60 MB)",
-                ) { vm.navigate(Screen.Music) }
+                ) { vm.openScreen("music_ai") }
             }
 
             SectionHeader("Aktivierungswort")

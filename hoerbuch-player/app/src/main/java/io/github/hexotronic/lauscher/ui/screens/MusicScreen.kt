@@ -35,7 +35,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Tab
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -104,148 +110,192 @@ fun MusicScreen(vm: MainViewModel) {
                 Spacer(Modifier.width(12.dp))
             },
         )
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(bottom = 24.dp)) {
-            Text(
-                "Leise Musik und Geräusche unter der Erzählung – vom eingebauten Synthesizer oder aus der " +
-                    "Musikbibliothek. Sie macht unter Sprache Platz. Die Szenen erkennt eine lokale KI – " +
-                    "nichts verlässt das Gerät.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(16.dp),
-            )
+        var tab by rememberSaveable { mutableIntStateOf(vm.requestedMusicTab ?: MUSIC_TAB_NOW) }
+        LaunchedEffect(vm.requestedMusicTab) {
+            vm.requestedMusicTab?.let {
+                tab = it
+                vm.requestedMusicTab = null
+            }
+        }
+        PrimaryTabRow(selectedTabIndex = tab) {
+            MUSIC_TABS.forEachIndexed { i, label -> Tab(selected = tab == i, onClick = { tab = i }, text = { Text(label) }) }
+        }
+        // Each tab starts at the top.
+        val scroll = key(tab) { rememberScrollState() }
+        Column(Modifier.fillMaxSize().verticalScroll(scroll).navigationBarsPadding().padding(bottom = 24.dp)) {
+            when (tab) {
+                MUSIC_TAB_NOW -> {
+                    Text(
+                        "Leise Musik unter der Erzählung, passend zur Szene. Die Szenen erkennt eine lokale KI – nichts verlässt das Gerät.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(16.dp),
+                    )
 
-            // Current scene and mood map of the loaded book.
-            val book = np.book
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, end = 20.dp, bottom = 8.dp)
-                    .block(MaterialTheme.colorScheme.surfaceContainerLow)
-                    .padding(14.dp),
-            ) {
-                Text("Stimmungskarte", style = MaterialTheme.typography.titleLarge)
-                Spacer(Modifier.height(6.dp))
-                if (book == null) {
-                    Text("Starte ein Hörbuch, um seine Szenen zu sehen.", style = MaterialTheme.typography.bodySmall)
-                } else {
-                    val scene = np.scene
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (scene?.mood != null) {
-                            PixelBadge(scene.mood.label, moodColor(scene.mood), onMoodColor(scene.mood))
-                            Spacer(Modifier.width(8.dp))
+                    // Current scene and mood map of the loaded book.
+                    val book = np.book
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 20.dp, bottom = 8.dp)
+                            .block(MaterialTheme.colorScheme.surfaceContainerLow)
+                            .padding(14.dp),
+                    ) {
+                        Text("Stimmungskarte", style = MaterialTheme.typography.titleLarge)
+                        Spacer(Modifier.height(6.dp))
+                        if (book == null) {
+                            Text("Starte ein Hörbuch, um seine Szenen zu sehen.", style = MaterialTheme.typography.bodySmall)
+                        } else {
+                            val scene = np.scene
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (scene?.mood != null) {
+                                    PixelBadge(scene.mood.label, moodColor(scene.mood), onMoodColor(scene.mood))
+                                    Spacer(Modifier.width(8.dp))
+                                }
+                                scene?.setting?.let { place ->
+                                    PixelBadge(place.label, MaterialTheme.colorScheme.surfaceContainerHighest, MaterialTheme.colorScheme.onSurface)
+                                    Spacer(Modifier.width(8.dp))
+                                }
+                                Text(
+                                    when {
+                                        !s.enabled -> "Musik ist ausgeschaltet"
+                                        scene == null -> "Diese Stelle ist noch nicht analysiert"
+                                        scene.mood == null -> "Hier bewusst keine Musik"
+                                        else -> scene.title.ifBlank { scene.mood.hint }
+                                    },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            }
+                            Spacer(Modifier.height(10.dp))
+                            MoodMap(scenes, np.durationMs, np.positionMs, onSceneClick = { editScene = it })
+                            val covered = scenes.sumOf { it.endMs - it.startMs }
+                            Text(
+                                "${if (np.durationMs > 0) covered * 100 / np.durationMs else 0} % analysiert · ${scenes.count { it.mood != null }} Szenen mit Musik · Tippen zum Bearbeiten",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 6.dp),
+                            )
+                            MoodLegend(scenes)
+                            TextButton(onClick = { vm.openScreen("analysis") }) { Text("Alle Szenen als Stichpunkte (KI-Analyse) …") }
                         }
-                        scene?.setting?.let { place ->
-                            PixelBadge(place.label, MaterialTheme.colorScheme.surfaceContainerHighest, MaterialTheme.colorScheme.onSurface)
-                            Spacer(Modifier.width(8.dp))
+                    }
+                    LabeledSlider("Lautstärke", s.volume, "${(s.volume * 100).toInt()} %") { v ->
+                        vm.updateMusic { it.copy(volume = v) }
+                    }
+                    Text(
+                        "${s.mode.label} · ${s.source.label} · Auswahl „${s.follow.label}“",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
+                    AiLogWindow(vm, np.book?.id)
+                }
+
+                MUSIC_TAB_MUSIC -> {
+                    SectionHeader("Art der Musik")
+                    MusicMode.entries.forEach { mode ->
+                        ModeOption(mode, selected = s.mode == mode) { vm.updateMusic { it.copy(mode = mode, enabled = true) } }
+                    }
+
+                    when (s.mode) {
+                        MusicMode.FIXED -> FixedChoice(s, vm)
+                        MusicMode.SCENES -> TextButton(onClick = { tab = MUSIC_TAB_AI }, modifier = Modifier.padding(start = 8.dp)) {
+                            Text("Wie die KI die Szenen erkennt: Reiter „KI“ …")
                         }
-                        Text(
-                            when {
-                                !s.enabled -> "Musik ist ausgeschaltet"
-                                scene == null -> "Diese Stelle ist noch nicht analysiert"
-                                scene.mood == null -> "Hier bewusst keine Musik"
-                                else -> scene.title.ifBlank { scene.mood.hint }
-                            },
-                            style = MaterialTheme.typography.bodyMedium,
+                        MusicMode.CHAPTERS -> Text(
+                            "Am Anfang jedes Kapitels spielt 25 Sekunden ruhige Musik, am Ende 15 Sekunden ein leiser Ausklang.",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                         )
                     }
-                    Spacer(Modifier.height(10.dp))
-                    MoodMap(scenes, np.durationMs, np.positionMs, onSceneClick = { editScene = it })
-                    val covered = scenes.sumOf { it.endMs - it.startMs }
+
+                    if (s.mode == MusicMode.SCENES) {
+                        SectionHeader("Wie genau die Musik der Geschichte folgt")
+                        MusicFollow.entries.forEach { f ->
+                            OptionBox(f.label, f.hint, s.follow == f, enabled = true) { vm.updateMusic { it.copy(follow = f) } }
+                        }
+                        TextButton(onClick = { vm.navigate(Screen.AiLog) }, modifier = Modifier.padding(start = 8.dp)) {
+                            Text("Im KI-Protokoll nachsehen, warum welche Musik spielt …")
+                        }
+                    }
+
+                    SectionHeader("Klangquelle")
+                    MusicSource.entries.forEach { source ->
+                        SourceOption(source, selected = s.source == source, enabled = source == MusicSource.SYNTH || libraryInstalled.isNotEmpty()) {
+                            vm.updateMusic { it.copy(source = source) }
+                        }
+                    }
+                    RetroButton(
+                        onClick = { vm.navigate(Screen.MusicLibrary) },
+                        style = if (libraryInstalled.isEmpty()) RetroButtonStyle.PRIMARY else RetroButtonStyle.SECONDARY,
+                        modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
+                    ) {
+                        Text(
+                            if (libraryInstalled.isEmpty()) {
+                                "Musikbibliothek öffnen (${MusicCatalog.tracks.size} Stücke)"
+                            } else {
+                                "Musikbibliothek (${libraryInstalled.size}/${MusicCatalog.tracks.size} geladen)"
+                            },
+                        )
+                    }
+
+                    SectionHeader("Mischung")
+                    LabeledSlider(
+                        "Unter Sprache leiser",
+                        s.duckDepthDb,
+                        "${s.duckDepthDb.toInt()} dB",
+                        range = 0f..18f,
+                        subtitle = "Die Musik weicht der Stimme aus und kommt in Pausen zurück",
+                    ) { v -> vm.updateMusic { it.copy(duckDepthDb = v) } }
+                    LabeledSlider("Übergänge", s.crossfadeSeconds, "${s.crossfadeSeconds.toInt()} s", range = 1f..10f) { v ->
+                        vm.updateMusic { it.copy(crossfadeSeconds = v) }
+                    }
+                    SwitchRow("Gong bei Kapitelwechsel", null, s.chapterChime) { v -> vm.updateMusic { it.copy(chapterChime = v) } }
+                    SwitchRow(
+                        "Geräusche passend zum Ort",
+                        "Wald, Meer, Wind oder Kaminfeuer leise unter der Musik",
+                        s.placeSounds,
+                    ) { v -> vm.updateMusic { it.copy(placeSounds = v) } }
+                    SwitchRow(
+                        "Dezente Musik, wo noch nichts analysiert ist",
+                        null,
+                        s.neutralFallback,
+                    ) { v -> vm.updateMusic { it.copy(neutralFallback = v) } }
+
+                    SectionHeader("Hörproben")
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(horizontal = 16.dp)) {
+                        Mood.entries.forEach { m ->
+                            FilterChip(selected = false, onClick = { vm.previewMusic(SoundSpec(mood = m, intensity = 0.6f)) }, label = { Text(m.label) })
+                        }
+                        Atmosphere.entries.forEach { a ->
+                            FilterChip(selected = false, onClick = { vm.previewMusic(SoundSpec(atmosphere = a)) }, label = { Text(a.label) })
+                        }
+                    }
+                }
+
+                MUSIC_TAB_AI -> {
+                    SectionHeader("Szenen erkennen")
+                    AnalysisBlock(vm, s, status)
+                    TextButton(onClick = { vm.navigate(Screen.AiLog) }, modifier = Modifier.padding(start = 8.dp)) {
+                        Text("KI-Protokoll: sehen, was die KI gehört, gefragt und entschieden hat …")
+                    }
+                    SectionHeader("KI-Modelle (lokal)")
                     Text(
-                        "${if (np.durationMs > 0) covered * 100 / np.durationMs else 0} % analysiert · ${scenes.count { it.mood != null }} Szenen mit Musik · Tippen zum Bearbeiten",
-                        style = MaterialTheme.typography.labelSmall,
+                        "Einmal herunterladen, danach funktioniert alles offline. Die Spracherkennung ist nötig, das " +
+                            "Sprachmodell macht die Szenenwahl klüger und schreibt den Rückblick „Was bisher geschah“.",
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 6.dp),
+                        modifier = Modifier.padding(horizontal = 16.dp),
                     )
-                    MoodLegend(scenes)
-                    TextButton(onClick = { vm.openScreen("analysis") }) { Text("Alle Szenen als Stichpunkte (KI-Analyse) …") }
+                    ModelSection(vm, ModelKind.SPEECH, s.whisperModel, download, changes)
+                    ModelSection(vm, ModelKind.LANGUAGE, s.llmModel, download, changes)
+                }
+
+                else -> {
+                    SectionHeader("Rückmeldungen und Daten")
+                    AnalysisDataSection(vm)
                 }
             }
-
-            SectionHeader("Art der Musik")
-            MusicMode.entries.forEach { mode ->
-                ModeOption(mode, selected = s.mode == mode) { vm.updateMusic { it.copy(mode = mode, enabled = true) } }
-            }
-
-            when (s.mode) {
-                MusicMode.FIXED -> FixedChoice(s, vm)
-                MusicMode.SCENES -> AnalysisBlock(vm, s, status)
-                MusicMode.CHAPTERS -> Text(
-                    "Am Anfang jedes Kapitels spielt 25 Sekunden ruhige Musik, am Ende 15 Sekunden ein leiser Ausklang.",
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            }
-
-            if (s.mode == MusicMode.SCENES) {
-                SectionHeader("Wie genau die Musik der Geschichte folgt")
-                MusicFollow.entries.forEach { f ->
-                    OptionBox(f.label, f.hint, s.follow == f, enabled = true) { vm.updateMusic { it.copy(follow = f) } }
-                }
-                TextButton(onClick = { vm.navigate(Screen.AiLog) }, modifier = Modifier.padding(start = 8.dp)) {
-                    Text("Im KI-Protokoll nachsehen, warum welche Musik spielt …")
-                }
-            }
-
-            SectionHeader("Klangquelle")
-            MusicSource.entries.forEach { source ->
-                SourceOption(source, selected = s.source == source, enabled = source == MusicSource.SYNTH || libraryInstalled.isNotEmpty()) {
-                    vm.updateMusic { it.copy(source = source) }
-                }
-            }
-            RetroButton(
-                onClick = { vm.navigate(Screen.MusicLibrary) },
-                style = if (libraryInstalled.isEmpty()) RetroButtonStyle.PRIMARY else RetroButtonStyle.SECONDARY,
-                modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
-            ) {
-                Text(
-                    if (libraryInstalled.isEmpty()) {
-                        "Musikbibliothek öffnen (${MusicCatalog.tracks.size} Stücke)"
-                    } else {
-                        "Musikbibliothek (${libraryInstalled.size}/${MusicCatalog.tracks.size} geladen)"
-                    },
-                )
-            }
-
-            SectionHeader("Mischung")
-            LabeledSlider("Lautstärke", s.volume, "${(s.volume * 100).toInt()} %") { v ->
-                vm.updateMusic { it.copy(volume = v) }
-            }
-            LabeledSlider(
-                "Unter Sprache leiser",
-                s.duckDepthDb,
-                "${s.duckDepthDb.toInt()} dB",
-                range = 0f..18f,
-                subtitle = "Die Musik weicht der Stimme aus und kommt in Pausen zurück",
-            ) { v -> vm.updateMusic { it.copy(duckDepthDb = v) } }
-            LabeledSlider("Übergänge", s.crossfadeSeconds, "${s.crossfadeSeconds.toInt()} s", range = 1f..10f) { v ->
-                vm.updateMusic { it.copy(crossfadeSeconds = v) }
-            }
-            SwitchRow("Gong bei Kapitelwechsel", null, s.chapterChime) { v -> vm.updateMusic { it.copy(chapterChime = v) } }
-
-            SectionHeader("Hörproben")
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(horizontal = 16.dp)) {
-                Mood.entries.forEach { m ->
-                    FilterChip(selected = false, onClick = { vm.previewMusic(SoundSpec(mood = m, intensity = 0.6f)) }, label = { Text(m.label) })
-                }
-                Atmosphere.entries.forEach { a ->
-                    FilterChip(selected = false, onClick = { vm.previewMusic(SoundSpec(atmosphere = a)) }, label = { Text(a.label) })
-                }
-            }
-
-            SectionHeader("KI-Modelle (lokal)")
-            Text(
-                "Einmal herunterladen, danach funktioniert alles offline. Die Spracherkennung ist nötig, das " +
-                    "Sprachmodell macht die Szenenwahl klüger und schreibt den Rückblick „Was bisher geschah“.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-            ModelSection(vm, ModelKind.SPEECH, s.whisperModel, download, changes)
-            ModelSection(vm, ModelKind.LANGUAGE, s.llmModel, download, changes)
-
-            SectionHeader("Rückmeldungen und Daten")
-            AnalysisDataSection(vm)
         }
     }
 
@@ -407,16 +457,6 @@ private fun AnalysisBlock(vm: MainViewModel, s: MusicSettings, status: AnalysisS
         "Beim Hören werden die nächsten Minuten im Hintergrund vorbereitet",
         s.analyzeAhead,
     ) { v -> vm.updateMusic { it.copy(analyzeAhead = v) } }
-    SwitchRow(
-        "Geräusche passend zum Ort",
-        "Wald, Meer, Wind oder Kaminfeuer leise unter der Musik",
-        s.placeSounds,
-    ) { v -> vm.updateMusic { it.copy(placeSounds = v) } }
-    SwitchRow(
-        "Dezente Musik, wo noch nichts analysiert ist",
-        null,
-        s.neutralFallback,
-    ) { v -> vm.updateMusic { it.copy(neutralFallback = v) } }
     SamplingSettings(vm, s)
     Column(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
         Text("Sprache der Hörbücher", style = MaterialTheme.typography.labelLarge)
@@ -688,3 +728,9 @@ internal fun SceneEditDialog(
         dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen") } },
     )
 }
+
+const val MUSIC_TAB_NOW = 0
+const val MUSIC_TAB_MUSIC = 1
+const val MUSIC_TAB_AI = 2
+const val MUSIC_TAB_DATA = 3
+private val MUSIC_TABS = listOf("Überblick", "Musik", "KI", "Daten")

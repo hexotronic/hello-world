@@ -1,10 +1,12 @@
 """Generates FantasyCatalog.kt, the music library of the app.
 
-Inputs: analysis.jsonl and analysis-themes.jsonl (measured by measure.sh from candidates.txt and
-candidates-themes.txt), veloren-soundtrack.json and supertux-music.txt (the games' own metadata) and the
+Inputs: analysis.jsonl, analysis-themes.jsonl and analysis-more.jsonl (measured by measure.sh from
+candidates.txt, candidates-themes.txt and candidates-more.txt, the last made by catalog_more.py), veloren-soundtrack.json and supertux-music.txt (the games' own metadata) and the
 hand-made tables in catalog_tables.py: who composed each piece, under which licence (from the games'
 credits), and which moods and places it fits (assigned by hand from titles, the games' descriptions and
-the measurements).
+the measurements). catalog_more.py holds the third extension (more fantasy games).
+Not every measured piece is used: SuperTux, Hedgewars and Pioneer (cartoon, modern city and space music)
+were dropped from the library because they do not fit fantasy audiobooks.
 
 Usage: python3 catalog.py > ../../app/src/main/java/io/github/hexotronic/lauscher/music/library/core/FantasyCatalog.kt
 """
@@ -17,11 +19,12 @@ from collections import Counter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from catalog_tables import (T, OLD_PLACES, VELOREN, VELOREN_COMBAT, SPD_AREAS, SPD_KINDS, SUPERTUX,  # noqa: E402
-                            SUPERTUX_LICENSES, STENDHAL, ZERO_AD, HEDGEWARS, PIONEER)
+from catalog_tables import (T, OLD_PLACES, VELOREN, VELOREN_COMBAT, SPD_AREAS, SPD_KINDS,  # noqa: E402
+                            STENDHAL, ZERO_AD)
+import catalog_more  # noqa: E402
 
 A = {}
-for name in ('analysis.jsonl', 'analysis-themes.jsonl'):
+for name in ('analysis.jsonl', 'analysis-themes.jsonl', 'analysis-more.jsonl'):
     for line in open(os.path.join(HERE, name)):
         d = json.loads(line)
         if not d.get('error'):
@@ -93,34 +96,6 @@ for fid, title, moods, places in (('spd/theme_1', 'Titelthema I', 'NEUTRAL MYSTE
     plan, secs = whole_loop(A[fid]['f']['dur'], 150)
     add(fid, title, 'Lumine Haaristo', None, 'GPL3', 'SHATTERED_PD', [fid], moods, places, plan, secs)
 
-stx = {}
-for line in open(os.path.join(HERE, 'supertux-music.txt'), newline='\n'):
-    path = re.search(r'<data/music/(.*)\.music>', line)
-    file = re.search(r'\(file "([^"]+)\.ogg"\)', line)
-    if not path or not file:
-        continue
-    key = path.group(1).rsplit('/', 1)[0] + '/' + file.group(1)
-    authors_block = re.search(r'\(authors ((?:"(?:[^"\\]|\\.)*"\s*)+)\)', line)
-    authors = re.findall(r'"((?:[^"\\]|\\.)*)"', authors_block.group(1)) if authors_block else []
-    lic = re.search(r'\(license "([^"]+)"\)', line)
-    lb = float(re.search(r'\(loop-begin ([-0-9.]+)\)', line).group(1))
-    la = float(re.search(r'\(loop-at ([-0-9.]+)\)', line).group(1))
-    stx[key] = dict(authors=[a.replace('\\"', '"') for a in authors], license=lic.group(1) if lic else None, begin=lb, at=la)
-for key, (title, moods, places) in SUPERTUX.items():
-    fid = 'supertux/' + key
-    m = stx[key]
-    dur = A[fid]['f']['dur']
-    at = min(m['at'] if m['at'] > 0 else dur, dur)
-    begin = m['begin']
-    if at - begin < 10:
-        plan, secs = SINGLE, dur
-    else:
-        # Play to the loop point, then repeat the loop until the piece fills about 2.5 minutes.
-        k = max(0, min(3, math.ceil((150 - at) / (at - begin))))
-        plan = [(0, 0.0, round(at, 3), 1)] + ([(0, round(begin, 3), round(at, 3), k)] if k > 0 else [])
-        secs = at + (at - begin) * k
-    add(fid, title, ' & '.join(m['authors']), None, SUPERTUX_LICENSES[m['license']], 'SUPERTUX', [fid], moods, places, plan, secs)
-
 for key, (title, composer, lic, moods, places) in STENDHAL.items():
     fid = 'stendhal/' + key
     plan, secs = whole_loop(A[fid]['f']['dur'], 120)
@@ -131,19 +106,43 @@ for key, (moods, places) in ZERO_AD.items():
     plan, secs = whole_loop(A[fid]['f']['dur'], 90)
     add(fid, key.replace('_', ' '), 'Wildfire Games (Omri Lahav u. a.)', None, 'CC_BY_SA_3', 'ZERO_AD', [fid], moods, places, plan, secs)
 
-for key, (title, composer, moods, places) in HEDGEWARS.items():
-    fid = 'hedgewars/' + key
-    plan, secs = whole_loop(A[fid]['f']['dur'], 120)
-    add(fid, title, composer, None, 'GFDL', 'HEDGEWARS', [fid], moods, places, plan, secs)
-
-for key, (title, composer, moods, places, lic) in PIONEER.items():
-    fid = 'pioneer/' + key
-    plan, secs = whole_loop(A[fid]['f']['dur'], 120)
-    add(fid, title, composer, None, lic, 'PIONEER', [fid], moods, places, plan, secs)
+# Third extension: more fantasy games (see catalog_more.py).
+SKIP_MORE = {'tuxemon/good_morning', 'tuxemon/good_night', 'megaglest/intro'}
+for coll, entries in catalog_more.MORE.items():
+    prefix = catalog_more.PREFIX[coll]
+    for key, files, title, composer, lic, moods, places in entries:
+        tid = f'{prefix}/{key}'
+        if tid in SKIP_MORE:
+            continue
+        if not composer:
+            tag = (A.get(tid) or A.get(f'{tid}#0'))['tags'].get('artist', '').strip()
+            composer = catalog_more.TAG_ARTISTS.get(tag, tag) or catalog_more.COMPOSER_FALLBACK[coll]
+        if len(files) > 1:
+            parts = [f'{tid}#{i}' for i in range(len(files))]
+            durs = [A[p]['f']['dur'] for p in parts]
+            plan = [(i, 0.0, -1.0, 1) for i in range(len(parts))]
+            add(tid, title, composer, None, lic, coll, parts, moods, places, plan=plan, seconds=sum(durs), feat=A[parts[0]]['f'])
+        else:
+            dur = A[tid]['f']['dur']
+            plan, secs = whole_loop(dur, 120) if dur < 60 else (SINGLE, dur)
+            add(tid, title, composer, None, lic, coll, [tid], moods, places, plan, secs)
+WIDELANDS_COMPOSERS = {'ingame_15': 'MiddleFinger', 'ingame_16': 'MiddleFinger', 'ingame_17': 'MiddleFinger',
+                       'ingame_28': 'Klaus Halfmann (Hasi50)'}
+WIDELANDS_TITLES = {'ingame_28': 'The Beauty of the Flat Lands', 'intro': 'Intro'}
+for key, (moods, places) in catalog_more.WIDELANDS_MORE.items():
+    if key == 'menu':
+        continue  # the same file as ingame_14
+    tid = f'widelands/{key}'
+    dur = A[tid]['f']['dur']
+    plan, secs = whole_loop(dur, 120) if dur < 60 else (SINGLE, dur)
+    add(tid, WIDELANDS_TITLES.get(key, 'Widelands ' + key.replace('ingame_', '')), WIDELANDS_COMPOSERS.get(key, 'Widelands-Team'),
+        None, 'GPL2', 'WIDELANDS', [tid], moods, places, plan, secs)
 
 # ---------------------------------------------------------------- checks and output
 ids = [t['id'] for t in TRACKS]
 assert len(ids) == len(set(ids)), 'duplicate ids'
+shas = [f['sha256'] for t in TRACKS for f in t['files']]
+assert len(shas) == len(set(shas)), 'the same file twice: ' + str([x for x, n in Counter(shas).items() if n > 1])
 assert not [t['id'] for t in TRACKS if t['seconds'] < 40], 'too short'
 
 

@@ -55,6 +55,8 @@ start --ez music true --es screen player
 shot 06b-player-musik-hell 6
 start --es screen music
 shot 06c-hintergrundmusik-hell 4
+start --es screen music_settings
+shot 06c2-hintergrundmusik-musik-hell 4
 
 # --- Music library: download pieces from the games' repositories, check them and play them.
 # spd/sewers_1 is a 26-second loop that is played several times in a row.
@@ -115,7 +117,7 @@ if [ -n "${E2E_DIR:-}" ] && [ -f "$E2E_DIR/story.wav" ]; then
   done
   adb logcat -d -s LauscherAnalyse:* LauscherLlm:* LauscherWhisper:* | tail -40 | tee "$OUT/analyse.txt"
   sleep 5
-  start --es screen music
+  start --es screen music_ai
   shot 11-ki-analyse-hell 5
   if ! grep -q "Szenen" "$OUT/analyse.txt"; then
     echo "::error::Die lokale Analyse hat keine Szenen geliefert"

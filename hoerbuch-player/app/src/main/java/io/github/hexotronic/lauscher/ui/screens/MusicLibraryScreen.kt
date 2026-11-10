@@ -32,6 +32,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Tab
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,6 +41,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -94,120 +98,131 @@ fun MusicLibraryScreen(vm: MainViewModel) {
             },
             title = { Text("Musikbibliothek") },
         )
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(bottom = 24.dp)) {
-            Text(
-                "Echte Musik, von Menschen komponiert und eingespielt – keine KI-Musik. Sie stammt aus den " +
-                    "Soundtracks freier Spiele, steht unter GPL oder Creative Commons und wird unverändert aus deren " +
-                    "Archiven geladen. Die App wählt passend zu Stimmung, Ort und Spannung jeder Szene – vom ruhigen " +
-                    "Kerker-Rundgang bis zum Kampf, vom Wald bis zum Weltraum. Danach spielt alles offline.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(16.dp),
-            )
-
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, end = 20.dp, bottom = 8.dp)
-                    .block(MaterialTheme.colorScheme.surfaceContainerLow)
-                    .padding(14.dp),
-            ) {
-                Text("${installed.size} von ${all.size} Stücken geladen", style = MaterialTheme.typography.titleMedium)
+        var tab by rememberSaveable { mutableIntStateOf(0) }
+        PrimaryTabRow(selectedTabIndex = tab) {
+            listOf("Laden", "Stücke", "Herkunft").forEachIndexed { i, label -> Tab(selected = tab == i, onClick = { tab = i }, text = { Text(label) }) }
+        }
+        val scroll = key(tab) { rememberScrollState() }
+        Column(Modifier.fillMaxSize().verticalScroll(scroll).navigationBarsPadding().padding(bottom = 24.dp)) {
+            if (tab == 0) {
                 Text(
-                    "${megabytes(MusicCatalog.totalBytes(all.filter { it.id in installed }))} auf dem Gerät · " +
-                        "${formatHuman(all.filter { it.id in installed }.sumOf { it.seconds } * 1000L)} Musik",
-                    style = MaterialTheme.typography.labelSmall,
+                    "Echte Fantasy-Musik, von Menschen komponiert und eingespielt – keine KI-Musik. Sie stammt aus den " +
+                        "Soundtracks freier Spiele, steht unter GPL, Creative Commons oder CC0 und wird unverändert aus deren " +
+                        "Archiven geladen. Je Ort und Stimmung wählt die App zufällig unter allen passenden Stücken – vom " +
+                        "ruhigen Kerker-Rundgang bis zum Kampf, vom Wald bis zur Wüste. Danach spielt alles offline.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(16.dp),
                 )
-                DownloadProgress(download, onCancel = vm::cancelMusicDownload, onDismiss = vm::dismissMusicDownloadError)
-                if (download?.running != true) {
-                    Spacer(Modifier.height(10.dp))
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        if (starterMissing.isNotEmpty()) {
-                            RetroButton(onClick = { vm.downloadMusic(starterMissing.map { it.id }) }) {
-                                Text("Starterpaket (${starterMissing.size} Stücke, ${megabytes(MusicCatalog.totalBytes(starterMissing))})")
+
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 20.dp, bottom = 8.dp)
+                        .block(MaterialTheme.colorScheme.surfaceContainerLow)
+                        .padding(14.dp),
+                ) {
+                    Text("${installed.size} von ${all.size} Stücken geladen", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "${megabytes(MusicCatalog.totalBytes(all.filter { it.id in installed }))} auf dem Gerät · " +
+                            "${formatHuman(all.filter { it.id in installed }.sumOf { it.seconds } * 1000L)} Musik",
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                    DownloadProgress(download, onCancel = vm::cancelMusicDownload, onDismiss = vm::dismissMusicDownloadError)
+                    if (download?.running != true) {
+                        Spacer(Modifier.height(10.dp))
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            if (starterMissing.isNotEmpty()) {
+                                RetroButton(onClick = { vm.downloadMusic(starterMissing.map { it.id }) }) {
+                                    Text("Starterpaket (${starterMissing.size} Stücke, ${megabytes(MusicCatalog.totalBytes(starterMissing))})")
+                                }
                             }
-                        }
-                        if (missing.isNotEmpty()) {
-                            RetroButton(
-                                onClick = { vm.downloadMusic(missing.map { it.id }) },
-                                style = if (starterMissing.isEmpty()) RetroButtonStyle.PRIMARY else RetroButtonStyle.SECONDARY,
-                            ) {
-                                Text(if (installed.isEmpty()) "Alles laden (${megabytes(MusicCatalog.totalBytes(missing))})" else "Rest laden (${megabytes(MusicCatalog.totalBytes(missing))})")
+                            if (missing.isNotEmpty()) {
+                                RetroButton(
+                                    onClick = { vm.downloadMusic(missing.map { it.id }) },
+                                    style = if (starterMissing.isEmpty()) RetroButtonStyle.PRIMARY else RetroButtonStyle.SECONDARY,
+                                ) {
+                                    Text(if (installed.isEmpty()) "Alles laden (${megabytes(MusicCatalog.totalBytes(missing))})" else "Rest laden (${megabytes(MusicCatalog.totalBytes(missing))})")
+                                }
                             }
-                        }
-                        if (installed.isNotEmpty()) {
-                            RetroButton(onClick = { vm.deleteMusic(installed) }, style = RetroButtonStyle.PLAIN) { Text("Alle löschen") }
+                            if (installed.isNotEmpty()) {
+                                RetroButton(onClick = { vm.deleteMusic(installed) }, style = RetroButtonStyle.PLAIN) { Text("Alle löschen") }
+                            }
                         }
                     }
                 }
-            }
 
-            SwitchRow(
-                "Für die Hintergrundmusik verwenden",
-                if (installed.isEmpty()) "Lade zuerst Stücke herunter" else "Fehlt ein passendes Stück, spielt der Synthesizer",
-                s.source == MusicSource.LIBRARY,
-                enabled = installed.isNotEmpty(),
-            ) { on -> vm.updateMusic { it.copy(source = if (on) MusicSource.LIBRARY else MusicSource.SYNTH) } }
+                SwitchRow(
+                    "Für die Hintergrundmusik verwenden",
+                    if (installed.isEmpty()) "Lade zuerst Stücke herunter" else "Fehlt ein passendes Stück, spielt der Synthesizer",
+                    s.source == MusicSource.LIBRARY,
+                    enabled = installed.isNotEmpty(),
+                ) { on -> vm.updateMusic { it.copy(source = if (on) MusicSource.LIBRARY else MusicSource.SYNTH) } }
 
-            np.musicTrackId?.let { MusicCatalog.byId(it) }?.let { playing ->
-                Text(
-                    "Läuft gerade: ${playing.credit}",
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                )
-            }
-
-            SectionHeader("Pakete")
-            Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(selected = !byPlace, onClick = { byPlace = false }, label = { Text("Nach Stimmung") })
-                FilterChip(selected = byPlace, onClick = { byPlace = true }, label = { Text("Nach Ort") })
-            }
-            Spacer(Modifier.height(8.dp))
-            val playingId = np.musicTrackId.takeIf { np.musicPlaying }
-            val busy = download?.running == true
-            if (byPlace) {
-                Setting.entries.forEach { place ->
-                    val tracks = MusicCatalog.forSetting(place)
-                    Pack(
-                        key = "place-" + place.name,
-                        badge = { PixelBadge(place.label, MaterialTheme.colorScheme.surfaceContainerHighest, MaterialTheme.colorScheme.onSurface) },
-                        hint = if (tracks.isEmpty()) {
-                            place.hint + " – eigene Stücke fehlen noch, es spielen: " + place.related.joinToString { it.label }
-                        } else {
-                            place.hint
-                        },
-                        tracks = tracks,
-                        installed = installed,
-                        expanded = expanded,
-                        playingId = playingId,
-                        busy = busy,
-                        onToggle = { expanded = if (expanded == it) null else it },
-                        vm = vm,
-                        liked = s.likedTracks,
-                        hidden = s.hiddenTracks,
+                np.musicTrackId?.let { MusicCatalog.byId(it) }?.let { playing ->
+                    Text(
+                        "Läuft gerade: ${playing.credit}",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                     )
                 }
-            } else {
-                Mood.entries.forEach { mood ->
-                    Pack(
-                        key = "mood-" + mood.name,
-                        badge = { PixelBadge(mood.label, moodColor(mood), onMoodColor(mood)) },
-                        hint = mood.hint,
-                        tracks = MusicCatalog.forMood(mood),
-                        installed = installed,
-                        expanded = expanded,
-                        playingId = playingId,
-                        busy = busy,
-                        onToggle = { expanded = if (expanded == it) null else it },
-                        vm = vm,
-                        liked = s.likedTracks,
-                        hidden = s.hiddenTracks,
-                    )
-                }
-            }
 
-            SectionHeader("Herkunft und Lizenzen")
-            Credits()
+            }
+            if (tab == 1) {
+                SectionHeader("Pakete")
+                Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(selected = !byPlace, onClick = { byPlace = false }, label = { Text("Nach Stimmung") })
+                    FilterChip(selected = byPlace, onClick = { byPlace = true }, label = { Text("Nach Ort") })
+                }
+                Spacer(Modifier.height(8.dp))
+                val playingId = np.musicTrackId.takeIf { np.musicPlaying }
+                val busy = download?.running == true
+                if (byPlace) {
+                    Setting.entries.forEach { place ->
+                        val tracks = MusicCatalog.forSetting(place)
+                        Pack(
+                            key = "place-" + place.name,
+                            badge = { PixelBadge(place.label, MaterialTheme.colorScheme.surfaceContainerHighest, MaterialTheme.colorScheme.onSurface) },
+                            hint = if (tracks.isEmpty()) {
+                                place.hint + " – eigene Stücke fehlen noch, es spielen: " + place.related.joinToString { it.label }
+                            } else {
+                                place.hint
+                            },
+                            tracks = tracks,
+                            installed = installed,
+                            expanded = expanded,
+                            playingId = playingId,
+                            busy = busy,
+                            onToggle = { expanded = if (expanded == it) null else it },
+                            vm = vm,
+                            liked = s.likedTracks,
+                            hidden = s.hiddenTracks,
+                        )
+                    }
+                } else {
+                    Mood.entries.forEach { mood ->
+                        Pack(
+                            key = "mood-" + mood.name,
+                            badge = { PixelBadge(mood.label, moodColor(mood), onMoodColor(mood)) },
+                            hint = mood.hint,
+                            tracks = MusicCatalog.forMood(mood),
+                            installed = installed,
+                            expanded = expanded,
+                            playingId = playingId,
+                            busy = busy,
+                            onToggle = { expanded = if (expanded == it) null else it },
+                            vm = vm,
+                            liked = s.likedTracks,
+                            hidden = s.hiddenTracks,
+                        )
+                    }
+                }
+
+            }
+            if (tab == 2) {
+                SectionHeader("Herkunft und Lizenzen")
+                Credits()
+            }
         }
     }
 }

@@ -308,6 +308,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             "stats" -> navigate(Screen.Stats)
             "settings" -> navigate(Screen.Settings)
             "music" -> navigate(Screen.Music)
+            "music_settings", "music_ai", "music_data" -> {
+                requestedMusicTab = when (name) {
+                    "music_settings" -> io.github.hexotronic.lauscher.ui.screens.MUSIC_TAB_MUSIC
+                    "music_ai" -> io.github.hexotronic.lauscher.ui.screens.MUSIC_TAB_AI
+                    else -> io.github.hexotronic.lauscher.ui.screens.MUSIC_TAB_DATA
+                }
+                navigate(Screen.Music)
+            }
             "musiclibrary" -> navigate(Screen.MusicLibrary)
             "downloads" -> navigate(Screen.Downloads)
             "voice" -> navigate(Screen.Voice)
@@ -453,6 +461,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Set before opening a book's details on a certain tab (e.g. 4 = "KI-Analyse"). */
     var requestedBookTab by mutableStateOf<Int?>(null)
+
+    /** Tab of the "Hintergrundmusik" screen to show when it opens next (models live under "KI"). */
+    var requestedMusicTab by mutableStateOf<Int?>(null)
 
     fun stopAnalysis() = app.analysis.stop()
 

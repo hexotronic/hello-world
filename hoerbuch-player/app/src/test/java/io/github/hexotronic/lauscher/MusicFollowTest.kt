@@ -175,6 +175,26 @@ class MusicFollowTest {
     }
 
     @Test
+    fun piecesOfAPlaceComeInRandomOrderAndAllGetTheirTurn() {
+        val base = MusicCatalog.byId("wesnoth/silvan_sanctuary")!!
+        val forest = (1..8).map { base.copy(id = "forest-$it") }
+        // A piece for another place only joins when the place has too little of its own.
+        val elsewhere = MusicCatalog.byId("wesnoth/heroes_rite")!!
+        fun round(picker: TrackPicker) = (1..8).map { picker.pick(forest + elsewhere, Mood.CALM, Setting.FOREST, 0.3f)!!.id }
+        val picker = TrackPicker(seed = 1)
+        val first = round(picker)
+        val second = round(picker)
+        assertEquals("every forest piece once per round", forest.map { it.id }.toSet(), first.toSet())
+        assertEquals(forest.map { it.id }.toSet(), second.toSet())
+        // No piece comes back within four picks, not even across rounds.
+        val all = first + second
+        for (i in 4 until all.size) assertTrue(all[i] !in all.subList(i - 4, i))
+        // Chance decides the order: other seeds, other orders.
+        val orders = (2L..6L).map { round(TrackPicker(seed = it)) }.toSet()
+        assertTrue("${orders.size} different orders", orders.size >= 4)
+    }
+
+    @Test
     fun aPieceStillFitsOnlyCloseScenes() {
         val forest = MusicCatalog.byId("wesnoth/silvan_sanctuary")!!
         assertTrue(TrackPicker.stillFits(forest, Mood.IDYLLIC, Setting.FOREST, 0.2f))

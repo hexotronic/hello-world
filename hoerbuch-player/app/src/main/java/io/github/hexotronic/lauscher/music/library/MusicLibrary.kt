@@ -253,7 +253,12 @@ class MusicLibrary(
     companion object {
         private const val TAG = "LauscherMusik"
 
-        private fun fileName(track: LibraryTrack, index: Int) =
-            track.id.replace('/', '-') + (if (index > 0) "-$index" else "") + ".ogg"
+        private val EXTENSIONS = setOf("ogg", "mp3", "m4a", "flac", "opus")
+
+        /** The file's own extension (Ogg, MP3, M4A, FLAC), so the decoder recognises it. */
+        private fun fileName(track: LibraryTrack, index: Int): String {
+            val ext = track.files[index].url.substringAfterLast('.').lowercase().takeIf { it in EXTENSIONS } ?: "ogg"
+            return track.id.replace('/', '-') + (if (index > 0) "-$index" else "") + ".$ext"
+        }
     }
 }
