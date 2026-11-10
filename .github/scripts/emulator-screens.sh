@@ -154,6 +154,8 @@ if [ -n "${E2E_DIR:-}" ] && [ -f "$E2E_DIR/story.wav" ]; then
   shot 13-ki-analyse-tab-hell 5
   start --es screen ailog
   shot 13b-ki-protokoll-hell 4
+  start --es screen analyze_range
+  shot 13c-analysieren-dialog-hell 4
   adb logcat -d -s LauscherKI:* | grep -E "Gelesen:|Szenenwechsel:" | cut -c1-260 | tail -6
   # Two windows with different music: the scene change must have been looked for.
   KINDS=$(grep "Szenen:" "$OUT/analyse-buchtext.txt" | grep -oE "[0-9]+:[0-9]+=[A-Z]+/[0-9]@[A-Z_?]+" | cut -d= -f2 | sort -u | wc -l)

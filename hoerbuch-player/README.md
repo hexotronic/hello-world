@@ -210,7 +210,15 @@ oder **nur für ein bestimmtes Hörbuch** speichern.
   oder analysiert auf Wunsch das ganze Buch (Stichproben oder vollständig).
 - Die **Musik wird live erzeugt** (Flächen, gezupfte Saiten, Glocken, Herzschlag, Natur-Geräusche, Hall),
   überblendet weich zwischen Szenen und **weicht der Stimme aus** (Ducking), Lautstärke und Übergänge einstellbar.
-- **Stimmungskarte** des ganzen Buchs; jede Szene lässt sich antippen und korrigieren
+- **Stimmungskarte** des ganzen Buchs mit Kapitelmarken und einer **Lupe** (10 Min., 30 Min., 1 Std. oder
+  das Kapitel) samt Zeitachse, die der Hörstelle folgt und sich mit dem Finger verschieben lässt. Blockhöhe =
+  Spannung, schraffiert = bewusst ohne Musik, leer = noch nicht analysiert. Eine angetippte Stelle zeigt, was die
+  KI dort gefunden hat (Gefühl, Spannung, Ort, Titel, bis wohin analysiert ist), mit „Hierhin springen“,
+  „Korrigieren“ und „Ab hier analysieren“; darunter die Anteile der Gefühle.
+- **„Analysieren …“ mit freier Wahl:** Start bei der eigenen Stelle, der ersten noch nicht analysierten Stelle,
+  am Anfang, bei einem Kapitel (mit Anteil schon analysiert) oder bei einem Zeitpunkt (Regler, ±1/5 Min. oder
+  Tippen auf die Karte); Umfang 15 Min., 1 Std., bis Kapitelende oder bis zum Ende. Der Dialog zeigt den
+  Bereich auf der Karte, wie viel davon schon fertig ist und die erwartete Rechenzeit.
 - **„Passt die Musik?“** direkt im Player: Szene bestätigen, korrigieren (Stimmung, Ort, Spannung), „hier keine
   Musik“, neu analysieren oder ihre Analyse löschen; zum laufenden Stück „anderes Stück“, „gefällt mir“
   (wird bevorzugt) oder „nie mehr spielen“

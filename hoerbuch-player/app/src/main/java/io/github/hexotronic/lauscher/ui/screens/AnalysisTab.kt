@@ -26,6 +26,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -38,12 +40,12 @@ import io.github.hexotronic.lauscher.analysis.core.Scene
 import io.github.hexotronic.lauscher.analysis.core.SceneMerger
 import io.github.hexotronic.lauscher.analysis.core.TranscriptWindow
 import io.github.hexotronic.lauscher.data.Book
+import io.github.hexotronic.lauscher.data.Chapter
 import io.github.hexotronic.lauscher.music.MusicSettings
 import io.github.hexotronic.lauscher.music.MusicSource
 import io.github.hexotronic.lauscher.music.library.core.MusicCatalog
 import io.github.hexotronic.lauscher.ui.MainViewModel
 import io.github.hexotronic.lauscher.ui.components.LabeledSlider
-import io.github.hexotronic.lauscher.ui.components.MoodMap
 import io.github.hexotronic.lauscher.ui.components.PixelBadge
 import io.github.hexotronic.lauscher.ui.components.RetroButton
 import io.github.hexotronic.lauscher.ui.components.RetroButtonStyle
@@ -69,6 +71,7 @@ internal class AnalysisTabData(
     val trackId: String?,
     val status: AnalysisStatus,
     val settings: MusicSettings,
+    val chapters: List<Chapter>,
 )
 
 @Composable
@@ -81,6 +84,7 @@ internal fun rememberAnalysisTabData(vm: MainViewModel, book: Book): AnalysisTab
     // Summary and texts grow with the analysis, so they are read again when the scenes change.
     val story by produceState("", book.id, scenes) { value = vm.repository.story(book.id) }
     val texts by produceState(emptyList<TranscriptWindow>(), book.id, scenes) { value = vm.repository.transcripts(book.id) }
+    val storedChapters by produceState(emptyList<Chapter>(), book.id) { value = vm.repository.bookDetails(book.id)?.chapters.orEmpty() }
     val current = np.book?.id == book.id
     return AnalysisTabData(
         scenes = scenes,
@@ -92,6 +96,7 @@ internal fun rememberAnalysisTabData(vm: MainViewModel, book: Book): AnalysisTab
         trackId = if (current && np.musicPlaying) np.musicTrackId else null,
         status = status,
         settings = settings,
+        chapters = if (current && np.chapters.isNotEmpty()) np.chapters else storedChapters,
     )
 }
 
@@ -120,6 +125,22 @@ internal fun LazyListScope.analysisTab(d: AnalysisTabData, vm: MainViewModel, bo
 @Composable
 private fun AnalysisHeader(d: AnalysisTabData, vm: MainViewModel, bookId: Long, onEdit: (Scene) -> Unit) {
     val s = d.settings
+    var showRange by remember { mutableStateOf(false) }
+    var rangePreset by remember { mutableStateOf<Long?>(null) }
+    if (showRange) {
+        AnalyzeRangeDialog(
+            scenes = d.scenes,
+            chapters = d.chapters,
+            durationMs = d.durationMs,
+            positionMs = d.positionMs,
+            settings = s,
+            presetFromMs = rangePreset,
+            onDismiss = { showRange = false },
+        ) { from, until ->
+            vm.analyzeRange(bookId, from, until)
+            showRange = false
+        }
+    }
     Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
         Text(
             "Beim Hören liest die KI voraus: Für jeden Abschnitt notiert sie Ort, Gefühl, Spannung und einen kurzen " +
@@ -130,7 +151,18 @@ private fun AnalysisHeader(d: AnalysisTabData, vm: MainViewModel, bookId: Long, 
         )
         if (d.durationMs > 0) {
             Spacer(Modifier.height(12.dp))
-            MoodMap(d.scenes, d.durationMs, d.positionMs, onSceneClick = onEdit)
+            MoodMapPanel(
+                scenes = d.scenes,
+                chapters = d.chapters,
+                durationMs = d.durationMs,
+                positionMs = d.positionMs,
+                onJump = { vm.playBook(bookId, openPlayer = false, startAtMs = it) },
+                onEdit = onEdit,
+                onAnalyzeFrom = {
+                    rangePreset = it
+                    showRange = true
+                },
+            )
         }
         val covered = d.scenes.sumOf { it.endMs - it.startMs }
         val percent = if (d.durationMs > 0) (covered * 100 / d.durationMs).toInt() else 0
@@ -172,8 +204,11 @@ private fun AnalysisHeader(d: AnalysisTabData, vm: MainViewModel, bookId: Long, 
             }
             Spacer(Modifier.height(10.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                RetroButton(onClick = { vm.analyzeBookFrom(bookId, d.positionMs) }) { Text("Ab meiner Stelle analysieren") }
-                RetroButton(onClick = { vm.analyzeBookFrom(bookId, 0) }, style = RetroButtonStyle.SECONDARY) { Text("Ganzes Buch") }
+                RetroButton(onClick = {
+                    rangePreset = null
+                    showRange = true
+                }) { Text("Analysieren …") }
+                RetroButton(onClick = { vm.analyzeBookFrom(bookId, d.positionMs) }, style = RetroButtonStyle.SECONDARY) { Text("Ab meiner Stelle") }
             }
         }
     }

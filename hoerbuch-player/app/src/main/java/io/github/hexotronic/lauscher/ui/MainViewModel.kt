@@ -308,6 +308,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             "stats" -> navigate(Screen.Stats)
             "settings" -> navigate(Screen.Settings)
             "music" -> navigate(Screen.Music)
+            "analyze_range" -> {
+                requestedMusicTab = io.github.hexotronic.lauscher.ui.screens.MUSIC_TAB_AI
+                requestedRangeDialog = true
+                navigate(Screen.Music)
+            }
             "music_settings", "music_ai", "music_data" -> {
                 requestedMusicTab = when (name) {
                     "music_settings" -> io.github.hexotronic.lauscher.ui.screens.MUSIC_TAB_MUSIC
@@ -448,6 +453,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /** Analyses [bookId] between [fromMs] and [untilMs] (the "Analysieren" dialog). */
+    fun analyzeRange(bookId: Long, fromMs: Long, untilMs: Long) {
+        viewModelScope.launch {
+            if (!app.analysis.hasSpeechModel && !repository.hasBookText(bookId)) {
+                toast("Bitte zuerst ein Spracherkennungsmodell laden oder den Buchtext einfügen")
+                return@launch
+            }
+            if (app.analysis.isRunning) {
+                toast("Es läuft schon eine Analyse – bitte erst stoppen")
+                return@launch
+            }
+            app.analysis.analyze(bookId, fromMs = fromMs, untilMs = untilMs)
+        }
+    }
+
     /** Analyses [bookId] from [fromMs] on (from the "KI-Analyse" tab of any book). */
     fun analyzeBookFrom(bookId: Long, fromMs: Long) {
         viewModelScope.launch {
@@ -464,6 +484,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Tab of the "Hintergrundmusik" screen to show when it opens next (models live under "KI"). */
     var requestedMusicTab by mutableStateOf<Int?>(null)
+
+    /** Opens the "Analysieren" dialog on the "Hintergrundmusik" screen (test aid, adb extra screen=analyze_range). */
+    var requestedRangeDialog by mutableStateOf(false)
 
     fun stopAnalysis() = app.analysis.stop()
 

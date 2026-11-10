@@ -69,7 +69,6 @@ import io.github.hexotronic.lauscher.music.synth.SoundSpec
 import io.github.hexotronic.lauscher.ui.MainViewModel
 import io.github.hexotronic.lauscher.ui.Screen
 import io.github.hexotronic.lauscher.ui.components.LabeledSlider
-import io.github.hexotronic.lauscher.ui.components.MoodMap
 import io.github.hexotronic.lauscher.ui.components.PixelBadge
 import io.github.hexotronic.lauscher.ui.components.RetroBox
 import io.github.hexotronic.lauscher.ui.components.RetroButton
@@ -98,6 +97,15 @@ fun MusicScreen(vm: MainViewModel) {
     val changes by vm.modelChanges.collectAsStateWithLifecycle()
     val libraryInstalled by vm.libraryInstalled.collectAsStateWithLifecycle()
     var editScene by remember { mutableStateOf<Scene?>(null) }
+    // The "Analysieren" dialog, optionally starting at a time chosen on the mood map.
+    var showRange by remember { mutableStateOf(false) }
+    var rangePreset by remember { mutableStateOf<Long?>(null) }
+    LaunchedEffect(vm.requestedRangeDialog) {
+        if (vm.requestedRangeDialog) {
+            vm.requestedRangeDialog = false
+            showRange = true
+        }
+    }
 
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
         RetroTopBar(
@@ -167,15 +175,18 @@ fun MusicScreen(vm: MainViewModel) {
                                 )
                             }
                             Spacer(Modifier.height(10.dp))
-                            MoodMap(scenes, np.durationMs, np.positionMs, onSceneClick = { editScene = it })
-                            val covered = scenes.sumOf { it.endMs - it.startMs }
-                            Text(
-                                "${if (np.durationMs > 0) covered * 100 / np.durationMs else 0} % analysiert · ${scenes.count { it.mood != null }} Szenen mit Musik · Tippen zum Bearbeiten",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = 6.dp),
+                            MoodMapPanel(
+                                scenes = scenes,
+                                chapters = np.chapters,
+                                durationMs = np.durationMs,
+                                positionMs = np.positionMs,
+                                onJump = { vm.playBook(book.id, openPlayer = false, startAtMs = it) },
+                                onEdit = { editScene = it },
+                                onAnalyzeFrom = {
+                                    rangePreset = it
+                                    showRange = true
+                                },
                             )
-                            MoodLegend(scenes)
                             TextButton(onClick = { vm.openScreen("analysis") }) { Text("Alle Szenen als Stichpunkte (KI-Analyse) …") }
                         }
                     }
@@ -275,7 +286,10 @@ fun MusicScreen(vm: MainViewModel) {
 
                 MUSIC_TAB_AI -> {
                     SectionHeader("Szenen erkennen")
-                    AnalysisBlock(vm, s, status)
+                    AnalysisBlock(vm, s, status) {
+                        rangePreset = null
+                        showRange = true
+                    }
                     TextButton(onClick = { vm.navigate(Screen.AiLog) }, modifier = Modifier.padding(start = 8.dp)) {
                         Text("KI-Protokoll: sehen, was die KI gehört, gefragt und entschieden hat …")
                     }
@@ -299,6 +313,22 @@ fun MusicScreen(vm: MainViewModel) {
         }
     }
 
+    val rangeBook = np.book
+    if (showRange && rangeBook != null) {
+        AnalyzeRangeDialog(
+            scenes = scenes,
+            chapters = np.chapters,
+            durationMs = np.durationMs,
+            positionMs = np.positionMs,
+            settings = s,
+            presetFromMs = rangePreset,
+            onDismiss = { showRange = false },
+        ) { from, until ->
+            vm.analyzeRange(rangeBook.id, from, until)
+            showRange = false
+        }
+    }
+
     editScene?.let { scene ->
         SceneEditDialog(
             scene,
@@ -309,21 +339,6 @@ fun MusicScreen(vm: MainViewModel) {
         ) { mood, level, title, setting ->
             vm.overrideScene(scene, mood, level, title, setting)
             editScene = null
-        }
-    }
-}
-
-@Composable
-private fun MoodLegend(scenes: List<Scene>) {
-    val used = scenes.mapNotNull { it.mood }.distinct()
-    if (used.isEmpty()) return
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 6.dp)) {
-        used.forEach { m ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(10.dp).background(moodColor(m)).border(1.dp, LocalRetro.current.ink))
-                Spacer(Modifier.width(4.dp))
-                Text(m.label, style = MaterialTheme.typography.labelSmall)
-            }
         }
     }
 }
@@ -404,7 +419,7 @@ private fun FixedChoice(s: MusicSettings, vm: MainViewModel) {
 }
 
 @Composable
-private fun AnalysisBlock(vm: MainViewModel, s: MusicSettings, status: AnalysisStatus) {
+private fun AnalysisBlock(vm: MainViewModel, s: MusicSettings, status: AnalysisStatus, onChooseRange: () -> Unit) {
     Column(Modifier.padding(horizontal = 16.dp)) {
         if (!vm.models.isInstalled(s.whisperModel)) {
             Text(
@@ -439,8 +454,8 @@ private fun AnalysisBlock(vm: MainViewModel, s: MusicSettings, status: AnalysisS
         if (status !is AnalysisStatus.Running) {
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                RetroButton(onClick = { vm.analyzeBook(fromCurrentPosition = true) }) { Text("Ab hier analysieren") }
-                RetroButton(onClick = { vm.analyzeBook(fromCurrentPosition = false) }, style = RetroButtonStyle.SECONDARY) { Text("Ganzes Buch") }
+                RetroButton(onClick = onChooseRange) { Text("Analysieren …") }
+                RetroButton(onClick = { vm.analyzeBook(fromCurrentPosition = true) }, style = RetroButtonStyle.SECONDARY) { Text("Ab meiner Stelle") }
             }
             var clearBook by remember { mutableStateOf(false) }
             TextButton(onClick = { clearBook = true }) { Text("Analyse dieses Buchs löschen …") }
