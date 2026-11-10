@@ -114,6 +114,13 @@ class SceneAnalysisTest {
         val cues = KeywordMoods.cuesOf(text)
         assertTrue(cues.toString(), MusicCue.BATTLE in cues && MusicCue.ROYAL in cues)
         assertEquals(emptyList<MusicCue>(), KeywordMoods.cuesOf("Ein ganz gewöhnlicher Satz."))
+        // A short passage: one hit is enough (the chase in the CI story).
+        assertEquals(
+            listOf(MusicCue.CHASE),
+            KeywordMoods.cuesOf("She jumped up and ran along the shore, faster and faster, while the stranger chased her."),
+        )
+        // A long passage needs the words twice.
+        assertEquals(emptyList<MusicCue>(), KeywordMoods.cuesOf("The stranger chased her. " + "Nothing else happened here. ".repeat(60)))
         assertEquals(Pace.FAST, Pace.of(Mood.ACTION, 2))
         assertEquals(Pace.SLOW, Pace.of(Mood.SAD, 1))
         assertEquals(Pace.MEDIUM, Pace.of(Mood.MYSTERIOUS, 2))

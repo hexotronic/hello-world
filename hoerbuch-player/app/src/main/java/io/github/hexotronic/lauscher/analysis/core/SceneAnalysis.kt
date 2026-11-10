@@ -627,15 +627,22 @@ object KeywordMoods {
         MusicCue.HUMOR to listOf("lachte", "witz", "streich", "kicher", "grinste", "laughed", "joke", "prank", "giggl", "grinned"),
     )
 
-    /** Up to three cues whose words occur at least twice in [text] (fallback without a language model). */
+    /**
+     * Up to three cues whose words occur in [text] (fallback when the language model names none):
+     * in a short passage once is enough, in a long one twice.
+     */
     fun cuesOf(text: String): List<MusicCue> {
         val t = " " + text.lowercase() + " "
+        val needed = if (text.length < SHORT_TEXT) 1 else 2
         return cueWords.mapValues { (_, list) -> list.sumOf { w -> occurrences(t, w) } }
-            .filter { it.value >= 2 }
+            .filter { it.value >= needed }
             .entries.sortedByDescending { it.value }
             .map { it.key }
             .take(ScenePrompt.MAX_CUES)
     }
+
+    /** Shorter passages (a 25-second sample, a short book-text slice) need only one hit per cue. */
+    private const val SHORT_TEXT = 1200
 
     private fun occurrences(text: String, word: String): Int {
         var count = 0

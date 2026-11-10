@@ -69,8 +69,22 @@ fun AnalyzeRangeDialog(
     onDismiss: () -> Unit,
     onStart: (fromMs: Long, untilMs: Long) -> Unit,
 ) {
-    val firstGap = remember(scenes, positionMs) { Timeline.firstGap(scenes, positionMs, durationMs) }
-    var mode by rememberSaveable { mutableStateOf(if (presetFromMs != null) StartAt.TIME else StartAt.POSITION) }
+    // The first part not analysed yet after my position, or else from the beginning.
+    val firstGap = remember(scenes, positionMs) {
+        Timeline.firstGap(scenes, positionMs, durationMs) ?: Timeline.firstGap(scenes, 0L, durationMs)
+    }
+    // Start where there is something to do: my position, else the first gap, else the beginning.
+    val positionDone = remember(scenes, positionMs) { Timeline.coverage(scenes, positionMs, durationMs) >= 0.995f }
+    var mode by rememberSaveable {
+        mutableStateOf(
+            when {
+                presetFromMs != null -> StartAt.TIME
+                !positionDone -> StartAt.POSITION
+                firstGap != null -> StartAt.GAP
+                else -> StartAt.BEGINNING
+            },
+        )
+    }
     var time by rememberSaveable { mutableLongStateOf(presetFromMs ?: positionMs) }
     var chapterIndex by rememberSaveable(chapters.size) { mutableStateOf(chapters.indexOfLast { it.startMs <= positionMs }.coerceAtLeast(0)) }
     var end by rememberSaveable { mutableStateOf(RangeEnd.END) }
