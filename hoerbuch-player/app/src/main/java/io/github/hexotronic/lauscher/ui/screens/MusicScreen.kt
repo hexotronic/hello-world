@@ -733,4 +733,4 @@ const val MUSIC_TAB_NOW = 0
 const val MUSIC_TAB_MUSIC = 1
 const val MUSIC_TAB_AI = 2
 const val MUSIC_TAB_DATA = 3
-private val MUSIC_TABS = listOf("Überblick", "Musik", "KI", "Daten")
+private val MUSIC_TABS = listOf("Jetzt", "Musik", "KI", "Daten")

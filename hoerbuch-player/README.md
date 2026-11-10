@@ -197,7 +197,7 @@ oder **nur für ein bestimmtes Hörbuch** speichern.
 - Voreinstellungen: Klare Sprache, Verrauschte Aufnahme, Altes Tonband, Laute Umgebung, Nachtmodus, Ein Ohrhörer
 
 ### Hintergrundmusik passend zur Szene (lokale KI)
-- **Übersichtlich in Reitern:** *Überblick* (Stimmungskarte, Lautstärke, was die KI gerade macht), *Musik* (Art,
+- **Übersichtlich in Reitern:** *Jetzt* (Stimmungskarte, Lautstärke, was die KI gerade macht), *Musik* (Art,
   wie genau die Musik folgt, Klangquelle, Mischung, Hörproben), *KI* (Szenen-Analyse, Stichproben, Modelle) und
   *Daten* (Rückmeldungen, Löschen); die Musikbibliothek hat *Laden*, *Stücke* und *Herkunft*.
 - **Alles auf dem Handy:** Die Spracherkennung (whisper.cpp) schreibt kurze Ausschnitte des Hörbuchs mit,
