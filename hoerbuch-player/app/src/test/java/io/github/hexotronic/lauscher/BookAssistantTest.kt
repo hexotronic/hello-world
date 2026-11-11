@@ -92,6 +92,9 @@ class BookAssistantTest {
         assertEquals(AssistantAction.NONE, BookAssistant.sanitize("Wer ist eigentlich dieser Aelrin?", search).action)
         assertEquals(AssistantAction.FIND, BookAssistant.sanitize("Wo kommt der Drache vor?", search).action)
         assertEquals(AssistantAction.FIND, BookAssistant.sanitize("Bring mich zur Stelle mit Aelrin", search).action)
+        val next = io.github.hexotronic.lauscher.analysis.core.AssistantReply("Weiter.", AssistantAction.NEXT_CHAPTER)
+        assertEquals(AssistantAction.NONE, BookAssistant.sanitize("Who was following Mira?", next).action)
+        assertEquals(AssistantAction.NEXT_CHAPTER, BookAssistant.sanitize("Kannst du zum nächsten Kapitel springen?", next).action)
         // Written out for the grammar check with llama.cpp.
         System.getProperty("assistantGrammarOut")?.let { java.io.File(it).writeText(g) }
     }

@@ -296,6 +296,7 @@ oder **nur für ein bestimmtes Hörbuch** speichern.
   („mach in einer halben Stunde aus“), Lesezeichen, Tempo („etwas schneller, so 1,2-fach“), Musik an/aus,
   Wiedergabe/Pause. Einfache Befehle erkennt die App sofort ohne Sprachmodell; frei formulierte versteht das
   Modell und antwortet mit einer festen JSON-Form (Grammatik), die App führt sie aus und zeigt, was sie getan hat.
+  Eine Frage zum Buch („Wer …?“, „Warum …?“) löst nie eine Aktion aus, auch wenn ein Modell das vorschlägt.
 - Fragen und Antworten stehen im KI-Protokoll; das Modell bleibt geladen, solange das Fenster offen ist.
 
 ### Sprachmodelle: eigene hinzufügen und vergleichen

@@ -157,7 +157,7 @@ ASKING = re.compile(r"^(wer|wen|wem|wessen|was|warum|wieso|weshalb|wie|welche[rs
 def sanitize(question, rep):
     """As BookAssistant.sanitize: a question about the book does not move the player."""
     q = question.strip()
-    if rep and rep["action"] in ("FIND", "JUMP_TIME", "JUMP_CHAPTER") and q.endswith("?") and ASKING.search(q):
+    if rep and rep["action"] != "NONE" and q.endswith("?") and ASKING.search(q):
         return dict(rep, action="NONE", value="")
     return rep
 

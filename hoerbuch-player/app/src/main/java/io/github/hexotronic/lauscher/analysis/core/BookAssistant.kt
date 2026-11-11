@@ -112,13 +112,13 @@ object BookAssistant {
     private val ASKING = Regex("^(wer|wen|wem|wessen|was|warum|wieso|weshalb|wie|welche[rsmn]?|who|what|why|how|which)\\b", RegexOption.IGNORE_CASE)
 
     /**
-     * A question about the book does not move the player, even if the model chose a jump (models
-     * sometimes answer "Wer ist Aelrin?" with a search for Aelrin).
+     * A question about the book ("Wer …?", "Warum …?") does nothing in the player, whatever the model
+     * chose (models sometimes answer "Wer ist Aelrin?" with a search, a small one even with "next chapter").
      */
     fun sanitize(question: String, reply: AssistantReply): AssistantReply {
         val q = question.trim()
-        val jumps = reply.action in setOf(AssistantAction.FIND, AssistantAction.JUMP_TIME, AssistantAction.JUMP_CHAPTER)
-        return if (jumps && q.endsWith("?") && ASKING.containsMatchIn(q)) reply.copy(action = AssistantAction.NONE, value = "") else reply
+        val asks = q.endsWith("?") && ASKING.containsMatchIn(q)
+        return if (asks && reply.action != AssistantAction.NONE) reply.copy(action = AssistantAction.NONE, value = "") else reply
     }
 
     fun parse(output: String): AssistantReply? {
