@@ -116,21 +116,30 @@ jobs:
         # Normally about a minute; a stuck download or package mirror should fail fast, not eat the job.
         timeout-minutes: 15
         run: |
-          # Short time-outs, and the main Ubuntu archive when the runner's Azure mirror cannot be reached
-          # (seen as "Temporary failure resolving 'azure.archive.ubuntu.com'", or apt hanging without a word).
-          apt_get() { sudo timeout 240 apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 "$@"; }
-          use_main_archive() {
-            echo "::warning::Der Ubuntu-Spiegel des Runners antwortet nicht – nehme archive.ubuntu.com"
-            sudo sed -i 's#mirror+file:/etc/apt/apt-mirrors.txt#http://archive.ubuntu.com/ubuntu/#g' /etc/apt/sources.list.d/*.sources /etc/apt/sources.list 2>/dev/null || true
-            sudo sed -i 's#http://azure.archive.ubuntu.com/ubuntu/#http://archive.ubuntu.com/ubuntu/#g' /etc/apt/apt-mirrors.txt 2>/dev/null || true
-          }
-          timeout 15 getent hosts azure.archive.ubuntu.com > /dev/null || use_main_archive
-          if ! apt_get update -qq > "$RUNNER_TEMP/apt-update.log" 2>&1 || grep -qE "Failed to fetch|Temporary failure resolving" "$RUNNER_TEMP/apt-update.log"; then
-            cat "$RUNNER_TEMP/apt-update.log"
-            use_main_archive
-            apt_get update -qq
+          # The runner's package mirror, then the main Ubuntu archive, then an HTTPS mirror on another
+          # domain – each with short time-outs. (Seen: "Temporary failure resolving 'azure.archive.ubuntu.com'"
+          # and apt hanging without a word for the main archive as well.)
+          apt_get() { sudo timeout 120 apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 "$@"; }
+          installed=0
+          for mirror in "" "http://archive.ubuntu.com/ubuntu/" "https://mirrors.edge.kernel.org/ubuntu/"; do
+            url=${mirror:-http://azure.archive.ubuntu.com/}; host=${url#*://}; host=${host%%/*}
+            if ! timeout 15 getent hosts "$host" > /dev/null; then echo "::warning::$host ist nicht auflösbar"; continue; fi
+            if [ -n "$mirror" ]; then
+              sudo sed -i -E "s#(mirror\+file:/etc/apt/apt-mirrors.txt|https?://[a-z0-9.-]+/ubuntu/?)#${mirror}#g" \
+                /etc/apt/sources.list.d/*.sources /etc/apt/sources.list 2>/dev/null || true
+            fi
+            if apt_get update -qq > "$RUNNER_TEMP/apt.log" 2>&1 && ! grep -qE "Failed to fetch|Temporary failure" "$RUNNER_TEMP/apt.log" \
+              && apt_get install -y -qq flite ffmpeg espeak-ng > /dev/null; then
+              installed=1
+              break
+            fi
+            echo "::warning::Paketquelle ${mirror:-des Runners} geht nicht"
+            tail -5 "$RUNNER_TEMP/apt.log"
+          done
+          if [ "$installed" != 1 ]; then
+            echo "::error::Keine Ubuntu-Paketquelle erreichbar – flite, ffmpeg und espeak-ng fehlen"
+            exit 1
           fi
-          apt_get install -y -qq flite ffmpeg espeak-ng > /dev/null
           mkdir -p e2e
           cat > e2e/story.txt <<'TXT'
           It was a quiet morning at the lake. Mira sat on the wooden pier with a cup of tea and watched the sun rise
