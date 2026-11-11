@@ -255,7 +255,16 @@ class HttpFetchTest {
         assertTrue("$pieceRequests piece requests", pieceRequests >= 3)
 
         var last = 0L
-        assertEquals(big.size.toLong(), HttpFetch.parallelToFile("$base/big", file, "test", { false }, { done, total -> last = done; assertEquals(big.size.toLong(), total) }))
+        var falling = 0
+        assertEquals(
+            big.size.toLong(),
+            HttpFetch.parallelToFile("$base/big", file, "test", { false }, { done, total ->
+                if (done < last) falling++
+                last = done
+                assertEquals(big.size.toLong(), total)
+            }),
+        )
+        assertEquals("progress went back $falling times", 0, falling)
         assertArrayEquals(big, file.readBytes())
         assertEquals(big.size.toLong(), last)
         assertTrue(parts.none { it.exists() })

@@ -171,8 +171,9 @@ object HttpFetch {
             Thread({
                 try {
                     fetchPart(url, part, start, end, userAgent, chunked, headers, chunk, requests, stop) { bytes ->
-                        val now = received.addAndGet(bytes.toLong())
-                        synchronized(lock) { onProgress(now, total) }
+                        // Counted inside the lock, so the reports only grow and the last one is the total
+                        // (counted outside, a part could report an older sum after another's newer one).
+                        synchronized(lock) { onProgress(received.addAndGet(bytes.toLong()), total) }
                     }
                 } catch (t: Throwable) {
                     failure.compareAndSet(null, t)
