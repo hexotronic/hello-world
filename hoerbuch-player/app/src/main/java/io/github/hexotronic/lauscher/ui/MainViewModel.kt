@@ -807,7 +807,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             chatBookId = book.id
             _chat.value = emptyList()
         }
-        val history = _chat.value.mapNotNull { e -> e.answer?.let { AssistantTurn(e.question, it) } }
+        // Only questions make the context for follow-ups; earlier commands would tempt small models to repeat them.
+        val history = _chat.value.mapNotNull { e -> e.answer?.takeIf { e.done == null }?.let { AssistantTurn(e.question, it) } }
         _chat.value = _chat.value + ChatEntry(text)
         _chatBusy.value = true
         viewModelScope.launch {

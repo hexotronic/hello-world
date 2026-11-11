@@ -179,9 +179,10 @@ if [ -n "${E2E_DIR:-}" ] && [ -f "$E2E_DIR/story.wav" ]; then
   # --- "Frag das Buch": a command understood without the model, then a question to the small model
   # about the story that was just analysed (only up to the listening position).
   clear_log
-  start --es assistant_ask "Schlaf-Timer 20 Minuten"
+  # The text goes through the device's shell: quoted again, or only its first word arrives.
+  start --es assistant_ask "'Schlaf-Timer 20 Minuten'"
   sleep 10
-  start --es assistant_ask "Who was following Mira?"
+  start --es assistant_ask "'Who was following Mira?'"
   for i in $(seq 1 60); do
     if adb logcat -d -s LauscherKI:* | grep -qE "Antwort: Antwort nach|Problem: Frag das Buch"; then break; fi
     sleep 3
