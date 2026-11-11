@@ -209,6 +209,8 @@ private fun AnalysisHeader(d: AnalysisTabData, vm: MainViewModel, bookId: Long, 
                     showRange = true
                 }) { Text("Analysieren …") }
                 RetroButton(onClick = { vm.analyzeBookFrom(bookId, d.positionMs) }, style = RetroButtonStyle.SECONDARY) { Text("Ab meiner Stelle") }
+                // Questions refer to the book that is playing (its position decides what may be told).
+                if (d.isCurrent) RetroButton(onClick = { vm.openChat() }, style = RetroButtonStyle.PLAIN) { Text("Frag das Buch …") }
             }
         }
     }

@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.QuestionAnswer
 import androidx.compose.material.icons.filled.ThumbsUpDown
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -128,6 +129,9 @@ fun PlayerScreen(vm: MainViewModel) {
                 },
                 title = { Text("Wiedergabe", style = MaterialTheme.typography.titleMedium) },
                 actions = {
+                    IconButton(onClick = { vm.openChat() }, enabled = book != null) {
+                        Icon(Icons.Filled.QuestionAnswer, contentDescription = "Frag das Buch")
+                    }
                     IconButton(onClick = { vm.navigate(Screen.Music) }) {
                         Icon(Icons.Filled.MusicNote, contentDescription = "Hintergrundmusik")
                     }
@@ -148,6 +152,10 @@ fun PlayerScreen(vm: MainViewModel) {
                                 DropdownMenuItem(text = { Text("Lesezeichen mit Notiz …") }, onClick = {
                                     menu = false
                                     noteDialog = true
+                                })
+                                DropdownMenuItem(text = { Text("Frag das Buch …") }, onClick = {
+                                    menu = false
+                                    vm.openChat()
                                 })
                                 DropdownMenuItem(text = { Text("Was bisher geschah …") }, onClick = {
                                     menu = false

@@ -278,7 +278,41 @@ oder **nur für ein bestimmtes Hörbuch** speichern.
   Text gesucht). Die KI liest dann den echten Text; das spart die Spracherkennung fast ganz, Suche und
   Rückblick nutzen ihn ebenfalls.
 - **Weitere Beschleunigung:** schnelle CPU-Variante (ARMv8.2 dotprod/fp16) mit automatischer Erkennung, nur
-  Leistungskerne, wiederverwendeter KV-Cache, Grammatik nur bei Bedarf; die App zeigt die geschätzte Restzeit an
+  Leistungskerne (nach der Kern-Kapazität des Systems: auf einem Dimensity 8200 wie im Xiaomi 13T die vier
+  Cortex-A78, nicht mehr zusätzlich die vier langsamen A55), wiederverwendeter KV-Cache, Grammatik nur bei Bedarf; die App zeigt die geschätzte Restzeit an
+
+### „Frag das Buch“ – Fragen und Befehle im Nebenfenster
+- Im Player oben (Sprechblase) oder im Reiter „KI-Analyse“: ein Fenster für **Fragen zum Buch** („Wer hat Lena
+  gerettet?“, „Was ist bisher passiert?“, „Wo spielt das gerade?“) und für **Befehle**, die der Player gleich
+  ausführt. Das lokale Sprachmodell antwortet aus dem, was schon mitgeschrieben (oder als Buchtext eingefügt) ist:
+  die App sucht die passenden Stellen (mit Zeitangabe) und gibt sie ihm mit. Rückfragen beziehen sich auf die
+  vorigen Antworten.
+- **Keine Spoiler** (Standard): Nur was bis zur Hörstelle passiert ist, geht an das Modell – der laufende
+  Abschnitt wird genau an der Stelle abgeschnitten, die Zusammenfassung nur benutzt, wenn die Analyse nicht weit
+  vorausgelesen hat. Abschaltbar.
+- **Befehle:** zu einer Zeit („zu 1:20:00“), zu einem Kapitel („Kapitel 3“, „zum Anfang vom zweiten Kapitel“),
+  nächstes/voriges Kapitel, vor/zurück („30 Sekunden zurück“, „ein paar Minuten zurück“), **zur Stelle, wo etwas
+  passiert** („bring mich zur Stelle, wo die Wölfe heulen“ – durchsucht die Mitschrift), Schlaf-Timer
+  („mach in einer halben Stunde aus“), Lesezeichen, Tempo („etwas schneller, so 1,2-fach“), Musik an/aus,
+  Wiedergabe/Pause. Einfache Befehle erkennt die App sofort ohne Sprachmodell; frei formulierte versteht das
+  Modell und antwortet mit einer festen JSON-Form (Grammatik), die App führt sie aus und zeigt, was sie getan hat.
+- Fragen und Antworten stehen im KI-Protokoll; das Modell bleibt geladen, solange das Fenster offen ist.
+
+### Sprachmodelle: eigene hinzufügen und vergleichen
+- **Suche auf Hugging Face in der App** („Auf Hugging Face suchen …“ bei Spracherkennung und Sprachmodell):
+  die meistgeladenen Einträge mit GGUF-Dateien (bzw. ggml-Whisper-Dateien), Downloads, Likes und Größe in
+  Milliarden Parametern; Hinweise bei Nicht-Chat-Modellen und bei Modellen, die eine Anmeldung brauchen. Ein
+  Eintrag zeigt seine Dateien mit Quantisierung (Q4_K_M, IQ4_XS, Q8_0 …), Größe und ob sie **in den
+  Arbeitsspeicher dieses Handys passen**; die beste passende ist als „Empfohlen“ markiert. Teile von
+  aufgeteilten Dateien und Bild-Zusätze (mmproj) werden ausgeblendet. „Laden“ nimmt das Modell in die Liste auf
+  (mit Fortsetzen nach Abbruch), danach „Verwenden“. Weiterhin geht auch eine eigene Datei vom Handy.
+- **„Modelle testen“** (unter den Sprachmodellen): eine eingebaute deutsche Testgeschichte („Die Glut von
+  Weidenbach“, 16 Abschnitte à 2 Minuten mit bekannter Stimmung, Ort, Stärke und Musik-Merkmalen), 8 Fragen
+  (eine davon eine Spoiler-Falle) und 9 Befehle in Alltagssprache – mit denselben Prompts und Grammatiken wie
+  in der App. Ergebnis je installiertem Modell: **Verstehen** in Prozent (Stimmung, Ort, Stärke, Merkmale,
+  Fragen, Befehle), ob es Spoiler verraten hat, Lese- und Schreibtempo (Token/s), Sekunden je Frage und
+  Rechenzeit je Stunde Hörbuch – **gemessen auf dem eigenen Handy**. Kurztest oder ganzer Test.
+- Dieselbe Testgeschichte vergleicht in der CI sieben Modelle auf einem ARM-Rechner (siehe unten).
 
 ### Musikbibliothek nach Stimmung, Ort und Spannung (echte Fantasy-Musik, keine KI)
 Statt des Synthesizers kann die Hintergrundmusik aus **476 handkomponierten Fantasy-Stücken** (rund 1,4 GB, gut
@@ -387,7 +421,14 @@ Die CI baut die APK (inklusive llama.cpp und whisper.cpp für arm64 und x86_64),
 und startet die App anschließend in einem Android-14-Emulator: Demo-Hörbuch abspielen, Screenshots aller
 Hauptseiten, ein Ende-zu-Ende-Test der lokalen KI (synthetische Sprache → Whisper Tiny → Qwen2.5 0.5B →
 Szenen, mit doppelt so schneller Spracherkennung, danach dasselbe Buch mit eingefügtem Buchtext), Laden und
-Abspielen von Stücken der Musikbibliothek (auch einer Schleife) und Prüfung auf Abstürze.
+Abspielen von Stücken der Musikbibliothek (auch einer Schleife), „Frag das Buch“ (ein Befehl ohne und eine
+Frage mit Sprachmodell), der Kurztest „Modelle testen“ und Prüfung auf Abstürze.
+
+Mit „[modelltest]“ in der Commit-Nachricht (oder per Hand gestartet) vergleicht ein weiterer Job die
+Sprachmodelle auf einem ARM-Rechner von GitHub (`.github/scripts/model_bench.py`): llama-server in derselben
+llama.cpp-Version und mit denselben CPU-Befehlen wie die App auf einem Cortex-A78 (ARMv8.2 dotprod+fp16),
+4 Threads, gierig und mit JSON-Grammatik, mit den Prompts und richtigen Antworten der Testgeschichte (vom
+Unit-Test `ModelEvalTest` exportiert). Der Bericht hängt als `model-bench.md` am Release.
 
 ### Schriften
 

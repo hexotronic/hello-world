@@ -176,6 +176,41 @@ if [ -n "${E2E_DIR:-}" ] && [ -f "$E2E_DIR/story.wav" ]; then
     echo "::notice::Beide Abschnitte bekamen dieselbe Musik – kein Szenenwechsel zu verfeinern"
   fi
 
+  # --- "Frag das Buch": a command understood without the model, then a question to the small model
+  # about the story that was just analysed (only up to the listening position).
+  clear_log
+  start --es assistant_ask "Schlaf-Timer 20 Minuten"
+  sleep 10
+  start --es assistant_ask "Who was following Mira?"
+  for i in $(seq 1 60); do
+    if adb logcat -d -s LauscherKI:* | grep -qE "Antwort: Antwort nach|Problem: Frag das Buch"; then break; fi
+    sleep 3
+  done
+  shot 15-frag-das-buch-hell 4
+  adb logcat -d -s LauscherKI:* | grep -E "Frag das Buch|Frage ans Buch|Befehl ohne|Antwort nach|Sprachmodell für Fragen" | cut -c1-260 | tee "$OUT/frag-das-buch.txt"
+  for step in "Befehl ohne Sprachmodell erkannt" "ausgeführt: Schlaf-Timer 20" "Frage: Frage ans Buch" "Antwort: Antwort nach"; do
+    if ! grep -q "$step" "$OUT/frag-das-buch.txt"; then
+      echo "::error::„Frag das Buch“: es fehlt „$step“"
+      E2E_FAILED=1
+    fi
+  done
+  adb shell input keyevent KEYCODE_BACK
+
+  # --- "Modelle testen" (short test) with the small model: understanding and speed on this device.
+  clear_log
+  start --es model_test quick
+  for i in $(seq 1 100); do
+    if adb logcat -d -s LauscherKI:* | grep -qE "Modelltest .*: Verstehen|Modelltest fehlgeschlagen"; then break; fi
+    sleep 6
+  done
+  adb logcat -d -s LauscherKI:* | grep "Modelltest" | cut -c1-300 | tee "$OUT/modelltest.txt"
+  if grep -q "Verstehen" "$OUT/modelltest.txt"; then
+    echo "::notice::$(grep -o 'Modelltest [^:]*: Verstehen.*' "$OUT/modelltest.txt" | tail -1)"
+  else
+    echo "::error::Der Modelltest in der App hat kein Ergebnis geliefert"
+    E2E_FAILED=1
+  fi
+
   # Speech recognition of the same recording at 1×, 1.25×, 1.5× and 2×: time and words recognised.
   clear_log
   start --es speech_check "$DATA/test/story.wav"

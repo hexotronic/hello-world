@@ -582,13 +582,19 @@ private fun ModelSection(vm: MainViewModel, kind: ModelKind, selectedId: String?
             fontSize = 12.sp,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
         )
-        val entries = ModelCatalog.models.filter { it.kind == kind }
+        val userModels by vm.models.userModels.collectAsStateWithLifecycle()
+        val entries = remember(userModels) { vm.models.all(kind) }
         // [changes] is read so the list refreshes after downloads and deletions.
-        val installed = remember(changes) { (entries.map { it.id } + ModelCatalog.customId(kind)).filter { vm.models.isInstalled(it) }.toSet() }
+        val installed = remember(changes, entries) { (entries.map { it.id } + ModelCatalog.customId(kind)).filter { vm.models.isInstalled(it) }.toSet() }
+        var hubOpen by remember { mutableStateOf(false) }
         for (m in entries) {
             ModelRow(
                 title = m.label,
-                description = m.description,
+                description = m.description + if (m.isUserModel) {
+                    " · RAM " + io.github.hexotronic.lauscher.analysis.core.HfModels.fit(m.sizeMb * 1_000_000L, vm.models.totalRamMb).label
+                } else {
+                    ""
+                },
                 sizeText = "${m.sizeMb} MB",
                 installed = m.id in installed,
                 selected = m.id == selectedId,
@@ -614,13 +620,16 @@ private fun ModelSection(vm: MainViewModel, kind: ModelKind, selectedId: String?
                 onDelete = { vm.deleteModel(customId) },
             )
         }
-        RetroButton(
-            onClick = { importLauncher.launch(arrayOf("*/*")) },
-            style = RetroButtonStyle.PLAIN,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-        ) {
-            Text(if (kind == ModelKind.SPEECH) "Eigene ggml-Datei wählen …" else "Eigene GGUF-Datei wählen …")
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            RetroButton(onClick = { hubOpen = true }, style = RetroButtonStyle.SECONDARY) {
+                Text("Auf Hugging Face suchen …")
+            }
+            RetroButton(onClick = { importLauncher.launch(arrayOf("*/*")) }, style = RetroButtonStyle.PLAIN) {
+                Text(if (kind == ModelKind.SPEECH) "ggml-Datei …" else "GGUF-Datei …")
+            }
         }
+        if (hubOpen) ModelHubDialog(vm, kind) { hubOpen = false }
+        if (kind == ModelKind.LANGUAGE) ModelTestPanel(vm, changes)
     }
 }
 

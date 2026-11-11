@@ -53,6 +53,7 @@ import io.github.hexotronic.lauscher.ui.screens.SharedTextDialog
 import io.github.hexotronic.lauscher.ui.screens.SoundStudioScreen
 import io.github.hexotronic.lauscher.ui.screens.StatsScreen
 import io.github.hexotronic.lauscher.ui.screens.AiLogScreen
+import io.github.hexotronic.lauscher.ui.screens.AssistantSheet
 import io.github.hexotronic.lauscher.ui.screens.VoiceScreen
 
 @Composable
@@ -83,6 +84,7 @@ fun LauscherRoot(vm: MainViewModel) {
     }
     val shared by vm.sharedText.collectAsStateWithLifecycle()
     shared?.let { SharedTextDialog(vm, it) }
+    AssistantSheet(vm)
 }
 
 @Composable

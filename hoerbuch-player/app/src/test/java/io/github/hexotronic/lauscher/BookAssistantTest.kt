@@ -58,6 +58,10 @@ class BookAssistantTest {
         assertEquals(AssistantAction.REWIND to "30", d("30 Sekunden zurück")!!.let { it.action to it.value })
         assertEquals(AssistantAction.BOOKMARK, d("Lesezeichen")!!.action)
         assertEquals(AssistantAction.PAUSE, d("Pause")!!.action)
+        // The suggestions of the side window.
+        assertEquals(AssistantAction.SLEEP_TIMER to "20", d("Schlaf-Timer 20 Minuten")!!.let { it.action to it.value })
+        assertEquals(AssistantAction.NEXT_CHAPTER, d("Nächstes Kapitel")!!.action)
+        assertEquals(AssistantAction.REWIND to "30", d("30 Sekunden zurück")!!.let { it.action to it.value })
         // Questions are for the model.
         assertNull(d("Wer hat Lena gerettet?"))
         assertNull(d("Warum ging Lena zurück in den Wald?"))

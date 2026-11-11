@@ -26,6 +26,12 @@ import io.github.hexotronic.lauscher.music.library.LibraryDownload
 import io.github.hexotronic.lauscher.music.library.MusicLibrary
 import io.github.hexotronic.lauscher.music.library.core.LibraryTrack
 import io.github.hexotronic.lauscher.analysis.core.TranscriptWindow
+import io.github.hexotronic.lauscher.analysis.core.AssistantAction
+import io.github.hexotronic.lauscher.analysis.core.AssistantReply
+import io.github.hexotronic.lauscher.analysis.core.AssistantTurn
+import io.github.hexotronic.lauscher.analysis.core.BookAssistant
+import io.github.hexotronic.lauscher.analysis.core.HfFile
+import io.github.hexotronic.lauscher.analysis.core.HfRepo
 import io.github.hexotronic.lauscher.analysis.core.Scene
 import io.github.hexotronic.lauscher.analysis.ModelManager
 import io.github.hexotronic.lauscher.analysis.ModelKind
@@ -325,6 +331,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             "downloads" -> navigate(Screen.Downloads)
             "voice" -> navigate(Screen.Voice)
             "ailog" -> navigate(Screen.AiLog)
+            "assistant" -> {
+                navigate(Screen.Player)
+                openChat()
+            }
             "feedback" -> {
                 openFeedback = true
                 navigate(Screen.Player)
@@ -754,6 +764,200 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (query.isBlank()) return emptyList()
         return repository.searchTranscripts(book.id, query)
     }
+
+    // ---------------------------------------------------------------- "Frag das Buch"
+
+    /** One exchange in the side window; [done] says what the player did, [error] when it failed. */
+    data class ChatEntry(val question: String, val answer: String? = null, val done: String? = null, val error: String? = null)
+
+    private val _chat = MutableStateFlow<List<ChatEntry>>(emptyList())
+    val chat: StateFlow<List<ChatEntry>> = _chat
+    private val _chatBusy = MutableStateFlow(false)
+    val chatBusy: StateFlow<Boolean> = _chatBusy
+    private val _chatOpen = MutableStateFlow(false)
+    val chatOpen: StateFlow<Boolean> = _chatOpen
+    private var chatBookId: Long? = null
+
+    /** Only what was heard up to the position is told (switch off to allow spoilers). */
+    val spoilerFree = MutableStateFlow(true)
+
+    fun openChat() {
+        _chatOpen.value = true
+    }
+
+    fun closeChat() {
+        _chatOpen.value = false
+        app.analysis.releaseAssistant()
+    }
+
+    fun clearChat() {
+        _chat.value = emptyList()
+    }
+
+    /** Asks the book; the answer's action (jump, timer, music …) is carried out at once. */
+    fun ask(question: String) {
+        val text = question.trim()
+        if (text.isEmpty() || _chatBusy.value) return
+        val np = nowPlaying.value
+        val book = np.book ?: run {
+            toast("Kein Hörbuch geladen")
+            return
+        }
+        if (chatBookId != book.id) {
+            chatBookId = book.id
+            _chat.value = emptyList()
+        }
+        val history = _chat.value.mapNotNull { e -> e.answer?.let { AssistantTurn(e.question, it) } }
+        _chat.value = _chat.value + ChatEntry(text)
+        _chatBusy.value = true
+        viewModelScope.launch {
+            val result = app.analysis.ask(book.id, np.positionMs, text, history, spoilerFree.value)
+            val entry = result.fold(
+                onSuccess = { reply -> ChatEntry(text, reply.answer, perform(reply, book.id)) },
+                onFailure = { e -> ChatEntry(text, error = e.message ?: "Fehler") },
+            )
+            _chat.value = _chat.value.dropLast(1) + entry
+            _chatBusy.value = false
+            entry.done?.let { app.aiLog.add(io.github.hexotronic.lauscher.analysis.core.AiStep.INFO, "Frag das Buch ausgeführt: $it", null, book.id) }
+            entry.error?.let { app.aiLog.add(io.github.hexotronic.lauscher.analysis.core.AiStep.PROBLEM, "Frag das Buch: $it", null, book.id) }
+        }
+    }
+
+    /** For adb: loads the last book first if none is playing, then asks. */
+    fun askSoon(question: String) {
+        viewModelScope.launch {
+            if (nowPlaying.value.book == null) {
+                lastBook.value?.let { playBook(it.id, openPlayer = true) }
+                withTimeoutOrNull(20_000) { nowPlaying.first { it.book != null } }
+            }
+            openChat()
+            ask(question)
+        }
+    }
+
+    /** Carries out what the assistant wants; returns what happened, for the chat. */
+    private suspend fun perform(reply: AssistantReply, bookId: Long): String? {
+        if (reply.action == AssistantAction.NONE) return null
+        val core = awaitCore() ?: return "Wiedergabedienst nicht erreichbar"
+        val np = nowPlaying.value
+        val n = reply.number
+        return when (reply.action) {
+            AssistantAction.NONE -> null
+            AssistantAction.PLAY -> core.play().let { "Wiedergabe läuft" }
+            AssistantAction.PAUSE -> core.pause().let { "Pausiert" }
+            AssistantAction.REWIND -> n?.let {
+                core.seekBy(-(it * 1000).toLong())
+                "${it.toInt()} s zurück"
+            } ?: core.rewind().let { "Zurückgespult" }
+            AssistantAction.FORWARD -> n?.let {
+                core.seekBy((it * 1000).toLong())
+                "${it.toInt()} s vor"
+            } ?: core.forward().let { "Vorgespult" }
+            AssistantAction.JUMP_TIME -> BookAssistant.parseTime(reply.value)?.takeIf { np.durationMs <= 0 || it <= np.durationMs }?.let {
+                core.seekTo(it)
+                "Zu ${formatClock(it)} gesprungen"
+            } ?: "Diese Zeit gibt es im Buch nicht"
+            AssistantAction.JUMP_CHAPTER -> n?.toInt()?.let { number ->
+                if (number in 1..np.chapters.size) {
+                    core.jumpToChapter(number - 1)
+                    "Kapitel $number: ${np.chapters[number - 1].title}"
+                } else {
+                    "Das Buch hat ${np.chapters.size} Kapitel"
+                }
+            } ?: "Welches Kapitel?"
+            AssistantAction.NEXT_CHAPTER -> core.nextChapter().let { "Nächstes Kapitel" }
+            AssistantAction.PREVIOUS_CHAPTER -> core.previousChapter().let { "Voriges Kapitel" }
+            AssistantAction.FIND -> {
+                val hit = BookAssistant.find(reply.value, repository.transcripts(bookId))
+                if (hit != null) {
+                    core.seekTo(hit.startMs)
+                    "Zu ${formatClock(hit.startMs)} gesprungen"
+                } else {
+                    "Keine Stelle mit „${reply.value}“ gefunden – nur schon analysierte Teile lassen sich durchsuchen"
+                }
+            }
+            AssistantAction.SLEEP_TIMER -> {
+                val minutes = n?.toInt()?.coerceIn(1, 240) ?: app.settings.current.sleepDefaultMinutes
+                core.startSleepTimer(minutes)
+                "Schlaf-Timer $minutes Min."
+            }
+            AssistantAction.SLEEP_OFF -> core.cancelSleepTimer().let { "Schlaf-Timer aus" }
+            AssistantAction.BOOKMARK -> core.addBookmark(reply.value.ifBlank { "Frag das Buch" })?.let { "Lesezeichen gesetzt" } ?: "Lesezeichen ging nicht"
+            AssistantAction.SPEED -> n?.takeIf { it in 0.5f..3f }?.let {
+                core.setSpeed(it)
+                "Tempo ${"%.2f".format(it).trimEnd('0').trimEnd(',', '.')}×"
+            } ?: "Tempo zwischen 0,5 und 3"
+            AssistantAction.MUSIC_ON -> updateMusic { it.copy(enabled = true) }.let { "Hintergrundmusik an" }
+            AssistantAction.MUSIC_OFF -> updateMusic { it.copy(enabled = false) }.let { "Hintergrundmusik aus" }
+        }
+    }
+
+    private fun formatClock(ms: Long): String = io.github.hexotronic.lauscher.analysis.core.ScenePrompt.clock(ms)
+
+    // ---------------------------------------------------------------- models from Hugging Face
+
+    data class HubState(
+        val query: String = "",
+        val searching: Boolean = false,
+        val repos: List<HfRepo> = emptyList(),
+        val repo: HfRepo? = null,
+        val files: List<HfFile> = emptyList(),
+        val loadingFiles: Boolean = false,
+        val error: String? = null,
+    )
+
+    private val _hub = MutableStateFlow(HubState())
+    val hub: StateFlow<HubState> = _hub
+
+    fun hubSearch(query: String, kind: ModelKind) {
+        _hub.value = HubState(query = query, searching = true)
+        viewModelScope.launch {
+            _hub.value = runCatching { app.models.searchHub(query, kind) }.fold(
+                onSuccess = { HubState(query = query, repos = it, error = if (it.isEmpty()) "Nichts gefunden" else null) },
+                onFailure = { HubState(query = query, error = it.message ?: "Keine Verbindung zu Hugging Face") },
+            )
+        }
+    }
+
+    fun hubOpen(repo: HfRepo?, kind: ModelKind) {
+        if (repo == null) {
+            _hub.value = _hub.value.copy(repo = null, files = emptyList(), error = null)
+            return
+        }
+        _hub.value = _hub.value.copy(repo = repo, files = emptyList(), loadingFiles = true, error = null)
+        viewModelScope.launch {
+            val r = runCatching { app.models.hubFiles(repo.id, kind) }
+            _hub.value = _hub.value.copy(
+                files = r.getOrDefault(emptyList()),
+                loadingFiles = false,
+                error = r.exceptionOrNull()?.message ?: if (r.getOrNull().isNullOrEmpty()) {
+                    if (kind == ModelKind.SPEECH) "Keine ggml-Whisper-Datei in diesem Eintrag" else "Keine passende GGUF-Datei in diesem Eintrag"
+                } else {
+                    null
+                },
+            )
+        }
+    }
+
+    /** Adds the file to the model list and downloads it. */
+    fun hubAdd(kind: ModelKind, repo: HfRepo, file: HfFile) {
+        val info = app.models.addUserModel(kind, repo, file)
+        downloadModel(info)
+        toast("${info.label} wird geladen")
+    }
+
+    // ---------------------------------------------------------------- model test
+
+    val evalResults get() = app.analysis.evalResults
+    val evalProgress get() = app.analysis.evalProgress
+
+    fun evaluateModels(ids: List<String>, quick: Boolean) = app.analysis.evaluate(ids, quick)
+
+    fun installedLanguageModels(): List<String> =
+        (app.models.all(ModelKind.LANGUAGE).map { it.id } + io.github.hexotronic.lauscher.analysis.ModelCatalog.customId(ModelKind.LANGUAGE))
+            .filter { app.models.isInstalled(it) }
+
+    fun cancelEvaluation() = app.analysis.cancelEvaluation()
 
     // ---------------------------------------------------------------- backup
 

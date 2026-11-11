@@ -111,6 +111,13 @@ class MainActivity : ComponentActivity() {
         intent.getStringExtra(EXTRA_PRESET)?.let { name ->
             EnhancerPreset.entries.firstOrNull { it.name == name }?.let(vm::applyPreset)
         }
+        // "Frag das Buch" and the model test from adb (CI): a question or command, or "quick"/"full".
+        intent.getStringExtra(EXTRA_MODEL_TEST)?.let { mode -> vm.evaluateModels(vm.installedLanguageModels(), quick = mode != "full") }
+        intent.getStringExtra(EXTRA_ASSISTANT_ASK)?.let { question ->
+            vm.navigate(Screen.Player)
+            vm.askSoon(question)
+            return
+        }
         intent.getStringExtra(EXTRA_SCREEN)?.let { screen ->
             vm.openScreen(screen)
             return
@@ -163,6 +170,8 @@ class MainActivity : ComponentActivity() {
         const val EXTRA_OPEN_PLAYER = "open_player"
         const val EXTRA_DEMO = "demo"
         const val EXTRA_SCREEN = "screen"
+        const val EXTRA_ASSISTANT_ASK = "assistant_ask"
+        const val EXTRA_MODEL_TEST = "model_test"
         const val EXTRA_PRESET = "preset"
         const val EXTRA_MUSIC = "music"
         const val EXTRA_WHISPER_MODEL = "whisper_model"
