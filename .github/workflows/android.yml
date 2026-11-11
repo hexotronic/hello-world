@@ -14,8 +14,10 @@ on:
 permissions:
   contents: write
 
+# A newer push cancels the older build of the branch; a model comparison ("[modelltest]") runs in a
+# group of its own, so later pushes do not cut its hour of measuring short.
 concurrency:
-  group: lauscher-${{ github.ref }}
+  group: lauscher-${{ github.ref }}-${{ contains(github.event.head_commit.message, '[modelltest]') && github.sha || 'build' }}
   cancel-in-progress: true
 
 jobs:
