@@ -86,6 +86,9 @@ class ModelEvalTest {
         assertTrue(ModelEval.commandRight(ModelEval.commands[7], AssistantReply("", AssistantAction.JUMP_TIME, "25")))
         assertTrue(ModelEval.commandRight(ModelEval.commands[2], AssistantReply("", AssistantAction.REWIND, "120")))
         assertFalse(ModelEval.commandRight(ModelEval.commands[2], AssistantReply("", AssistantAction.REWIND, "10")))
+        assertTrue(ModelEval.commandRight(ModelEval.commands[2], AssistantReply("", AssistantAction.REWIND, "300")))
+        assertTrue(ModelEval.commandRight(ModelEval.commands[3], AssistantReply("", AssistantAction.SPEED, "1.25")))
+        assertFalse(ModelEval.commandRight(ModelEval.commands[3], AssistantReply("", AssistantAction.SPEED, "1.5")))
     }
 
     @Test
@@ -108,6 +111,10 @@ class ModelEvalTest {
         val root = MiniJson.parse(json) as Map<*, *>
         val calls = (root["scene"] as Map<*, *>)["calls"] as List<*>
         assertEquals(2, calls.size)
+        val four = ((root["scene"] as Map<*, *>)["batches"] as Map<*, *>)["4"] as List<*>
+        assertEquals(4, four.size)
+        assertEquals(listOf(0..3, 4..7, 8..11, 12..15), ModelEval.batches(quick = false, size = 4))
+        assertEquals(listOf(0..7), ModelEval.batches(quick = true))
         val assistant = root["assistant"] as Map<*, *>
         assertEquals(ModelEval.questions.size, (assistant["questions"] as List<*>).size)
         assertTrue("\"windowsPerHour\":30" in json)

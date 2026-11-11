@@ -56,23 +56,42 @@ object ModelCatalog {
             "Genauer, braucht aber deutlich mehr Rechenzeit",
             WHISPER + "ggml-small-q5_1.bin", "ggml-small-q5_1.bin", 190,
         ),
+        // Language models, ordered by the model comparison in CI (German test story; see README).
+        ModelInfo(
+            "qwen3-1.7b", ModelKind.LANGUAGE, "Qwen3 1.7B",
+            "Empfohlen: versteht im Test fast so gut wie Qwen2.5 3B und ist so schnell wie ein mittleres Modell (ab 4 GB RAM)",
+            "https://huggingface.co/unsloth/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q4_K_M.gguf",
+            "Qwen3-1.7B-Q4_K_M.gguf", 1110,
+        ),
+        ModelInfo(
+            "qwen3-4b-2507", ModelKind.LANGUAGE, "Qwen3 4B Instruct 2507",
+            "Versteht am besten – Szenen, Fragen und Befehle; braucht etwa doppelt so lange wie Qwen2.5 3B (ab 8 GB RAM)",
+            "https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF/resolve/main/Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+            "Qwen3-4B-Instruct-2507-Q4_K_M.gguf", 2500,
+        ),
+        ModelInfo(
+            "gemma3-4b", ModelKind.LANGUAGE, "Gemma 3 4B",
+            "Ebenso gut, trifft die Musik-Merkmale am besten; etwas schneller als Qwen3 4B (ab 8 GB RAM, Gemma-Nutzungsbedingungen)",
+            "https://huggingface.co/unsloth/gemma-3-4b-it-GGUF/resolve/main/gemma-3-4b-it-Q4_K_M.gguf",
+            "gemma-3-4b-it-Q4_K_M.gguf", 2490,
+        ),
+        ModelInfo(
+            "qwen2.5-3b", ModelKind.LANGUAGE, "Qwen2.5 3B Instruct",
+            "Gute Szenen und Antworten, versteht Befehle aber schlechter als die neuen Modelle (ab 6 GB RAM)",
+            "https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf",
+            "qwen2.5-3b-instruct-q4_k_m.gguf", 2100,
+        ),
         ModelInfo(
             "qwen2.5-1.5b", ModelKind.LANGUAGE, "Qwen2.5 1.5B Instruct",
-            "Empfohlen: versteht Deutsch gut und läuft auf den meisten Handys (ab 4 GB RAM)",
+            "Älter: beantwortet Fragen ordentlich, verwechselt aber oft Szenen (ab 4 GB RAM)",
             "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf",
             "qwen2.5-1.5b-instruct-q4_k_m.gguf", 1120,
         ),
         ModelInfo(
             "qwen2.5-0.5b", ModelKind.LANGUAGE, "Qwen2.5 0.5B Instruct",
-            "Klein und schnell, die Szenenwahl ist aber grober",
+            "Sehr klein und schnell, aber nur für einfache Fälle",
             "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf",
             "qwen2.5-0.5b-instruct-q4_k_m.gguf", 400,
-        ),
-        ModelInfo(
-            "qwen2.5-3b", ModelKind.LANGUAGE, "Qwen2.5 3B Instruct",
-            "Beste Ergebnisse, für starke Handys (ab 8 GB RAM)",
-            "https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf",
-            "qwen2.5-3b-instruct-q4_k_m.gguf", 2100,
         ),
     )
 

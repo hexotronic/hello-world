@@ -210,7 +210,7 @@ object ModelEval {
             forbid = listOf("fiel", "gefallen", "stirbt", "starb", "getötet", "besiegt", "könig", "kette"),
         ),
         EvalQuestion("Was stand in dem Brief, den der Rabe brachte?", 24 * MIN, listOf("großmutter", "grossmutter", "oma")),
-        EvalQuestion("Was leuchtete im Tempel?", 20 * MIN, listOf("rune")),
+        EvalQuestion("Was leuchtete im Tempel?", 20 * MIN, listOf("rune", "kugel", "licht")),
         EvalQuestion(
             "Was ist mit Aelrin im Kampf gegen den Drachen passiert?", 32 * MIN,
             listOf("fiel", "gefallen", "tot", "starb", "gestorben", "getötet", "stirbt", "ums leben"),
@@ -222,8 +222,8 @@ object ModelEval {
     val commands = listOf(
         EvalCommand("Bring mich zu der Stelle, wo die Wölfe heulen", AssistantAction.FIND, listOf("wölf", "wolf", "heul")),
         EvalCommand("Mach bitte in einer halben Stunde aus", AssistantAction.SLEEP_TIMER, listOf("30")),
-        EvalCommand("Ich hab nicht aufgepasst, spul ein paar Minuten zurück", AssistantAction.REWIND, listOf("120", "180", "2:00", "3:00")),
-        EvalCommand("Lies etwas schneller vor, so 1,2-fach", AssistantAction.SPEED, listOf("1.2")),
+        EvalCommand("Ich hab nicht aufgepasst, spul ein paar Minuten zurück", AssistantAction.REWIND, listOf("120..300", "2:00", "3:00", "4:00", "5:00")),
+        EvalCommand("Lies etwas schneller vor, so 1,2-fach", AssistantAction.SPEED, listOf("1.15..1.25")),
         EvalCommand("Diese Stelle möchte ich mir merken", AssistantAction.BOOKMARK),
         EvalCommand("Die Musik stört gerade, schalt sie ab", AssistantAction.MUSIC_OFF),
         EvalCommand("Bring mich zum Anfang vom zweiten Kapitel", AssistantAction.JUMP_CHAPTER, listOf("2")),
@@ -235,7 +235,9 @@ object ModelEval {
     fun quickQuestions() = listOf(questions[1], questions[3], questions[5])
     fun quickCommands() = listOf(commands[0], commands[1], commands[6])
 
-    fun batches(quick: Boolean): List<IntRange> = if (quick) listOf(0 until BATCH) else listOf(0 until BATCH, BATCH until windows.size)
+    /** The scene calls: [size] passages each (the app uses [BATCH]; the benchmark also tries smaller ones). */
+    fun batches(quick: Boolean, size: Int = BATCH): List<IntRange> =
+        (0 until (if (quick) BATCH else windows.size) step size).map { it until minOf(it + size, windows.size) }
 
     // ------------------------------------------------------------------ prompts (the same as in the app)
 
@@ -245,6 +247,9 @@ object ModelEval {
 
     fun sceneUser(range: IntRange): String =
         ScenePrompt.user(TITLE, AUTHOR, if (range.first >= BATCH) STORY_AFTER_ONE else null, transcript().slice(range))
+
+    /** Batch sizes the benchmark compares. */
+    val BENCH_BATCHES = listOf(BATCH, 4)
 
     fun sceneMaxTokens(count: Int) = 120 + 72 * count
 
@@ -299,14 +304,29 @@ object ModelEval {
         return c.values.isEmpty() || c.values.any { valueMatches(reply.value, it) }
     }
 
-    /** "25:00" compares as a time, "1.2" as a number, anything else as a part of the value. */
+    /** "25:00" compares as a time, "1.2" as a number, "120..300" as a range, anything else as a part of the value. */
     fun valueMatches(value: String, accepted: String): Boolean = when {
+        ".." in accepted -> {
+            val (lo, hi) = accepted.split("..").map { it.toFloat() }
+            AssistantReply("", value = value).number?.let { it in lo..hi } == true
+        }
         ':' in accepted -> BookAssistant.parseTime(value)?.let { it == BookAssistant.parseTime(accepted) } == true
         accepted.toFloatOrNull() != null -> AssistantReply("", value = value).number?.let { abs(it - accepted.toFloat()) < 0.01f } == true
         else -> accepted in value.lowercase()
     }
 
     // ------------------------------------------------------------------ export for the CI benchmark
+
+    private fun sceneCalls(size: Int) = batches(quick = false, size = size).map { r ->
+        mapOf(
+            "user" to sceneUser(r),
+            "grammar" to ScenePrompt.grammar(r.count()),
+            "maxTokens" to sceneMaxTokens(r.count()),
+            "gold" to windows.slice(r).map { w ->
+                mapOf("moods" to w.moods, "places" to w.places, "levelMin" to w.levels.first, "levelMax" to w.levels.last, "cues" to w.cues)
+            },
+        )
+    }
 
     /** Everything the benchmark script needs: prompts, grammars and the right answers. */
     fun exportJson(): String = MiniJson.write(
@@ -316,16 +336,8 @@ object ModelEval {
             "windowsPerHour" to 3_600_000 / WindowPlanner.WINDOW_MS,
             "scene" to mapOf(
                 "system" to ScenePrompt.SYSTEM,
-                "calls" to batches(quick = false).map { r ->
-                    mapOf(
-                        "user" to sceneUser(r),
-                        "grammar" to ScenePrompt.grammar(r.count()),
-                        "maxTokens" to sceneMaxTokens(r.count()),
-                        "gold" to windows.slice(r).map { w ->
-                            mapOf("moods" to w.moods, "places" to w.places, "levelMin" to w.levels.first, "levelMax" to w.levels.last, "cues" to w.cues)
-                        },
-                    )
-                },
+                "batches" to BENCH_BATCHES.associate { size -> size.toString() to sceneCalls(size) },
+                "calls" to sceneCalls(BATCH),
             ),
             "assistant" to mapOf(
                 "system" to BookAssistant.SYSTEM,

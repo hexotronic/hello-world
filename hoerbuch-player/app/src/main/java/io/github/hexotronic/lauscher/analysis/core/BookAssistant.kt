@@ -53,6 +53,8 @@ object BookAssistant {
 
         action: what to do in the player, or NONE to only answer:
         ${AssistantAction.entries.joinToString("\n        ") { "${it.name} = ${it.hint}" }}
+        A question about the book (who, what, why, how …) always gets NONE, even when it names a passage;
+        use an action only when the listener asks the player to do something.
         value: the value the action needs, else "".
         answer: your answer; for an action a short confirmation of what you do.
         Answer with JSON only.
@@ -99,10 +101,24 @@ object BookAssistant {
         append("root ::= \"{\" ws \"\\\"action\\\":\" ws action ws \",\" ws \"\\\"value\\\":\" ws value ws \",\" ws ")
         append("\"\\\"answer\\\":\" ws answer ws \"}\"\n")
         append("action ::= ").append(AssistantAction.entries.joinToString(" | ") { "\"\\\"${it.name}\\\"\"" }).append('\n')
-        append("value ::= \"\\\"\" char{0,40} \"\\\"\"\n")
+        // Values are times, numbers or a few words: no braces or other scripts a confused model drifts into.
+        append("value ::= \"\\\"\" [0-9A-Za-zÄÖÜäöüß :.,-]{0,32} \"\\\"\"\n")
         append("answer ::= \"\\\"\" char{1,600} \"\\\"\"\n")
         append("char ::= [^\"\\\\\\x00-\\x1F] | \"\\\\\" [\"\\\\/nt]\n")
         append("ws ::= [ \\n]{0,2}\n")
+    }
+
+    /** Words that start a question about the book (not "wo", which may mean "take me where …"). */
+    private val ASKING = Regex("^(wer|wen|wem|wessen|was|warum|wieso|weshalb|wie|welche[rsmn]?|who|what|why|how|which)\\b", RegexOption.IGNORE_CASE)
+
+    /**
+     * A question about the book does not move the player, even if the model chose a jump (models
+     * sometimes answer "Wer ist Aelrin?" with a search for Aelrin).
+     */
+    fun sanitize(question: String, reply: AssistantReply): AssistantReply {
+        val q = question.trim()
+        val jumps = reply.action in setOf(AssistantAction.FIND, AssistantAction.JUMP_TIME, AssistantAction.JUMP_CHAPTER)
+        return if (jumps && q.endsWith("?") && ASKING.containsMatchIn(q)) reply.copy(action = AssistantAction.NONE, value = "") else reply
     }
 
     fun parse(output: String): AssistantReply? {

@@ -653,7 +653,8 @@ class AnalysisManager(
                     currentLlm = null
                 }
                 log.add(AiStep.ANSWER, "Antwort nach ${"%.1f".format((System.nanoTime() - asked) / 1e9)} s", output, bookId, positionMs)
-                output?.let { BookAssistant.parse(it) } ?: error("Das Sprachmodell hat keine verwertbare Antwort gegeben")
+                output?.let { BookAssistant.parse(it) }?.let { BookAssistant.sanitize(question, it) }
+                    ?: error("Das Sprachmodell hat keine verwertbare Antwort gegeben")
             }
         }
     }
@@ -790,7 +791,7 @@ class AnalysisManager(
                 progress(++step)
                 val (out, sec) = timed(BookAssistant.SYSTEM, ModelEval.assistantUser(c.text, c.positionMs), BookAssistant.grammar(), ModelEval.ASSISTANT_MAX_TOKENS, cold = false)
                 askSeconds += sec
-                if (ModelEval.commandRight(c, out?.let { BookAssistant.parse(it) })) done++
+                if (ModelEval.commandRight(c, out?.let { BookAssistant.parse(it) }?.let { BookAssistant.sanitize(c.text, it) })) done++
             }
             fun share(a: Int, b: Int) = if (b == 0) 0f else a.toFloat() / b
             return EvalReport(

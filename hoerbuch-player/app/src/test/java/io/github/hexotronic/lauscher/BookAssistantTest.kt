@@ -87,6 +87,11 @@ class BookAssistantTest {
         assertEquals(25f, r.number)
         assertEquals("Der Elf Aelrin.", BookAssistant.parse("""{"action":"NONE","value":"","answer":"Der Elf Aelrin."}""")!!.answer)
         assertNull(BookAssistant.parse("kein json"))
+        // A question does not move the player; a request does.
+        val search = io.github.hexotronic.lauscher.analysis.core.AssistantReply("Ich suche …", AssistantAction.FIND, "Aelrin")
+        assertEquals(AssistantAction.NONE, BookAssistant.sanitize("Wer ist eigentlich dieser Aelrin?", search).action)
+        assertEquals(AssistantAction.FIND, BookAssistant.sanitize("Wo kommt der Drache vor?", search).action)
+        assertEquals(AssistantAction.FIND, BookAssistant.sanitize("Bring mich zur Stelle mit Aelrin", search).action)
         // Written out for the grammar check with llama.cpp.
         System.getProperty("assistantGrammarOut")?.let { java.io.File(it).writeText(g) }
     }

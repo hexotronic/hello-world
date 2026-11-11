@@ -201,7 +201,7 @@ oder **nur für ein bestimmtes Hörbuch** speichern.
   wie genau die Musik folgt, Klangquelle, Mischung, Hörproben), *KI* (Szenen-Analyse, Stichproben, Modelle) und
   *Daten* (Rückmeldungen, Löschen); die Musikbibliothek hat *Laden*, *Stücke* und *Herkunft*.
 - **Alles auf dem Handy:** Die Spracherkennung (whisper.cpp) schreibt kurze Ausschnitte des Hörbuchs mit,
-  ein **lokales Sprachmodell** (llama.cpp, z. B. Qwen2.5 1.5B) liest den Text, versteht die Szene und entscheidet,
+  ein **lokales Sprachmodell** (llama.cpp, z. B. Qwen3 1.7B oder Qwen3 4B) liest den Text, versteht die Szene und entscheidet,
   **ob** und **welche** Musik passt – ruhig, spannend, traurig, fröhlich, geheimnisvoll, dramatisch, romantisch,
   gruselig, idyllisch oder neutral. Nichts wird hochgeladen, keine API-Schlüssel, keine Kosten.
 - Die Modelle werden einmal in der App heruntergeladen (Whisper ab 32 MB, Sprachmodell ab 400 MB) oder als
