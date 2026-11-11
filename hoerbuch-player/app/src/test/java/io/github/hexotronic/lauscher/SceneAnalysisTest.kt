@@ -119,6 +119,11 @@ class SceneAnalysisTest {
             listOf(MusicCue.CHASE),
             KeywordMoods.cuesOf("She jumped up and ran along the shore, faster and faster, while the stranger chased her."),
         )
+        // Words inside other words are no cues (German "war", "gleiche", "aufregend", "begeistert"; "looking", "held her").
+        assertEquals(
+            emptyList<MusicCue>(),
+            KeywordMoods.cuesOf("Es war gleich so aufregend, er war begeistert. She was looking at him and held her cup."),
+        )
         // A long passage needs the words twice.
         assertEquals(emptyList<MusicCue>(), KeywordMoods.cuesOf("The stranger chased her. " + "Nothing else happened here. ".repeat(60)))
         assertEquals(Pace.FAST, Pace.of(Mood.ACTION, 2))

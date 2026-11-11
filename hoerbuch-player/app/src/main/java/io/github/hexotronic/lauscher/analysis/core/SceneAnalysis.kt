@@ -606,25 +606,27 @@ object KeywordMoods {
         return best.key.takeIf { best.value >= 2 }
     }
 
+    // Word starts with a leading space where a shorter piece would also match inside other words
+    // ("king" in "looking", "leiche" in "gleiche", "regen" in "aufregend", German "war" = was).
     private val cueWords: Map<MusicCue, List<String>> = mapOf(
-        MusicCue.BATTLE to listOf("kampf", "kämpf", "schwert", "schlacht", "krieg", "angriff", "duell", "fight", "sword", "battle", "war ", "attack", "duel"),
-        MusicCue.CHASE to listOf("verfolg", "flucht", "floh", "rannte", "jagte", "entkam", "chase", "escape", "fled", "pursu", "ran after"),
-        MusicCue.DANGER to listOf("gefahr", "bedroh", "hinterhalt", "lauer", "monster", "bestie", "danger", "threat", "ambush", "beast"),
-        MusicCue.HORROR to listOf("geist", "gespenst", "untot", "leiche", "blut", "albtraum", "ghost", "undead", "corpse", "blood", "nightmare"),
-        MusicCue.MYSTERY to listOf("geheimnis", "rätsel", "ruine", "verborgen", "entdeck", "secret", "riddle", "ruin", "hidden", "discover"),
-        MusicCue.MAGIC to listOf("magie", "zauber", "magier", "hexe", "fee ", "feen", "elf ", "elfen", "magic", "spell", "wizard", "witch", "fairy", "fairies"),
-        MusicCue.GRIEF to listOf("trauer", "starb", "tod ", "beerdig", "begräb", "weinte", "verzweif", "grief", "died", "death", "funeral", "wept", "despair"),
-        MusicCue.LOVE to listOf("liebe", "kuss", "küsste", "zärtlich", "sehnsucht", "love", "kiss", "tender", "longing"),
-        MusicCue.FEAST to listOf("fest ", "feier", "taverne", "gasthaus", "tanz", "markt", "musikanten", "feast", "celebrat", "tavern", "inn ", "dance", "market"),
-        MusicCue.VICTORY to listOf("sieg", "triumph", "gerettet", "jubel", "held ", "victory", "triumph", "rescued", "cheer", "hero"),
-        MusicCue.JOURNEY to listOf("reise", "aufbruch", "wanderte", "unterwegs", "straße", "pfad", "journey", "travel", "set out", "road", "path"),
-        MusicCue.NATURE to listOf("wald", "wiese", "feld", "tiere", "vögel", "blumen", "forest", "meadow", "field", "animals", "birds", "flowers"),
-        MusicCue.NIGHT to listOf("nacht", "dunkel", "mond", "sterne", "schlief", "traum", "night", "dark", "moon", "stars", "slept", "dream"),
-        MusicCue.WATER to listOf("meer", "fluss", "schiff", "regen", "hafen", "welle", "sea ", "river", "ship", "rain", "harbour", "harbor", "wave"),
-        MusicCue.ROYAL to listOf("könig", "königin", "prinz", "hof ", "palast", "thron", "king", "queen", "prince", "court", "palace", "throne"),
-        MusicCue.SACRED to listOf("tempel", "kirche", "gebet", "priester", "götter", "heilig", "temple", "church", "prayer", "priest", "gods", "holy"),
-        MusicCue.HOME to listOf("zuhause", "familie", "kamin", "stube", "mutter", "vater", "home", "family", "fireplace", "mother", "father"),
-        MusicCue.HUMOR to listOf("lachte", "witz", "streich", "kicher", "grinste", "laughed", "joke", "prank", "giggl", "grinned"),
+        MusicCue.BATTLE to listOf("kampf", "kämpf", "schwert", "schlacht", "krieg", "angriff", "duell", "fight", "sword", "battle", "warrior", "attack", " duel"),
+        MusicCue.CHASE to listOf("verfolg", "flucht", " floh ", "rannte", "jagte", "entkam", "chase", "escape", " fled", "pursu", "ran after"),
+        MusicCue.DANGER to listOf("gefahr", "bedroh", "hinterhalt", " lauert", "monster", "bestie", "danger", "threat", "ambush", " beast"),
+        MusicCue.HORROR to listOf(" geist", "gespenst", "untot", " leiche", " blut", "albtraum", "ghost", "undead", "corpse", "blood", "nightmare"),
+        MusicCue.MYSTERY to listOf("geheimnis", "rätsel", " ruine", "verborgen", "entdeck", "secret", "riddle", " ruin", "hidden", "discover"),
+        MusicCue.MAGIC to listOf("magie", "zauber", "magier", " hexe", " feen", "elfen", "magic", " spell", "wizard", " witch", "fairy", "fairies"),
+        MusicCue.GRIEF to listOf("trauer", "starb", " tod ", "beerdig", "begräb", "weinte", "verzweif", "grief", " died", "death", "funeral", " wept", "despair"),
+        MusicCue.LOVE to listOf(" liebe ", " liebte", " kuss", "küsste", "zärtlich", "sehnsucht", " love", " kiss", "tenderly", "longing"),
+        MusicCue.FEAST to listOf(" feier", "festmahl", "taverne", "gasthaus", " tanz", " markt", "musikanten", "feast", "celebrat", "tavern", " inn ", " danc", "market"),
+        MusicCue.VICTORY to listOf(" sieg", "triumph", "gerettet", "jubel", "helden", "victory", "rescued", "cheer", " hero"),
+        MusicCue.JOURNEY to listOf(" reise", "aufbruch", "wanderte", "unterwegs", "straße", " pfad", "journey", "travel", "set out", " road", " path "),
+        MusicCue.NATURE to listOf(" wald", " wiese", " feld", " tiere", "vögel", "blumen", "forest", "meadow", " field", "animals", " birds", "flowers"),
+        MusicCue.NIGHT to listOf("nacht", "dunkel", " mond", "sterne", "schlief", " traum", "night", " dark", " moon", " stars", " slept", " dream"),
+        MusicCue.WATER to listOf(" meer", " fluss", "schiff", " regen ", " hafen", " welle", " sea ", "river", " ship", " rain", "harbour", "harbor", " waves"),
+        MusicCue.ROYAL to listOf("könig", "prinz", " am hof", "palast", " thron", " king", "queen", "prince", " court", "palace", "throne"),
+        MusicCue.SACRED to listOf("tempel", "kirche", "gebet", "priester", "götter", "heilig", "temple", "church", "prayer", "priest", " gods", " holy"),
+        MusicCue.HOME to listOf("zuhause", "familie", " kamin", " stube", " mutter", " vater", " home", "family", "fireplace", "mother", "father"),
+        MusicCue.HUMOR to listOf("lachte", " witz", " streich", "kicher", "grinste", "laughed", " joke", " prank", "giggl", "grinned"),
     )
 
     /**
