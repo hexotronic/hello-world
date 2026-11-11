@@ -17,7 +17,7 @@ permissions:
 # A newer push cancels the older build of the branch; a model comparison ("[modelltest]") runs in a
 # group of its own, so later pushes do not cut its hour of measuring short.
 concurrency:
-  group: lauscher-${{ github.ref }}-${{ contains(github.event.head_commit.message, '[modelltest]') && github.sha || 'build' }}
+  group: lauscher-${{ github.ref }}-${{ (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[modelltest]')) && github.sha || 'build' }}
   cancel-in-progress: true
 
 jobs:
@@ -87,11 +87,17 @@ jobs:
           cp "$APK" "$RUNNER_TEMP/Lauscher.apk"
           TAG="lauscher-latest-${GITHUB_REF_NAME//\//-}"
           gh release delete "$TAG" --yes --cleanup-tag || true
-          gh release create "$TAG" "$APK" "$RUNNER_TEMP/Lauscher.apk" \
-            --target "$GITHUB_SHA" \
-            --title "Lauscher – neuester Build (${GITHUB_REF_NAME})" \
-            --notes "Automatisch gebaut aus ${GITHUB_SHA::7}. APK auf dem Handy herunterladen und installieren." \
-            --prerelease
+          create() {
+            gh release create "$TAG" "$APK" "$RUNNER_TEMP/Lauscher.apk" \
+              --target "$1" \
+              --title "Lauscher – neuester Build (${GITHUB_REF_NAME})" \
+              --notes "Automatisch gebaut aus ${GITHUB_SHA::7}. APK auf dem Handy herunterladen und installieren." \
+              --prerelease
+          }
+          # GitHub may refuse the build token a tag on a commit that changes a workflow file (HTTP 403);
+          # the release then hangs on the default branch – the notes still name the commit it was built from.
+          create "$GITHUB_SHA" || create "${{ github.event.repository.default_branch }}" \
+            || echo "::warning::Das Release konnte nicht angelegt werden – die APK liegt als Artefakt „Lauscher-APK“ am Lauf"
 
   device-test:
     name: Emulator-Test & Screenshots
@@ -189,6 +195,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="lauscher-latest-${GITHUB_REF_NAME//\//-}"
+          gh release view "$TAG" > /dev/null 2>&1 || { echo "::warning::Kein Release zum Anhängen"; exit 0; }
           # GitHub's upload server sometimes answers 500; try again before giving up.
           for attempt in 1 2 3; do
             gh release upload "$TAG" screenshots/*.png --clobber && exit 0
@@ -245,6 +252,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="lauscher-latest-${GITHUB_REF_NAME//\//-}"
+          gh release view "$TAG" > /dev/null 2>&1 || { echo "::warning::Kein Release zum Anhängen"; exit 0; }
           [ -f bench/model-bench.md ] || exit 0
           for attempt in 1 2 3; do
             gh release upload "$TAG" bench/model-bench.md bench/model-bench.json --clobber && exit 0
