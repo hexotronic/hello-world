@@ -67,6 +67,13 @@ jobs:
           name: Lauscher-APK
           path: ${{ runner.temp }}/Lauscher-*.apk
 
+      # Prompts, grammars and right answers of the model test (written by ModelEvalTest).
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Lauscher-Eval
+          path: hoerbuch-player/app/build/eval/testReleaseUnitTest.json
+          if-no-files-found: error
+
       - name: Publish as release "Lauscher (neuester Build)"
         if: github.event_name != 'pull_request'
         env:
@@ -183,6 +190,62 @@ jobs:
           # GitHub's upload server sometimes answers 500; try again before giving up.
           for attempt in 1 2 3; do
             gh release upload "$TAG" screenshots/*.png --clobber && exit 0
+            sleep 15
+          done
+          exit 1
+
+  model-bench:
+    name: Sprachmodelle vergleichen (ARM)
+    needs: build
+    # Long (about an hour) and downloads ~12 GB of models: only when asked for, by starting the
+    # workflow by hand or with "[modelltest]" in the commit message.
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[modelltest]')
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: Lauscher-Eval
+          path: eval
+
+      - name: Build llama-server (same release and CPU instructions as the app on a Cortex-A78)
+        run: |
+          TAG=$(sed -n 's/^ *GIT_TAG *//p' hoerbuch-player/llm/src/main/cpp/CMakeLists.txt | head -1)
+          git clone --depth 1 --branch "$TAG" https://github.com/ggml-org/llama.cpp.git "$RUNNER_TEMP/llama.cpp"
+          cmake -S "$RUNNER_TEMP/llama.cpp" -B "$RUNNER_TEMP/llama-build" -DCMAKE_BUILD_TYPE=Release \
+            -DGGML_NATIVE=OFF -DGGML_CPU_ARM_ARCH=armv8.2-a+dotprod+fp16 -DGGML_OPENMP=OFF \
+            -DLLAMA_OPENSSL=OFF -DLLAMA_USE_PREBUILT_UI=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_APP=OFF
+          cmake --build "$RUNNER_TEMP/llama-build" --target llama-server -j "$(nproc)"
+
+      - name: Compare the models
+        run: |
+          lscpu | grep -E "Model name|^CPU\(s\)|Flags" | cut -c1-200
+          MACHINE="einem GitHub-ARM-Rechner ($(lscpu | sed -n 's/^Model name: *//p' | head -1), $(nproc) Kerne)"
+          mkdir -p bench
+          python3 .github/scripts/model_bench.py --eval eval/testReleaseUnitTest.json \
+            --server "$RUNNER_TEMP/llama-build/bin/llama-server" --work "$RUNNER_TEMP/models" \
+            --out bench/model-bench.json --summary bench/model-bench.md --threads 4 --machine "$MACHINE"
+          cat bench/model-bench.md >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Lauscher-Modellvergleich
+          path: |
+            bench
+            ${{ runner.temp }}/models/*.log
+
+      - name: Attach the comparison to the release
+        if: always() && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="lauscher-latest-${GITHUB_REF_NAME//\//-}"
+          [ -f bench/model-bench.md ] || exit 0
+          for attempt in 1 2 3; do
+            gh release upload "$TAG" bench/model-bench.md bench/model-bench.json --clobber && exit 0
             sleep 15
           done
           exit 1

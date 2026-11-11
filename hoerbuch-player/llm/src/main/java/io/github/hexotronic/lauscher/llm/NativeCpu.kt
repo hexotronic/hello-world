@@ -40,17 +40,25 @@ internal object NativeCpu {
     }
 
     /**
-     * Number of performance cores: cores whose maximum clock is close to the fastest one.
-     * Using the slow efficiency cores as well makes ggml wait for them.
+     * Number of performance cores. Using the slow efficiency cores as well makes ggml wait for
+     * them: on a Dimensity 8200 (Xiaomi 13T) the four Cortex-A55 run at 2.0 GHz, two thirds of the
+     * A78's 3.1 GHz, but do far less per clock. So the kernel's relative core capacity decides where
+     * it is known (big cores have at least half of the largest), otherwise the clock (at least 80 %).
      */
     val performanceCores: Int by lazy {
         runCatching {
-            val freqs = (0 until Runtime.getRuntime().availableProcessors()).mapNotNull { cpu ->
-                File("/sys/devices/system/cpu/cpu$cpu/cpufreq/cpuinfo_max_freq").takeIf { it.canRead() }?.readText()?.trim()?.toLongOrNull()
-            }
-            if (freqs.isEmpty()) error("no cpufreq")
-            val max = freqs.max()
-            freqs.count { it >= max * 0.6 }
+            val cpus = 0 until Runtime.getRuntime().availableProcessors()
+            fun read(cpu: Int, name: String) = File("/sys/devices/system/cpu/cpu$cpu/$name").takeIf { it.canRead() }?.readText()?.trim()?.toLongOrNull()
+            val capacities = cpus.mapNotNull { read(it, "cpu_capacity") }
+            val freqs = cpus.mapNotNull { read(it, "cpufreq/cpuinfo_max_freq") }
+            fastCores(capacities.takeIf { it.size == cpus.count() }, freqs) ?: error("no cpu information")
         }.getOrElse { Runtime.getRuntime().availableProcessors() / 2 }.coerceIn(2, 8)
+    }
+
+    /** The cores with at least half of the largest capacity, or else at least 80 % of the highest clock. */
+    fun fastCores(capacities: List<Long>?, maxFreqs: List<Long>): Int? = when {
+        !capacities.isNullOrEmpty() && capacities.max() > 0 && capacities.distinct().size > 1 -> capacities.count { it * 2 >= capacities.max() }
+        maxFreqs.isNotEmpty() -> maxFreqs.count { it * 5 >= maxFreqs.max() * 4 }
+        else -> null
     }
 }

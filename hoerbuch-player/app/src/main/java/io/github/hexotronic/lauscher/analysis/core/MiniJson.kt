@@ -14,6 +14,62 @@ object MiniJson {
         return value
     }
 
+    /** Writes maps, lists, strings, numbers, booleans and null as compact JSON. */
+    fun write(value: Any?): String = StringBuilder().also { write(it, value) }.toString()
+
+    private fun write(out: StringBuilder, value: Any?) {
+        when (value) {
+            null -> out.append("null")
+            is Boolean -> out.append(value)
+            is Float, is Double -> {
+                val d = (value as Number).toDouble()
+                if (d.isNaN() || d.isInfinite()) out.append("null")
+                else if (d == Math.rint(d) && kotlin.math.abs(d) < 1e15) out.append(d.toLong()) else out.append(value.toString())
+            }
+            is Number -> out.append(value)
+            is Map<*, *> -> {
+                out.append('{')
+                var first = true
+                for ((k, v) in value) {
+                    if (!first) out.append(',')
+                    first = false
+                    quote(out, k.toString())
+                    out.append(':')
+                    write(out, v)
+                }
+                out.append('}')
+            }
+            is Iterable<*> -> {
+                out.append('[')
+                var first = true
+                for (v in value) {
+                    if (!first) out.append(',')
+                    first = false
+                    write(out, v)
+                }
+                out.append(']')
+            }
+            is Array<*> -> write(out, value.toList())
+            else -> quote(out, value.toString())
+        }
+    }
+
+    private fun quote(out: StringBuilder, s: String) {
+        out.append('"')
+        for (c in s) {
+            when {
+                c == '"' -> out.append("\\\"")
+                c == '\\' -> out.append("\\\\")
+                c == '\n' -> out.append("\\n")
+                c == '\r' -> out.append("\\r")
+                c == '\t' -> out.append("\\t")
+                c < ' ' -> out.append("\\u%04x".format(c.code))
+                else -> out.append(c)
+            }
+        }
+        out.append('"')
+    }
+
     private class Parser(val s: String) {
         var pos = 0
 

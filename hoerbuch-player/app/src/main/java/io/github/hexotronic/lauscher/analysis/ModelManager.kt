@@ -3,6 +3,15 @@ package io.github.hexotronic.lauscher.analysis
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
+import io.github.hexotronic.lauscher.analysis.core.HfFile
+import io.github.hexotronic.lauscher.analysis.core.HfModels
+import io.github.hexotronic.lauscher.analysis.core.HfRepo
+import io.github.hexotronic.lauscher.analysis.core.MiniJson
+import java.io.File
+import java.io.FileOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
+import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,11 +19,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileOutputStream
-import java.net.HttpURLConnection
-import java.net.URL
-import kotlin.coroutines.coroutineContext
 
 enum class ModelKind { SPEECH, LANGUAGE }
 
@@ -27,7 +31,11 @@ data class ModelInfo(
     val url: String?,
     val fileName: String,
     val sizeMb: Int,
-)
+    /** The Hugging Face repository of a model the listener added himself, else null. */
+    val repo: String? = null,
+) {
+    val isUserModel: Boolean get() = repo != null
+}
 
 object ModelCatalog {
     private const val WHISPER = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/"
@@ -85,6 +93,85 @@ class ModelManager(private val context: Context) {
     private val _changes = MutableStateFlow(0)
     val changes: StateFlow<Int> = _changes.asStateFlow()
     private var job: Job? = null
+    private val prefs = context.getSharedPreferences("user_models", Context.MODE_PRIVATE)
+    private val _userModels = MutableStateFlow(loadUserModels())
+
+    /** Models the listener found on Hugging Face and added (downloaded or not yet). */
+    val userModels: StateFlow<List<ModelInfo>> = _userModels.asStateFlow()
+
+    /** A model from the catalog or one the listener added. */
+    fun info(id: String?): ModelInfo? = ModelCatalog.byId(id) ?: _userModels.value.firstOrNull { it.id == id }
+
+    fun all(kind: ModelKind): List<ModelInfo> = ModelCatalog.models.filter { it.kind == kind } + _userModels.value.filter { it.kind == kind }
+
+    private fun loadUserModels(): List<ModelInfo> = runCatching {
+        (MiniJson.parse(prefs.getString("list", "[]") ?: "[]") as List<*>).mapNotNull { item ->
+            val m = item as? Map<*, *> ?: return@mapNotNull null
+            ModelInfo(
+                m["id"] as String, ModelKind.valueOf(m["kind"] as String), m["label"] as String, m["description"] as? String ?: "",
+                m["url"] as? String, m["fileName"] as String, (m["sizeMb"] as? Number)?.toInt() ?: 0, m["repo"] as String,
+            )
+        }
+    }.getOrDefault(emptyList())
+
+    private fun saveUserModels(list: List<ModelInfo>) {
+        _userModels.value = list
+        prefs.edit().putString(
+            "list",
+            MiniJson.write(
+                list.map {
+                    mapOf(
+                        "id" to it.id, "kind" to it.kind.name, "label" to it.label, "description" to it.description, "url" to it.url,
+                        "fileName" to it.fileName, "sizeMb" to it.sizeMb, "repo" to it.repo,
+                    )
+                },
+            ),
+        ).apply()
+        _changes.value++
+    }
+
+    /** Adds a file of a Hugging Face repository to the model list (download it with [downloadModel]). */
+    fun addUserModel(kind: ModelKind, repo: HfRepo, file: HfFile): ModelInfo {
+        val id = HfModels.idFor(repo.id, file.path)
+        val quant = HfModels.quantOf(file.fileName)
+        val info = ModelInfo(
+            id, kind, repo.name.removeSuffix("-GGUF").removeSuffix("-gguf") + (quant?.let { " · $it" } ?: ""),
+            "Von Hugging Face: ${repo.id}", HfModels.downloadUrl(repo.id, file.path), HfModels.localName(repo.id, file.path), file.sizeMb,
+            repo = repo.id,
+        )
+        saveUserModels(_userModels.value.filter { it.id != id } + info)
+        return info
+    }
+
+    /** All memory of the phone in MB (for the "fits" hint of the search). */
+    val totalRamMb: Int by lazy {
+        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        android.app.ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }.totalMem.let { (it / 1_000_000).toInt() }
+    }
+
+    /** Searches Hugging Face (needs the internet). */
+    suspend fun searchHub(query: String, kind: ModelKind): List<HfRepo> = withContext(Dispatchers.IO) {
+        HfModels.parseSearch(getText(HfModels.searchUrl(query, kind == ModelKind.SPEECH)))
+    }
+
+    /** The usable files of a repository, the recommended one first. */
+    suspend fun hubFiles(repo: String, kind: ModelKind): List<HfFile> = withContext(Dispatchers.IO) {
+        HfModels.parseFiles(getText(HfModels.filesUrl(repo)), kind == ModelKind.SPEECH)
+    }
+
+    private fun getText(url: String): String {
+        val conn = URL(url).openConnection() as HttpURLConnection
+        conn.connectTimeout = 15_000
+        conn.readTimeout = 30_000
+        conn.setRequestProperty("User-Agent", "Lauscher-Android")
+        try {
+            val code = conn.responseCode
+            if (code != 200) error(if (code == 429) "Hugging Face bremst gerade, bitte gleich noch einmal" else "Hugging Face antwortet mit $code")
+            return conn.inputStream.bufferedReader().use { it.readText() }
+        } finally {
+            conn.disconnect()
+        }
+    }
 
     /** External app storage keeps the large files out of the internal partition. */
     private val dirs: List<File>
@@ -95,7 +182,7 @@ class ModelManager(private val context: Context) {
 
     fun fileFor(id: String?): File? {
         id ?: return null
-        val name = ModelCatalog.byId(id)?.fileName ?: customFileName(id) ?: return null
+        val name = info(id)?.fileName ?: customFileName(id) ?: return null
         return dirs.map { File(it, name) }.firstOrNull { it.isFile && it.length() > 1_000_000 }
     }
 
@@ -110,8 +197,9 @@ class ModelManager(private val context: Context) {
     }
 
     fun delete(id: String) {
-        val name = ModelCatalog.byId(id)?.fileName ?: customFileName(id) ?: return
+        val name = info(id)?.fileName ?: customFileName(id) ?: return
         dirs.forEach { File(it, name).delete(); File(it, "$name.part").delete() }
+        if (_userModels.value.any { it.id == id }) saveUserModels(_userModels.value.filter { it.id != id })
         _changes.value++
     }
 

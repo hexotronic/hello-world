@@ -104,3 +104,11 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("junit:junit:4.13.2")
 }
+
+// ModelEvalTest writes the prompts, grammars and right answers of the model test here; CI hands the
+// file to the language-model benchmark on an ARM machine (.github/scripts/model_bench.py).
+tasks.withType<Test>().configureEach {
+    val evalFile = layout.buildDirectory.file("eval/$name.json")
+    outputs.file(evalFile)
+    systemProperty("evalOut", evalFile.get().asFile.absolutePath)
+}

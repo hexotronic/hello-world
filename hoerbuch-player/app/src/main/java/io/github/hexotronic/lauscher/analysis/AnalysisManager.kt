@@ -6,6 +6,12 @@ import android.util.Log
 import io.github.hexotronic.lauscher.analysis.core.AiLogText
 import io.github.hexotronic.lauscher.analysis.core.AiStep
 import io.github.hexotronic.lauscher.analysis.core.Anchor
+import io.github.hexotronic.lauscher.analysis.core.AssistantReply
+import io.github.hexotronic.lauscher.analysis.core.AssistantTurn
+import io.github.hexotronic.lauscher.analysis.core.BookAssistant
+import io.github.hexotronic.lauscher.analysis.core.EvalReport
+import io.github.hexotronic.lauscher.analysis.core.MiniJson
+import io.github.hexotronic.lauscher.analysis.core.ModelEval
 import io.github.hexotronic.lauscher.analysis.core.KeywordMoods
 import io.github.hexotronic.lauscher.analysis.core.SceneCut
 import io.github.hexotronic.lauscher.analysis.core.SceneCuts
@@ -53,6 +59,9 @@ sealed interface AnalysisStatus {
 
 /** Result of comparing speech recognition at [speed] with normal speed on a sample of a book. */
 data class SpeedCheck(val bookId: Long, val speed: Float, val agreement: Float, val accepted: Boolean)
+
+/** How far "Modelle testen" is: model [model] of [models], step [step] of [steps]. */
+data class EvalProgress(val label: String, val model: Int, val models: Int, val step: Int, val steps: Int)
 
 /**
  * Listens to the audiobook with an on-device speech model (whisper.cpp) and lets an
@@ -576,8 +585,231 @@ class AnalysisManager(
         }
     }
 
+    // ------------------------------------------------------------------ "Frag das Buch"
+
+    /** The model stays loaded while the listener asks one question after the other. */
+    private var chatLlm: LlamaNative? = null
+    private var chatModelPath: String? = null
+
+    /** Frees the memory of the question model (when the side window closes). */
+    fun releaseAssistant() {
+        scope.launch(native) {
+            chatLlm?.close()
+            chatLlm = null
+            chatModelPath = null
+        }
+    }
+
+    /**
+     * Answers a question about the book or turns a command into an action. Simple commands are
+     * recognised without the model. With [spoilerFree] only what was transcribed up to [positionMs]
+     * is given to the model. The look-ahead analysis pauses meanwhile and starts again by itself.
+     */
+    suspend fun ask(bookId: Long, positionMs: Long, question: String, history: List<AssistantTurn>, spoilerFree: Boolean): Result<AssistantReply> {
+        if (evalJob?.isActive == true) return Result.failure(IllegalStateException("Der Modelltest läuft gerade – bitte kurz warten"))
+        BookAssistant.direct(question)?.let {
+            log.add(AiStep.INFO, "Befehl ohne Sprachmodell erkannt: „$question“ → ${it.action}${it.value.takeIf { v -> v.isNotEmpty() }?.let { v -> " $v" } ?: ""}", null, bookId, positionMs)
+            return Result.success(it)
+        }
+        stop()
+        return withContext(native) {
+            runCatching {
+                val details = repo.bookDetails(bookId) ?: error("Hörbuch nicht gefunden")
+                val book = details.book
+                val file = models.fileFor(settings.current.llmModel)
+                    ?: error("Für Fragen wird ein Sprachmodell gebraucht – bitte unter „Hintergrundmusik → KI“ eines herunterladen")
+                val llm = chatLlm?.takeIf { chatModelPath == file.absolutePath } ?: run {
+                    chatLlm?.close()
+                    val started = System.nanoTime()
+                    (LlamaNative.load(file.absolutePath, CONTEXT) ?: error("Sprachmodell konnte nicht geladen werden")).also {
+                        chatLlm = it
+                        chatModelPath = file.absolutePath
+                        log.add(AiStep.INFO, "Sprachmodell für Fragen geladen (${"%.1f".format((System.nanoTime() - started) / 1e9)} s)", null, bookId)
+                    }
+                }
+                val until = if (spoilerFree) positionMs else Long.MAX_VALUE
+                val windows = repo.transcripts(bookId)
+                val passages = BookAssistant.passages(question, windows, until)
+                // The running summary may already know later parts when the analysis went far ahead.
+                val analysedUntil = repo.analyzedRanges(bookId).maxOfOrNull { it.last } ?: 0L
+                val story = repo.story(bookId).takeIf { !spoilerFree || analysedUntil <= positionMs + STORY_SLACK_MS }
+                val chapter = details.chapters.lastOrNull { it.startMs <= positionMs }
+                var keep = passages
+                var prompt: String
+                do {
+                    prompt = llm.chatPrompt(
+                        BookAssistant.SYSTEM,
+                        BookAssistant.user(book.title, book.author, story, positionMs, chapter?.title, details.chapters.size, keep, history, question, spoilerFree),
+                    )
+                    if (llm.countTokens(prompt) + ModelEval.ASSISTANT_MAX_TOKENS <= llm.contextSize || keep.isEmpty()) break
+                    keep = keep.drop(1)
+                } while (true)
+                log.add(AiStep.ASKED, "Frage ans Buch: „$question“ (${keep.size} passende Stellen, ${llm.countTokens(prompt)} Token)", prompt, bookId, positionMs)
+                currentLlm = llm
+                val asked = System.nanoTime()
+                val output = try {
+                    llm.generate(prompt, BookAssistant.grammar(), ModelEval.ASSISTANT_MAX_TOKENS, temperature = 0f)
+                } finally {
+                    currentLlm = null
+                }
+                log.add(AiStep.ANSWER, "Antwort nach ${"%.1f".format((System.nanoTime() - asked) / 1e9)} s", output, bookId, positionMs)
+                output?.let { BookAssistant.parse(it) } ?: error("Das Sprachmodell hat keine verwertbare Antwort gegeben")
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------ "Modelle testen"
+
+    private val evalPrefs = context.getSharedPreferences("model_eval", Context.MODE_PRIVATE)
+    private val _evalResults = MutableStateFlow(loadEvalResults())
+
+    /** The last test result per model id. */
+    val evalResults: StateFlow<Map<String, EvalReport>> = _evalResults.asStateFlow()
+    private val _evalProgress = MutableStateFlow<EvalProgress?>(null)
+    val evalProgress: StateFlow<EvalProgress?> = _evalProgress.asStateFlow()
+    private var evalJob: Job? = null
+
+    private fun loadEvalResults(): Map<String, EvalReport> = runCatching {
+        (MiniJson.parse(evalPrefs.getString("results", "{}") ?: "{}") as Map<*, *>).mapNotNull { (k, v) ->
+            (v as? Map<*, *>)?.let { EvalReport.fromMap(it) }?.let { k as String to it }
+        }.toMap()
+    }.getOrDefault(emptyMap())
+
+    fun cancelEvaluation() {
+        currentLlm?.cancel()
+        evalJob?.cancel()
+        evalJob = null
+        _evalProgress.value = null
+    }
+
+    /**
+     * Runs the model test (a German test story with known answers) on the given installed models,
+     * one after the other, and keeps understanding and speed per model.
+     */
+    fun evaluate(ids: List<String>, quick: Boolean) {
+        if (evalJob?.isActive == true) return
+        stop()
+        evalJob = scope.launch(native) {
+            val todo = ids.mapNotNull { id -> models.fileFor(id)?.let { Triple(id, models.info(id)?.label ?: id, it) } }
+            val steps = ModelEval.batches(quick).size + (if (quick) ModelEval.quickQuestions().size + ModelEval.quickCommands().size else ModelEval.questions.size + ModelEval.commands.size)
+            log.add(AiStep.INFO, "Modelltest gestartet (${if (quick) "kurz" else "ganz"}): ${todo.joinToString { it.second }}")
+            try {
+                todo.forEachIndexed { i, (id, label, file) ->
+                    val report = evalModel(label, file, quick) { step -> _evalProgress.value = EvalProgress(label, i + 1, todo.size, step, steps) }
+                    _evalResults.value = _evalResults.value + (id to report)
+                    evalPrefs.edit().putString("results", MiniJson.write(_evalResults.value.mapValues { it.value.toMap() })).apply()
+                    log.add(
+                        AiStep.INFO,
+                        "Modelltest $label: Verstehen ${(report.understanding * 100).toInt()} %, ${"%.1f".format(report.secondsPerQuestion)} s je Frage, " +
+                            "${"%.0f".format(report.promptTokensPerSecond)} Token/s lesen, ${"%.1f".format(report.generatedTokensPerSecond)} Token/s schreiben",
+                    )
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                Log.w(TAG, "Model test failed", e)
+                log.add(AiStep.PROBLEM, "Modelltest fehlgeschlagen: ${e.message ?: e.javaClass.simpleName}")
+            } finally {
+                _evalProgress.value = null
+            }
+        }
+    }
+
+    private suspend fun evalModel(label: String, file: java.io.File, quick: Boolean, progress: (Int) -> Unit): EvalReport {
+        chatLlm?.close()
+        chatLlm = null
+        chatModelPath = null
+        val loadStart = System.nanoTime()
+        val llm = LlamaNative.load(file.absolutePath, CONTEXT) ?: error("$label konnte nicht geladen werden")
+        val load = (System.nanoTime() - loadStart) / 1e9f
+        currentLlm = llm
+        var step = 0
+        // The prompt is read once alone (one token), then answered from the cache: so reading and
+        // writing are timed apart, as the phone does them.
+        var coldTokens = 0
+        var coldSeconds = 0.0
+        var genTokens = 0
+        var genSeconds = 0.0
+        fun timed(system: String, user: String, grammar: String, maxTokens: Int, cold: Boolean): Pair<String?, Double> {
+            val prompt = llm.chatPrompt(system, user)
+            val t0 = System.nanoTime()
+            llm.generate(prompt, null, maxTokens = 1, temperature = 0f)
+            val read = (System.nanoTime() - t0) / 1e9
+            val t1 = System.nanoTime()
+            val out = llm.generate(prompt, grammar, maxTokens, temperature = 0f)
+            val write = (System.nanoTime() - t1) / 1e9
+            if (cold) {
+                coldTokens += llm.countTokens(prompt)
+                coldSeconds += read
+            }
+            genTokens += out?.let { llm.countTokens(it) } ?: 0
+            genSeconds += write
+            return out to read + write
+        }
+        try {
+            var moods = 0
+            var places = 0
+            var placeCount = 0
+            var levels = 0
+            var cues = 0
+            var cueCount = 0
+            var windows = 0
+            var valid = 0
+            val batches = ModelEval.batches(quick)
+            var sceneSeconds = 0.0
+            batches.forEachIndexed { i, r ->
+                coroutineContext.ensureActive()
+                progress(++step)
+                val (out, sec) = timed(ScenePrompt.SYSTEM, ModelEval.sceneUser(r), ScenePrompt.grammar(r.count()), ModelEval.sceneMaxTokens(r.count()), cold = i == 0)
+                sceneSeconds += sec
+                val h = ModelEval.scoreScenes(r, out)
+                moods += h.moods; places += h.places; placeCount += h.placeCount; levels += h.levels
+                cues += h.cues; cueCount += h.cueCount; windows += h.windows; if (h.valid) valid++
+            }
+            val questions = if (quick) ModelEval.quickQuestions() else ModelEval.questions
+            val commands = if (quick) ModelEval.quickCommands() else ModelEval.commands
+            var right = 0
+            var traps = 0
+            var safe = 0
+            var askSeconds = 0.0
+            questions.forEachIndexed { i, q ->
+                coroutineContext.ensureActive()
+                progress(++step)
+                val (out, sec) = timed(BookAssistant.SYSTEM, ModelEval.assistantUser(q.question, q.positionMs), BookAssistant.grammar(), ModelEval.ASSISTANT_MAX_TOKENS, cold = i == 0)
+                askSeconds += sec
+                val reply = out?.let { BookAssistant.parse(it) }
+                if (ModelEval.answerRight(q, reply)) right++
+                if (q.forbid.isNotEmpty()) {
+                    traps++
+                    if (ModelEval.spoilerSafe(q, reply)) safe++
+                }
+            }
+            var done = 0
+            for (c in commands) {
+                coroutineContext.ensureActive()
+                progress(++step)
+                val (out, sec) = timed(BookAssistant.SYSTEM, ModelEval.assistantUser(c.text, c.positionMs), BookAssistant.grammar(), ModelEval.ASSISTANT_MAX_TOKENS, cold = false)
+                askSeconds += sec
+                if (ModelEval.commandRight(c, out?.let { BookAssistant.parse(it) })) done++
+            }
+            fun share(a: Int, b: Int) = if (b == 0) 0f else a.toFloat() / b
+            return EvalReport(
+                label, share(moods, windows), share(places, placeCount), share(levels, windows), share(cues, cueCount), share(valid, batches.size),
+                share(right, questions.size), if (traps == 0) 1f else share(safe, traps), share(done, commands.size),
+                if (coldSeconds > 0) (coldTokens / coldSeconds).toFloat() else 0f, if (genSeconds > 0) (genTokens / genSeconds).toFloat() else 0f,
+                (sceneSeconds / batches.size).toFloat(), (askSeconds / (questions.size + commands.size)).toFloat(), load, quick,
+            )
+        } finally {
+            currentLlm = null
+            llm.close()
+        }
+    }
+
     companion object {
         private const val TAG = "LauscherAnalyse"
+
+        /** The running summary is only used spoiler-free when the analysis is at most this far ahead. */
+        private const val STORY_SLACK_MS = 10 * 60_000L
         /** Windows per language-model call: the instructions are read once for all of them. */
         private const val BATCH = 8
         private const val CONTEXT = 4096
