@@ -59,13 +59,13 @@ object ModelCatalog {
         // Language models, ordered by the model comparison in CI (German test story; see README).
         ModelInfo(
             "qwen3-1.7b", ModelKind.LANGUAGE, "Qwen3 1.7B",
-            "Empfohlen: versteht im Test fast so gut wie Qwen2.5 3B und ist so schnell wie ein mittleres Modell (ab 4 GB RAM)",
+            "Empfohlen: versteht im Test so gut wie Qwen2.5 3B und ist fast doppelt so schnell (ab 4 GB RAM)",
             "https://huggingface.co/unsloth/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q4_K_M.gguf",
             "Qwen3-1.7B-Q4_K_M.gguf", 1110,
         ),
         ModelInfo(
             "qwen3-4b-2507", ModelKind.LANGUAGE, "Qwen3 4B Instruct 2507",
-            "Versteht am besten – Szenen, Fragen und Befehle; braucht etwa doppelt so lange wie Qwen2.5 3B (ab 8 GB RAM)",
+            "Versteht am besten – Szenen, Fragen und Befehle; braucht etwa anderthalbmal so lange wie Qwen2.5 3B (ab 8 GB RAM)",
             "https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF/resolve/main/Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
             "Qwen3-4B-Instruct-2507-Q4_K_M.gguf", 2500,
         ),

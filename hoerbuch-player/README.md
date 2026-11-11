@@ -314,6 +314,30 @@ oder **nur für ein bestimmtes Hörbuch** speichern.
   Rechenzeit je Stunde Hörbuch – **gemessen auf dem eigenen Handy**. Kurztest oder ganzer Test.
 - Dieselbe Testgeschichte vergleicht in der CI sieben Modelle auf einem ARM-Rechner (siehe unten).
 
+#### Ergebnis des Vergleichs (ARM, 4 Kerne, wie in der App)
+
+| Modell | Größe | Verstehen | Stimmung | Fragen | Befehle | Frage/Befehl (CI) | Xiaomi 13T geschätzt: Frage | … Sprachmodell je Std. Hörbuch |
+|---|---|---|---|---|---|---|---|---|
+| Qwen2.5 0.5B | 0,5 GB | 26 % | 12 % | 38 % | 0 % | 3 s | 4–7 s | 2–3 Min. |
+| Qwen2.5 1.5B (bisher „mittel“) | 1,1 GB | 45 % | 38 % | 75 % | 33 % | 6 s | 7–11 s | 3–5 Min. |
+| **Qwen3 1.7B** (neu empfohlen) | 1,1 GB | **73 %** | 81 % | 88 % | 56 % | 6 s | 9–13 s | 3–5 Min. |
+| Llama 3.2 3B | 2,0 GB | 69 % | 75 % | 100 % | 67 % | 11 s | 15–23 s | 7–10 Min. |
+| Qwen2.5 3B (bisher „stärkstes“) | 2,1 GB | 70 % | 88 % | 100 % | 33 % | 12 s | 16–24 s | 6–9 Min. |
+| Gemma 3 4B | 2,5 GB | 82 % | 81 % | 100 % | 67 % | 14 s | 19–29 s | 8–12 Min. |
+| **Qwen3 4B Instruct 2507** | 2,5 GB | **86 %** | 100 % | 100 % | 100 % | 15 s | 20–30 s | 9–14 Min. |
+
+„Verstehen“ ist der Mittelwert aus Stimmung, Ort, Stärke, Musik-Merkmalen, Fragen und Befehlen; alle Modelle
+hielten die Spoiler-Falle ein und lieferten immer gültiges JSON. Die Spalten zum Xiaomi 13T (Dimensity 8200-Ultra,
+4× Cortex-A78) sind **geschätzt** als 50–75 % des auf dem ARM-Rechner gemessenen Tempos (langsamerer Speicher,
+Wärmedrosselung) – „Modelle testen“ misst es auf dem eigenen Handy. Das Spracherkennen (Whisper) kommt bei der
+Szenen-Analyse noch dazu. Gelernt:
+- Qwen2.5 1.5B gibt bei acht Abschnitten je Aufruf oft allen dieselbe Szene; kleinere Portionen (vier) helfen ihm
+  nur wenig und schaden den großen Modellen – die App bleibt bei acht.
+- Qwen3 1.7B versteht so gut wie Qwen2.5 3B bei halber Rechenzeit; Qwen3 4B 2507 und Gemma 3 4B sind deutlich
+  besser, brauchen aber etwa 1,3- bis 1,5-mal so lange wie Qwen2.5 3B. Auf einem Handy mit 12 GB wie dem Xiaomi 13T passen
+  beide gut in den Speicher.
+- Der ganze Bericht mit allen Antworten: [docs/modellvergleich.md](docs/modellvergleich.md).
+
 ### Musikbibliothek nach Stimmung, Ort und Spannung (echte Fantasy-Musik, keine KI)
 Statt des Synthesizers kann die Hintergrundmusik aus **476 handkomponierten Fantasy-Stücken** (rund 1,4 GB, gut
 23 Stunden mit Schleifen) kommen – Soundtracks freier Spiele. Alles ist von Menschen komponiert und eingespielt,
