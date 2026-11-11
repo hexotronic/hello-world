@@ -89,6 +89,20 @@ class ModelEvalTest {
     }
 
     @Test
+    fun resultsSurviveSaving() {
+        val r = io.github.hexotronic.lauscher.analysis.core.EvalReport(
+            "Qwen2.5 1.5B", 0.75f, 0.5f, 1f, 0.25f, 1f, 0.875f, 1f, 0.6f, 120.5f, 14.2f, 31.5f, 6.25f, 1.5f, quick = true,
+        )
+        val json = MiniJson.write(mapOf("qwen2.5-1.5b" to r.toMap()))
+        val back = io.github.hexotronic.lauscher.analysis.core.EvalReport.fromMap((MiniJson.parse(json) as Map<*, *>)["qwen2.5-1.5b"] as Map<*, *>)
+        assertEquals(r, back)
+        assertEquals((0.75f + 0.5f + 1f + 0.25f + 0.875f + 0.6f) / 6f, r.understanding, 1e-6f)
+        // 31.5 s for 8 windows of 2 minutes: 30 windows per hour.
+        assertEquals(31.5f / 8 * 30, r.modelSecondsPerHour, 1e-3f)
+        assertEquals("""{"a":"x\"y\n","b":[1,2.5,true,null]}""", MiniJson.write(mapOf("a" to "x\"y\n", "b" to listOf(1, 2.5, true, null))))
+    }
+
+    @Test
     fun exportForTheBenchmark() {
         val json = ModelEval.exportJson()
         val root = MiniJson.parse(json) as Map<*, *>
