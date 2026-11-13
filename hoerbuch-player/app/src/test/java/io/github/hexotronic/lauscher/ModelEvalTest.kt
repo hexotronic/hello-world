@@ -118,6 +118,15 @@ class ModelEvalTest {
         val assistant = root["assistant"] as Map<*, *>
         assertEquals(ModelEval.questions.size, (assistant["questions"] as List<*>).size)
         assertTrue("\"windowsPerHour\":30" in json)
-        System.getProperty("evalOut")?.let { java.io.File(it).apply { parentFile?.mkdirs() }.writeText(json) }
+        // For the CI comparison: the instructions before the precision pass ("vorher") and the current ones ("neu").
+        fun v1(name: String) = javaClass.getResource("/prompts-v1/$name")!!.readText()
+        val variants = mapOf(
+            "vorher" to (v1("scenes.txt") to v1("assistant.txt")),
+            "neu" to (io.github.hexotronic.lauscher.analysis.core.ScenePrompt.SYSTEM to io.github.hexotronic.lauscher.analysis.core.BookAssistant.SYSTEM),
+        )
+        assertTrue(variants.getValue("vorher").first != variants.getValue("neu").first)
+        val both = ModelEval.exportJson(variants)
+        assertEquals(setOf("vorher", "neu"), ((MiniJson.parse(both) as Map<*, *>)["variants"] as Map<*, *>).keys)
+        System.getProperty("evalOut")?.let { java.io.File(it).apply { parentFile?.mkdirs() }.writeText(both) }
     }
 }

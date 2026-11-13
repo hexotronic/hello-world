@@ -328,10 +328,16 @@ object ModelEval {
         )
     }
 
-    /** Everything the benchmark script needs: prompts, grammars and the right answers. */
-    fun exportJson(): String = MiniJson.write(
+    /**
+     * Everything the benchmark script needs: prompts, grammars and the right answers. [variants] are
+     * versions of the two instructions (scene analysis, assistant) to compare, by name.
+     */
+    fun exportJson(
+        variants: Map<String, Pair<String, String>> = mapOf("aktuell" to (ScenePrompt.SYSTEM to BookAssistant.SYSTEM)),
+    ): String = MiniJson.write(
         mapOf(
             "title" to TITLE,
+            "variants" to variants.mapValues { (_, v) -> mapOf("scene" to v.first, "assistant" to v.second) },
             "batch" to BATCH,
             "windowsPerHour" to 3_600_000 / WindowPlanner.WINDOW_MS,
             "scene" to mapOf(

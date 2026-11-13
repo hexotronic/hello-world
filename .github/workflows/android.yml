@@ -260,7 +260,8 @@ jobs:
           mkdir -p bench
           python3 .github/scripts/model_bench.py --eval eval/testReleaseUnitTest.json \
             --server "$RUNNER_TEMP/llama-build/bin/llama-server" --work "$RUNNER_TEMP/models" \
-            --out bench/model-bench.json --summary bench/model-bench.md --threads 4 --machine "$MACHINE"
+            --out bench/model-bench.json --summary bench/model-bench.md --threads 4 --machine "$MACHINE" \
+            --only "qwen2.5-1.5b,qwen2.5-3b,qwen3-1.7b,qwen3-4b-2507,gemma3-4b"
           cat bench/model-bench.md >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4

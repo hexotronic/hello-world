@@ -184,7 +184,85 @@ def ask(system, user, grammar, max_tokens):
     }
 
 
+def measure(ev, scene_system, assistant_system, batches):
+    """One pass of the test story with the given instructions; returns the scores and timings."""
+    timings = {"scene": [], "question": [], "command": []}
+    per_batch = {}
+    for bsize, calls in batches.items():
+        hits_sum = {"windows": 0, "valid": 0, "calls": 0, "moods": 0, "places": 0, "placeCount": 0, "levels": 0, "cues": 0, "cueCount": 0}
+        seen_all, seconds = [], 0.0
+        for call in calls:
+            out, t = ask(scene_system, call["user"], call["grammar"], call["maxTokens"])
+            if int(bsize) == ev["batch"]:
+                timings["scene"].append(t)
+            seconds += t["seconds"]
+            hits, seen = score_scenes(call["gold"], out)
+            hits_sum["calls"] += 1
+            for k, v in hits.items():
+                hits_sum[k] += v
+            seen_all += seen
+            print(f"   Szenen ({bsize} je Aufruf): {t['seconds']:.1f} s, {t['prompt_n']} + {t['predicted_n']} Token", flush=True)
+        h = hits_sum
+        per_batch[bsize] = {
+            "moods": h["moods"] / max(1, h["windows"]), "places": h["places"] / max(1, h["placeCount"]),
+            "levels": h["levels"] / max(1, h["windows"]), "cues": h["cues"] / max(1, h["cueCount"]),
+            "validJson": h["valid"] / max(1, h["calls"]),
+            # Seconds for eight passages, comparable between the sizes.
+            "secondsPer8": seconds / max(1, h["windows"]) * 8, "seen": seen_all, "hits": h,
+        }
+    sh = per_batch[str(ev["batch"])]["hits"]
+
+    a = ev["assistant"]
+    answers = []
+    right = safe = traps = 0
+    for q in a["questions"]:
+        out, t = ask(assistant_system, q["user"], a["grammar"], a["maxTokens"])
+        timings["question"].append(t)
+        rep = assistant_reply(out)
+        text = (rep or {}).get("answer", "").lower()
+        ok = rep is not None and any(e in text for e in q["expectAny"]) and not any(f in text for f in q["forbid"])
+        right += ok
+        if q["forbid"]:
+            traps += 1
+            safe += not any(f in text for f in q["forbid"])
+        answers.append({"question": q["question"], "answer": (rep or {}).get("answer", out[:200]), "right": ok, "seconds": round(t["seconds"], 1)})
+
+    commands = []
+    done = 0
+    for c in a["commands"]:
+        out, t = ask(assistant_system, c["user"], a["grammar"], a["maxTokens"])
+        timings["command"].append(t)
+        rep = sanitize(c["text"], assistant_reply(out))
+        ok = rep is not None and rep["action"] == c["action"] and (not c["values"] or any(value_matches(rep["value"], v) for v in c["values"]))
+        done += ok
+        commands.append({"text": c["text"], "action": (rep or {}).get("action"), "value": (rep or {}).get("value"), "want": c["action"], "right": ok})
+
+    every = timings["scene"] + timings["question"] + timings["command"]
+    p_n = sum(t["prompt_n"] for t in every)
+    p_ms = sum(t["prompt_ms"] for t in every)
+    g_n = sum(t["predicted_n"] for t in every)
+    g_ms = sum(t["predicted_ms"] for t in every)
+    scene_s = sum(t["seconds"] for t in timings["scene"]) / max(1, len(timings["scene"]))
+    asked = timings["question"] + timings["command"]
+    question_s = sum(t["seconds"] for t in asked) / max(1, len(asked))
+    report = {
+        "moods": sh["moods"] / max(1, sh["windows"]), "places": sh["places"] / max(1, sh["placeCount"]),
+        "levels": sh["levels"] / max(1, sh["windows"]), "cues": sh["cues"] / max(1, sh["cueCount"]),
+        "validJson": sh["valid"] / max(1, sh["calls"]),
+        "answers": right / max(1, len(a["questions"])), "spoilerSafe": safe / max(1, traps), "commands": done / max(1, len(a["commands"])),
+        "promptTps": p_n / (p_ms / 1000) if p_ms else 0, "genTps": g_n / (g_ms / 1000) if g_ms else 0,
+        "sceneCall": scene_s, "question": question_s,
+        "scenesSeen": per_batch[str(ev["batch"])]["seen"], "answersSeen": answers, "commandsSeen": commands,
+        "batches": {k: {kk: vv for kk, vv in v.items() if kk not in ("hits",)} for k, v in per_batch.items()},
+    }
+    report["understanding"] = (report["moods"] + report["places"] + report["levels"] + report["cues"] + report["answers"] + report["commands"]) / 6
+    report["modelSecondsPerHour"] = scene_s / ev["batch"] * ev["windowsPerHour"]
+    print(f"   Verstehen {report['understanding'] * 100:.0f} %, Prompt {report['promptTps']:.0f} tok/s, Ausgabe {report['genTps']:.1f} tok/s", flush=True)
+    return report
+
+
 def run_model(m, ev, server, work, threads):
+    """Loads the model once and measures it with each version of the instructions; one report per version."""
     if "path" in m:  # a local file (to try the script)
         path, size, target = m["path"], os.path.getsize(m["path"]), m["path"]
     else:
@@ -195,12 +273,21 @@ def run_model(m, ev, server, work, threads):
         download(m["repo"], path, target)
     print(f"== {m['label']}: {path} ({size / 1e6:.0f} MB, Download {time.time() - t0:.0f} s)", flush=True)
 
+    # Versions of the instructions to compare; without them the current ones (and the batch-size experiment).
+    variants = ev.get("variants")
+    if variants:
+        batches = {str(ev["batch"]): ev["scene"]["calls"]}
+    else:
+        variants = {"": {"scene": ev["scene"]["system"], "assistant": ev["assistant"]["system"]}}
+        batches = ev["scene"].get("batches") or {str(ev["batch"]): ev["scene"]["calls"]}
+
     log = open(os.path.join(work, m["id"] + ".server.log"), "w")
     proc = subprocess.Popen([server, "-m", target, "-c", "4096", "-t", str(threads), "-tb", str(threads), "-b", "512", "-ub", "512",
                              "-np", "1", "--port", str(PORT), "--no-jinja", "--no-webui",
                              # Only the last prompt stays cached, as in the app (no store of older prompts).
                              "--cache-ram", "0"], stdout=log, stderr=subprocess.STDOUT)
     started = time.time()
+    reports = []
     try:
         while True:
             if proc.poll() is not None:
@@ -214,59 +301,13 @@ def run_model(m, ev, server, work, threads):
                 raise RuntimeError("llama-server startet nicht")
             time.sleep(0.5)
         load = time.time() - started
-
-        timings = {"scene": [], "question": [], "command": []}
-        batches = ev["scene"].get("batches") or {str(ev["batch"]): ev["scene"]["calls"]}
-        per_batch = {}
-        for bsize, calls in batches.items():
-            hits_sum = {"windows": 0, "valid": 0, "calls": 0, "moods": 0, "places": 0, "placeCount": 0, "levels": 0, "cues": 0, "cueCount": 0}
-            seen_all, seconds = [], 0.0
-            for call in calls:
-                out, t = ask(ev["scene"]["system"], call["user"], call["grammar"], call["maxTokens"])
-                if int(bsize) == ev["batch"]:
-                    timings["scene"].append(t)
-                seconds += t["seconds"]
-                hits, seen = score_scenes(call["gold"], out)
-                hits_sum["calls"] += 1
-                for k, v in hits.items():
-                    hits_sum[k] += v
-                seen_all += seen
-                print(f"   Szenen ({bsize} je Aufruf): {t['seconds']:.1f} s, {t['prompt_n']} + {t['predicted_n']} Token", flush=True)
-            h = hits_sum
-            per_batch[bsize] = {
-                "moods": h["moods"] / max(1, h["windows"]), "places": h["places"] / max(1, h["placeCount"]),
-                "levels": h["levels"] / max(1, h["windows"]), "cues": h["cues"] / max(1, h["cueCount"]),
-                "validJson": h["valid"] / max(1, h["calls"]),
-                # Seconds for eight passages, comparable between the sizes.
-                "secondsPer8": seconds / max(1, h["windows"]) * 8, "seen": seen_all, "hits": h,
-            }
-        scene_hits = per_batch[str(ev["batch"])]["hits"]
-        scenes_seen = per_batch[str(ev["batch"])]["seen"]
-
-        a = ev["assistant"]
-        answers = []
-        right = safe = traps = 0
-        for q in a["questions"]:
-            out, t = ask(a["system"], q["user"], a["grammar"], a["maxTokens"])
-            timings["question"].append(t)
-            rep = assistant_reply(out)
-            text = (rep or {}).get("answer", "").lower()
-            ok = rep is not None and any(e in text for e in q["expectAny"]) and not any(f in text for f in q["forbid"])
-            right += ok
-            if q["forbid"]:
-                traps += 1
-                safe += not any(f in text for f in q["forbid"])
-            answers.append({"question": q["question"], "answer": (rep or {}).get("answer", out[:200]), "right": ok, "seconds": round(t["seconds"], 1)})
-
-        commands = []
-        done = 0
-        for c in a["commands"]:
-            out, t = ask(a["system"], c["user"], a["grammar"], a["maxTokens"])
-            timings["command"].append(t)
-            rep = sanitize(c["text"], assistant_reply(out))
-            ok = rep is not None and rep["action"] == c["action"] and (not c["values"] or any(value_matches(rep["value"], v) for v in c["values"]))
-            done += ok
-            commands.append({"text": c["text"], "action": (rep or {}).get("action"), "value": (rep or {}).get("value"), "want": c["action"], "right": ok})
+        for name, v in variants.items():
+            if name:
+                print(f"-- Anweisungen „{name}“", flush=True)
+            r = measure(ev, v["scene"], v["assistant"], batches)
+            r.update({"id": m["id"], "label": m["label"] + (f" · {name}" if name else ""), "model": m["label"], "variant": name,
+                      "note": m["note"], "file": path, "sizeMb": round(size / 1e6), "load": load})
+            reports.append(r)
     finally:
         proc.terminate()
         try:
@@ -276,31 +317,7 @@ def run_model(m, ev, server, work, threads):
         log.close()
     if "path" not in m:
         os.remove(target)
-
-    every = timings["scene"] + timings["question"] + timings["command"]
-    p_n = sum(t["prompt_n"] for t in every)
-    p_ms = sum(t["prompt_ms"] for t in every)
-    g_n = sum(t["predicted_n"] for t in every)
-    g_ms = sum(t["predicted_ms"] for t in every)
-    scene_s = sum(t["seconds"] for t in timings["scene"]) / max(1, len(timings["scene"]))
-    asked = timings["question"] + timings["command"]
-    question_s = sum(t["seconds"] for t in asked) / max(1, len(asked))
-    sh = scene_hits
-    report = {
-        "id": m["id"], "label": m["label"], "note": m["note"], "file": path, "sizeMb": round(size / 1e6),
-        "moods": sh["moods"] / max(1, sh["windows"]), "places": sh["places"] / max(1, sh["placeCount"]),
-        "levels": sh["levels"] / max(1, sh["windows"]), "cues": sh["cues"] / max(1, sh["cueCount"]),
-        "validJson": sh["valid"] / max(1, sh["calls"]),
-        "answers": right / max(1, len(a["questions"])), "spoilerSafe": safe / max(1, traps), "commands": done / max(1, len(a["commands"])),
-        "promptTps": p_n / (p_ms / 1000) if p_ms else 0, "genTps": g_n / (g_ms / 1000) if g_ms else 0,
-        "sceneCall": scene_s, "question": question_s, "load": load,
-        "scenesSeen": scenes_seen, "answersSeen": answers, "commandsSeen": commands,
-        "batches": {k: {kk: vv for kk, vv in v.items() if kk not in ("hits",)} for k, v in per_batch.items()},
-    }
-    report["understanding"] = (report["moods"] + report["places"] + report["levels"] + report["cues"] + report["answers"] + report["commands"]) / 6
-    report["modelSecondsPerHour"] = scene_s / ev["batch"] * ev["windowsPerHour"]
-    print(f"   Verstehen {report['understanding'] * 100:.0f} %, Prompt {report['promptTps']:.0f} tok/s, Ausgabe {report['genTps']:.1f} tok/s", flush=True)
-    return report
+    return reports
 
 
 # ---------------------------------------------------------------- report
@@ -324,6 +341,28 @@ def summary(results, failed, machine):
     for r in results:
         lines.append(f"| **{r['label']}** ({r['note']}) | {r['sizeMb']} MB | **{pct(r['understanding'])}** | {pct(r['moods'])} | {pct(r['places'])} | "
                      f"{pct(r['levels'])} | {pct(r['cues'])} | {pct(r['answers'])} | {pct(r['spoilerSafe'])} | {pct(r['commands'])} | {pct(r['validJson'])} |")
+    # The same model with two versions of the instructions: what changed.
+    by_model = {}
+    for r in results:
+        if r.get("variant"):
+            by_model.setdefault(r["model"], {})[r["variant"]] = r
+    pairs = [(m, v) for m, v in by_model.items() if len(v) >= 2]
+    if pairs:
+        names = list(pairs[0][1].keys())
+        a, b = names[0], names[-1]
+        keys = [("understanding", "Verstehen"), ("moods", "Stimmung"), ("places", "Ort"), ("levels", "Stärke"), ("cues", "Merkmale"),
+                ("answers", "Fragen"), ("commands", "Befehle")]
+        lines += ["", f"### Anweisungen „{a}“ → „{b}“", "",
+                  "| Modell | " + " | ".join(k[1] for k in keys) + " | Zeit je Frage |", "|---|" + "---|" * (len(keys) + 1)]
+        for model, v in pairs:
+            cells = []
+            for k, _ in keys:
+                d = (v[b][k] - v[a][k]) * 100
+                cells.append(f"{pct(v[a][k])} → **{pct(v[b][k])}** ({d:+.0f})")
+            cells.append(f"{v[a]['question']:.1f} → {v[b]['question']:.1f} s")
+            lines.append(f"| {model} | " + " | ".join(cells) + " |")
+        mean = lambda name, k: sum(v[name][k] for _, v in pairs) / len(pairs)
+        lines += ["", f"Im Mittel: Verstehen {pct(mean(a, 'understanding'))} → **{pct(mean(b, 'understanding'))}**."]
     lines += ["", "### Geschwindigkeit", "",
               f"Handy-Spalten: geschätzt für {PHONE} als {int(PHONE_LOW * 100)}–{int(PHONE_HIGH * 100)} % der gemessenen Geschwindigkeit "
               "(langsamerer Speicher, Wärmedrosselung). Genaue Werte misst „Modelle testen“ in der App.", "",
@@ -381,7 +420,7 @@ def main():
         if only and m["id"] not in only:
             continue
         try:
-            results.append(run_model(m, ev, args.server, args.work, args.threads))
+            results += run_model(m, ev, args.server, args.work, args.threads)
         except Exception as e:  # one model failing must not hide the others
             import traceback
             traceback.print_exc()
