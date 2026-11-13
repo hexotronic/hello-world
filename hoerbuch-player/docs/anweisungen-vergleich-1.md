@@ -1,4 +1,4 @@
-<!-- Erster Vergleich der KI-Anweisungen (vorher = bis 12.11.2026, neu = erste genauere Fassung) vom 13.11.2026, Lauf 43399532139 (Commit 4344cf3). Ergebnis: gemischt – Qwen3 4B besser, Gemma 3 4B schlechter (abgeschnittenes JSON). Daraufhin wurden Grammatik, Antwortlänge und die Zeitangaben verbessert, siehe anweisungen-vergleich.md. -->
+<!-- Erster Vergleich der KI-Anweisungen (vorher = bis 12.11.2026, neu = erste genauere Fassung) vom 13.11.2026, Lauf 43399532139 (Commit 4344cf3). Ergebnis: gemischt – Qwen3 4B besser, Gemma 3 4B schlechter (abgeschnittenes JSON). Daraufhin wurden Grammatik, Antwortlänge und die Zeitangaben verbessert, siehe anweisungen-vergleich.md (zweiter Versuch: im Mittel 71 % → 73 %). -->
 
 ## Lauscher – Sprachmodelle im Vergleich
 

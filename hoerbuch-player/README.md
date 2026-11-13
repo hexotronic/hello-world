@@ -315,7 +315,11 @@ oder **nur für ein bestimmtes Hörbuch** speichern.
   Anweisungen“, wenn sie geändert sind.
 - Die eingebauten Texte selbst wurden genauer gemacht (Abschnitte sind zwei Minuten, Stimmungen schärfer
   abgegrenzt, Orte mit Beispielen, mindestens ein Musik-Merkmal je Szene, feste Regeln und Beispiele für die
-  Werte von Befehlen) und in der CI gegen die alte Fassung gemessen (siehe Modellvergleich).
+  Werte von Befehlen) und in der CI gegen die alte Fassung gemessen
+  ([Vergleich](docs/anweisungen-vergleich.md)): im Mittel 71 % → 73 % verstanden, beim stärksten Modell
+  Qwen3 4B 86 % → 96 % (Orte 64 % → 86 %, Musik-Merkmale 50 % → 100 %). Das kleinste Modell Qwen2.5 1.5B
+  kommt mit den längeren Texten etwas schlechter zurecht (45 % → 39 %); einzelne Antworten auf Fragen
+  fallen kürzer und knapper aus – wer ausführlichere möchte, ergänzt z. B. „Antworte mit allen Einzelheiten“.
 
 ### Sprachmodelle: eigene hinzufügen und vergleichen
 - **Suche auf Hugging Face in der App** („Auf Hugging Face suchen …“ bei Spracherkennung und Sprachmodell):
