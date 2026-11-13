@@ -1,0 +1,72 @@
+(supertux-music (file "airship_2.ogg") (title "Airship 2") (authors "Jason Lavallée") (license "CC-BY-SA / GPL 2+") (loop-begin 0) (loop-at 202) )  <data/music/antarctic/airship_remix-2.music>
+(supertux-music (file "airship_remix.ogg") (title "Airship Song Orchestral Mix") (authors "Bart Kelsey") (license "CC-BY-SA 3.0 / GPL 3.0 / GPL 2.0") (loop-begin 4) (loop-at 58) )  <data/music/antarctic/airship_remix.music>
+(supertux-music (file "arctic_breeze.ogg") (title "Antarctic Breeze") (authors "Jason Lavallée") (license "CC-BY-SA / GPL 2+") (loop-begin 0) (loop-at 197) ) <data/music/antarctic/arctic_breeze.music>
+(supertux-music (file "arctic_cave.ogg") (title "Eyes in the Deep") (authors "Jason Lavallée") (license "CC-BY-SA / GPL 2+") (loop-begin 0) (loop-at 267) )  <data/music/antarctic/arctic_cave.music>
+(supertux-music (file "bossattack.ogg") (title "Boss Attack") (authors "Marek \"Wansti\" Moeckel") (license "CC-BY-SA / GPL 2+") (loop-begin 0.5) (loop-at -1) )  <data/music/antarctic/bossattack.music>
+(supertux-music (file "cave.ogg") (title "The Cave (Milestone 2 Version)") (authors "Marek \"Wansti\" Moeckel") (license "CC-BY-SA / GPL 2+") (loop-begin 0) (loop-at -1) )  <data/music/antarctic/cave.music>
+(supertux-music (file "cavetheme.ogg") (authors "SnugglyBun" "Marek \"Wansti\" Moeckel") (license "CC-BY-SA 4.0") (loop-begin 0) (loop-at -1) )  <data/music/antarctic/cavetheme.music>
+(supertux-music (file "cavetheme_alt.ogg") (authors "SnugglyBun" "Marek \"Wansti\" Moeckel") (license "CC-BY-SA 4.0") (loop-begin 0) (loop-at -1) )  <data/music/antarctic/cavetheme_alt.music>
+(supertux-music (file "chipdisko.ogg") (title "Mortimer's Chipdisko") (authors "Lukas Nystrand (as Mortimer Twang)") (license "CC-BY-SA / GPL") (loop-begin 0) (loop-at 158) )  <data/music/antarctic/chipdisko.music>
+(supertux-music (file "crystalmine_intro.ogg") (authors "SnugglyBun") (license "CC-BY-SA 4.0") (loop-begin 0) (loop-at -1) )  <data/music/antarctic/crystalmine_intro.music>
+(supertux-music (file "crystalmine_main.ogg") (authors "SnugglyBun") (license "CC-BY-SA 4.0") (loop-begin 7.499) (loop-at 146.250) )  <data/music/antarctic/crystalmine_main.music>
+(supertux-music (file "glacier.ogg") (authors "SnugglyBun") (license "CC-BY-SA 4.0") (loop-begin 12.311) (loop-at 86.154) )  <data/music/antarctic/glacier.music>
+(supertux-music (file "jewels.ogg") (authors "Alex \"cynicmusic\" Smith" "congusbongus") (title "Crystal Cave + Mysterious Ambience (seamless loop)") (license "CC-BY 3.0 / CC-BY-SA 3.0 / GPL 3.0") (loop-begin 0) (loop-at -1) )  <data/music/antarctic/jewels.music>
+(supertux-music (file "late_sunset.ogg") (loop-begin 2.790) (loop-at 92.090) )  <data/music/antarctic/late_sunset.music>
+(supertux-music (file "midday.ogg") (authors "SnugglyBun") (license "CC-BY-SA 4.0") (loop-begin 0) (loop-at -1) )  <data/music/antarctic/midday.music>
+(supertux-music (file "midday_alt.ogg") (authors "SnugglyBun") (license "CC-BY-SA 4.0") (loop-begin 0) (loop-at -1) )  <data/music/antarctic/midday_alt.music>
+(supertux-music (file "night.ogg") (authors "SnugglyBun") (license "CC-BY-SA 4.0") (loop-begin 2.912) (loop-at 72.727) )  <data/music/antarctic/night.music>
+(supertux-music (file "salcon.ogg") (authors "DJ Gentoo" "Asbjorn \"Mystical\" Andersen") (title "Salsa Con Carne (remix)") (license "CC-BY-SA / GPL") (loop-begin 0) (loop-at 56) )  <data/music/antarctic/salcon.music>
+(supertux-music (file "skylevel.ogg") (authors "SnugglyBun") (license "CC-BY-SA 4.0") (loop-begin 11.639) (loop-at 81.445) )  <data/music/antarctic/skylevel.music>
+(supertux-music (file "snowfort.ogg") (authors "SnugglyBun") (license "CC-BY-SA 4.0") (loop-begin 7.683) (loop-at 88.320) )  <data/music/antarctic/snowfort.music>
+(supertux-music (file "sunset.ogg") (authors "SnugglyBun") (license "CC-BY-SA 4.0") (loop-begin 34.912) (loop-at 104.727) )  <data/music/antarctic/sunset.music>
+(supertux-music (file "underwater.ogg") (authors "SnugglyBun") (license "CC-BY-SA 4.0") (loop-begin 19.198) (loop-at 115.200) )  <data/music/antarctic/underwater.music>
+(supertux-music (file "voc-boss.ogg") (authors "Marek \"Wansti\" Moeckel") (license "CC-BY-SA / GPL 2+") (loop-begin 0) (loop-at -1) )  <data/music/antarctic/voc-boss.music>
+(supertux-music (file "voc-dark.ogg") (authors "Marek \"Wansti\" Moeckel") (license "CC-BY-SA / GPL 2+") (loop-begin 0) (loop-at -1) )  <data/music/antarctic/voc-dark.music>
+(supertux-music (file "voc-daytime.ogg") (authors "Marek \"Wansti\" Moeckel") (license "CC-BY-SA / GPL 2+") (loop-begin 0) (loop-at -1) )  <data/music/antarctic/voc-daytime.music>
+(supertux-music (file "voc-night.ogg") (authors "Marek \"Wansti\" Moeckel") (license "CC-BY-SA / GPL 2+") (loop-begin 4.648) (loop-at 73.231) )  <data/music/antarctic/voc-night.music>
+(supertux-music (file "voc_night_alt.ogg") (loop-begin 3.000) (loop-at 203.000) )  <data/music/antarctic/voc_night_alt.music>
+(supertux-music (file "worldmap_ice.ogg") (authors "SnugglyBun") (license "CC-BY-SA 4.0") (loop-begin 0) (loop-at -1) )  <data/music/antarctic/worldmap_ice.music>
+(supertux-music (file "yetiboss.ogg") (authors "SnugglyBun" "Marek \"Wansti\" Moeckel") (license "CC-BY-SA 4.0") (loop-begin 1.446) (loop-at 82.410) )  <data/music/antarctic/yetiboss.music>
+(supertux-music (file "darkforestkeep.ogg") (authors "Marek \"Wansti\" Moeckel") (license "CC-BY-SA / GPL 2+") (title "Dark Forest Keep") (loop-begin 0) (loop-at 199) )  <data/music/castle/darkforestkeep.music>
+(supertux-music (file "fortress.ogg") (authors "Marek \"Wansti\" Moeckel") (license "CC-BY-SA / GPL 2+") (title "The Fortress (Milestone 2 Version)") (loop-begin 11.37) (loop-at -1) )  <data/music/castle/fortress.music>
+(supertux-music (file "icecastle.ogg") (authors "SnugglyBun" "Marek \"Wansti\" Moeckel") (license "CC-BY-SA 4.0") (loop-begin 9.235) (loop-at 80.000) )  <data/music/castle/icecastle.music>
+(supertux-music (file "beneath_the_rabbit_hole.ogg") (authors "Jason Lavallée") (license "CC-BY-SA / GPL 2+") (title "Beneath the Rabbit Holes") (loop-begin 0) (loop-at 178) )  <data/music/forest/beneath_the_rabbit_hole.music>
+(supertux-music (file "bright_thunders.ogg") (authors "Chris \"Krobonil\" Leutwyler") (license "CC-BY-SA") (loop-begin 0) (loop-at -1) )  <data/music/forest/bright_thunders.music>
+(supertux-music (file "call_of_the_winding_path.ogg") (authors "Jason Lavallée") (license "CC-BY-SA / GPL 2+") (loop-begin 0) (loop-at 394) )  <data/music/forest/call_of_the_winding_path.music>
+(supertux-music (file "clavelian_march.ogg") (authors "Treskalle") (title "Clavelian March") (loop-begin 0.5) (loop-at -1) )  <data/music/forest/clavelian_march.music>
+(supertux-music (file "counter_current.ogg") (loop-begin 38.34) (loop-at 213.58) )  <data/music/forest/counter_current.music>
+(supertux-music (file "deeply_rooted.ogg") (loop-begin 0) (loop-at 69.81) )  <data/music/forest/deeply_rooted.music>
+(supertux-music (file "forest-cave.ogg") (authors "Jason Lavallée") (license "CC-BY-SA / GPL 2+") (loop-begin 0) (loop-at 149) ) <data/music/forest/forest-cave.music>
+(supertux-music (file "forest-sprint.ogg") (authors "Jason Lavallée") (license "CC-BY-SA / GPL 2+") (loop-begin 0) (loop-at 207) ) <data/music/forest/forest-sprint.music>
+(supertux-music (file "forest.ogg") (authors "Marek \"Wansti\" Moeckel") (license "CC-BY-SA / GPL 2+") (title "Forest Dance") (loop-begin 54.818) (loop-at 95.955) )  <data/music/forest/forest.music>
+(supertux-music (file "forest2.ogg") (authors "Marek \"Wansti\" Moeckel") (license "CC-BY-SA / GPL 2+") (title "Rabbit Holes") (loop-begin 0) (loop-at 143) )  <data/music/forest/forest2.music>
+(supertux-music (file "forest3.ogg") (authors "Marek \"Wansti\" Moeckel") (license "CC-BY-SA / GPL 2+") (title "Riding The Wind") (loop-begin 0) (loop-at 99) )  <data/music/forest/forest3.music>
+(supertux-music (file "forest_midday.ogg") (authors "SnugglyBun" "Marek \"Wansti\" Moeckel") (license "CC-BY-SA 4.0") (loop-begin 8.067) (loop-at 112.941) )  <data/music/forest/forest_midday.music>
+(supertux-music (file "forest_midday_alt.ogg") (authors "SnugglyBun" "Marek \"Wansti\" Moeckel") (license "CC-BY-SA 4.0") (loop-begin 7.215) (loop-at 101.053) )  <data/music/forest/forest_midday_alt.music>
+(supertux-music (file "forest_theme.ogg") (authors "Marek \"Wansti\" Moeckel" "Tobias \"ToBeFree\" Frei") (license "CC-BY-SA / GPL 2+") (title "Forest Prophecy reEducated") (loop-begin 0) (loop-at -1) )  <data/music/forest/forest_theme.music>
+(supertux-music (file "ghostforest.ogg") (authors "Marek \"Wansti\" Moeckel") (license "CC-BY-SA / GPL 2+") (title "Ghost Forest") (loop-begin 0) (loop-at -1) )  <data/music/forest/ghostforest.music>
+(supertux-music (file "ghostforest2.ogg") (authors "Marek \"Wansti\" Moeckel") (license "CC-BY-SA / GPL 2+") (title "Ghost Forest 2") (loop-begin 0) (loop-at 91) )  <data/music/forest/ghostforest2.music>
+(supertux-music (file "ghostforest_map.ogg") (authors "Jason Lavallée") (license "CC-BY-SA / GPL 2+") (loop-begin 0) (loop-at 236) ) <data/music/forest/ghostforest_map.music>
+(supertux-music (file "greatgigantic.ogg") (authors "Marek \"Wansti\" Moeckel" "Chris Huelsbeck") (license "GPL") (title "The Great Gigantic Secret (with kind permission from Chris Huelsbeck)") (loop-begin 0) (loop-at -1) )  <data/music/forest/greatgigantic.music>
+(supertux-music (file "march_of_the_malevolent.ogg") (authors "Servalot" "Marek \"Wansti\" Moeckel") (license "CC-BY-SA 4.0") (title "March of the Malevolent") (loop-begin 0) (loop-at 109.09) )  <data/music/forest/march_of_the_malevolent.music>
+(supertux-music (file "new_forest_map.ogg") (authors "Jason Lavallée") (license "CC-BY-SA / GPL 2+") (loop-begin 0) (loop-at 105) )  <data/music/forest/new_forest_map.music>
+(supertux-music (file "shallow-green.ogg") (authors "Jason Lavallée") (license "CC-BY-SA / GPL 2+") (title "Forest Stroll") (loop-begin 0) (loop-at 255) )  <data/music/forest/shallow-green.music>
+(supertux-music (file "treeboss.ogg") (authors "Marek \"Wansti\" Moeckel") (license "CC-BY-SA / GPL 2+") (loop-begin 32.15) (loop-at -1) )  <data/music/forest/treeboss.music>
+(supertux-music (file "wisphunt.ogg") (authors "Marek \"Wansti\" Moeckel") (license "CC-BY-SA / GPL 2+") (loop-begin 21.08) (loop-at -1) )  <data/music/forest/wisphunt.music>
+(supertux-music (file "battle_theme.ogg") (authors "remaxim") (license "CC-BY-SA 3.0 / GPL 2+") (title "Battle Theme") (loop-begin 30) (loop-at 200) )  <data/music/misc/battle_theme.music>
+(supertux-music (file "bonuscave.ogg") (authors "Marek \"Wansti\" Moeckel") (license "CC-BY-SA / GPL 2+") (title "Bonus Cave") (loop-begin 0) (loop-at 10) )  <data/music/misc/bonuscave.music>
+(supertux-music (file "calm_ocean.ogg") (loop-begin 16) (loop-at -1) ) <data/music/misc/calm_ocean.music>
+(supertux-music (file "christmas_theme.ogg") (loop-begin 9) (loop-at -1) )  <data/music/misc/christmas_theme.music>
+(supertux-music (file "credits.ogg") (authors "Marek \"Wansti\" Moeckel") (license "CC-BY-SA / GPL 2+") (title "SuperTux Credits Theme") (loop-begin 0) (loop-at 107) )  <data/music/misc/credits.music>
+(supertux-music (file "halloween_1.ogg") (authors "Forty-Two") (license "CC-BY-SA 4.0") (loop-begin 37.60) (loop-at 124.95) )  <data/music/misc/halloween_1.music>
+(supertux-music (file "intro.ogg") (authors "Marek \"Wansti\" Moeckel") (license "CC-BY-SA / GPL 2+") (title "Intro Theme") (loop-begin 0) (loop-at 34) )  <data/music/misc/intro.music>
+(supertux-music (file "invincible.ogg") (title "Invincibility Theme") (loop-begin 2) (loop-at 14) )  <data/music/misc/invincible.music>
+(supertux-music (file "theme.ogg") (authors "Marek \"Wansti\" Moeckel") (license "CC-BY-SA / GPL 2+") (title "SuperTux Theme (Milestone 2 Version)") (loop-begin 9) (loop-at 135) )  <data/music/misc/theme.music>
+(supertux-music (file "cave_old.ogg") (authors "Marek \"Wansti\" Moeckel") (license "CC-BY-SA / GPL 2+") (title "Super Tux - The Cave") (loop-begin 0) (loop-at 77) )  <data/music/retro/cave_old.music>
+(supertux-music (file "classic.ogg") (title "SuperTux 0.0.4 music") (loop-begin 0) (loop-at 97) )  <data/music/retro/classic.music>
+(supertux-music (file "fortress_old.ogg") (authors "Marek \"Wansti\" Moeckel") (license "CC-BY-SA / GPL 2+") (title "Super Tux - Fortress") (loop-begin 0) (loop-at 46) )  <data/music/retro/fortress_old.music>
+(supertux-music (file "ice_music.ogg") (authors "ZhayTee") (title "supertux ice level") (loop-begin 0) (loop-at 137) )  <data/music/retro/ice_music.music>
+(supertux-music (file "theme_old.ogg") (loop-begin 9.7) (loop-at 61.53) )  <data/music/retro/theme_old.music>
+(supertux-music (file "worldmap_old.ogg") (authors "ZhayTee") (title "supertux title") (loop-begin 0) (loop-at 40) )  <data/music/retro/worldmap_old.music>
+(supertux-music (file "saharan_penguin.ogg") (authors "Enol \"Meji\" Monte") (license "CC-BY-SA") (loop-begin 0) (loop-at 96) )  <data/music/tropical/saharan_penguin.music>
+(supertux-music (file "tropicalbreeze.ogg") (authors "Flan") (license "CC-BY-SA 4.0") (title "Tropical Breeze") (loop-begin 0) (loop-at 73) )  <data/music/tropical/tropicalbreeze.music>

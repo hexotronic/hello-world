@@ -1,0 +1,273 @@
+package io.github.hexotronic.lauscher.music.library
+
+import android.content.Context
+import android.util.Log
+import io.github.hexotronic.lauscher.music.MusicEngine
+import io.github.hexotronic.lauscher.music.MusicSettingsStore
+import io.github.hexotronic.lauscher.music.MusicSource
+import io.github.hexotronic.lauscher.music.library.core.LibraryTrack
+import io.github.hexotronic.lauscher.music.library.core.MusicCatalog
+import io.github.hexotronic.lauscher.music.library.core.TrackFile
+import io.github.hexotronic.lauscher.music.library.core.TrackPicker
+import io.github.hexotronic.lauscher.music.synth.Mood
+import io.github.hexotronic.lauscher.music.synth.MusicCue
+import io.github.hexotronic.lauscher.music.synth.Pace
+import io.github.hexotronic.lauscher.music.synth.PcmStream
+import io.github.hexotronic.lauscher.music.synth.RecordingSource
+import io.github.hexotronic.lauscher.music.synth.Setting
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
+import java.security.MessageDigest
+import kotlin.coroutines.coroutineContext
+import kotlin.math.pow
+
+/** Progress of downloading one or more pieces. */
+data class LibraryDownload(
+    val totalCount: Int,
+    val doneCount: Int,
+    val bytesDone: Long,
+    val bytesTotal: Long,
+    val currentTitle: String?,
+    val error: String? = null,
+) {
+    val running: Boolean get() = currentTitle != null
+    val progress: Float get() = if (bytesTotal > 0) (bytesDone.toFloat() / bytesTotal).coerceIn(0f, 1f) else 0f
+}
+
+/**
+ * The downloadable fantasy music: fetches pieces from the games' repositories, checks them
+ * against the catalog's checksums and hands them to the music mixer.
+ */
+class MusicLibrary(
+    private val context: Context,
+    private val settings: MusicSettingsStore,
+    private val scope: CoroutineScope,
+) : RecordingSource {
+    private val _installed = MutableStateFlow<Set<String>>(emptySet())
+    val installed: StateFlow<Set<String>> = _installed.asStateFlow()
+    private val _download = MutableStateFlow<LibraryDownload?>(null)
+    val download: StateFlow<LibraryDownload?> = _download.asStateFlow()
+
+    private val picker = TrackPicker()
+    private val queue = ArrayDeque<LibraryTrack>()
+    private var job: Job? = null
+
+    @Volatile
+    private var installedTracks: List<LibraryTrack> = emptyList()
+
+    private val dir: File
+        get() = (context.getExternalFilesDir("music") ?: File(context.filesDir, "music")).also { it.mkdirs() }
+
+    init {
+        scope.launch(Dispatchers.IO) { rescan() }
+    }
+
+    /** The piece's files on the device, or null unless all of them are complete. */
+    fun filesFor(track: LibraryTrack): List<File>? {
+        val files = track.files.indices.map { File(dir, fileName(track, it)) }
+        return files.takeIf { list -> list.indices.all { list[it].isFile && list[it].length() == track.files[it].bytes } }
+    }
+
+    fun installedBytes(): Long = installedTracks.sumOf { it.bytes }
+
+    private fun rescan() {
+        val present = MusicCatalog.tracks.filter { filesFor(it) != null }
+        installedTracks = present
+        _installed.value = present.map { it.id }.toSet()
+    }
+
+    // Batch bookkeeping, guarded by [queue].
+    private var workerRunning = false
+    private var currentId: String? = null
+    private var batchCount = 0
+    private var batchBytes = 0L
+    private var doneCount = 0
+    private var doneBytes = 0L
+
+    /** Queues pieces for download; pieces already present or queued are skipped. */
+    fun download(ids: Collection<String>) {
+        val wanted = ids.mapNotNull { MusicCatalog.byId(it) }.filter { it.id !in _installed.value }
+        var start = false
+        synchronized(queue) {
+            val fresh = wanted.filter { t -> t.id != currentId && queue.none { it.id == t.id } }
+            if (fresh.isEmpty()) return
+            if (!workerRunning) {
+                batchCount = 0
+                batchBytes = 0
+                doneCount = 0
+                doneBytes = 0
+            }
+            queue.addAll(fresh)
+            batchCount += fresh.size
+            batchBytes += fresh.sumOf { it.bytes }
+            start = !workerRunning
+            workerRunning = true
+            publishLocked(currentId?.let { MusicCatalog.byId(it)?.title } ?: fresh.first().title, 0)
+        }
+        if (start) job = scope.launch(Dispatchers.IO) { work() }
+    }
+
+    private fun publishLocked(title: String?, partBytes: Long) {
+        _download.value = LibraryDownload(batchCount, doneCount, doneBytes + partBytes, batchBytes, title)
+    }
+
+    private suspend fun work() {
+        while (true) {
+            val track = synchronized(queue) {
+                queue.removeFirstOrNull().also { t ->
+                    currentId = t?.id
+                    if (t == null) {
+                        workerRunning = false
+                        _download.value = null
+                    } else {
+                        publishLocked(t.title, 0)
+                    }
+                }
+            } ?: return
+            val error = runCatching { fetch(track) }.exceptionOrNull()
+            val cancelled = !coroutineContext.isActive
+            synchronized(queue) {
+                currentId = null
+                if (error != null) {
+                    queue.clear()
+                    workerRunning = false
+                    if (!cancelled) Log.w(TAG, "Download von ${track.id} fehlgeschlagen: ${error.message}")
+                    _download.value = if (cancelled) null else _download.value?.copy(currentTitle = null, error = "${track.title}: ${error.message}")
+                    return
+                }
+                doneCount++
+                doneBytes += track.bytes
+                installedTracks = installedTracks + track
+                _installed.value = _installed.value + track.id
+            }
+            Log.i(TAG, "Geladen: ${track.id}")
+        }
+    }
+
+    private suspend fun fetch(track: LibraryTrack) {
+        var before = 0L
+        track.files.forEachIndexed { index, file ->
+            val target = File(dir, fileName(track, index))
+            if (!(target.isFile && target.length() == file.bytes)) fetchFile(track, file, target, before)
+            before += file.bytes
+        }
+    }
+
+    private suspend fun fetchFile(track: LibraryTrack, file: TrackFile, target: File, before: Long) {
+        val part = File(target.path + ".part")
+        val conn = URL(file.url).openConnection() as HttpURLConnection
+        conn.connectTimeout = 20_000
+        conn.readTimeout = 30_000
+        conn.setRequestProperty("User-Agent", "Lauscher-Android")
+        try {
+            val code = conn.responseCode
+            if (code != 200) error("Server antwortet mit $code")
+            val digest = MessageDigest.getInstance("SHA-256")
+            var got = 0L
+            conn.inputStream.use { input ->
+                FileOutputStream(part).use { out ->
+                    val buf = ByteArray(64 * 1024)
+                    var lastReport = 0L
+                    while (true) {
+                        if (!coroutineContext.isActive) error("Abgebrochen")
+                        val n = input.read(buf)
+                        if (n < 0) break
+                        out.write(buf, 0, n)
+                        digest.update(buf, 0, n)
+                        got += n
+                        if (got - lastReport > 128 * 1024) {
+                            lastReport = got
+                            synchronized(queue) { if (currentId == track.id) publishLocked(track.title, before + got) }
+                        }
+                    }
+                }
+            }
+            val sha = digest.digest().joinToString("") { "%02x".format(it) }
+            if (got != file.bytes || sha != file.sha256) {
+                part.delete()
+                error("Datei ist beschädigt (Prüfsumme stimmt nicht)")
+            }
+            if (!part.renameTo(target)) error("Konnte Datei nicht speichern")
+        } finally {
+            conn.disconnect()
+            part.delete()
+        }
+    }
+
+    fun cancel() {
+        synchronized(queue) { queue.clear() }
+        job?.cancel()
+    }
+
+    fun clearError() {
+        if (_download.value?.running == false) _download.value = null
+    }
+
+    fun delete(ids: Collection<String>) {
+        val tracks = ids.mapNotNull { MusicCatalog.byId(it) }
+        tracks.forEach { t -> t.files.indices.forEach { File(dir, fileName(t, it)).delete() } }
+        val gone = tracks.map { it.id }.toSet()
+        installedTracks = installedTracks.filter { it.id !in gone }
+        _installed.value = _installed.value - gone
+    }
+
+    // ------------------------------------------------------------------ RecordingSource
+
+    @Volatile
+    private var avoidNext: String? = null
+
+    /** The next pick avoids [trackId] (the listener asked for another piece). */
+    fun avoidNext(trackId: String) {
+        avoidNext = trackId
+    }
+
+    override fun open(
+        mood: Mood,
+        setting: Setting?,
+        intensity: Float,
+        trackId: String?,
+        cues: List<MusicCue>,
+        pace: Pace?,
+    ): PcmStream? {
+        val track = if (trackId != null) {
+            MusicCatalog.byId(trackId)
+        } else {
+            val s = settings.current
+            if (s.source != MusicSource.LIBRARY) return null
+            val pool = if (s.hiddenTracks.isEmpty()) installedTracks else installedTracks.filter { it.id !in s.hiddenTracks }
+            val avoid = avoidNext
+            avoidNext = null
+            picker.pick(pool, mood, setting, intensity, s.likedTracks, avoid, s.follow, cues, pace)
+        } ?: return null
+        val files = filesFor(track) ?: return null
+        // Quieter scenes get the piece a little softer.
+        val gain = 10f.pow(track.gainDb / 20f) * (0.8f + 0.2f * intensity.coerceIn(0f, 1f))
+        Log.i(TAG, "Spielt: ${track.id} (${mood.name}, ${setting?.name ?: "ohne Ort"})")
+        return DecodedFileStream(files, track.plan, track.id, gain, MusicEngine.SAMPLE_RATE)
+    }
+
+    override fun stillFits(trackId: String, mood: Mood, setting: Setting?, intensity: Float): Boolean? =
+        MusicCatalog.byId(trackId)?.let { TrackPicker.stillFits(it, mood, setting, intensity) }
+
+    companion object {
+        private const val TAG = "LauscherMusik"
+
+        private val EXTENSIONS = setOf("ogg", "mp3", "m4a", "flac", "opus")
+
+        /** The file's own extension (Ogg, MP3, M4A, FLAC), so the decoder recognises it. */
+        private fun fileName(track: LibraryTrack, index: Int): String {
+            val ext = track.files[index].url.substringAfterLast('.').lowercase().takeIf { it in EXTENSIONS } ?: "ogg"
+            return track.id.replace('/', '-') + (if (index > 0) "-$index" else "") + ".$ext"
+        }
+    }
+}

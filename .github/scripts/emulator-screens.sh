@@ -1,0 +1,501 @@
+#!/bin/bash
+# Installs the APK on the CI emulator, plays the demo audiobook, takes screenshots of the
+# main screens in light and dark mode and fails if the app crashed.
+# usage: emulator-screens.sh <apk> <output-dir>
+set -u
+APK=$1
+OUT=$2
+PKG=io.github.hexotronic.lauscher
+mkdir -p "$OUT"
+
+adb install -r "$APK"
+adb shell pm grant "$PKG" android.permission.POST_NOTIFICATIONS || true
+adb shell settings put system screen_off_timeout 1800000
+adb shell svc power stayon true
+adb logcat -c
+
+start() { adb shell am start -W -n "$PKG/.MainActivity" "$@" > /dev/null; }
+# Clears the log; "logcat -c" also empties the crash buffer, so that is kept first.
+clear_log() {
+  adb logcat -d -b crash >> "$OUT/crash.txt" 2>/dev/null || true
+  adb logcat -c
+}
+shot() {
+  sleep "$2"
+  # A busy emulator sometimes shows "… isn't responding" for the launcher; close such dialogs
+  # (not for the notification screenshot, which needs the open shade).
+  if [ "$1" != "10-benachrichtigung" ]; then
+    adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS > /dev/null 2>&1 || true
+    sleep 1
+  fi
+  adb exec-out screencap -p > "$OUT/$1.png"
+  echo "screenshot $1"
+}
+
+adb shell cmd uimode night no
+start --ez demo true
+shot 01-player-hell 25
+start --es screen library
+shot 02-bibliothek-hell 4
+start --es preset NOISY_RECORDING --es screen studio
+shot 03-klangstudio-hell 6
+adb shell input swipe 20 2000 20 300 400
+adb shell input swipe 20 2000 20 300 400
+shot 03b-klangstudio-unten-hell 2
+adb shell input swipe 20 2000 20 300 400
+shot 03c-equalizer-hell 2
+start --es screen detail
+shot 04-details-hell 4
+sleep 15
+start --es screen stats
+shot 05-statistik-hell 5
+start --es screen settings
+shot 06-einstellungen-hell 3
+start --ez music true --es screen player
+shot 06b-player-musik-hell 6
+start --es screen music
+shot 06c-hintergrundmusik-hell 4
+start --es screen music_settings
+shot 06c2-hintergrundmusik-musik-hell 4
+
+# --- Music library: download pieces from the games' repositories, check them and play them.
+# spd/sewers_1 is a 26-second loop that is played several times in a row.
+start --es music_download wesnoth/sad,spd/sewers_1 --es screen musiclibrary
+for i in $(seq 1 40); do
+  if adb logcat -d -s LauscherMusik:* | grep -qE "Geladen: spd/sewers_1|fehlgeschlagen"; then break; fi
+  sleep 2
+done
+start --es music_preview wesnoth/sad --es screen musiclibrary
+shot 06d-musikbibliothek-hell 6
+start --es music_preview spd/sewers_1 --es screen player
+sleep 32
+start --es music_fixed TENSE@DUNGEON --es screen player
+shot 06e-player-kerker-musik-hell 4
+start --ez music true --es screen feedback
+shot 06f-rueckmeldung-hell 4
+adb logcat -d -s LauscherMusik:* | tail -30 | tee "$OUT/musik.txt"
+if ! grep -q "Dekodiert: wesnoth/sad" "$OUT/musik.txt" || ! grep -q "Fortsetzung: spd/sewers_1, Teil 2" "$OUT/musik.txt"; then
+  echo "::error::Die Musikbibliothek wurde nicht geladen oder nicht (in Schleife) abgespielt"
+  E2E_FAILED=1
+fi
+# The AI log explains every music decision ("… → spielt „…“ – Gefühl … passt …").
+adb logcat -d -s LauscherKI:* | grep "Musik:" | tail -10 | tee "$OUT/ki-protokoll-musik.txt"
+if ! grep -q "spielt „" "$OUT/ki-protokoll-musik.txt"; then
+  echo "::error::Das KI-Protokoll hat die Musikauswahl nicht begründet"
+  E2E_FAILED=1
+fi
+
+adb shell cmd uimode night yes
+sleep 3
+start --es screen player
+shot 07-player-dunkel 5
+start --es screen studio
+shot 08-klangstudio-dunkel 6
+start --es screen library
+shot 09-bibliothek-dunkel 4
+adb shell cmd statusbar expand-notifications
+shot 10-benachrichtigung 3
+adb shell cmd statusbar collapse
+
+# --- Local AI end to end: speech file + small models -> scene analysis on the device.
+if [ -n "${E2E_DIR:-}" ] && [ -f "$E2E_DIR/story.wav" ]; then
+  DATA=/sdcard/Android/data/$PKG/files
+  adb shell mkdir -p "$DATA/models" "$DATA/test"
+  adb push "$E2E_DIR/ggml-tiny-q5_1.bin" "$DATA/models/" > /dev/null
+  adb push "$E2E_DIR/qwen2.5-0.5b-instruct-q4_k_m.gguf" "$DATA/models/" > /dev/null
+  adb push "$E2E_DIR/story.wav" "$DATA/test/" > /dev/null
+  adb push "$E2E_DIR/story.txt" "$DATA/test/" > /dev/null
+  adb shell cmd uimode night no
+  # Speech recognition at double speed (time-stretched, same pitch): the first sample is compared with
+  # normal speed, and the faster speed is only kept if recognition hardly suffers.
+  start --ez music true --es whisper_model whisper-tiny --es llm_model qwen2.5-0.5b --es language en --es speech_speed 2 \
+    --es import_path "$DATA/test/story.wav" --ez analyze true
+  echo "Warte auf die lokale Analyse …"
+  for i in $(seq 1 120); do
+    if adb logcat -d -s LauscherAnalyse:* | grep -qE "Szenen|Analysis failed"; then break; fi
+    sleep 5
+  done
+  adb logcat -d -s LauscherAnalyse:* LauscherLlm:* LauscherWhisper:* | tail -40 | tee "$OUT/analyse.txt"
+  sleep 5
+  start --es screen music_ai
+  shot 11-ki-analyse-hell 5
+  if ! grep -q "Szenen" "$OUT/analyse.txt"; then
+    echo "::error::Die lokale Analyse hat keine Szenen geliefert"
+    E2E_FAILED=1
+  fi
+  # Music cues and pace named by the model (e.g. "[CHASE+DANGER/FAST]"); a small model may leave the cues empty.
+  CUES=$(grep "Szenen:" "$OUT/analyse.txt" | grep -oE "\[[A-Z+]*/[A-Z?]+\]" | head -3 | tr '\n' ' ')
+  if [ -n "$CUES" ]; then
+    echo "::notice::Musik-Merkmale der Szenen: $CUES"
+  else
+    echo "::error::Die Szenen haben keine Musik-Merkmale (Tempo/Merkmale) bekommen"
+    E2E_FAILED=1
+  fi
+  if ! grep -q "Tempoprobe 2.0" "$OUT/analyse.txt"; then
+    echo "::error::Die Tempoprobe bei 2× fehlt"
+    E2E_FAILED=1
+  fi
+  # The AI log (text window "KI-Protokoll") shows each step: heard, asked, answered, scenes.
+  adb logcat -d -s LauscherKI:* | cut -c1-260 | tee "$OUT/ki-protokoll.txt" | tail -12
+  for step in "Gehört:" "Frage: Sprachmodell gefragt" "Antwort: Antwort nach" "Szene:"; do
+    if ! grep -q "$step" "$OUT/ki-protokoll.txt"; then
+      echo "::error::Im KI-Protokoll fehlt der Schritt „$step“"
+      E2E_FAILED=1
+    fi
+  done
+
+  # The same book with its text: the analysis reads instead of listening. Windows of 30 s, so the
+  # story has two and a change of music between them is looked for more precisely.
+  clear_log
+  start --es sample_every 0.5 --es book_text_path "$DATA/test/story.txt" --ez analyze true
+  echo "Warte auf die Analyse mit Buchtext …"
+  for i in $(seq 1 120); do
+    if adb logcat -d -s LauscherAnalyse:* | grep -qE "Analyse fertig|Analysis failed"; then break; fi
+    sleep 5
+  done
+  adb logcat -d -s LauscherAnalyse:* | tail -20 | tee "$OUT/analyse-buchtext.txt"
+  if ! grep -q "Buchtext" "$OUT/analyse-buchtext.txt" || ! grep -q "Szenen" "$OUT/analyse-buchtext.txt"; then
+    echo "::error::Die Analyse mit Buchtext hat nicht funktioniert"
+    E2E_FAILED=1
+  fi
+  start --es screen analysis
+  shot 13-ki-analyse-tab-hell 5
+  start --es screen ailog
+  shot 13b-ki-protokoll-hell 4
+  start --es screen analyze_range
+  shot 13c-analysieren-dialog-hell 4
+  adb logcat -d -s LauscherKI:* | grep -E "Gelesen:|Szenenwechsel:" | cut -c1-260 | tail -6
+  # Two windows with different music: the scene change must have been looked for.
+  KINDS=$(grep "Szenen:" "$OUT/analyse-buchtext.txt" | grep -oE "[0-9]+:[0-9]+=[A-Z]+/[0-9]@[A-Z_?]+" | cut -d= -f2 | sort -u | wc -l)
+  if [ "$KINDS" -gt 1 ]; then
+    if ! grep -q "Szenenwechsel bei" "$OUT/analyse-buchtext.txt"; then
+      echo "::error::Der Szenenwechsel wurde nicht genauer gesucht"
+      E2E_FAILED=1
+    fi
+  else
+    echo "::notice::Beide Abschnitte bekamen dieselbe Musik – kein Szenenwechsel zu verfeinern"
+  fi
+
+  # --- "Frag das Buch": a command understood without the model, then a question to the small model
+  # about the story that was just analysed (only up to the listening position).
+  clear_log
+  # The text goes through the device's shell: quoted again, or only its first word arrives.
+  start --es assistant_ask "'Schlaf-Timer 20 Minuten'"
+  sleep 10
+  start --es assistant_ask "'Who was following Mira?'"
+  for i in $(seq 1 60); do
+    if adb logcat -d -s LauscherKI:* | grep -qE "Antwort: Antwort nach|Problem: Frag das Buch"; then break; fi
+    sleep 3
+  done
+  shot 15-frag-das-buch-hell 4
+  adb logcat -d -s LauscherKI:* | grep -E "Frag das Buch|Frage ans Buch|Befehl ohne|Antwort nach|Sprachmodell für Fragen" | cut -c1-260 | tee "$OUT/frag-das-buch.txt"
+  for step in "Befehl ohne Sprachmodell erkannt" "ausgeführt: Schlaf-Timer 20" "Frage: Frage ans Buch" "Antwort: Antwort nach"; do
+    if ! grep -q "$step" "$OUT/frag-das-buch.txt"; then
+      echo "::error::„Frag das Buch“: es fehlt „$step“"
+      E2E_FAILED=1
+    fi
+  done
+  adb shell input keyevent KEYCODE_BACK
+
+  # --- "Modelle testen" (short test) with the small model: understanding and speed on this device.
+  clear_log
+  start --es model_test quick
+  # Up to 20 minutes: the emulator runs the model without fast CPU instructions, seven calls take 8–15 minutes.
+  for i in $(seq 1 200); do
+    if adb logcat -d -s LauscherKI:* | grep -qE "Modelltest .*: Verstehen|Modelltest fehlgeschlagen"; then break; fi
+    sleep 6
+  done
+  adb logcat -d -s LauscherKI:* | grep "Modelltest" | cut -c1-300 | tee "$OUT/modelltest.txt"
+  if grep -q "Verstehen" "$OUT/modelltest.txt"; then
+    echo "::notice::$(grep -o 'Modelltest [^:]*: Verstehen.*' "$OUT/modelltest.txt" | tail -1)"
+  else
+    echo "::error::Der Modelltest in der App hat kein Ergebnis geliefert"
+    E2E_FAILED=1
+  fi
+
+  # --- "KI-Anweisungen": an addition to the instructions of "Frag das Buch" reaches the model.
+  # (Only after the model test: while it runs, questions are turned away.)
+  clear_log
+  start --es prompt_extra "'ASSISTANT:Antworte in höchstens zwei Sätzen.'" --es screen prompts
+  shot 16-ki-anweisungen-hell 4
+  start --es assistant_ask "'Where did Mira sit?'"
+  for i in $(seq 1 60); do
+    if adb logcat -d -s LauscherKI:* | grep -qE "Antwort: Antwort nach|Problem: Frag das Buch"; then break; fi
+    sleep 3
+  done
+  adb logcat -d -s LauscherKI:* | grep -E "Frage ans Buch" | cut -c1-260 | tee "$OUT/ki-anweisungen.txt"
+  if ! grep -q "mit deinen Anweisungen" "$OUT/ki-anweisungen.txt"; then
+    echo "::error::Die eigene Ergänzung der KI-Anweisungen kam nicht beim Sprachmodell an"
+    E2E_FAILED=1
+  fi
+  adb shell input keyevent KEYCODE_BACK
+  start --es prompt_reset all
+
+  # Speech recognition of the same recording at 1×, 1.25×, 1.5× and 2×: time and words recognised.
+  clear_log
+  start --es speech_check "$DATA/test/story.wav"
+  echo "Warte auf den Sprachtest …"
+  for i in $(seq 1 60); do
+    if adb logcat -d -s LauscherAnalyse:* | grep -q "Sprachtest fertig"; then break; fi
+    sleep 5
+  done
+  adb logcat -d -s LauscherAnalyse:* | grep "Sprachtest" > "$OUT/sprachtest.txt" || true
+  sed -E 's/^.*(Sprachtest)/\1/' "$OUT/sprachtest.txt" | cut -c1-300
+  python3 - "$E2E_DIR/story.txt" "$OUT/sprachtest.txt" <<'PY' | tee "$OUT/sprachtest-auswertung.txt"
+import difflib, re, sys
+words = lambda t: re.findall(r"[a-z]+", t.lower())
+ref = words(open(sys.argv[1]).read())
+for line in open(sys.argv[2]):
+    m = re.search(r"Sprachtest ([\d.]+)×: (\d+) ms, (\d+) Wörter: (.*)", line)
+    if not m:
+        continue
+    heard = words(m.group(4))
+    hit = sum(b.size for b in difflib.SequenceMatcher(None, ref, heard, autojunk=False).get_matching_blocks())
+    print(f"Tempo {m.group(1)}×: {int(m.group(2)) / 1000:.1f} s, {100 * hit / len(ref):.0f} % der {len(ref)} Wörter erkannt")
+PY
+  if ! grep -q "Sprachtest fertig" "$OUT/sprachtest.txt" || ! grep -q "Tempo 2.0" "$OUT/sprachtest-auswertung.txt"; then
+    echo "::error::Der Sprachtest bei mehreren Tempi hat nicht funktioniert"
+    E2E_FAILED=1
+  fi
+
+  # --- Downloads: a video from the phone as MP3, one LibriVox chapter, a PeerTube search result.
+  if [ -f "$E2E_DIR/video.mp4" ]; then adb push "$E2E_DIR/video.mp4" "$DATA/test/" > /dev/null; fi
+  if [ -f "$E2E_DIR/long.mp4" ]; then adb push "$E2E_DIR/long.mp4" "$DATA/test/" > /dev/null; fi
+  clear_log
+  # Both files in one job: converted at the same time, the long one in pieces on several cores.
+  start --es download_convert "$DATA/test/video.mp4,$DATA/test/long.mp4" --es screen downloads
+  start --es download_audiobook "Grimm" --es download_limit 1
+  start --es download_media "peertube:peertube" --es download_limit 1
+  echo "Warte auf die Downloads …"
+  for i in $(seq 1 96); do
+    if [ "$(adb logcat -d -s LauscherDownload:* | grep -cE "Auftrag [0-9]+ (fertig|fehlgeschlagen)")" -ge 3 ]; then break; fi
+    sleep 5
+  done
+  start --es screen downloads
+  shot 12-herunterladen-hell 4
+  adb logcat -d -s LauscherDownload:* | tail -60 | tee "$OUT/downloads.txt"
+  if ! grep -q "Umgewandelt: .*video.mp3" "$OUT/downloads.txt" || ! grep -qE "Importiert \[download:[0-9a-f]+\]: video .*Buch [0-9]" "$OUT/downloads.txt"; then
+    echo "::error::Das Video wurde nicht in MP3 umgewandelt"
+    E2E_FAILED=1
+  fi
+  # The long video: several pieces, joined cleanly, and the MP3 decodes without errors at full length.
+  if ! grep -qE "Umgewandelt: .*long.mp3 – 1:1[45] in .* \(([3-9]|[1-9][0-9]) Teile, [0-9]+ gleichzeitig, 0 unsaubere" "$OUT/downloads.txt"; then
+    echo "::error::Das lange Video wurde nicht in Stücken parallel umgewandelt"
+    E2E_FAILED=1
+  fi
+  LONG_MP3=$(adb shell find /sdcard/Audiobooks -iname "*long*.mp3" 2>/dev/null | tr -d '\r' | head -1)
+  if [ -n "$LONG_MP3" ] && adb pull "$LONG_MP3" "$OUT/long.mp3" > /dev/null; then
+    ffmpeg -nostdin -v error -i "$OUT/long.mp3" -f null - 2> "$OUT/long-decode.txt"
+    LONG_SECONDS=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$OUT/long.mp3")
+    echo "long.mp3: $LONG_SECONDS s, Dekodierfehler: $(wc -l < "$OUT/long-decode.txt")"
+    if [ -s "$OUT/long-decode.txt" ] || ! awk -v d="$LONG_SECONDS" 'BEGIN { exit !(d > 74.5 && d < 75.5) }'; then
+      echo "::error::Die in Stücken umgewandelte MP3 ist fehlerhaft"
+      cat "$OUT/long-decode.txt"
+      E2E_FAILED=1
+    fi
+  else
+    echo "::error::Die umgewandelte long.mp3 wurde nicht gefunden"
+    E2E_FAILED=1
+  fi
+  # Remaining time: what the app expected when a conversion began (and when the job began)
+  # against how long the job then really took.
+  if python3 - "$OUT/downloads.txt" > "$OUT/restzeit.txt" <<'PY'
+import re, sys
+def at(line):
+    m = re.match(r"\d\d-\d\d (\d\d):(\d\d):(\d\d\.\d+)", line)
+    return int(m.group(1)) * 3600 + int(m.group(2)) * 60 + float(m.group(3)) if m else None
+lines = open(sys.argv[1], encoding="utf-8", errors="replace").read().splitlines()
+done = {m.group(1): at(l) for l in lines for m in [re.search(r"Auftrag (\d+) fertig nach", l)] if m}
+bad = 0
+for l in lines:
+    first = re.search(r"Erste Schätzung für Auftrag (\d+): ([0-9.]+) s", l)
+    conv = re.search(r"Umwandlung beginnt: (.*) – Restzeit geschätzt ([0-9.]+) s \(Auftrag (\d+)", l)
+    if first:
+        job, guess, what = first.group(1), float(first.group(2)), "Start des Auftrags"
+    elif conv:
+        job, guess, what = conv.group(3), float(conv.group(2)), "Beginn der Umwandlung von " + conv.group(1)[:40]
+    else:
+        continue
+    if job not in done or at(l) is None:
+        continue
+    real = done[job] - at(l)
+    ratio = guess / real if real > 0 else float("inf")
+    print(f"Auftrag {job}, {what}: geschätzt {guess:.1f} s, tatsächlich {real:.1f} s ({ratio:.2f}×)")
+    if conv and real >= 3 and not (1 / 3 <= ratio <= 3):
+        bad += 1
+sys.exit(1 if bad else 0)
+PY
+  then
+    cat "$OUT/restzeit.txt"
+  else
+    cat "$OUT/restzeit.txt"
+    echo "::error::Die geschätzte Restzeit lag weit neben der tatsächlichen Dauer"
+    E2E_FAILED=1
+  fi
+  if ! grep -qE "Importiert \[download:librivox:.*Buch [0-9]" "$OUT/downloads.txt"; then
+    echo "::error::Das LibriVox-Hörbuch wurde nicht geladen"
+    E2E_FAILED=1
+  fi
+  if ! grep -E "Importiert \[download:[0-9a-f]+\]: .*Buch [0-9]" "$OUT/downloads.txt" | grep -qv "\]: video "; then
+    echo "::warning::Der PeerTube-Download hat nicht geklappt (externer Dienst)"
+  fi
+
+  # Pause and continue: two LibriVox chapters, paused after 1.5 s and continued 3 s later.
+  clear_log
+  start --es download_audiobook "Grimm" --es download_limit 2 --es download_pause_test 1500 --es screen downloads
+  shot 12b-download-pausiert-hell 2
+  for i in $(seq 1 36); do
+    if adb logcat -d -s LauscherDownload:* | grep -qE "Auftrag [0-9]+ (fertig|fehlgeschlagen)"; then break; fi
+    sleep 5
+  done
+  adb logcat -d -s LauscherDownload:* | tail -15 | tee "$OUT/downloads-pause.txt"
+  if grep -q "pausiert" "$OUT/downloads-pause.txt"; then
+    if ! grep -q "fortgesetzt" "$OUT/downloads-pause.txt" || ! grep -qE "fertig nach [0-9.]+ s: DONE" "$OUT/downloads-pause.txt"; then
+      echo "::error::Ein pausierter Download wurde nicht fortgesetzt und beendet"
+      E2E_FAILED=1
+    fi
+  else
+    echo "::notice::Der Download war schon fertig, bevor er pausiert werden konnte"
+  fi
+
+  # Closing the app: a LibriVox download is ended hard (force-stop) and must go on when the app is
+  # opened again, with the chapter it was in the middle of continued from the partial file.
+  adb shell dumpsys media_session > "$OUT/media_session.txt" || true
+  clear_log
+  # Five chapters; the app is ended right after the first one is in, so some are surely left.
+  start --es download_audiobook "Grimm" --es download_limit 5 --es screen downloads
+  for i in $(seq 1 200); do
+    if adb logcat -d -s LauscherDownload:* | grep -qE "Geladen: "; then break; fi
+    sleep 0.3
+  done
+  adb shell am force-stop "$PKG"
+  echo "App beendet (force-stop)"
+  sleep 2
+  start --es screen downloads
+  shot 12c-download-nach-neustart-hell 3
+  for i in $(seq 1 48); do
+    if adb logcat -d -s LauscherDownload:* | grep -qE "Auftrag [0-9]+ (fertig|fehlgeschlagen)"; then break; fi
+    sleep 5
+  done
+  adb logcat -d -s LauscherDownload:* > "$OUT/downloads-neustart.txt"
+  tail -20 "$OUT/downloads-neustart.txt"
+  if grep -qE "Wiederhergestellt: .*, [1-9][0-9]* unterbrochen" "$OUT/downloads-neustart.txt"; then
+    if ! grep -q "fortgesetzt" "$OUT/downloads-neustart.txt" || ! grep -qE "fertig nach [0-9.]+ s: DONE" "$OUT/downloads-neustart.txt"; then
+      echo "::error::Ein durch das Schließen der App unterbrochener Download ging nicht weiter"
+      E2E_FAILED=1
+    fi
+    if ! grep -q "Fortsetzen ab" "$OUT/downloads-neustart.txt"; then
+      echo "::notice::Das angefangene Kapitel wurde nach dem Neustart von vorn geladen"
+    fi
+  else
+    echo "::error::Nach dem Neustart der App fehlte der unterbrochene Download"
+    E2E_FAILED=1
+  fi
+
+  # Conversion modes: the same six minutes as MP3 at 64 and 128 kbit/s, "Ausgewogen" and
+  # "Schnell", one job after the other; time from the log, sound judged on the runner with ViSQOL.
+  if [ -f "$E2E_DIR/modes.m4a" ]; then
+    clear_log
+    n=0
+    for spec in "speech balanced" "speech fast" "standard balanced" "standard fast"; do
+      set -- $spec
+      adb push "$E2E_DIR/modes.m4a" "$DATA/test/modes-$1-$2.m4a" > /dev/null
+      start --es download_convert "$DATA/test/modes-$1-$2.m4a" --es download_quality "$1" --es download_mode "$2" --es screen downloads
+      n=$((n + 1))
+      for i in $(seq 1 90); do
+        if [ "$(adb logcat -d -s LauscherDownload:* | grep -cE "Auftrag [0-9]+ (fertig|fehlgeschlagen)")" -ge "$n" ]; then break; fi
+        sleep 2
+      done
+    done
+    shot 12d-umwandlung-modi-hell 2
+    adb logcat -d -s LauscherDownload:* > "$OUT/downloads-modi.txt"
+    grep -E "Umgewandelt: .*modes|Auftrag" "$OUT/downloads-modi.txt" | tail -12
+    mkdir -p "$OUT/modi"
+    for v in speech-balanced speech-fast standard-balanced standard-fast; do
+      f=$(adb shell find /sdcard/Audiobooks -iname "*modes-$v.mp3" 2>/dev/null | tr -d '\r' | head -1)
+      if [ -n "$f" ]; then adb pull "$f" "$OUT/modi/modes-$v.mp3" > /dev/null; fi
+    done
+    if [ -x "$E2E_DIR/venv/bin/python" ]; then
+      "$E2E_DIR/venv/bin/python" .github/scripts/modes_quality.py "$E2E_DIR/modes.m4a" "$OUT/downloads-modi.txt" "$OUT/modi" > "$OUT/umwandlung-modi.txt" 2>&1
+      status=$?
+      cat "$OUT/umwandlung-modi.txt"
+      if [ "$status" -ne 0 ]; then
+        echo "::error::Die Umwandlungs-Modi haben den Test nicht bestanden (siehe umwandlung-modi.txt)"
+        E2E_FAILED=1
+      fi
+    else
+      echo "::warning::ViSQOL ist nicht installiert, die Klangprüfung der Modi fällt aus"
+    fi
+    rm -rf "$OUT/modi"
+  fi
+
+  # --- Voice control: the microphone service starts and listens; then spoken commands go through
+  # speech detector, whisper (base), command matcher and the player.
+  if [ -f "$E2E_DIR/voice.wav" ] && [ -f "$E2E_DIR/ggml-base-q5_1.bin" ]; then
+    adb push "$E2E_DIR/ggml-base-q5_1.bin" "$DATA/models/" > /dev/null
+    adb push "$E2E_DIR/voice.wav" "$DATA/test/" > /dev/null
+    adb shell pm grant "$PKG" android.permission.RECORD_AUDIO || true
+    clear_log
+    start --ez demo true --es whisper_model whisper-base
+    sleep 20
+    start --ez voice_any_output true --ez voice_enable true --es screen voice
+    shot 14-sprachsteuerung-hell 8
+    adb logcat -d -s LauscherVoice:* | tee "$OUT/voice-service.txt" | tail -5
+    if grep -q "Sprachsteuerung hört zu" "$OUT/voice-service.txt"; then
+      echo "Mikrofon-Dienst hört zu"
+    elif grep -q "Mikrofon ist gerade nicht verfügbar" "$OUT/voice-service.txt"; then
+      echo "::warning::Das Emulator-Mikrofon ist nicht verfügbar; der Dienst lief aber"
+    else
+      echo "::error::Der Mikrofon-Dienst der Sprachsteuerung hat nicht zugehört"
+      E2E_FAILED=1
+    fi
+    start --ez voice_enable false
+    sleep 2
+    clear_log
+    start --es voice_test_file "$DATA/test/voice.wav"
+    for i in $(seq 1 60); do
+      if adb logcat -d -s LauscherVoice:* | grep -qE "Sprachbefehl-Test (fertig|: kein)"; then break; fi
+      sleep 3
+    done
+    adb logcat -d -s LauscherVoice:* > "$OUT/voice.txt"
+    if ! python3 .github/scripts/voice_check.py "$OUT/voice.txt" > "$OUT/sprachbefehle.txt" 2>&1; then
+      echo "::error::Die Sprachbefehle haben den Test nicht bestanden (siehe sprachbefehle.txt)"
+      E2E_FAILED=1
+    fi
+    cat "$OUT/sprachbefehle.txt"
+  fi
+
+  # YouTube (Big Buck Bunny, CC BY 3.0 Blender Foundation): best effort, YouTube often blocks CI servers.
+  clear_log
+  start --es download_media "https://www.youtube.com/watch?v=aqz-KE-bpKQ" --es download_limit 1
+  for i in $(seq 1 48); do
+    if adb logcat -d -s LauscherDownload:* | grep -qE "Auftrag [0-9]+ (fertig|fehlgeschlagen)|Automatischer Download fehlgeschlagen"; then break; fi
+    sleep 5
+  done
+  adb logcat -d -s LauscherDownload:* | tail -15 | tee "$OUT/downloads-youtube.txt"
+  if ! grep -qE "Importiert \[.*Buch [0-9]" "$OUT/downloads-youtube.txt"; then
+    echo "::warning::Der YouTube-Download hat in der CI nicht geklappt (siehe downloads-youtube.txt)"
+  fi
+fi
+
+[ -s "$OUT/media_session.txt" ] || adb shell dumpsys media_session > "$OUT/media_session.txt" || true
+adb logcat -d -b crash >> "$OUT/crash.txt" || true
+adb logcat -d > "$OUT/logcat-full.txt" || true
+grep -E "AndroidRuntime|lauscher|ExoPlayer|AudioTrack|MediaSession|LibraryScanner" "$OUT/logcat-full.txt" | tail -400 > "$OUT/logcat.txt" || true
+
+APP_PID=$(adb shell pidof "$PKG" | tr -d '\r')
+echo "--- Warnungen/Fehler der App (PID ${APP_PID:-?}) ---"
+if [ -n "$APP_PID" ]; then
+  grep -E "^[0-9-]+ [0-9:.]+ +$APP_PID .* [EW] " "$OUT/logcat-full.txt" | grep -vE "TextToSpeech|OpenGLRenderer|EGL_emulation|HWUI" | tail -60 || true
+fi
+
+if grep -q "$PKG" "$OUT/crash.txt"; then
+  echo "::error::Lauscher ist abgestürzt"
+  cat "$OUT/crash.txt"
+  exit 1
+fi
+if ! grep -q "$PKG" "$OUT/media_session.txt"; then
+  echo "::warning::Keine Media-Session von Lauscher gefunden"
+fi
+if [ "${E2E_FAILED:-0}" = 1 ]; then exit 1; fi
+echo "Keine Abstürze."

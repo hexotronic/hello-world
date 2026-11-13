@@ -1,0 +1,435 @@
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+
+package io.github.hexotronic.lauscher.ui.screens
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Tab
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.key
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.hexotronic.lauscher.music.MusicSource
+import io.github.hexotronic.lauscher.music.library.LibraryDownload
+import io.github.hexotronic.lauscher.music.library.core.LibraryTrack
+import io.github.hexotronic.lauscher.music.library.core.MusicCatalog
+import io.github.hexotronic.lauscher.music.library.core.MusicCollection
+import io.github.hexotronic.lauscher.music.library.core.MusicLicense
+import io.github.hexotronic.lauscher.music.synth.Mood
+import io.github.hexotronic.lauscher.music.synth.Setting
+import io.github.hexotronic.lauscher.ui.MainViewModel
+import io.github.hexotronic.lauscher.ui.components.PixelBadge
+import io.github.hexotronic.lauscher.ui.components.RetroButton
+import io.github.hexotronic.lauscher.ui.components.RetroButtonStyle
+import io.github.hexotronic.lauscher.ui.components.RetroProgress
+import io.github.hexotronic.lauscher.ui.components.RetroTopBar
+import io.github.hexotronic.lauscher.ui.components.SectionHeader
+import io.github.hexotronic.lauscher.ui.components.SwitchRow
+import io.github.hexotronic.lauscher.ui.components.block
+import io.github.hexotronic.lauscher.ui.components.moodColor
+import io.github.hexotronic.lauscher.ui.components.onMoodColor
+import io.github.hexotronic.lauscher.ui.formatClock
+import io.github.hexotronic.lauscher.ui.formatHuman
+import io.github.hexotronic.lauscher.ui.theme.PixelFont
+import java.util.Locale
+
+/** Downloadable soundtrack pieces of open games, grouped by mood or place, with their credits. */
+@Composable
+fun MusicLibraryScreen(vm: MainViewModel) {
+    val s by vm.musicSettings.collectAsStateWithLifecycle()
+    val np by vm.nowPlaying.collectAsStateWithLifecycle()
+    val installed by vm.libraryInstalled.collectAsStateWithLifecycle()
+    val download by vm.libraryDownload.collectAsStateWithLifecycle()
+    var expanded by rememberSaveable { mutableStateOf<String?>(null) }
+    var byPlace by rememberSaveable { mutableStateOf(false) }
+    val all = MusicCatalog.tracks
+    val missing = all.filter { it.id !in installed }
+    val starterMissing = MusicCatalog.starterPack.filter { it.id !in installed }
+
+    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
+        RetroTopBar(
+            navigationIcon = {
+                IconButton(onClick = { vm.back() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück") }
+            },
+            title = { Text("Musikbibliothek") },
+        )
+        var tab by rememberSaveable { mutableIntStateOf(0) }
+        PrimaryTabRow(selectedTabIndex = tab) {
+            listOf("Laden", "Stücke", "Herkunft").forEachIndexed { i, label -> Tab(selected = tab == i, onClick = { tab = i }, text = { Text(label) }) }
+        }
+        val scroll = key(tab) { rememberScrollState() }
+        Column(Modifier.fillMaxSize().verticalScroll(scroll).navigationBarsPadding().padding(bottom = 24.dp)) {
+            if (tab == 0) {
+                Text(
+                    "Echte Fantasy-Musik, von Menschen komponiert und eingespielt – keine KI-Musik. Sie stammt aus den " +
+                        "Soundtracks freier Spiele, steht unter GPL, Creative Commons oder CC0 und wird unverändert aus deren " +
+                        "Archiven geladen. Je Ort und Stimmung wählt die App zufällig unter allen passenden Stücken – vom " +
+                        "ruhigen Kerker-Rundgang bis zum Kampf, vom Wald bis zur Wüste. Danach spielt alles offline.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(16.dp),
+                )
+
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 20.dp, bottom = 8.dp)
+                        .block(MaterialTheme.colorScheme.surfaceContainerLow)
+                        .padding(14.dp),
+                ) {
+                    Text("${installed.size} von ${all.size} Stücken geladen", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "${megabytes(MusicCatalog.totalBytes(all.filter { it.id in installed }))} auf dem Gerät · " +
+                            "${formatHuman(all.filter { it.id in installed }.sumOf { it.seconds } * 1000L)} Musik",
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                    DownloadProgress(download, onCancel = vm::cancelMusicDownload, onDismiss = vm::dismissMusicDownloadError)
+                    if (download?.running != true) {
+                        Spacer(Modifier.height(10.dp))
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            if (starterMissing.isNotEmpty()) {
+                                RetroButton(onClick = { vm.downloadMusic(starterMissing.map { it.id }) }) {
+                                    Text("Starterpaket (${starterMissing.size} Stücke, ${megabytes(MusicCatalog.totalBytes(starterMissing))})")
+                                }
+                            }
+                            if (missing.isNotEmpty()) {
+                                RetroButton(
+                                    onClick = { vm.downloadMusic(missing.map { it.id }) },
+                                    style = if (starterMissing.isEmpty()) RetroButtonStyle.PRIMARY else RetroButtonStyle.SECONDARY,
+                                ) {
+                                    Text(if (installed.isEmpty()) "Alles laden (${megabytes(MusicCatalog.totalBytes(missing))})" else "Rest laden (${megabytes(MusicCatalog.totalBytes(missing))})")
+                                }
+                            }
+                            if (installed.isNotEmpty()) {
+                                RetroButton(onClick = { vm.deleteMusic(installed) }, style = RetroButtonStyle.PLAIN) { Text("Alle löschen") }
+                            }
+                        }
+                    }
+                }
+
+                SwitchRow(
+                    "Für die Hintergrundmusik verwenden",
+                    if (installed.isEmpty()) "Lade zuerst Stücke herunter" else "Fehlt ein passendes Stück, spielt der Synthesizer",
+                    s.source == MusicSource.LIBRARY,
+                    enabled = installed.isNotEmpty(),
+                ) { on -> vm.updateMusic { it.copy(source = if (on) MusicSource.LIBRARY else MusicSource.SYNTH) } }
+
+                np.musicTrackId?.let { MusicCatalog.byId(it) }?.let { playing ->
+                    Text(
+                        "Läuft gerade: ${playing.credit}",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                }
+
+            }
+            if (tab == 1) {
+                SectionHeader("Pakete")
+                Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(selected = !byPlace, onClick = { byPlace = false }, label = { Text("Nach Stimmung") })
+                    FilterChip(selected = byPlace, onClick = { byPlace = true }, label = { Text("Nach Ort") })
+                }
+                Spacer(Modifier.height(8.dp))
+                val playingId = np.musicTrackId.takeIf { np.musicPlaying }
+                val busy = download?.running == true
+                if (byPlace) {
+                    Setting.entries.forEach { place ->
+                        val tracks = MusicCatalog.forSetting(place)
+                        Pack(
+                            key = "place-" + place.name,
+                            badge = { PixelBadge(place.label, MaterialTheme.colorScheme.surfaceContainerHighest, MaterialTheme.colorScheme.onSurface) },
+                            hint = if (tracks.isEmpty()) {
+                                place.hint + " – eigene Stücke fehlen noch, es spielen: " + place.related.joinToString { it.label }
+                            } else {
+                                place.hint
+                            },
+                            tracks = tracks,
+                            installed = installed,
+                            expanded = expanded,
+                            playingId = playingId,
+                            busy = busy,
+                            onToggle = { expanded = if (expanded == it) null else it },
+                            vm = vm,
+                            liked = s.likedTracks,
+                            hidden = s.hiddenTracks,
+                        )
+                    }
+                } else {
+                    Mood.entries.forEach { mood ->
+                        Pack(
+                            key = "mood-" + mood.name,
+                            badge = { PixelBadge(mood.label, moodColor(mood), onMoodColor(mood)) },
+                            hint = mood.hint,
+                            tracks = MusicCatalog.forMood(mood),
+                            installed = installed,
+                            expanded = expanded,
+                            playingId = playingId,
+                            busy = busy,
+                            onToggle = { expanded = if (expanded == it) null else it },
+                            vm = vm,
+                            liked = s.likedTracks,
+                            hidden = s.hiddenTracks,
+                        )
+                    }
+                }
+
+            }
+            if (tab == 2) {
+                SectionHeader("Herkunft und Lizenzen")
+                Credits()
+            }
+        }
+    }
+}
+
+@Composable
+private fun DownloadProgress(download: LibraryDownload?, onCancel: () -> Unit, onDismiss: () -> Unit) {
+    download ?: return
+    Spacer(Modifier.height(10.dp))
+    if (download.running) {
+        Text(
+            "Lade ${download.doneCount + 1} von ${download.totalCount}: ${download.currentTitle}",
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Spacer(Modifier.height(4.dp))
+        RetroProgress(download.progress)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "${megabytes(download.bytesDone)} von ${megabytes(download.bytesTotal)}",
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = onCancel) { Text("Abbrechen") }
+        }
+    } else if (download.error != null) {
+        Text("Fehler: ${download.error}", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        TextButton(onClick = onDismiss) { Text("OK") }
+    }
+}
+
+@Composable
+private fun Pack(
+    key: String,
+    badge: @Composable () -> Unit,
+    hint: String,
+    tracks: List<LibraryTrack>,
+    installed: Set<String>,
+    expanded: String?,
+    playingId: String?,
+    busy: Boolean,
+    onToggle: (String) -> Unit,
+    vm: MainViewModel,
+    liked: Set<String>,
+    hidden: Set<String>,
+) {
+    val have = tracks.count { it.id in installed }
+    val missing = tracks.filter { it.id !in installed }
+    val open = expanded == key
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, end = 20.dp, bottom = 10.dp)
+            .block(MaterialTheme.colorScheme.surfaceContainerLow, shadow = 3.dp),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().clickable(enabled = tracks.isNotEmpty()) { onToggle(key) }.padding(start = 12.dp, top = 10.dp, bottom = 10.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    badge()
+                    Spacer(Modifier.width(8.dp))
+                    Text("$have/${tracks.size} geladen", style = MaterialTheme.typography.labelSmall)
+                }
+                Spacer(Modifier.height(4.dp))
+                Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (tracks.isNotEmpty()) {
+                Icon(if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, contentDescription = if (open) "Zuklappen" else "Aufklappen")
+            }
+        }
+        if (missing.isNotEmpty() && !busy) {
+            RetroButton(
+                onClick = { vm.downloadMusic(missing.map { it.id }) },
+                style = RetroButtonStyle.SECONDARY,
+                modifier = Modifier.padding(start = 12.dp, bottom = 12.dp),
+            ) { Text("${missing.size} Stücke laden (${megabytes(MusicCatalog.totalBytes(missing))})") }
+        }
+        if (open) {
+            HorizontalDivider(thickness = 2.dp, color = MaterialTheme.colorScheme.outline)
+            tracks.forEach { t ->
+                TrackRow(
+                    track = t,
+                    installed = t.id in installed,
+                    playing = t.id == playingId,
+                    busy = busy,
+                    liked = t.id in liked,
+                    hidden = t.id in hidden,
+                    onLike = { vm.toggleLikedTrack(t.id) },
+                    onHide = { vm.toggleHiddenTrack(t.id) },
+                    onDownload = { vm.downloadMusic(listOf(t.id)) },
+                    onPreview = { vm.previewTrack(t) },
+                    onStop = vm::stopMusicPreview,
+                    onDelete = { vm.deleteMusic(listOf(t.id)) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TrackRow(
+    track: LibraryTrack,
+    installed: Boolean,
+    playing: Boolean,
+    busy: Boolean,
+    liked: Boolean,
+    hidden: Boolean,
+    onLike: () -> Unit,
+    onHide: () -> Unit,
+    onDownload: () -> Unit,
+    onPreview: () -> Unit,
+    onStop: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                track.title,
+                style = MaterialTheme.typography.titleSmall.copy(textDecoration = if (hidden) TextDecoration.LineThrough else null),
+                color = if (hidden) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                listOfNotNull(track.composer, track.year?.toString(), track.collection.title).joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                "${formatClock(track.seconds * 1000L)} · ${megabytes(track.bytes)} · ${track.license.label}",
+                style = MaterialTheme.typography.labelSmall,
+            )
+            Text(
+                track.moods.joinToString(", ") { it.label } +
+                    (track.settings.takeIf { it.isNotEmpty() }?.joinToString(", ", prefix = " · ") { it.label } ?: ""),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onLike, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        if (liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        contentDescription = if (liked) "Kein Lieblingsstück mehr" else "Lieblingsstück",
+                        tint = if (liked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                IconButton(onClick = onHide, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        Icons.Filled.Block,
+                        contentDescription = if (hidden) "Wieder zulassen" else "Nie spielen",
+                        tint = if (hidden) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                if (hidden) Text("ausgeblendet", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+                if (liked) Text("Lieblingsstück", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            }
+        }
+        when {
+            installed && playing -> IconButton(onClick = onStop) { Icon(Icons.Filled.Stop, contentDescription = "Hörprobe stoppen") }
+            installed -> IconButton(onClick = onPreview) { Icon(Icons.Filled.PlayArrow, contentDescription = "Hörprobe") }
+            !busy -> IconButton(onClick = onDownload) { Icon(Icons.Filled.Download, contentDescription = "Laden") }
+        }
+        if (installed) IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, contentDescription = "Löschen") }
+    }
+}
+
+@Composable
+private fun Credits() {
+    val uri = LocalUriHandler.current
+    Column(Modifier.padding(horizontal = 16.dp)) {
+        Text(
+            "Alle Stücke stammen unverändert aus den offenen Spiele-Projekten unten, jeweils in einer festen " +
+                "Version, und werden beim Laden per Prüfsumme kontrolliert. Komponisten und Lizenzen stehen in den " +
+                "Credits der Projekte und in den Dateien selbst.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        MusicCollection.entries.forEach { c ->
+            val tracks = MusicCatalog.tracks.filter { it.collection == c }
+            Spacer(Modifier.height(12.dp))
+            Text(c.title, fontFamily = PixelFont, fontSize = 12.sp)
+            Text(c.note, style = MaterialTheme.typography.bodySmall)
+            Text(
+                c.repository.removePrefix("https://"),
+                style = MaterialTheme.typography.bodySmall.copy(textDecoration = TextDecoration.Underline),
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.clickable { uri.openUri(c.repository) }.padding(vertical = 2.dp),
+            )
+            tracks.groupBy { it.composer }.forEach { (composer, list) ->
+                Text(
+                    "$composer: " + list.joinToString(", ") { it.title } + " (" + list.map { it.license.label }.distinct().joinToString(", ") + ")",
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(top = 3.dp),
+                )
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Text("Lizenztexte", fontFamily = PixelFont, fontSize = 12.sp)
+        MusicLicense.entries.forEach { l ->
+            Text(
+                l.label,
+                style = MaterialTheme.typography.bodySmall.copy(textDecoration = TextDecoration.Underline),
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.clickable { uri.openUri(l.url) }.padding(vertical = 3.dp),
+            )
+        }
+    }
+}
+
+private fun megabytes(bytes: Long): String = String.format(Locale.GERMANY, "%.1f MB", bytes / 1_000_000.0)

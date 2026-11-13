@@ -1,0 +1,290 @@
+name: Lauscher APK
+
+on:
+  # Changes to documentation alone (README, docs/) start no build.
+  push:
+    paths:
+      - "hoerbuch-player/**"
+      - "!hoerbuch-player/**/*.md"
+      - ".github/workflows/android.yml"
+      - ".github/scripts/**"
+  pull_request:
+    paths:
+      - "hoerbuch-player/**"
+      - "!hoerbuch-player/**/*.md"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# A newer push cancels the older build of the branch; a model comparison ("[modelltest]") runs in a
+# group of its own, so later pushes do not cut its hour of measuring short.
+concurrency:
+  group: lauscher-${{ github.ref }}-${{ (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[modelltest]')) && github.sha || 'build' }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: hoerbuch-player
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Optional release key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.LAUSCHER_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+            echo "LAUSCHER_KEYSTORE=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
+          fi
+
+      - name: Show preinstalled NDK
+        run: echo "Preinstalled NDK is $ANDROID_NDK_LATEST_HOME"
+
+      - name: Unit tests
+        run: ./gradlew --no-daemon testReleaseUnitTest
+
+      - name: Build APK
+        env:
+          LAUSCHER_KEYSTORE_PASSWORD: ${{ secrets.LAUSCHER_KEYSTORE_PASSWORD }}
+          LAUSCHER_KEY_ALIAS: ${{ secrets.LAUSCHER_KEY_ALIAS }}
+          LAUSCHER_KEY_PASSWORD: ${{ secrets.LAUSCHER_KEY_PASSWORD }}
+        run: |
+          # Empty secrets must not override the defaults in build.gradle.kts.
+          [ -z "$LAUSCHER_KEYSTORE_PASSWORD" ] && unset LAUSCHER_KEYSTORE_PASSWORD
+          [ -z "$LAUSCHER_KEY_ALIAS" ] && unset LAUSCHER_KEY_ALIAS
+          [ -z "$LAUSCHER_KEY_PASSWORD" ] && unset LAUSCHER_KEY_PASSWORD
+          ./gradlew --no-daemon assembleRelease
+          cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/Lauscher-${GITHUB_RUN_NUMBER}.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Lauscher-APK
+          path: ${{ runner.temp }}/Lauscher-*.apk
+
+      # Prompts, grammars and right answers of the model test (written by ModelEvalTest).
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Lauscher-Eval
+          path: hoerbuch-player/app/build/eval/testReleaseUnitTest.json
+          if-no-files-found: error
+
+      - name: Publish as release "Lauscher (neuester Build)"
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          APK="$RUNNER_TEMP/Lauscher-${GITHUB_RUN_NUMBER}.apk"
+          # The same file under a fixed name, so ".../releases/download/<tag>/Lauscher.apk" always
+          # points to the newest build.
+          cp "$APK" "$RUNNER_TEMP/Lauscher.apk"
+          TAG="lauscher-latest-${GITHUB_REF_NAME//\//-}"
+          gh release delete "$TAG" --yes --cleanup-tag || true
+          create() {
+            gh release create "$TAG" "$APK" "$RUNNER_TEMP/Lauscher.apk" \
+              --target "$1" \
+              --title "Lauscher – neuester Build (${GITHUB_REF_NAME})" \
+              --notes "Automatisch gebaut aus ${GITHUB_SHA::7}. APK auf dem Handy herunterladen und installieren." \
+              --prerelease
+          }
+          # GitHub may refuse the build token a tag on a commit that changes a workflow file (HTTP 403);
+          # the release then hangs on the default branch – the notes still name the commit it was built from.
+          create "$GITHUB_SHA" || create "${{ github.event.repository.default_branch }}" \
+            || echo "::warning::Das Release konnte nicht angelegt werden – die APK liegt als Artefakt „Lauscher-APK“ am Lauf"
+
+  device-test:
+    name: Emulator-Test & Screenshots
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: Lauscher-APK
+          path: apk
+
+      - name: Prepare local AI test (speech + small models)
+        # Normally about a minute; a stuck download or package mirror should fail fast, not eat the job.
+        timeout-minutes: 15
+        run: |
+          # The runner's package mirror, then the main Ubuntu archive, then an HTTPS mirror on another
+          # domain – each with short time-outs. (Seen: "Temporary failure resolving 'azure.archive.ubuntu.com'"
+          # and apt hanging without a word for the main archive as well.)
+          apt_get() { sudo timeout 120 apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 "$@"; }
+          installed=0
+          for mirror in "" "http://archive.ubuntu.com/ubuntu/" "https://mirrors.edge.kernel.org/ubuntu/"; do
+            url=${mirror:-http://azure.archive.ubuntu.com/}; host=${url#*://}; host=${host%%/*}
+            if ! timeout 15 getent hosts "$host" > /dev/null; then echo "::warning::$host ist nicht auflösbar"; continue; fi
+            if [ -n "$mirror" ]; then
+              sudo sed -i -E "s#(mirror\+file:/etc/apt/apt-mirrors.txt|https?://[a-z0-9.-]+/ubuntu/?)#${mirror}#g" \
+                /etc/apt/sources.list.d/*.sources /etc/apt/sources.list 2>/dev/null || true
+            fi
+            if apt_get update -qq > "$RUNNER_TEMP/apt.log" 2>&1 && ! grep -qE "Failed to fetch|Temporary failure" "$RUNNER_TEMP/apt.log" \
+              && apt_get install -y -qq flite ffmpeg espeak-ng > /dev/null; then
+              installed=1
+              break
+            fi
+            echo "::warning::Paketquelle ${mirror:-des Runners} geht nicht"
+            tail -5 "$RUNNER_TEMP/apt.log"
+          done
+          if [ "$installed" != 1 ]; then
+            echo "::error::Keine Ubuntu-Paketquelle erreichbar – flite, ffmpeg und espeak-ng fehlen"
+            exit 1
+          fi
+          mkdir -p e2e
+          cat > e2e/story.txt <<'TXT'
+          It was a quiet morning at the lake. Mira sat on the wooden pier with a cup of tea and watched the sun rise
+          over the water. Birds were singing in the reeds and a soft wind moved through the old trees. She smiled,
+          closed her eyes and listened to the gentle waves. Everything was peaceful, and she thought about the
+          summer holidays of her childhood, about long afternoons in the garden and the smell of fresh bread.
+          Suddenly she heard footsteps behind her. A dark shadow moved between the trees. Her heart was racing.
+          Somebody was following her! She jumped up and ran along the shore, faster and faster, while the stranger
+          chased her through the forest. Branches hit her face. She fell, got up again and kept running for her life,
+          until she reached the old boat house and slammed the door shut behind her.
+          Three days later they buried her grandfather on the hill above the village. Everybody was crying.
+          Mira held the old letter in her hands and could not stop her tears. It was the saddest goodbye of her life,
+          and the empty chair by the window would always remind her of him.
+          TXT
+          flite -f e2e/story.txt -o e2e/story.wav
+          # A short video (test picture + the story as AAC sound) for the "video to MP3" conversion.
+          ffmpeg -nostdin -loglevel error -f lavfi -i testsrc=size=320x240:rate=15 -i e2e/story.wav -t 20 \
+            -c:v libx264 -pix_fmt yuv420p -c:a aac -b:a 96k -shortest e2e/video.mp4
+          # A longer one with 48 kHz stereo sound: converted in pieces on several cores at once.
+          ffmpeg -nostdin -loglevel error -f lavfi -i testsrc=size=160x120:rate=5 -stream_loop 3 -i e2e/story.wav -t 75 \
+            -c:v libx264 -pix_fmt yuv420p -af aresample=48000 -ac 2 -c:a aac -b:a 128k e2e/long.mp4
+          # Six minutes of speech over music with noise bursts (48 kHz, AAC like on video sites) for
+          # the conversion modes, and ViSQOL (objective listening model) to judge the MP3s.
+          flite -voice slt -f e2e/story.txt -o e2e/story-slt.wav
+          ffmpeg -nostdin -loglevel error -stream_loop 6 -i e2e/story-slt.wav \
+            -f lavfi -i "aevalsrc=0.06*sin(2*PI*220*t)*sin(2*PI*0.3*t)+0.05*sin(2*PI*330*t+sin(2*PI*2*t))|0.06*sin(2*PI*277*t)*cos(2*PI*0.2*t)+0.04*sin(2*PI*165*t):s=48000:d=360" \
+            -f lavfi -i "anoisesrc=c=pink:a=0.2:r=48000:d=360" \
+            -filter_complex "[0]aresample=48000,aformat=channel_layouts=stereo[s];[2]volume='if(lt(mod(t,1.7),0.04),1,0.03)':eval=frame,aformat=channel_layouts=stereo[n];[s][1][n]amix=inputs=3:normalize=0:duration=longest,atrim=0:360" \
+            -c:a aac -b:a 160k e2e/modes.m4a
+          python3 -m venv e2e/venv && e2e/venv/bin/pip install -q "visqol-python[accel]" soundfile scipy numpy
+          curl -sSL --retry 3 --max-time 600 -o e2e/ggml-tiny-q5_1.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny-q5_1.bin
+          # Voice commands: spoken German (espeak-ng) with pauses and quiet noise, one sentence
+          # without the wake word; recognised with Whisper Base as recommended in the app.
+          curl -sSL --retry 3 --max-time 600 -o e2e/ggml-base-q5_1.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin
+          i=0
+          : > e2e/voice-list.txt
+          ffmpeg -nostdin -loglevel error -f lavfi -i anullsrc=r=22050:cl=mono -t 1.5 e2e/voice-gap.wav
+          for t in "Lauscher, Pause." "Lauscher, weiter." "Lauscher, dreißig Sekunden zurück." "Lauscher, nächstes Kapitel." \
+                   "Heute ist schönes Wetter am See." "Lauscher, wo bin ich?" "Lauscher, Pause."; do
+            espeak-ng -v de -s 140 -w e2e/voice-$i.wav "$t"
+            echo "file 'voice-$i.wav'" >> e2e/voice-list.txt
+            echo "file 'voice-gap.wav'" >> e2e/voice-list.txt
+            i=$((i + 1))
+          done
+          ffmpeg -nostdin -loglevel error -f concat -safe 0 -i e2e/voice-list.txt -f lavfi -i "anoisesrc=c=pink:a=0.004:r=22050:d=60" \
+            -filter_complex "[0][1]amix=inputs=2:normalize=0:duration=first" -ar 16000 -ac 1 e2e/voice.wav
+          curl -sSL --retry 3 --max-time 600 -o e2e/qwen2.5-0.5b-instruct-q4_k_m.gguf https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf
+          ls -la e2e
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run app on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          # Four cores, so the MP3 pieces are really encoded at the same time.
+          cores: 4
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim -camera-back none
+          script: E2E_DIR=e2e bash .github/scripts/emulator-screens.sh "$(ls apk/*.apk | head -1)" screenshots
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Lauscher-Screenshots
+          path: screenshots
+
+      - name: Attach screenshots to release
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="lauscher-latest-${GITHUB_REF_NAME//\//-}"
+          gh release view "$TAG" > /dev/null 2>&1 || { echo "::warning::Kein Release zum Anhängen"; exit 0; }
+          # GitHub's upload server sometimes answers 500; try again before giving up.
+          for attempt in 1 2 3; do
+            gh release upload "$TAG" screenshots/*.png --clobber && exit 0
+            sleep 15
+          done
+          exit 1
+
+  model-bench:
+    name: Sprachmodelle vergleichen (ARM)
+    needs: build
+    # Long (about an hour) and downloads ~12 GB of models: only when asked for, by starting the
+    # workflow by hand or with "[modelltest]" in the commit message.
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[modelltest]')
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: Lauscher-Eval
+          path: eval
+
+      - name: Build llama-server (same release and CPU instructions as the app on a Cortex-A78)
+        run: |
+          TAG=$(sed -n 's/^ *GIT_TAG *//p' hoerbuch-player/llm/src/main/cpp/CMakeLists.txt | head -1)
+          git clone --depth 1 --branch "$TAG" https://github.com/ggml-org/llama.cpp.git "$RUNNER_TEMP/llama.cpp"
+          cmake -S "$RUNNER_TEMP/llama.cpp" -B "$RUNNER_TEMP/llama-build" -DCMAKE_BUILD_TYPE=Release \
+            -DGGML_NATIVE=OFF -DGGML_CPU_ARM_ARCH=armv8.2-a+dotprod+fp16 -DGGML_OPENMP=OFF \
+            -DLLAMA_OPENSSL=OFF -DLLAMA_USE_PREBUILT_UI=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_APP=OFF
+          cmake --build "$RUNNER_TEMP/llama-build" --target llama-server -j "$(nproc)"
+
+      - name: Compare the models
+        run: |
+          lscpu | grep -E "Model name|^CPU\(s\)|Flags" | cut -c1-200
+          MACHINE="einem GitHub-ARM-Rechner ($(lscpu | sed -n 's/^Model name: *//p' | head -1), $(nproc) Kerne)"
+          mkdir -p bench
+          python3 .github/scripts/model_bench.py --eval eval/testReleaseUnitTest.json \
+            --server "$RUNNER_TEMP/llama-build/bin/llama-server" --work "$RUNNER_TEMP/models" \
+            --out bench/model-bench.json --summary bench/model-bench.md --threads 4 --machine "$MACHINE" \
+            --only "qwen2.5-1.5b,qwen2.5-3b,qwen3-1.7b,qwen3-4b-2507,gemma3-4b"
+          cat bench/model-bench.md >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Lauscher-Modellvergleich
+          path: |
+            bench
+            ${{ runner.temp }}/models/*.log
+
+      - name: Attach the comparison to the release
+        if: always() && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="lauscher-latest-${GITHUB_REF_NAME//\//-}"
+          gh release view "$TAG" > /dev/null 2>&1 || { echo "::warning::Kein Release zum Anhängen"; exit 0; }
+          [ -f bench/model-bench.md ] || exit 0
+          for attempt in 1 2 3; do
+            gh release upload "$TAG" bench/model-bench.md bench/model-bench.json --clobber && exit 0
+            sleep 15
+          done
+          exit 1
