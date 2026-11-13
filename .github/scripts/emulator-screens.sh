@@ -200,7 +200,8 @@ if [ -n "${E2E_DIR:-}" ] && [ -f "$E2E_DIR/story.wav" ]; then
   # --- "Modelle testen" (short test) with the small model: understanding and speed on this device.
   clear_log
   start --es model_test quick
-  for i in $(seq 1 100); do
+  # Up to 20 minutes: the emulator runs the model without fast CPU instructions, seven calls take 8–15 minutes.
+  for i in $(seq 1 200); do
     if adb logcat -d -s LauscherKI:* | grep -qE "Modelltest .*: Verstehen|Modelltest fehlgeschlagen"; then break; fi
     sleep 6
   done
@@ -213,6 +214,7 @@ if [ -n "${E2E_DIR:-}" ] && [ -f "$E2E_DIR/story.wav" ]; then
   fi
 
   # --- "KI-Anweisungen": an addition to the instructions of "Frag das Buch" reaches the model.
+  # (Only after the model test: while it runs, questions are turned away.)
   clear_log
   start --es prompt_extra "'ASSISTANT:Antworte in höchstens zwei Sätzen.'" --es screen prompts
   shot 16-ki-anweisungen-hell 4
