@@ -12,7 +12,7 @@ enum class AssistantAction(val label: String, val hint: String) {
     PAUSE("Pause", "pause playback"),
     REWIND("Zurück", "go back, value = seconds"),
     FORWARD("Vor", "skip ahead, value = seconds"),
-    JUMP_TIME("Zu einer Zeit", "jump to a time in the book"),
+    JUMP_TIME("Zu einer Zeit", "jump to a time in the book, value = h:mm:ss"),
     JUMP_CHAPTER("Zu einem Kapitel", "jump to a chapter, value = chapter number"),
     NEXT_CHAPTER("Nächstes Kapitel", "jump to the next chapter"),
     PREVIOUS_CHAPTER("Voriges Kapitel", "jump to the previous chapter"),
@@ -47,7 +47,7 @@ data class AssistantTurn(val question: String, val answer: String)
 object BookAssistant {
     val SYSTEM = """
         You are the companion of an audiobook app. The listener asks about the book or tells the player what to do.
-        Questions: answer only from the given excerpts and summary, in one to four full sentences in the language of
+        Questions: answer only from the given excerpts and summary, briefly (one to four sentences), in the language of
         the question (usually German). If they do not say it, say so honestly. Never reveal anything that happens after
         the listener's position unless excerpts after it are given.
 
@@ -59,7 +59,8 @@ object BookAssistant {
         JUMP_CHAPTER as the chapter number; FIND as one to four words that occur in the wanted passage.
         answer: the answer to the question, or for an action a short confirmation of what you do.
         Examples: "Mach in einer Viertelstunde aus" = SLEEP_TIMER "15"; "Geh zwei Minuten zurück" = REWIND "120";
-        "Etwas langsamer bitte" = SPEED "0.9"; "Wer ist Mira?" = NONE "".
+        "Spring zur Stelle bei Minute vierzig" = JUMP_TIME "0:40:00"; "Etwas langsamer bitte" = SPEED "0.9";
+        "Wer ist Mira?" = NONE "".
         Answer with JSON only.
     """.trimIndent()
 

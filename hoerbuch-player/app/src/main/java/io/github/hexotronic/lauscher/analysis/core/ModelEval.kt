@@ -257,7 +257,7 @@ object ModelEval {
     /** Batch sizes the benchmark compares. */
     val BENCH_BATCHES = listOf(BATCH, 4)
 
-    fun sceneMaxTokens(count: Int) = 120 + 72 * count
+    fun sceneMaxTokens(count: Int) = ScenePrompt.maxTokens(count)
 
     fun assistantUser(question: String, positionMs: Long): String {
         val all = transcript()

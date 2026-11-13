@@ -394,9 +394,16 @@ object ScenePrompt {
         append("cue ::= ").append(MusicCue.entries.joinToString(" | ") { "\"\\\"${it.name}\\\"\"" }).append('\n')
         append("title ::= \"\\\"\" char{1,32} \"\\\"\"\n")
         append("story ::= \"\\\"\" char{0,300} \"\\\"\"\n")
-        append("char ::= [^\"\\\\\\x00-\\x1F] | \"\\\\\" [\"\\\\/nt]\n")
+        // No typographic quotes: Gemma closes titles with ” and would then run on until the length limit.
+        append("char ::= [^\"\\\\\\x00-\\x1F“”„] | \"\\\\\" [\"\\\\/nt]\n")
         append("ws ::= [ \\n]{0,2}\n")
     }
+
+    /**
+     * Room for the answer: the story plus per window mood, level, place, pace, up to three cues and
+     * a title. Too little cuts the JSON off (the whole call is then lost); unused room costs nothing.
+     */
+    fun maxTokens(windows: Int) = 160 + 96 * windows
 
     data class Result(val windows: List<WindowMood>, val story: String)
 

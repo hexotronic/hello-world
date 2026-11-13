@@ -473,7 +473,7 @@ class AnalysisManager(
             do {
                 prompt = llm.chatPrompt(prompts.system(PromptKind.SCENES), ScenePrompt.user(book.title, book.author, story, windows, maxChars, corrections))
                 maxChars -= 100
-            } while (llm.countTokens(prompt) + maxTokens(windows.size) > llm.contextSize && maxChars > 100)
+            } while (llm.countTokens(prompt) + ScenePrompt.maxTokens(windows.size) > llm.contextSize && maxChars > 100)
             log.add(
                 AiStep.ASKED,
                 "Sprachmodell gefragt: ${windows.size} ${if (windows.size == 1) "Abschnitt" else "Abschnitte"} ab " +
@@ -486,7 +486,7 @@ class AnalysisManager(
             )
             // Greedy decoding: deterministic and the fastest path through the JSON grammar.
             val asked = System.nanoTime()
-            val output = llm.generate(prompt, ScenePrompt.grammar(windows.size), maxTokens(windows.size), temperature = 0f)
+            val output = llm.generate(prompt, ScenePrompt.grammar(windows.size), ScenePrompt.maxTokens(windows.size), temperature = 0f)
             log.add(
                 AiStep.ANSWER,
                 "Antwort nach ${"%.1f".format((System.nanoTime() - asked) / 1e9)} s" + if (output.isNullOrBlank()) " – leer" else "",
@@ -537,8 +537,6 @@ class AnalysisManager(
         }
     }
 
-    /** Room for the answer: the story plus per window mood, level, place, pace, cues and title. */
-    private fun maxTokens(windows: Int) = 120 + 72 * windows
 
     /** "0:00–2:00: Ruhig · Spannung 1 · Ort „Wald“ – „Kindheit im Garten“" for the AI log. */
     private fun sceneLine(w: WindowMood): String {
