@@ -1,14 +1,17 @@
 name: Lauscher APK
 
 on:
+  # Changes to documentation alone (README, docs/) start no build.
   push:
     paths:
       - "hoerbuch-player/**"
+      - "!hoerbuch-player/**/*.md"
       - ".github/workflows/android.yml"
       - ".github/scripts/**"
   pull_request:
     paths:
       - "hoerbuch-player/**"
+      - "!hoerbuch-player/**/*.md"
   workflow_dispatch:
 
 permissions:
