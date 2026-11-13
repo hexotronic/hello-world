@@ -100,6 +100,10 @@ fun AssistantSheet(vm: MainViewModel) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                TextButton(onClick = {
+                    vm.closeChat()
+                    vm.openScreen("prompts")
+                }) { Text("Anweisungen") }
                 if (chat.isNotEmpty()) TextButton(onClick = { vm.clearChat() }) { Text("Leeren") }
             }
             Row(Modifier.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {

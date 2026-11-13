@@ -38,6 +38,8 @@ data class EvalReport(
     val secondsPerQuestion: Float,
     val loadSeconds: Float,
     val quick: Boolean,
+    /** Measured with instructions the listener changed (scene analysis or "Frag das Buch"). */
+    val customPrompts: Boolean = false,
 ) {
     /** "Verstehen": the mean of the scene, answer and command scores. */
     val understanding: Float get() = (moods + places + levels + cues + answers + commands) / 6f
@@ -49,7 +51,7 @@ data class EvalReport(
         "model" to model, "moods" to moods, "places" to places, "levels" to levels, "cues" to cues, "validJson" to validJson,
         "answers" to answers, "spoilerSafe" to spoilerSafe, "commands" to commands, "promptTps" to promptTokensPerSecond,
         "genTps" to generatedTokensPerSecond, "sceneCall" to secondsPerSceneCall, "question" to secondsPerQuestion,
-        "load" to loadSeconds, "quick" to quick,
+        "load" to loadSeconds, "quick" to quick, "customPrompts" to customPrompts,
     )
 
     companion object {
@@ -58,8 +60,12 @@ data class EvalReport(
             return EvalReport(
                 m["model"] as? String ?: return null, f("moods"), f("places"), f("levels"), f("cues"), f("validJson"), f("answers"),
                 f("spoilerSafe"), f("commands"), f("promptTps"), f("genTps"), f("sceneCall"), f("question"), f("load"), m["quick"] == true,
+                m["customPrompts"] == true,
             )
         }
+
+        /** Where a result is kept: per model, and apart for the listener's own instructions. */
+        fun key(modelId: String, customPrompts: Boolean) = if (customPrompts) "$modelId#eigene" else modelId
     }
 }
 

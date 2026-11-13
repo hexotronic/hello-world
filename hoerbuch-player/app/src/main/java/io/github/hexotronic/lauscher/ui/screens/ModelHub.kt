@@ -224,12 +224,16 @@ fun ModelTestPanel(vm: MainViewModel, changes: Int) {
                 Text(if (installed.isEmpty()) "Erst ein Sprachmodell laden" else "Test starten …")
             }
         }
-        val shown = installed.mapNotNull { id -> results[id]?.let { id to it } }
+        // Each model with the built-in instructions and, if tested so, with the listener's own.
+        val shown = installed.flatMap { id ->
+            listOf(false, true).mapNotNull { own -> results[EvalReport.key(id, own)]?.let { id to it } }
+        }
         if (shown.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
             val best = shown.maxOf { it.second.understanding }
             for ((id, r) in shown.sortedByDescending { it.second.understanding }) {
-                EvalRow(vm.models.info(id)?.label ?: r.model, r, r.understanding == best && shown.size > 1)
+                val label = (vm.models.info(id)?.label ?: r.model) + if (r.customPrompts) " · eigene Anweisungen" else ""
+                EvalRow(label, r, r.understanding == best && shown.size > 1)
             }
             Text(
                 "Rechenzeit: nur das Sprachmodell, ohne Spracherkennung, bei einer Szene alle 2 Minuten.",

@@ -212,6 +212,23 @@ if [ -n "${E2E_DIR:-}" ] && [ -f "$E2E_DIR/story.wav" ]; then
     E2E_FAILED=1
   fi
 
+  # --- "KI-Anweisungen": an addition to the instructions of "Frag das Buch" reaches the model.
+  clear_log
+  start --es prompt_extra "'ASSISTANT:Antworte in höchstens zwei Sätzen.'" --es screen prompts
+  shot 16-ki-anweisungen-hell 4
+  start --es assistant_ask "'Where did Mira sit?'"
+  for i in $(seq 1 60); do
+    if adb logcat -d -s LauscherKI:* | grep -qE "Antwort: Antwort nach|Problem: Frag das Buch"; then break; fi
+    sleep 3
+  done
+  adb logcat -d -s LauscherKI:* | grep -E "Frage ans Buch" | cut -c1-260 | tee "$OUT/ki-anweisungen.txt"
+  if ! grep -q "mit deinen Anweisungen" "$OUT/ki-anweisungen.txt"; then
+    echo "::error::Die eigene Ergänzung der KI-Anweisungen kam nicht beim Sprachmodell an"
+    E2E_FAILED=1
+  fi
+  adb shell input keyevent KEYCODE_BACK
+  start --es prompt_reset all
+
   # Speech recognition of the same recording at 1×, 1.25×, 1.5× and 2×: time and words recognised.
   clear_log
   start --es speech_check "$DATA/test/story.wav"

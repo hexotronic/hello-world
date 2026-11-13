@@ -54,6 +54,7 @@ import io.github.hexotronic.lauscher.ui.screens.SoundStudioScreen
 import io.github.hexotronic.lauscher.ui.screens.StatsScreen
 import io.github.hexotronic.lauscher.ui.screens.AiLogScreen
 import io.github.hexotronic.lauscher.ui.screens.AssistantSheet
+import io.github.hexotronic.lauscher.ui.screens.PromptsScreen
 import io.github.hexotronic.lauscher.ui.screens.VoiceScreen
 
 @Composable
@@ -73,6 +74,7 @@ fun LauscherRoot(vm: MainViewModel) {
         Screen.Downloads -> FullScreen(snackbar) { DownloadScreen(vm) }
         Screen.Voice -> FullScreen(snackbar) { VoiceScreen(vm) }
         Screen.AiLog -> FullScreen(snackbar) { AiLogScreen(vm) }
+        Screen.Prompts -> FullScreen(snackbar) { PromptsScreen(vm) }
         is Screen.BookDetail -> TabScaffold(vm, snackbar) { BookDetailScreen(vm, screen.bookId) }
         else -> TabScaffold(vm, snackbar) {
             when (screen) {

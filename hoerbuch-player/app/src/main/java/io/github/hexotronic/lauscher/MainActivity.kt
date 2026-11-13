@@ -111,6 +111,13 @@ class MainActivity : ComponentActivity() {
         intent.getStringExtra(EXTRA_PRESET)?.let { name ->
             EnhancerPreset.entries.firstOrNull { it.name == name }?.let(vm::applyPreset)
         }
+        // The model's instructions from adb (CI): "ASSISTANT:text" adds to one, a kind name or "all" resets.
+        intent.getStringExtra(EXTRA_PROMPT_EXTRA)?.let { v ->
+            io.github.hexotronic.lauscher.analysis.core.PromptKind.parse(v.substringBefore(':'))?.let { vm.setPromptExtra(it, v.substringAfter(':')) }
+        }
+        intent.getStringExtra(EXTRA_PROMPT_RESET)?.let { v ->
+            io.github.hexotronic.lauscher.analysis.core.PromptKind.entries.filter { v == "all" || it.name == v }.forEach { vm.resetPrompt(it) }
+        }
         // "Frag das Buch" and the model test from adb (CI): a question or command, or "quick"/"full".
         intent.getStringExtra(EXTRA_MODEL_TEST)?.let { mode -> vm.evaluateModels(vm.installedLanguageModels(), quick = mode != "full") }
         intent.getStringExtra(EXTRA_ASSISTANT_ASK)?.let { question ->
@@ -172,6 +179,8 @@ class MainActivity : ComponentActivity() {
         const val EXTRA_SCREEN = "screen"
         const val EXTRA_ASSISTANT_ASK = "assistant_ask"
         const val EXTRA_MODEL_TEST = "model_test"
+        const val EXTRA_PROMPT_EXTRA = "prompt_extra"
+        const val EXTRA_PROMPT_RESET = "prompt_reset"
         const val EXTRA_PRESET = "preset"
         const val EXTRA_MUSIC = "music"
         const val EXTRA_WHISPER_MODEL = "whisper_model"

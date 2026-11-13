@@ -293,6 +293,9 @@ fun MusicScreen(vm: MainViewModel) {
                     TextButton(onClick = { vm.navigate(Screen.AiLog) }, modifier = Modifier.padding(start = 8.dp)) {
                         Text("KI-Protokoll: sehen, was die KI gehört, gefragt und entschieden hat …")
                     }
+                    TextButton(onClick = { vm.navigate(Screen.Prompts) }, modifier = Modifier.padding(start = 8.dp)) {
+                        Text("KI-Anweisungen: ansehen, ergänzen, ändern …")
+                    }
                     SectionHeader("KI-Modelle (lokal)")
                     Text(
                         "Einmal herunterladen, danach funktioniert alles offline. Die Spracherkennung ist nötig, das " +

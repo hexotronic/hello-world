@@ -85,6 +85,7 @@ sealed interface Screen {
     data object Downloads : Screen
     data object Voice : Screen
     data object AiLog : Screen
+    data object Prompts : Screen
     data class BookDetail(val bookId: Long) : Screen
 }
 
@@ -331,6 +332,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             "downloads" -> navigate(Screen.Downloads)
             "voice" -> navigate(Screen.Voice)
             "ailog" -> navigate(Screen.AiLog)
+            "prompts" -> navigate(Screen.Prompts)
             "assistant" -> {
                 navigate(Screen.Player)
                 openChat()
@@ -945,6 +947,36 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val info = app.models.addUserModel(kind, repo, file)
         downloadModel(info)
         toast("${info.label} wird geladen")
+    }
+
+    // ---------------------------------------------------------------- instructions of the language model
+
+    val promptSettings: StateFlow<io.github.hexotronic.lauscher.analysis.core.PromptSettings> = app.prompts.settings
+
+    fun setPromptExtra(kind: io.github.hexotronic.lauscher.analysis.core.PromptKind, text: String) {
+        app.prompts.update { it.withExtra(kind, text) }
+        toast(if (text.isBlank()) "Ergänzung entfernt" else "Ergänzung gespeichert – gilt ab der nächsten Anfrage")
+    }
+
+    fun setPromptText(kind: io.github.hexotronic.lauscher.analysis.core.PromptKind, text: String) {
+        app.prompts.update { it.withCustom(kind, text) }
+        toast(if (app.prompts.current.isCustom(kind)) "Eigene Fassung gespeichert" else "Es gilt wieder der eingebaute Text")
+    }
+
+    fun resetPrompt(kind: io.github.hexotronic.lauscher.analysis.core.PromptKind) {
+        app.prompts.update { it.reset(kind) }
+        toast("${kind.label}: eingebaute Anweisung wiederhergestellt")
+    }
+
+    /** The short model test with the selected language model, using the instructions now in use. */
+    fun testPrompts() {
+        val id = musicSettings.value.llmModel?.takeIf { app.models.isInstalled(it) } ?: installedLanguageModels().firstOrNull()
+        if (id == null) {
+            toast("Zum Prüfen wird ein Sprachmodell gebraucht")
+            return
+        }
+        evaluateModels(listOf(id), quick = true)
+        toast("Kurztest läuft mit ${app.models.info(id)?.label ?: "dem Sprachmodell"} – das Ergebnis steht unten")
     }
 
     // ---------------------------------------------------------------- model test

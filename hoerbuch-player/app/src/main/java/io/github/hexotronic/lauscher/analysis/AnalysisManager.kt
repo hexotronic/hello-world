@@ -12,6 +12,7 @@ import io.github.hexotronic.lauscher.analysis.core.BookAssistant
 import io.github.hexotronic.lauscher.analysis.core.EvalReport
 import io.github.hexotronic.lauscher.analysis.core.MiniJson
 import io.github.hexotronic.lauscher.analysis.core.ModelEval
+import io.github.hexotronic.lauscher.analysis.core.PromptKind
 import io.github.hexotronic.lauscher.analysis.core.KeywordMoods
 import io.github.hexotronic.lauscher.analysis.core.SceneCut
 import io.github.hexotronic.lauscher.analysis.core.SceneCuts
@@ -77,6 +78,8 @@ class AnalysisManager(
     private val scope: CoroutineScope,
     /** Every step is written here for the "KI-Protokoll" window. */
     private val log: AiLog,
+    /** The instructions for the language model (built-in or changed by the listener). */
+    private val prompts: PromptStore,
 ) {
     /** The native engines are not thread-safe, so all their work runs on one thread. */
     private val native = Dispatchers.IO.limitedParallelism(1)
@@ -340,7 +343,7 @@ class AnalysisManager(
                                     null
                                 } else {
                                     questions++
-                                    val prompt = model.chatPrompt(ScenePrompt.CUT_SYSTEM, ScenePrompt.cutUser(a, b, textA, textB, passage))
+                                    val prompt = model.chatPrompt(prompts.system(PromptKind.SCENE_CUT), ScenePrompt.cutUser(a, b, textA, textB, passage))
                                     val answer = model.generate(prompt, ScenePrompt.CUT_GRAMMAR, maxTokens = 2, temperature = 0f)
                                     asked.append("Bei ${ScenePrompt.clock(t)}: ${AiLogText.excerpt(passage, 100)} → gehört zu ${answer?.trim() ?: "?"}\n")
                                     ScenePrompt.parseCut(answer)
@@ -468,14 +471,15 @@ class AnalysisManager(
                 emptyList()
             }
             do {
-                prompt = llm.chatPrompt(ScenePrompt.SYSTEM, ScenePrompt.user(book.title, book.author, story, windows, maxChars, corrections))
+                prompt = llm.chatPrompt(prompts.system(PromptKind.SCENES), ScenePrompt.user(book.title, book.author, story, windows, maxChars, corrections))
                 maxChars -= 100
             } while (llm.countTokens(prompt) + maxTokens(windows.size) > llm.contextSize && maxChars > 100)
             log.add(
                 AiStep.ASKED,
                 "Sprachmodell gefragt: ${windows.size} ${if (windows.size == 1) "Abschnitt" else "Abschnitte"} ab " +
                     "${ScenePrompt.clock(windows.first().startMs)} (${llm.countTokens(prompt)} Token" +
-                    (if (corrections.isNotEmpty()) ", ${corrections.size} deiner Korrekturen als Beispiel" else "") + ")",
+                    (if (corrections.isNotEmpty()) ", ${corrections.size} deiner Korrekturen als Beispiel" else "") +
+                    (if (prompts.current.isChanged(PromptKind.SCENES)) ", mit deinen Anweisungen" else "") + ")",
                 prompt,
                 book.id,
                 windows.first().startMs,
@@ -569,7 +573,7 @@ class AnalysisManager(
                     var chars = 5000
                     var prompt: String
                     do {
-                        prompt = llm.chatPrompt(ScenePrompt.RECAP_SYSTEM, ScenePrompt.recapUser(book.title, story, recent, chars))
+                        prompt = llm.chatPrompt(prompts.system(PromptKind.RECAP), ScenePrompt.recapUser(book.title, story, recent, chars))
                         chars -= 1000
                     } while (llm.countTokens(prompt) + 400 > llm.contextSize && chars > 500)
                     log.add(AiStep.ASKED, "Rückblick „Was bisher geschah“ bis ${ScenePrompt.clock(positionMs)} erbeten", prompt, bookId, positionMs)
@@ -638,13 +642,20 @@ class AnalysisManager(
                 var prompt: String
                 do {
                     prompt = llm.chatPrompt(
-                        BookAssistant.SYSTEM,
+                        prompts.system(PromptKind.ASSISTANT),
                         BookAssistant.user(book.title, book.author, story, positionMs, chapter?.title, details.chapters.size, keep, history, question, spoilerFree),
                     )
                     if (llm.countTokens(prompt) + ModelEval.ASSISTANT_MAX_TOKENS <= llm.contextSize || keep.isEmpty()) break
                     keep = keep.drop(1)
                 } while (true)
-                log.add(AiStep.ASKED, "Frage ans Buch: „$question“ (${keep.size} passende Stellen, ${llm.countTokens(prompt)} Token)", prompt, bookId, positionMs)
+                log.add(
+                    AiStep.ASKED,
+                    "Frage ans Buch: „$question“ (${keep.size} passende Stellen, ${llm.countTokens(prompt)} Token" +
+                        (if (prompts.current.isChanged(PromptKind.ASSISTANT)) ", mit deinen Anweisungen" else "") + ")",
+                    prompt,
+                    bookId,
+                    positionMs,
+                )
                 currentLlm = llm
                 val asked = System.nanoTime()
                 val output = try {
@@ -697,7 +708,7 @@ class AnalysisManager(
             try {
                 todo.forEachIndexed { i, (id, label, file) ->
                     val report = evalModel(label, file, quick) { step -> _evalProgress.value = EvalProgress(label, i + 1, todo.size, step, steps) }
-                    _evalResults.value = _evalResults.value + (id to report)
+                    _evalResults.value = _evalResults.value + (EvalReport.key(id, report.customPrompts) to report)
                     evalPrefs.edit().putString("results", MiniJson.write(_evalResults.value.mapValues { it.value.toMap() })).apply()
                     log.add(
                         AiStep.INFO,
@@ -747,6 +758,8 @@ class AnalysisManager(
             genSeconds += write
             return out to read + write
         }
+        val sceneSystem = prompts.system(PromptKind.SCENES)
+        val assistantSystem = prompts.system(PromptKind.ASSISTANT)
         try {
             var moods = 0
             var places = 0
@@ -761,7 +774,7 @@ class AnalysisManager(
             batches.forEachIndexed { i, r ->
                 coroutineContext.ensureActive()
                 progress(++step)
-                val (out, sec) = timed(ScenePrompt.SYSTEM, ModelEval.sceneUser(r), ScenePrompt.grammar(r.count()), ModelEval.sceneMaxTokens(r.count()), cold = i == 0)
+                val (out, sec) = timed(sceneSystem, ModelEval.sceneUser(r), ScenePrompt.grammar(r.count()), ModelEval.sceneMaxTokens(r.count()), cold = i == 0)
                 sceneSeconds += sec
                 val h = ModelEval.scoreScenes(r, out)
                 moods += h.moods; places += h.places; placeCount += h.placeCount; levels += h.levels
@@ -776,7 +789,7 @@ class AnalysisManager(
             questions.forEachIndexed { i, q ->
                 coroutineContext.ensureActive()
                 progress(++step)
-                val (out, sec) = timed(BookAssistant.SYSTEM, ModelEval.assistantUser(q.question, q.positionMs), BookAssistant.grammar(), ModelEval.ASSISTANT_MAX_TOKENS, cold = i == 0)
+                val (out, sec) = timed(assistantSystem, ModelEval.assistantUser(q.question, q.positionMs), BookAssistant.grammar(), ModelEval.ASSISTANT_MAX_TOKENS, cold = i == 0)
                 askSeconds += sec
                 val reply = out?.let { BookAssistant.parse(it) }
                 if (ModelEval.answerRight(q, reply)) right++
@@ -789,7 +802,7 @@ class AnalysisManager(
             for (c in commands) {
                 coroutineContext.ensureActive()
                 progress(++step)
-                val (out, sec) = timed(BookAssistant.SYSTEM, ModelEval.assistantUser(c.text, c.positionMs), BookAssistant.grammar(), ModelEval.ASSISTANT_MAX_TOKENS, cold = false)
+                val (out, sec) = timed(assistantSystem, ModelEval.assistantUser(c.text, c.positionMs), BookAssistant.grammar(), ModelEval.ASSISTANT_MAX_TOKENS, cold = false)
                 askSeconds += sec
                 if (ModelEval.commandRight(c, out?.let { BookAssistant.parse(it) }?.let { BookAssistant.sanitize(c.text, it) })) done++
             }
@@ -799,6 +812,7 @@ class AnalysisManager(
                 share(right, questions.size), if (traps == 0) 1f else share(safe, traps), share(done, commands.size),
                 if (coldSeconds > 0) (coldTokens / coldSeconds).toFloat() else 0f, if (genSeconds > 0) (genTokens / genSeconds).toFloat() else 0f,
                 (sceneSeconds / batches.size).toFloat(), (askSeconds / (questions.size + commands.size)).toFloat(), load, quick,
+                customPrompts = prompts.current.isChanged(PromptKind.SCENES) || prompts.current.isChanged(PromptKind.ASSISTANT),
             )
         } finally {
             currentLlm = null

@@ -31,7 +31,8 @@ class LauscherApp : Application() {
     val models by lazy { ModelManager(this) }
     /** What the AI does, for the "KI-Protokoll" window. */
     val aiLog by lazy { AiLog() }
-    val analysis by lazy { AnalysisManager(this, repository, models, musicSettings, appScope, aiLog) }
+    val prompts by lazy { io.github.hexotronic.lauscher.analysis.PromptStore(this) }
+    val analysis by lazy { AnalysisManager(this, repository, models, musicSettings, appScope, aiLog, prompts) }
     val musicLibrary by lazy { MusicLibrary(this, musicSettings, appScope) }
     val downloads by lazy { DownloadManager(this, scanner, appScope) }
     val voice by lazy { VoiceControl(this) }

@@ -299,6 +299,24 @@ oder **nur für ein bestimmtes Hörbuch** speichern.
   Eine Frage zum Buch („Wer …?“, „Warum …?“) löst nie eine Aktion aus, auch wenn ein Modell das vorschlägt.
 - Fragen und Antworten stehen im KI-Protokoll; das Modell bleibt geladen, solange das Fenster offen ist.
 
+### KI-Anweisungen ansehen und ändern
+- Unter *Hintergrundmusik → KI → KI-Anweisungen* (oder „Anweisungen“ in „Frag das Buch“) stehen die festen
+  Anweisungen („Prompts“), die das Sprachmodell für jede Aufgabe bekommt: **Szenen-Analyse**, **Szenenwechsel**,
+  **Rückblick** und **Frag das Buch** – jeweils mit Zweck, Antwortform, dem ganzen Text, einer **Beispiel-Anfrage**
+  mit der Testgeschichte und einer Beispiel-Antwort. Die Texte sind auf Englisch, weil kleine Modelle englischen
+  Anweisungen am genauesten folgen.
+- **Ergänzen:** eine eigene Regel anhängen, gern auf Deutsch („Kampfszenen immer mit Stärke 3“, „Antworte in
+  höchstens zwei Sätzen“), mit Vorschlägen zum Antippen. **Bearbeiten:** den ganzen Text ändern; die App warnt,
+  wenn erlaubte Werte (Stimmungen, Orte, Merkmale, Aktionen) im Text fehlen oder er zu lang wird.
+  **Zurücksetzen** stellt den eingebauten Text wieder her. Die Antwortform bleibt fest (Grammatik), die App
+  versteht das Modell also auch mit geänderten Anweisungen.
+- **Prüfen:** der Kurztest „Modelle testen“ mit den gerade gültigen Anweisungen; Ergebnisse mit eigenen
+  Anweisungen stehen getrennt neben denen mit den eingebauten. Im KI-Protokoll steht bei jeder Anfrage „mit deinen
+  Anweisungen“, wenn sie geändert sind.
+- Die eingebauten Texte selbst wurden genauer gemacht (Abschnitte sind zwei Minuten, Stimmungen schärfer
+  abgegrenzt, Orte mit Beispielen, mindestens ein Musik-Merkmal je Szene, feste Regeln und Beispiele für die
+  Werte von Befehlen) und in der CI gegen die alte Fassung gemessen (siehe Modellvergleich).
+
 ### Sprachmodelle: eigene hinzufügen und vergleichen
 - **Suche auf Hugging Face in der App** („Auf Hugging Face suchen …“ bei Spracherkennung und Sprachmodell):
   die meistgeladenen Einträge mit GGUF-Dateien (bzw. ggml-Whisper-Dateien), Downloads, Likes und Größe in
