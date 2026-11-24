@@ -20,9 +20,10 @@ export class SpeechError extends Error {
 }
 
 /** Hört zu und liefert die erkannten Vorschläge (bester zuerst). */
-export function listen({ lang = 'de-DE', prompt = 'Name sagen …' } = {}) {
+export function listen({ lang = 'de-DE', prompt = 'Name sagen …', phrases = [] } = {}) {
+  const hints = [...new Set(phrases.filter(Boolean))].slice(0, 100);
   if (SpeechNative) {
-    return SpeechNative.listen({ language: lang, prompt })
+    return SpeechNative.listen({ language: lang, prompt, phrases: hints })
       .then(r => (r.matches || []).filter(Boolean))
       .catch(err => {
         throw new SpeechError(err?.code === 'CANCELLED' ? 'Nichts erkannt.' : (err?.message || 'Spracherkennung fehlgeschlagen.'), err?.code || 'ERROR');
@@ -35,6 +36,10 @@ export function listen({ lang = 'de-DE', prompt = 'Name sagen …' } = {}) {
     rec.maxAlternatives = 5;
     rec.interimResults = false;
     rec.continuous = false;
+    // Neuere Chrome-Versionen: erwartete Wörter als Hinweis (falls unterstützt)
+    try {
+      if (hints.length && 'SpeechRecognitionPhrase' in window) rec.phrases = hints.map(p => new window.SpeechRecognitionPhrase(p, 5));
+    } catch { /* nicht unterstützt */ }
     let done = false;
     rec.onresult = e => {
       done = true;
@@ -63,14 +68,14 @@ export function listen({ lang = 'de-DE', prompt = 'Name sagen …' } = {}) {
  * Mikrofon-Knopf. onResult(alternatives) wird mit den erkannten Vorschlägen aufgerufen.
  * big: großer runder Knopf (Training „Name sprechen“).
  */
-export function micButton({ getLang, onResult, onError, big = false, label = 'Antwort sprechen' }) {
+export function micButton({ getLang, getPhrases, onResult, onError, big = false, label = 'Antwort sprechen' }) {
   const b = h('button', {
     type: 'button', class: 'mic-btn' + (big ? ' big' : ''), 'aria-label': label, title: label,
     onclick: async () => {
       if (b.classList.contains('listening')) return;
       b.classList.add('listening');
       try {
-        const alts = await listen({ lang: getLang() });
+        const alts = await listen({ lang: getLang(), phrases: getPhrases ? getPhrases() : [] });
         b.classList.remove('listening');
         if (alts.length) onResult(alts);
         else onError?.(new SpeechError('Nichts erkannt.', 'no-speech'));

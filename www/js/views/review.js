@@ -6,7 +6,7 @@ import { getDeck, getCard, cardsInDeck, allCards, saveCard, addLog, logsSince, d
 import { answer as srsAnswer, buildQueues, deckConfig, dayStart, dayStartPlus, previewIntervals } from '../srs.js';
 import { cardFace } from '../cardview.js';
 import { acceptedNames } from '../plants.js';
-import { checkAnswer, checkSpoken, shuffle } from '../util.js';
+import { checkAnswer, matchSpoken, shuffle } from '../util.js';
 import { speechSupported, micButton } from '../speech.js';
 import { cloudSoon } from '../cloud.js';
 
@@ -132,9 +132,12 @@ export default async function reviewView({ deckId, mode = 'srs', cardIds, title 
       // Antwort auch sprechen (Mikrofon neben dem Eingabefeld)
       const mic = input && speechSupported() ? micButton({
         getLang: () => app.settings?.speechInLang || 'de-DE',
+        // Namen aller Karten des Stapels: Hinweis an die Erkennung und Vergleich mit den anderen Pflanzen
+        getPhrases: () => cards.flatMap(answersFor),
         onResult: alts => {
           if (!current || revealed) return;
-          const res = checkSpoken(alts, answersFor(current));
+          const others = cards.filter(x => x.id !== current.id).flatMap(answersFor);
+          const res = matchSpoken(alts, answersFor(current), others);
           typed = { value: res.heard, ...res };
           revealed = true;
           show();

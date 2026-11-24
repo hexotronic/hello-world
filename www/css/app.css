@@ -895,3 +895,4 @@ body.fullscreen-view .review, body.fullscreen-view .random.playing, body.fullscr
 .heard { text-align: center; min-height: 1.2em; }
 .rv-bottom .type-area { display: flex; gap: 8px; }
 .rv-bottom .type-area .input { flex: 1; }
+.override-btn { margin-top: 6px; }

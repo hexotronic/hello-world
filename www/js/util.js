@@ -75,9 +75,11 @@ export function checkAnswer(input, answers) {
   const len = norm(best).length;
   if (bestDist <= Math.max(1, Math.floor(len / 6))) return { result: 'close', best };
   // Nur ein Teil des Namens (z. B. "Salbei" statt "Wiesen-Salbei"): fast richtig
+  // nur großgeschriebene Wörter (Gattung, deutsches Hauptwort), nicht z. B. „officinale“ allein
   if (n.length >= 4) {
     for (const ans of list) {
-      if (norm(ans).split(' ').includes(n)) return { result: 'close', best: ans };
+      const words = String(ans).split(/[\s-]+/).filter(w => /^[A-ZÄÖÜ]/.test(w)).map(norm);
+      if (words.includes(n)) return { result: 'close', best: ans };
     }
   }
   return { result: 'wrong', best };
@@ -125,6 +127,59 @@ export function checkSpoken(alternatives, answers) {
     if (best.result === 'correct') break;
   }
   return best;
+}
+
+/** Normierte Klangdistanz 0…1 zwischen Gehörtem und einem Namen; prüft auch Wortausschnitte (Füllwörter). */
+export function soundDistance(heard, name) {
+  const target = soundKey(name);
+  if (!target) return 1;
+  const words = norm(heard).split(' ').filter(Boolean);
+  let best = 1;
+  for (let len = 1; len <= words.length; len++) {
+    for (let i = 0; i + len <= words.length; i++) {
+      const k = soundKey(words.slice(i, i + len).join(' '));
+      if (!k) continue;
+      const d = levenshtein(k, target) / Math.max(k.length, target.length);
+      if (d < best) best = d;
+    }
+  }
+  return best;
+}
+
+/**
+ * Gesprochene Antwort bewerten – mit Blick auf alle möglichen Pflanzen (others = Namen der anderen Karten).
+ * Passt die gefragte Pflanze von allen am besten zum Gehörten, zählt es als richtig, auch wenn die
+ * Spracherkennung den (lateinischen) Namen verstümmelt hat. Klingt eine andere Pflanze näher, bleibt es falsch.
+ */
+export function matchSpoken(alternatives, answers, others = [], { correctAt = 0.3, closeAt = 0.5 } = {}) {
+  const direct = checkSpoken(alternatives, answers);
+  if (direct.result === 'correct') return direct;
+  // Kurzformen deutscher Namen: „Gewöhnliche Schafgarbe“ → „Schafgarbe“ (nur großgeschriebene Hauptwörter,
+  // damit lateinische Artnamen wie „officinale“ nicht allein zählen)
+  const withShort = list => list.flatMap(name => {
+    const parts = String(name).split(/[\s-]+/).filter(Boolean);
+    const last = parts[parts.length - 1] || '';
+    return parts.length > 1 && last.length >= 5 && /^[A-ZÄÖÜ]/.test(last)
+      ? [{ name, partial: false }, { name: last, full: name, partial: true }]
+      : [{ name, partial: false }];
+  });
+  const own = withShort(answers.filter(Boolean));
+  const ownKeys = new Set(own.map(o => norm(o.name)));
+  const foreign = withShort(others.filter(Boolean)).filter(o => !ownKeys.has(norm(o.name)));
+  let mine = { d: 1, alt: alternatives[0] || '', name: answers[0] || '', partial: false };
+  let theirs = 1;
+  for (const alt of alternatives) {
+    for (const o of own) {
+      const d = soundDistance(alt, o.name);
+      if (d < mine.d || (d === mine.d && mine.partial && !o.partial)) mine = { d, alt, name: o.full || o.name, partial: o.partial };
+    }
+    for (const o of foreign) theirs = Math.min(theirs, soundDistance(alt, o.name));
+  }
+  const margin = foreign.length ? theirs - mine.d : 1;
+  if (mine.d <= correctAt && margin > 0.05) return { result: mine.partial ? 'close' : 'correct', best: mine.name, heard: mine.alt };
+  if (direct.result === 'close') return direct;
+  if (mine.d <= (foreign.length ? closeAt : 0.35) && margin > 0.1) return { result: 'close', best: mine.name, heard: mine.alt };
+  return direct;
 }
 
 export const MONTHS_SHORT = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];

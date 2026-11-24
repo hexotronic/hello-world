@@ -13,7 +13,7 @@ import { isNative } from '../native.js';
 import { SPEECH_LANGS, speechSupported } from '../speech.js';
 import { cloudSection } from './cloudsection.js';
 
-const VERSION = '1.8.0';
+const VERSION = '1.9.0';
 
 export default async function settingsView(params = {}) {
   const s = app.settings;

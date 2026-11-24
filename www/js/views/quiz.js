@@ -5,7 +5,7 @@ import { icon } from '../icons.js';
 import { allCards, listDecks, addLog, saveCards, displayName, saveSettings } from '../db.js';
 import { photoURL, lazyPhoto } from '../images.js';
 import { openZoom } from '../cardview.js';
-import { shuffle, norm, checkAnswer, checkSpoken, speak } from '../util.js';
+import { shuffle, norm, checkAnswer, matchSpoken, speak } from '../util.js';
 import { speechSupported, micButton, SPEECH_LANGS } from '../speech.js';
 import { FAMILIES, familyKey, sameFamily, acceptedNames, mainName, getNameMode } from '../plants.js';
 
@@ -182,6 +182,26 @@ export default async function quizView(params = {}) {
       nextBtn.focus();
     };
 
+    // Für die Spracherkennung: Namen aller Pflanzen der Runde (Hinweis an die Erkennung, Vergleich mit anderen Pflanzen)
+    const roundCards = r.qs.map(q => q.card);
+    const otherNames = roundCards.filter(c => c.id !== card.id).flatMap(c => spokenAnswers(c, st.expect));
+    const speechPhrases = () => roundCards.flatMap(c => spokenAnswers(c, st.expect));
+    const judgeSpoken = alts => matchSpoken(alts, spokenAnswers(card, st.expect), otherNames);
+    const heardText = (res, alts) => {
+      const more = alts.filter(a => norm(a) !== norm(res.heard)).slice(0, 2);
+      return `Gehört: „${res.heard}“` + (more.length ? ` (auch: ${more.map(a => `„${a}“`).join(', ')})` : '');
+    };
+    /** Falls die Erkennung danebenlag: trotzdem als richtig zählen. */
+    const offerOverride = () => {
+      feedback.append(btn('Zählt doch – ich habe es richtig gesagt', () => {
+        r.right++;
+        r.wrong = r.wrong.filter(w => w.card.id !== card.id);
+        addLog({ cardId: card.id, deckId: card.deckId, rating: 3, mode: 'quiz', quiz: st.mode, override: true });
+        feedback.replaceChildren(h('div', { class: 'fb ok' }, icon('check', 20), h('span', null, `Als richtig gezählt – ${answer}`)));
+        root.querySelector('.topbar .tb-sub').textContent = `${r.right} richtig`;
+      }, { kind: 'ghost', cls: 'override-btn' }));
+    };
+
     let answerArea;
     if (opts) {
       const latinOpts = st.mode === 'mc-latin' || (getNameMode() === 'la' && ['mc-photo', 'features'].includes(st.mode));
@@ -203,13 +223,15 @@ export default async function quizView(params = {}) {
       const mic = micButton({
         big: true, label: 'Antippen und Namen sagen',
         getLang: () => app.settings.speechInLang || 'de-DE',
+        getPhrases: speechPhrases,
         onResult: alts => {
           if (r.answered) return;
-          const res = checkSpoken(alts, spokenAnswers(card, st.expect));
-          heard.textContent = `Gehört: „${res.heard}“`;
+          const res = judgeSpoken(alts);
+          heard.textContent = heardText(res, alts);
           mic.hidden = true;
           skip.hidden = true;
           finishAnswer(res.result !== 'wrong', res.heard, res.result === 'close');
+          if (res.result === 'wrong') offerOverride();
         },
         onError: err => toast(err.message),
       });
@@ -229,11 +251,13 @@ export default async function quizView(params = {}) {
       input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); check(); } });
       const mic = speechSupported() ? micButton({
         getLang: () => app.settings.speechInLang || 'de-DE',
+        getPhrases: speechPhrases,
         onResult: alts => {
           if (r.answered) return;
-          const res = checkSpoken(alts, spokenAnswers(card, st.expect));
+          const res = judgeSpoken(alts);
           input.value = res.heard;
           judge(res);
+          if (res.result === 'wrong') offerOverride();
         },
         onError: err => toast(err.message),
       }) : null;

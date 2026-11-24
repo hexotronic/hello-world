@@ -3,6 +3,7 @@ package de.florakarten.app;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.os.Build;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import androidx.activity.result.ActivityResult;
@@ -44,6 +45,16 @@ public class SpeechPlugin extends Plugin {
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, lang);
         intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5);
         intent.putExtra(RecognizerIntent.EXTRA_PROMPT, call.getString("prompt", "Jetzt sprechen …"));
+        // Android 13+: erwartete Wörter (Pflanzennamen) als Hinweis an die Spracherkennung
+        JSArray phrases = call.getArray("phrases");
+        if (phrases != null && phrases.length() > 0 && Build.VERSION.SDK_INT >= 33) {
+            ArrayList<String> list = new ArrayList<>();
+            for (int i = 0; i < phrases.length() && list.size() < 100; i++) {
+                String p = phrases.optString(i, "");
+                if (!p.isEmpty()) list.add(p);
+            }
+            intent.putStringArrayListExtra("android.speech.extra.BIASING_STRINGS", list);
+        }
         try {
             startActivityForResult(call, intent, "onSpeechResult");
         } catch (ActivityNotFoundException e) {

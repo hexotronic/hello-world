@@ -50,7 +50,11 @@ Karteikarten-App für Android (und jeden Browser) mit Wiederholung in wachsenden
 - Übung **„Foto → Name sprechen“**: Mikrofon antippen und den Namen sagen – wahlweise deutsch, botanisch oder beides
 - Mikrofon auch neben jedem Eingabefeld (Training „Eintippen“ und Lernen mit „Antwort eintippen“)
 - Botanische Namen: Es gibt keine lateinische Spracherkennung; erkannt wird über Deutsch, **Italienisch** (oft besser für Latein) oder Englisch (*Einstellungen → Lernen → Spracherkennung*). Die App vergleicht mehrere Erkennungsvorschläge nach Klang, z. B. zählt „Taraxakum offizinale“ für *Taraxacum officinale*
+- Zuordnung über alle Pflanzen der Runde bzw. des Stapels: Passt die gefragte Pflanze am besten zum Gehörten, zählt es – auch wenn die Erkennung den Namen verstümmelt („Belis Perry Niss“ → *Bellis perennis*). Klingt eine andere Pflanze näher, bleibt es falsch. Kurzformen wie „Schafgarbe“ zählen als fast richtig
+- Die Namen deiner Pflanzen werden der Spracherkennung als erwartete Wörter mitgegeben (Android 13+)
+- Angezeigt wird, was erkannt wurde (inkl. weiterer Vorschläge); „Zählt doch“ korrigiert eine falsche Bewertung
 - Android-App: nutzt die Spracherkennung des Handys (meist Google, braucht in der Regel Internet)
+- Testsammlung mit typischen Fehl-Erkennungen: `npm run test:speech`
 
 **Beispielbilder aus dem Internet**
 - Im Karten-Editor unter Fotos: **„Internet“** sucht zum eingegebenen botanischen (oder deutschen) Namen freie Bilder bei **iNaturalist** (geprüfte Pflanzenfotos) oder **Wikimedia Commons**
