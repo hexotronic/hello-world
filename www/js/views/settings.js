@@ -10,9 +10,10 @@ import { createSampleDeck } from '../sample.js';
 import { forgetAll } from '../images.js';
 import { fmtDate, fmtBytes, norm } from '../util.js';
 import { isNative } from '../native.js';
+import { SPEECH_LANGS, speechSupported } from '../speech.js';
 import { cloudSection } from './cloudsection.js';
 
-const VERSION = '1.7.0';
+const VERSION = '1.8.0';
 
 export default async function settingsView(params = {}) {
   const s = app.settings;
@@ -208,6 +209,11 @@ export default async function settingsView(params = {}) {
         field('Vorlesestimme', h('select', { class: 'input', id: 'set-voice', value: s.speechLang, onchange: e => update({ speechLang: e.target.value }) },
           h('option', { value: 'de-DE' }, 'Deutsch'), h('option', { value: 'it-IT' }, 'Italienisch (nah an Kirchenlatein)'), h('option', { value: 'en-GB' }, 'Englisch')),
           'Für botanische Namen gibt es meist keine lateinische Stimme. Italienisch klingt oft passender.'),
+        field('Spracherkennung (Mikrofon)', h('select', { class: 'input', id: 'set-speechin', value: s.speechInLang || 'de-DE', onchange: e => update({ speechInLang: e.target.value }) },
+          SPEECH_LANGS.map(l => h('option', { value: l.value }, l.label))),
+          speechSupported()
+            ? 'Für „Foto → Name sprechen“ im Training und das Mikrofon beim Eintippen. Botanische Namen: Italienisch erkennt sie oft besser. Ähnlich klingende Erkennungen zählen trotzdem.'
+            : 'Spracherkennung ist hier nicht verfügbar – in der Android-App und in Chrome auf dem Handy schon.'),
         h('p', { class: 'muted small' }, 'Tageslimits, Lernschritte und „Antwort eintippen“ stellst du pro Stapel ein (Stapel öffnen → Optionen).')),
 
       cloud.el,

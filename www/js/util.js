@@ -83,6 +83,50 @@ export function checkAnswer(input, answers) {
   return { result: 'wrong', best };
 }
 
+/**
+ * Klangschlüssel für gesprochene Namen (deutsch/lateinisch): gleich klingende Schreibweisen werden gleich,
+ * z. B. „Taraxakum offizinale“ ≈ „Taraxacum officinale“, „Füsalis“ ≈ „Physalis“.
+ */
+export function soundKey(s) {
+  let k = norm(s);
+  const rules = [
+    [/sch/g, 's'], [/ch/g, 'k'], [/ph/g, 'f'], [/th/g, 't'], [/rh/g, 'r'], [/qu/g, 'kw'], [/ck/g, 'k'],
+    [/c(?=[eiy])/g, 's'], [/c/g, 'k'], [/z/g, 's'], [/x/g, 'ks'], [/y/g, 'i'], [/ae/g, 'e'], [/oe/g, 'e'],
+    [/ue/g, 'u'], [/v/g, 'w'], [/ie/g, 'i'], [/h(?![aeiou])/g, ''], [/(.)\1+/g, '$1'],
+  ];
+  for (const [re, r] of rules) k = k.replace(re, r);
+  // Wortgrenzen ignorieren: Spracherkennung trennt Namen oft anders („mille folium“)
+  return k.replace(/\s+/g, '');
+}
+
+/**
+ * Bewertet gesprochene Antworten (mehrere Erkennungsvorschläge) gegen erlaubte Antworten.
+ * Ergebnis wie checkAnswer, zusätzlich heard = bester erkannter Text.
+ */
+export function checkSpoken(alternatives, answers) {
+  const rank = { correct: 2, close: 1, wrong: 0 };
+  let best = { result: 'wrong', best: answers.filter(Boolean)[0] || '', heard: alternatives[0] || '' };
+  for (const alt of alternatives) {
+    const plain = checkAnswer(alt, answers);
+    let res = plain;
+    if (plain.result !== 'correct') {
+      // nach Klang vergleichen
+      const key = soundKey(alt);
+      for (const ans of answers.filter(Boolean)) {
+        const variants = [ans, ...String(ans).split(/[\/,;]| oder /)].map(soundKey).filter(Boolean);
+        for (const v of variants) {
+          const d = levenshtein(key, v);
+          const r = d === 0 ? 'correct' : d <= Math.max(1, Math.floor(v.length / 5)) ? 'close' : null;
+          if (r && rank[r] > rank[res.result]) res = { result: r, best: ans };
+        }
+      }
+    }
+    if (rank[res.result] > rank[best.result]) best = { ...res, heard: alt };
+    if (best.result === 'correct') break;
+  }
+  return best;
+}
+
 export const MONTHS_SHORT = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
 export const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
 export const MONTHS_ABBR = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];

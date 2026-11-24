@@ -2,15 +2,17 @@
 import { app } from '../app.js';
 import { h, topbar, btn, segmented, field, toggle, toast, emptyState } from '../ui.js';
 import { icon } from '../icons.js';
-import { allCards, listDecks, addLog, saveCards, displayName } from '../db.js';
+import { allCards, listDecks, addLog, saveCards, displayName, saveSettings } from '../db.js';
 import { photoURL, lazyPhoto } from '../images.js';
 import { openZoom } from '../cardview.js';
-import { shuffle, norm, checkAnswer, speak } from '../util.js';
+import { shuffle, norm, checkAnswer, checkSpoken, speak } from '../util.js';
+import { speechSupported, micButton, SPEECH_LANGS } from '../speech.js';
 import { FAMILIES, familyKey, sameFamily, acceptedNames, mainName, getNameMode } from '../plants.js';
 
 const MODES = [
   { id: 'mc-photo', label: 'Foto → Name', desc: 'Wähle aus vier Namen', icon: 'image' },
   { id: 'type-photo', label: 'Foto → Name eintippen', desc: 'Tippfehler werden erkannt', icon: 'edit' },
+  { id: 'speak-photo', label: 'Foto → Name sprechen', desc: 'Mit Spracherkennung, auch botanisch', icon: 'mic' },
   { id: 'mc-latin', label: 'Deutsch → Botanisch', desc: 'Lateinische Namen lernen', icon: 'leaf' },
   { id: 'mc-german', label: 'Botanisch → Deutsch', desc: 'Andersherum', icon: 'leaf' },
   { id: 'mc-family', label: 'Foto → Familie', desc: 'Pflanzenfamilien erkennen', icon: 'layers' },
@@ -18,16 +20,25 @@ const MODES = [
   { id: 'features', label: 'Merkmale → Name', desc: 'Nur anhand der Beschreibung', icon: 'search' },
 ];
 
-const prefs = { mode: 'mc-photo', deckId: '', count: 10, tricky: true };
+const prefs = { mode: 'mc-photo', deckId: '', count: 10, tricky: true, expect: 'both' };
 
 const nameOf = c => mainName(c.plant) || c.title || '';
 
-function eligible(c, mode) {
+/** Erlaubte Antworten beim Eintippen/Sprechen: nur deutsch, nur botanisch oder beides. */
+function spokenAnswers(c, expect) {
+  const p = c.plant || {};
+  if (expect === 'la') return [p.latinName].filter(Boolean);
+  if (expect === 'de') return [p.deName, c.title].filter(Boolean);
+  return acceptedNames(c);
+}
+
+function eligible(c, mode, expect = 'both') {
   if (c.type !== 'plant' || c.suspended) return false;
   const p = c.plant || {};
   switch (mode) {
     case 'mc-photo':
-    case 'type-photo': return c.photoIds?.length && nameOf(c);
+    case 'type-photo':
+    case 'speak-photo': return c.photoIds?.length && spokenAnswers(c, expect).length;
     case 'mc-latin':
     case 'mc-german': return p.deName && p.latinName;
     case 'mc-family': return c.photoIds?.length && p.family;
@@ -37,7 +48,11 @@ function eligible(c, mode) {
   return false;
 }
 
-function answerValue(c, mode) {
+function answerValue(c, mode, expect = 'both') {
+  if (mode === 'type-photo' || mode === 'speak-photo') {
+    if (expect === 'la') return c.plant.latinName;
+    if (expect === 'de') return c.plant.deName || c.title;
+  }
   // Bei mehreren Lebensformen wird pro Frage eine davon abgefragt
   if (mode === 'mc-lifeform') return c.plant.lifeForm[Math.floor(Math.random() * c.plant.lifeForm.length)];
   if (mode === 'mc-latin') return c.plant.latinName;
@@ -52,13 +67,13 @@ export default async function quizView(params = {}) {
   const root = h('div', { class: 'page quiz' });
   const save = () => Object.assign(prefs, st);
 
-  const pool = () => cards.filter(c => (!st.deckId || c.deckId === st.deckId) && eligible(c, st.mode));
+  const pool = () => cards.filter(c => (!st.deckId || c.deckId === st.deckId) && eligible(c, st.mode, st.expect));
 
   function renderSetup() {
     const pl = pool();
     const enough = pl.length >= 2;
-    const modeList = h('div', { class: 'mode-list', role: 'radiogroup' }, MODES.map(m => {
-      const n = cards.filter(c => (!st.deckId || c.deckId === st.deckId) && eligible(c, m.id)).length;
+    const modeList = h('div', { class: 'mode-list', role: 'radiogroup' }, MODES.filter(m => m.id !== 'speak-photo' || speechSupported()).map(m => {
+      const n = cards.filter(c => (!st.deckId || c.deckId === st.deckId) && eligible(c, m.id, st.expect)).length;
       return h('button', {
         type: 'button', role: 'radio', 'aria-checked': String(st.mode === m.id),
         class: 'mode' + (st.mode === m.id ? ' on' : ''), onclick: () => { st.mode = m.id; save(); renderSetup(); },
@@ -75,6 +90,13 @@ export default async function quizView(params = {}) {
           h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Übung'), modeList),
           h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Fragen'), segmented(
             [{ value: 10, label: '10' }, { value: 20, label: '20' }, { value: 0, label: 'Alle' }], st.count, v => { st.count = v; save(); })),
+          ['type-photo', 'speak-photo'].includes(st.mode) ? h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Antwort'), segmented([
+            { value: 'de', label: 'Deutsch' }, { value: 'la', label: 'Botanisch' }, { value: 'both', label: 'Beides' },
+          ], st.expect, v => { st.expect = v; save(); renderSetup(); }, { id: 'quiz-expect' })) : null,
+          st.mode === 'speak-photo' ? field('Erkennungssprache', h('select', {
+            class: 'input', id: 'quiz-speechlang', value: app.settings.speechInLang || 'de-DE',
+            onchange: async e => { app.settings = await saveSettings({ speechInLang: e.target.value }); },
+          }, SPEECH_LANGS.map(l => h('option', { value: l.value }, l.label))), 'Für botanische Namen klappt Italienisch oft besser, weil die Aussprache dem Latein ähnelt. Ähnlich klingende Erkennungen zählen trotzdem.') : null,
           st.mode.startsWith('mc') || st.mode === 'features'
             ? toggle('Knifflig', st.tricky, v => { st.tricky = v; save(); }, { id: 'quiz-tricky', hint: 'Falsche Antworten bevorzugt aus derselben Familie – wie draußen, wo sich Korbblütler gern ähneln.' })
             : null),
@@ -111,8 +133,8 @@ export default async function quizView(params = {}) {
   function start(list) {
     const pl = pool();
     const qs = (st.count ? list.slice(0, st.count) : list).map(c => {
-      const answer = answerValue(c, st.mode);
-      return { card: c, answer, opts: st.mode === 'type-photo' ? null : options(c, pl, answer) };
+      const answer = answerValue(c, st.mode, st.expect);
+      return { card: c, answer, opts: ['type-photo', 'speak-photo'].includes(st.mode) ? null : options(c, pl, answer) };
     });
     if (!run) app.pushLayer();
     run = { qs, i: 0, right: 0, wrong: [], answered: false };
@@ -126,7 +148,7 @@ export default async function quizView(params = {}) {
     const { card, opts, answer } = r.qs[r.i];
     const p = card.plant;
     let prompt;
-    if (['mc-photo', 'type-photo', 'mc-family', 'mc-lifeform'].includes(st.mode)) {
+    if (['mc-photo', 'type-photo', 'speak-photo', 'mc-family', 'mc-lifeform'].includes(st.mode)) {
       const pid = card.photoIds[Math.floor(Math.random() * card.photoIds.length)];
       const img = h('img', { class: 'quiz-img', alt: 'Welche Pflanze?' });
       photoURL(pid, 'full').then(u => { img.src = u || ''; });
@@ -139,7 +161,8 @@ export default async function quizView(params = {}) {
     } else {
       prompt = h('div', { class: 'quiz-text' }, h('span', { class: 'quiz-q' }, 'Welche Pflanze ist gemeint?'), h('p', { class: 'quiz-features pre' }, p.features));
     }
-    const question = st.mode === 'mc-family' ? 'Zu welcher Familie gehört sie?'
+    const question = st.mode === 'speak-photo' ? ({ la: 'Sag den botanischen Namen', de: 'Sag den deutschen Namen' }[st.expect] || 'Sag den Namen der Pflanze')
+      : st.mode === 'mc-family' ? 'Zu welcher Familie gehört sie?'
       : st.mode === 'mc-lifeform' ? 'Welche Lebensform hat sie?'
         : (st.mode.endsWith('photo') ? 'Welche Pflanze ist das?' : null);
     const feedback = h('div', { class: 'quiz-feedback' });
@@ -174,17 +197,47 @@ export default async function quizView(params = {}) {
           finishAnswer(ok, o);
         },
       }, o)));
+    } else if (st.mode === 'speak-photo') {
+      // Sprechen: großer Mikrofon-Knopf, mehrere Erkennungsvorschläge werden tolerant verglichen
+      const heard = h('p', { class: 'heard muted' });
+      const mic = micButton({
+        big: true, label: 'Antippen und Namen sagen',
+        getLang: () => app.settings.speechInLang || 'de-DE',
+        onResult: alts => {
+          if (r.answered) return;
+          const res = checkSpoken(alts, spokenAnswers(card, st.expect));
+          heard.textContent = `Gehört: „${res.heard}“`;
+          mic.hidden = true;
+          skip.hidden = true;
+          finishAnswer(res.result !== 'wrong', res.heard, res.result === 'close');
+        },
+        onError: err => toast(err.message),
+      });
+      const skip = btn('Weiß ich nicht', () => { if (!r.answered) { mic.hidden = true; skip.hidden = true; finishAnswer(false, '—'); } }, { kind: 'ghost' });
+      answerArea = h('div', { class: 'speak-area' }, mic, heard, skip);
     } else {
-      const input = h('input', { class: 'input type-input', id: 'quiz-type', placeholder: 'Deutscher oder botanischer Name …', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', enterkeyhint: 'done' });
-      const check = () => {
-        if (r.answered) { nextBtn.click(); return; }
-        const res = checkAnswer(input.value, acceptedNames(card));
+      const input = h('input', { class: 'input type-input', id: 'quiz-type', placeholder: { la: 'Botanischer Name …', de: 'Deutscher Name …' }[st.expect] || 'Deutscher oder botanischer Name …', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', enterkeyhint: 'done' });
+      const judge = res => {
         input.disabled = true;
         input.classList.add(res.result === 'wrong' ? 'bad' : 'ok');
         finishAnswer(res.result !== 'wrong', input.value, res.result === 'close');
       };
+      const check = () => {
+        if (r.answered) { nextBtn.click(); return; }
+        judge(checkAnswer(input.value, spokenAnswers(card, st.expect)));
+      };
       input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); check(); } });
-      answerArea = h('div', { class: 'type-area' }, input, btn('Prüfen', check, { kind: 'secondary' }));
+      const mic = speechSupported() ? micButton({
+        getLang: () => app.settings.speechInLang || 'de-DE',
+        onResult: alts => {
+          if (r.answered) return;
+          const res = checkSpoken(alts, spokenAnswers(card, st.expect));
+          input.value = res.heard;
+          judge(res);
+        },
+        onError: err => toast(err.message),
+      }) : null;
+      answerArea = h('div', { class: 'type-area' }, input, mic, btn('Prüfen', check, { kind: 'secondary' }));
       setTimeout(() => input.focus(), 60);
     }
 

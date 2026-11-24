@@ -119,6 +119,7 @@ export const SETTINGS_DEFAULTS = {
   usesList: DEFAULT_USES,         // Auswahlliste Verwendungszwecke
   photoNameMode: '',              // Fotonamen: '' = wie Hauptname, 'de' oder 'la'
   renameOriginals: true,          // Android: Originalfotos in der Galerie umbenennen
+  speechInLang: 'de-DE',          // Sprache der Spracherkennung
 };
 
 export async function getMeta(key, fallback = null) {

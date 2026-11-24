@@ -9,7 +9,7 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         // Bei GitHub-Builds steigt die Versionsnummer automatisch, damit Updates sauber installiert werden.
         versionCode((System.getenv("GITHUB_RUN_NUMBER") ?: "1") as Integer)
-        versionName "1.7.0"
+        versionName "1.8.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

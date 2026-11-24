@@ -46,6 +46,12 @@ Karteikarten-App für Android (und jeden Browser) mit Wiederholung in wachsenden
 - „Aus der Cloud wiederherstellen“ und „Bestehende Sicherung verbinden“ (z. B. auf einem neuen Handy), wahlweise zusammenführen oder ersetzen
 - Ohne Google-Entwicklerkonto und ohne Server: Die App schreibt nur in die eine Datei, die du ausgewählt hast. Andere Cloud-Speicher mit Android-Anbindung (z. B. OneDrive, Nextcloud) funktionieren genauso.
 
+**Training mit Spracherkennung**
+- Übung **„Foto → Name sprechen“**: Mikrofon antippen und den Namen sagen – wahlweise deutsch, botanisch oder beides
+- Mikrofon auch neben jedem Eingabefeld (Training „Eintippen“ und Lernen mit „Antwort eintippen“)
+- Botanische Namen: Es gibt keine lateinische Spracherkennung; erkannt wird über Deutsch, **Italienisch** (oft besser für Latein) oder Englisch (*Einstellungen → Lernen → Spracherkennung*). Die App vergleicht mehrere Erkennungsvorschläge nach Klang, z. B. zählt „Taraxakum offizinale“ für *Taraxacum officinale*
+- Android-App: nutzt die Spracherkennung des Handys (meist Google, braucht in der Regel Internet)
+
 **Beispielbilder aus dem Internet**
 - Im Karten-Editor unter Fotos: **„Internet“** sucht zum eingegebenen botanischen (oder deutschen) Namen freie Bilder bei **iNaturalist** (geprüfte Pflanzenfotos) oder **Wikimedia Commons**
 - Bilder antippen zum Auswählen, auch aus beiden Quellen gemischt; „Mehr laden“ für weitere

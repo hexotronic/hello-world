@@ -7,6 +7,8 @@ export const Filesystem = reg('Filesystem');
 export const Share = reg('Share');
 // Eigenes Modul der App: Speicherort frei wählen (z. B. Google Drive) und dorthin schreiben
 export const CloudFile = reg('CloudFile');
+// Eigenes Modul der App: Spracherkennung über den Android-Dialog
+export const SpeechNative = reg('Speech');
 
 /** Liest eine lokale App-Datei (file://…) als Blob. */
 export async function readNativeFile(fileUri) {

@@ -6,7 +6,8 @@ import { getDeck, getCard, cardsInDeck, allCards, saveCard, addLog, logsSince, d
 import { answer as srsAnswer, buildQueues, deckConfig, dayStart, dayStartPlus, previewIntervals } from '../srs.js';
 import { cardFace } from '../cardview.js';
 import { acceptedNames } from '../plants.js';
-import { checkAnswer, shuffle } from '../util.js';
+import { checkAnswer, checkSpoken, shuffle } from '../util.js';
+import { speechSupported, micButton } from '../speech.js';
 import { cloudSoon } from '../cloud.js';
 
 const RATINGS = [
@@ -128,8 +129,20 @@ export default async function reviewView({ deckId, mode = 'srs', cardIds, title 
         autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', enterkeyhint: 'done',
         onkeydown: e => { if (e.key === 'Enter') { e.preventDefault(); reveal(); } },
       }) : null;
+      // Antwort auch sprechen (Mikrofon neben dem Eingabefeld)
+      const mic = input && speechSupported() ? micButton({
+        getLang: () => app.settings?.speechInLang || 'de-DE',
+        onResult: alts => {
+          if (!current || revealed) return;
+          const res = checkSpoken(alts, answersFor(current));
+          typed = { value: res.heard, ...res };
+          revealed = true;
+          show();
+        },
+        onError: err => toast(err.message),
+      }) : null;
       bottom.replaceChildren(...[
-        input,
+        input ? h('div', { class: 'type-area' }, input, mic) : null,
         h('div', { class: 'rv-row' },
           canHint ? btn(hintLevel ? `Tipp ${Math.min(hintLevel + 1, 3)}` : 'Tipp', () => { hintLevel = Math.min(3, hintLevel + 1); const v = input?.value; show(); if (v != null) { const i = bottom.querySelector('#type-answer'); if (i) i.value = v; } }, { iconName: 'bulb', cls: 'hint-btn', attrs: { disabled: hintLevel >= 3 } }) : null,
           btn('Antwort zeigen', () => reveal(), { kind: 'primary', cls: 'reveal-btn' }))].filter(Boolean));

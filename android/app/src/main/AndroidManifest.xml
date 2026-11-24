@@ -35,6 +35,16 @@
         </provider>
     </application>
 
+    <!-- Spracherkennung finden (Android 11+: Paket-Sichtbarkeit) -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+        <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
+        </intent>
+    </queries>
+
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
