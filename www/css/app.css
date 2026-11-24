@@ -896,3 +896,12 @@ body.fullscreen-view .review, body.fullscreen-view .random.playing, body.fullscr
 .rv-bottom .type-area { display: flex; gap: 8px; }
 .rv-bottom .type-area .input { flex: 1; }
 .override-btn { margin-top: 6px; }
+
+/* Steckbrief automatisch ergänzen */
+.facts-bar { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 6px 10px; border-radius: 12px; background: var(--sheet-2); }
+.facts-bar .btn { min-height: 38px; padding: 6px 10px; }
+.facts-status { display: flex; align-items: flex-start; gap: 6px; font-size: 0.88rem; color: var(--ink-2); padding: 4px 0; }
+.facts-status .icon { flex: none; margin-top: 2px; }
+.facts-status.ok .icon { color: var(--moss); }
+.facts-status.bad .icon { color: var(--c-learn); }
+.autofilled { box-shadow: 0 0 0 3px color-mix(in srgb, var(--moss) 45%, transparent) !important; transition: box-shadow .4s; }

@@ -11,6 +11,7 @@ import { norm, nameFromFilename } from '../util.js';
 import { newDeckFlow } from './home.js';
 import { cloudSoon } from '../cloud.js';
 import { pickCard, rememberTarget } from '../cardpicker.js';
+import { lookupPlant, applyFacts, enrichLater } from '../plantfacts.js';
 
 const TARGET_KEY = 'quickTarget';
 
@@ -307,6 +308,15 @@ export default async function quickView(params = {}) {
       card.photoIds = [p.id];
       await saveCard(card);
       queueRename(current.file, card.id, p.id);
+      // Familie und Steckbrief im Hintergrund ergänzen (nur leere Felder)
+      if (app.settings.autoFacts !== false && (name || card.plant.latinName)) {
+        const latin = card.plant.latinName, german = name;
+        enrichLater(async () => {
+          const facts = await lookupPlant({ latin, german, lifeForms: app.settings.lifeForms || [] });
+          const fresh = await getCard(card.id);
+          if (fresh && applyFacts(fresh.plant, facts, { families: FAMILIES }).length) await saveCard(fresh);
+        });
+      }
       everything.push(card);
       remember(card);
       lastCard = card;

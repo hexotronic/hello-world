@@ -56,6 +56,13 @@ Karteikarten-App für Android (und jeden Browser) mit Wiederholung in wachsenden
 - Android-App: nutzt die Spracherkennung des Handys (meist Google, braucht in der Regel Internet)
 - Testsammlung mit typischen Fehl-Erkennungen: `npm run test:speech`
 
+**Steckbrief automatisch ergänzen**
+- Nach Eingabe des botanischen oder deutschen Namens sucht die App bei **iNaturalist** und in der **deutschen Wikipedia** und füllt **leere** Felder: Familie (z. B. „Plantaginaceae (Wegerichgewächse)“), fehlender deutscher/botanischer Name, Merkmale, Blütezeit (Monate im Blühkalender), Lebensform, Standort, Giftigkeit, Verwendung, Verwechslung; die Quelle wird in den Notizen vermerkt
+- Ausgefüllte Felder bleiben unangetastet; „Rückgängig“ und „Erneut suchen“ direkt unter den Namen
+- In der Schnell-Erfassung passiert das im Hintergrund
+- Abschaltbar unter *Einstellungen → Steckbrief*; Tests für den Faktenleser: `npm run test:facts`
+- Die Angaben stammen aus Wikipedia/iNaturalist – vor allem Giftigkeit und Blütezeit bitte kurz prüfen
+
 **Beispielbilder aus dem Internet**
 - Im Karten-Editor unter Fotos: **„Internet“** sucht zum eingegebenen botanischen (oder deutschen) Namen freie Bilder bei **iNaturalist** (geprüfte Pflanzenfotos) oder **Wikimedia Commons**
 - Bilder antippen zum Auswählen, auch aus beiden Quellen gemischt; „Mehr laden“ für weitere

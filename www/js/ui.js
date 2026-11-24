@@ -215,6 +215,7 @@ export function chipPicker(options, selected, { id, label, onAdd, addLabel = '+ 
     wrap.replaceChildren(...chips);
   };
   render();
+  wrap.refresh = render;
   return wrap;
 }
 

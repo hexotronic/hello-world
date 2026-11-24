@@ -120,6 +120,7 @@ export const SETTINGS_DEFAULTS = {
   photoNameMode: '',              // Fotonamen: '' = wie Hauptname, 'de' oder 'la'
   renameOriginals: true,          // Android: Originalfotos in der Galerie umbenennen
   speechInLang: 'de-DE',          // Sprache der Spracherkennung
+  autoFacts: true,                // Familie & Steckbrief automatisch aus dem Internet ergänzen
 };
 
 export async function getMeta(key, fallback = null) {

@@ -13,7 +13,7 @@ import { isNative } from '../native.js';
 import { SPEECH_LANGS, speechSupported } from '../speech.js';
 import { cloudSection } from './cloudsection.js';
 
-const VERSION = '1.9.0';
+const VERSION = '2.0.0';
 
 export default async function settingsView(params = {}) {
   const s = app.settings;
@@ -191,6 +191,13 @@ export default async function settingsView(params = {}) {
           : h('p', { class: 'muted small' }, 'Originalfotos in der Galerie umbenennen geht nur in der Android-App.'),
         h('div', { class: 'btn-col' },
           btn('Alle Fotos als ZIP exportieren', () => exportPhotosZip(), { iconName: 'download' }))),
+
+      h('section', { class: 'set-sec', id: 'facts' },
+        h('h2', { class: 'section-h' }, 'Steckbrief'),
+        toggle('Familie & Steckbrief automatisch ergänzen', s.autoFacts !== false, v => update({ autoFacts: v }), {
+          id: 'set-autofacts',
+          hint: 'Nach Eingabe des botanischen oder deutschen Namens sucht die App bei iNaturalist und in der deutschen Wikipedia und füllt leere Felder: Familie, Namen, Merkmale, Blütezeit, Lebensform, Standort, Giftigkeit, Verwendung, Verwechslung. Bei der Schnell-Erfassung geschieht das im Hintergrund. Braucht Internet.',
+        })),
 
       h('section', { class: 'set-sec', id: 'lists' },
         h('h2', { class: 'section-h' }, 'Auswahllisten'),

@@ -11,6 +11,7 @@ import { newSrs, formatDays } from '../srs.js';
 import { FAMILIES, TOXICITY, CAPTIONS, getNameMode, familyKey } from '../plants.js';
 import { saveSettings } from '../db.js';
 import { openImageSearch } from '../imagesearch.js';
+import { lookupPlant, applyFacts, FACT_LABELS } from '../plantfacts.js';
 import { MONTHS_ABBR, MONTHS, norm, fmtDate, nameFromFilename } from '../util.js';
 import { newDeckFlow } from './home.js';
 
@@ -219,10 +220,81 @@ export default async function editView({ id, deckId, type }) {
   const deField = field(latinFirst ? 'Deutscher Name' : 'Deutscher Name (Hauptname)', deInput);
   const laField = field(latinFirst ? 'Botanischer Name (Hauptname)' : 'Botanischer Name', laInput, 'Gattung groß, Art klein – z. B. Bellis perennis');
 
+  // ---------- Steckbrief automatisch ergänzen (iNaturalist + Wikipedia) ----------
+  const factsBar = h('div', { class: 'facts-bar' });
+  let lastLookup = '';
+  let undoState = null;
+
+  /** Aktuelle Feldwerte als Pflanzenobjekt (für applyFacts). */
+  const readFields = () => ({
+    deName: deInput.value.trim(), latinName: laInput.value.trim(), family: famInput.value.trim(), features: featInput.value.trim(),
+    bloom: [...bloom].sort((a, b) => a - b), lifeForm: [...card.plant.lifeForm], toxicity: toxSelect.value, habitat: habInput.value.trim(),
+    uses: usesInput.value.trim(), confusion: confInput.value.trim(), notes: notesInput.value.trim(),
+  });
+  const inputs = { deName: deInput, latinName: laInput, family: famInput, features: featInput, habitat: habInput, uses: usesInput, confusion: confInput, notes: notesInput, toxicity: toxSelect };
+  /** Werte zurück in die Felder schreiben und kurz hervorheben. */
+  const writeFields = (v, highlight = []) => {
+    for (const [k, el] of Object.entries(inputs)) el.value = v[k] ?? '';
+    bloom.clear();
+    (v.bloom || []).forEach(m => bloom.add(m));
+    [...bloomRow.children].forEach((b, i) => { b.classList.toggle('on', bloom.has(i + 1)); b.setAttribute('aria-pressed', String(bloom.has(i + 1))); });
+    card.plant.lifeForm.splice(0, card.plant.lifeForm.length, ...(v.lifeForm || []));
+    lifePicker.refresh();
+    updateTitleHint();
+    for (const k of highlight) {
+      const el = k === 'bloom' ? bloomRow : k === 'lifeForm' ? lifePicker : inputs[k];
+      el?.classList.add('autofilled');
+      setTimeout(() => el?.classList.remove('autofilled'), 2500);
+    }
+  };
+
+  async function fetchFacts({ manual = false } = {}) {
+    const latin = laInput.value.trim(), german = deInput.value.trim();
+    if (!latin && !german) { if (manual) toast('Bitte zuerst einen botanischen oder deutschen Namen eintragen.'); return; }
+    const key = norm(latin || german);
+    if (!manual && key === lastLookup) return;
+    lastLookup = key;
+    factsBar.replaceChildren(h('span', { class: 'facts-status' }, icon('globe', 16), 'Suche Familie und Steckbrief …'));
+    try {
+      const facts = await lookupPlant({ latin, german, lifeForms: app.settings.lifeForms || [] });
+      const before = readFields();
+      const values = readFields();
+      let filled = applyFacts(values, facts, { families: [...famSet] });
+      if (!filled.length && manual) {
+        if (await confirmDialog('Alle Felder sind schon ausgefüllt', 'Sollen die gefundenen Angaben die vorhandenen überschreiben?', { ok: 'Überschreiben', danger: false })) {
+          filled = applyFacts(values, facts, { onlyEmpty: false, families: [...famSet] });
+        }
+      }
+      if (!filled.length) {
+        factsBar.replaceChildren(h('span', { class: 'facts-status' }, icon('check', 16), 'Nichts zu ergänzen – alles schon ausgefüllt.'),
+          btn('Erneut suchen', () => fetchFacts({ manual: true }), { kind: 'ghost' }));
+        return;
+      }
+      undoState = before;
+      writeFields(values, filled);
+      const src = facts.sources.map(s => s.name).join(' & ');
+      factsBar.replaceChildren(
+        h('span', { class: 'facts-status ok' }, icon('check', 16), h('span', null, h('strong', null, 'Ergänzt: '), filled.filter(k => k !== 'notes').map(k => FACT_LABELS[k]).join(', '), ` (${src})`)),
+        h('div', { class: 'row-gap' },
+          btn('Rückgängig', () => { if (undoState) { writeFields(undoState); undoState = null; factsBar.replaceChildren(h('span', { class: 'facts-status' }, 'Rückgängig gemacht.'), btn('Erneut suchen', () => fetchFacts({ manual: true }), { kind: 'ghost' })); } }, { kind: 'ghost' }),
+          btn('Erneut suchen', () => fetchFacts({ manual: true }), { kind: 'ghost' })));
+    } catch (err) {
+      lastLookup = '';
+      factsBar.replaceChildren(h('span', { class: 'facts-status bad' }, icon('info', 16), err?.message || String(err)),
+        btn('Nochmal versuchen', () => fetchFacts({ manual: true }), { kind: 'ghost' }));
+    }
+  }
+  // Automatisch, sobald ein Name eingegeben wurde (beim Verlassen des Feldes)
+  const autoFacts = () => { if (card.type === 'plant' && app.settings.autoFacts !== false) fetchFacts(); };
+  laInput.addEventListener('change', autoFacts);
+  deInput.addEventListener('change', autoFacts);
+  factsBar.append(btn('Familie & Steckbrief aus dem Internet ergänzen', () => fetchFacts({ manual: true }), { kind: 'ghost', iconName: 'globe' }));
+
   const plantSection = h('div', { class: 'form-section' },
     latinFirst ? laField : deField,
     dupHint,
     latinFirst ? deField : laField,
+    factsBar,
     field('Familie', famInput),
     famList,
     field('Merkmale', featInput),
