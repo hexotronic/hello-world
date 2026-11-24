@@ -1,7 +1,8 @@
 import { app } from '../app.js';
 import { h, topbar, iconBtn, btn, promptDialog, emptyState, toast } from '../ui.js';
 import { icon } from '../icons.js';
-import { listDecks, allCards, logsSince, createDeck, getMeta } from '../db.js';
+import { listDecks, allCards, logsSince, createDeck, getMeta, setMeta } from '../db.js';
+import { cloudSupported, getCloud, providerLabel, ago } from '../cloud.js';
 import { deckCounts, dayStart } from '../srs.js';
 import { bloomsIn } from '../plants.js';
 import { MONTHS } from '../util.js';
@@ -57,6 +58,24 @@ export default async function homeView() {
     app.go('edit', { deckId: decks.some(d => d.id === last) ? last : decks[0].id });
   };
 
+  // Cloud-Sicherung: Status oder Einladung
+  let cloudEl = null;
+  if (cloudSupported) {
+    const [c, dismissed] = await Promise.all([getCloud(), getMeta('cloudBannerDismissed')]);
+    if (c.uri) {
+      cloudEl = h('button', { type: 'button', class: 'cloud-status' + (c.lastError ? ' err' : ''), onclick: () => app.go('settings', { focus: 'cloud' }) },
+        icon('cloud', 18),
+        h('span', null, c.lastError ? `${providerLabel(c.provider)}: Sicherung fehlgeschlagen – antippen` : `In ${providerLabel(c.provider)} gesichert ${ago(c.lastSync)}`));
+    } else if (!dismissed && cards.length) {
+      const banner = h('div', { class: 'cloud-banner' },
+        h('button', { type: 'button', class: 'cloud-banner-main', onclick: () => app.go('settings', { focus: 'cloud' }) },
+          icon('cloudUp', 22),
+          h('span', null, h('strong', null, 'Karten in Google Drive sichern'), h('span', { class: 'muted small' }, 'Automatisch, mit deinem eigenen Konto'))),
+        h('button', { type: 'button', class: 'icon-btn small', 'aria-label': 'Hinweis ausblenden', onclick: async () => { await setMeta('cloudBannerDismissed', true); banner.remove(); } }, icon('close', 18)));
+      cloudEl = banner;
+    }
+  }
+
   const el = h('div', { class: 'page home' },
     topbar({
       title: 'Florakarten',
@@ -71,6 +90,7 @@ export default async function homeView() {
         h('span', null, `${studiedToday} heute gelernt`),
         h('span', { class: 'legend' },
           h('i', { class: 'dot-new' }), 'neu ', h('i', { class: 'dot-learn' }), 'lernen ', h('i', { class: 'dot-due' }), 'fällig'))),
+    cloudEl,
     blooming.length ? h('button', {
       class: 'bloom-banner', type: 'button',
       onclick: () => app.go('browse', { filter: 'bloom' }),

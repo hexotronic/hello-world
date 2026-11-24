@@ -802,3 +802,25 @@ body.fullscreen-view .review, body.fullscreen-view .random.playing, body.fullscr
 @media (min-width: 900px) {
   .page { padding-top: 8px; }
 }
+
+/* ---------- Cloud-Speicher ---------- */
+.cloud-sec { scroll-margin-top: 72px; }
+.steps { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 4px; color: var(--ink-2); }
+.cloud-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; background: var(--moss-soft); }
+.cloud-card.err { background: var(--again-soft); }
+.cloud-ico { width: 42px; height: 42px; flex: none; display: grid; place-items: center; border-radius: 12px; background: var(--sheet); color: var(--moss); }
+.cloud-main { display: flex; flex-direction: column; min-width: 0; }
+.cloud-file { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cloud-err { font-size: 0.86rem; color: var(--c-learn); }
+.cloud-status {
+  display: inline-flex; align-items: center; gap: 8px; max-width: 100%; margin: -6px 0 14px;
+  padding: 6px 12px; border-radius: 99px; border: 1px solid var(--line); background: var(--sheet);
+  color: var(--ink-2); font-size: 0.85rem; font-weight: 600;
+}
+.cloud-status .icon { color: var(--moss); flex: none; }
+.cloud-status.err { border-color: var(--again-bar); color: var(--ink); background: var(--again-soft); }
+.cloud-status.err .icon { color: var(--again-bar); }
+.cloud-banner { display: flex; align-items: center; gap: 4px; margin-bottom: 14px; padding: 4px 4px 4px 0; border-radius: var(--r); border: 1px dashed var(--moss); }
+.cloud-banner-main { flex: 1; display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 0; background: none; text-align: left; }
+.cloud-banner-main .icon { color: var(--moss); flex: none; }
+.cloud-banner-main > span { display: flex; flex-direction: column; }

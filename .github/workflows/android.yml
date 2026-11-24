@@ -28,6 +28,26 @@ jobs:
           distribution: temurin
           java-version: 21
 
+      # Signaturschlüssel: aus dem Secret FLORAKARTEN_KEYSTORE (Base64) – damit bleiben Updates installierbar.
+      # Ohne Secret wird der Debug-Schlüssel des Runners zwischengespeichert und wiederverwendet.
+      - name: Signaturschlüssel aus Secret
+        env:
+          KEYSTORE_B64: ${{ secrets.FLORAKARTEN_KEYSTORE }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/florakarten.keystore"
+            echo "FLORA_KEYSTORE=$RUNNER_TEMP/florakarten.keystore" >> "$GITHUB_ENV"
+            echo "Signiere mit dem Schlüssel aus dem Secret."
+          else
+            echo "Kein Secret FLORAKARTEN_KEYSTORE gesetzt – nutze zwischengespeicherten Debug-Schlüssel."
+          fi
+
+      - name: Debug-Schlüssel zwischenspeichern (falls kein Secret)
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: florakarten-debug-keystore-v1
+
       - name: Abhängigkeiten installieren
         run: npm ci
 

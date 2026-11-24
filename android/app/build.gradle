@@ -7,8 +7,9 @@ android {
         applicationId "de.florakarten.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        // Bei GitHub-Builds steigt die Versionsnummer automatisch, damit Updates sauber installiert werden.
+        versionCode((System.getenv("GITHUB_RUN_NUMBER") ?: "1") as Integer)
+        versionName "1.1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,7 +17,24 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Fester Schlüssel für private Builds, damit jede neue APK als Update über die alte installiert werden kann.
+    // Der Schlüssel liegt NICHT im Repository: Der GitHub-Workflow legt ihn aus einem Secret ab und setzt FLORA_KEYSTORE.
+    // Ohne diese Variable wird mit dem normalen Debug-Schlüssel des Rechners signiert.
+    def floraKeystore = System.getenv("FLORA_KEYSTORE")
+    signingConfigs {
+        if (floraKeystore) {
+            florakarten {
+                storeFile file(floraKeystore)
+                storePassword System.getenv("FLORA_KEYSTORE_PASSWORD") ?: 'android'
+                keyAlias System.getenv("FLORA_KEY_ALIAS") ?: 'androiddebugkey'
+                keyPassword System.getenv("FLORA_KEY_PASSWORD") ?: 'android'
+            }
+        }
+    }
     buildTypes {
+        debug {
+            if (floraKeystore) signingConfig signingConfigs.florakarten
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'

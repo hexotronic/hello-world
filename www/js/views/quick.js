@@ -7,6 +7,7 @@ import { processImage, blobURL } from '../images.js';
 import { FAMILIES, CAPTIONS } from '../plants.js';
 import { norm, nameFromFilename } from '../util.js';
 import { newDeckFlow } from './home.js';
+import { cloudSoon } from '../cloud.js';
 
 export default async function quickView(params = {}) {
   let decks = await listDecks();
@@ -151,6 +152,7 @@ export default async function quickView(params = {}) {
   }
 
   function renderDone() {
+    cloudSoon();
     if (current) { URL.revokeObjectURL(current.url); current = null; }
     root.replaceChildren(
       topbar({ title: 'Erfassung beendet', back: () => app.back() }),

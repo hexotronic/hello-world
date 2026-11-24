@@ -8,10 +8,11 @@ import { createSampleDeck } from '../sample.js';
 import { forgetAll } from '../images.js';
 import { fmtDate, fmtBytes } from '../util.js';
 import { isNative } from '../native.js';
+import { cloudSection } from './cloudsection.js';
 
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 
-export default async function settingsView() {
+export default async function settingsView(params = {}) {
   const s = app.settings;
   const [lastBackup, decks, cardCount] = await Promise.all([getMeta('lastBackup'), listDecks(), raw.count('cards')]);
   const root = h('div', { class: 'page settings' });
@@ -120,6 +121,7 @@ export default async function settingsView() {
   }
 
   const native = isNative;
+  const cloud = cloudSection();
 
   root.append(
     topbar({ title: 'Einstellungen', back: () => app.back() }),
@@ -141,9 +143,11 @@ export default async function settingsView() {
           'Für botanische Namen gibt es meist keine lateinische Stimme. Italienisch klingt oft passender.'),
         h('p', { class: 'muted small' }, 'Tageslimits, Lernschritte und „Antwort eintippen“ stellst du pro Stapel ein (Stapel öffnen → Optionen).')),
 
+      cloud.el,
+
       h('section', { class: 'set-sec' },
         h('h2', { class: 'section-h' }, 'Sichern & Übertragen'),
-        h('p', { class: 'muted' }, 'Deine Karten und Fotos liegen nur auf diesem Gerät. Sichere sie regelmäßig, z. B. in deine Cloud oder per Mail an dich selbst.'),
+        h('p', { class: 'muted' }, 'Sicherung als Datei: zum Verschicken, zum Umziehen in den Browser oder als zusätzliche Kopie.'),
         h('p', { class: 'small' }, lastBackup ? `Letzte Sicherung: ${fmtDate(lastBackup)}` : 'Noch keine Sicherung erstellt.'),
         h('div', { class: 'btn-col' },
           btn(native ? 'Sicherung erstellen & teilen' : 'Sicherung herunterladen', () => exportBackup(), { kind: 'primary', iconName: 'download' }),
@@ -167,5 +171,10 @@ export default async function settingsView() {
         h('p', null, `Version ${VERSION}. Offline-Karteikarten mit Wiederholung in wachsenden Abständen, Zufallsfotos und Pflanzen-Extras. Für den privaten Gebrauch.`),
         h('p', { class: 'muted small' }, 'Tastatur beim Lernen: Leertaste = aufdecken / Gut, 1–4 = Bewertung, H = Tipp, M = markieren, E = bearbeiten, Z = rückgängig.'))));
 
-  return { el: root, fullscreen: false, tab: 'home' };
+  return {
+    el: root,
+    tab: 'home',
+    destroy: cloud.destroy,
+    afterMount: () => { if (params.focus === 'cloud') cloud.el.scrollIntoView({ block: 'start' }); },
+  };
 }

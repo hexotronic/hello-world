@@ -35,6 +35,12 @@ Karteikarten-App für Android (und jeden Browser) mit Wiederholung in wachsenden
 - **Fotos schnell erfassen**: viele Fotos auf einmal auswählen, nacheinander benennen, weitere Fotos derselben Pflanze mit einem Tipp anhängen
 - „Blüht im November“-Hinweis auf der Startseite
 
+**Cloud-Speicher: eigenes Google Drive**
+- In der Android-App unter *Einstellungen → Cloud-Speicher* eine Datei im eigenen Google Drive anlegen (Android-Dialog „Speichern unter“ → ☰ → Drive → Konto und Ordner wählen)
+- Danach sichert die App automatisch: etwa eine Minute nach Änderungen, nach jeder Lernrunde und beim Verlassen der App
+- „Aus der Cloud wiederherstellen“ und „Bestehende Sicherung verbinden“ (z. B. auf einem neuen Handy), wahlweise zusammenführen oder ersetzen
+- Ohne Google-Entwicklerkonto und ohne Server: Die App schreibt nur in die eine Datei, die du ausgewählt hast. Andere Cloud-Speicher mit Android-Anbindung (z. B. OneDrive, Nextcloud) funktionieren genauso.
+
 **Sonstiges**
 - Statistik: Lernserie, Behaltensquote, Kartenbestand, Prognose der nächsten 14 Tage, Verlauf der letzten 30 Tage, am häufigsten vergessene Karten
 - Sicherung als JSON-Datei inklusive Fotos und Lernverlauf; Einspielen per Zusammenführen oder Ersetzen
@@ -49,9 +55,11 @@ Karteikarten-App für Android (und jeden Browser) mit Wiederholung in wachsenden
 3. `florakarten.apk` auf dem Handy öffnen und die Installation aus dieser Quelle erlauben.
 
 Der Build startet automatisch bei jeder Änderung an der App. Er lässt sich auch von Hand über *Run workflow* starten.
-Es ist ein Debug-Build: Er ist nicht im Play Store und ist mit einem Entwicklerschlüssel signiert. Für den privaten Gebrauch reicht das.
+Die APK ist nicht im Play Store, sondern mit einem eigenen Schlüssel signiert. Damit neue Versionen als Update über die alte gehen (und die Daten bleiben), muss der Schlüssel bei jedem Build derselbe sein:
+- **Empfohlen:** Den Schlüssel als Base64-Text im Repository-Secret `FLORAKARTEN_KEYSTORE` hinterlegen (*Settings → Secrets and variables → Actions → New repository secret*). Der Schlüssel gehört nie ins Repository selbst.
+- Ohne Secret merkt sich GitHub den Schlüssel im Build-Zwischenspeicher. Der wird aber nach einer Woche ohne Build gelöscht; dann muss die App einmal neu installiert werden (vorher sichern).
 
-> Wichtig: Wird die App deinstalliert, sind die Daten weg. Vorher unter *Einstellungen → Sicherung erstellen & teilen* sichern.
+> Wichtig: Wird die App deinstalliert, sind die Daten auf dem Handy weg. Mit eingerichtetem Cloud-Speicher holst du sie danach über *Bestehende Sicherung verbinden* zurück.
 
 ### Variante B: Als Web-App (auch iPhone)
 1. Einmalig auf GitHub: **Settings → Pages → Source: „GitHub Actions“**.

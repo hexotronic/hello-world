@@ -25,27 +25,57 @@ function dataURLToBlob(url) {
   return new Blob([bytes], { type: mime });
 }
 
-async function blobToBase64Chunks(blob, chunk = 3 * 1024 * 1024) {
-  const out = [];
-  for (let i = 0; i < blob.size; i += chunk) {
-    const url = await blobToDataURL(blob.slice(i, i + chunk));
-    out.push(url.slice(url.indexOf(',') + 1));
+/**
+ * Erzeugt die Sicherung Stück für Stück (Kopf, dann Foto für Foto), damit auch große Sammlungen
+ * nicht auf einmal im Speicher liegen. onChunk wird mit jedem Text-Stück aufgerufen.
+ */
+async function writeBackup(onChunk, { deckId } = {}) {
+  const deck = deckId ? await getDeck(deckId) : null;
+  const decks = deck ? [deck] : await listDecks();
+  const cards = deck ? await cardsInDeck(deckId) : await allCards();
+  const logs = (await allLogs()).filter(l => !deck || l.deckId === deckId).map(({ id, ...rest }) => rest);
+  const ids = [...new Set(cards.flatMap(c => c.photoIds || []))];
+  await onChunk('{"app":"florakarten","version":1,"exported":' + Date.now() +
+    ',"decks":' + JSON.stringify(decks) +
+    ',"cards":' + JSON.stringify(cards) +
+    ',"revlog":' + JSON.stringify(logs) +
+    ',"settings":' + JSON.stringify(deck ? null : await getSettings()) +
+    ',"photos":[');
+  let first = true;
+  let photos = 0;
+  for (const id of ids) {
+    const p = await getPhoto(id);
+    if (!p) continue;
+    const { blob, thumb, ...meta } = p;
+    const rec = { ...meta, data: await blobToDataURL(blob), thumbData: thumb ? await blobToDataURL(thumb) : null };
+    await onChunk((first ? '' : ',') + JSON.stringify(rec));
+    first = false;
+    photos++;
   }
-  return out;
+  await onChunk(']}');
+  return { deck, cards: cards.length, photos };
 }
 
-/** Datei speichern: in der Android-App über Teilen-Dialog, im Browser als Download. */
-export async function saveFile(blob, filename) {
-  if (isNative && Filesystem) {
-    const chunks = await blobToBase64Chunks(blob);
-    await Filesystem.writeFile({ path: filename, data: chunks[0] || '', directory: 'CACHE' });
-    for (const c of chunks.slice(1)) await Filesystem.appendFile({ path: filename, data: c, directory: 'CACHE' });
-    const { uri } = await Filesystem.getUri({ path: filename, directory: 'CACHE' });
-    if (Share) {
-      await Share.share({ title: filename, files: [uri], dialogTitle: 'Sicherung speichern oder senden' });
-    }
-    return true;
-  }
+/** Sicherung als Blob (Browser). */
+export async function buildBackupBlob(opts) {
+  const parts = [];
+  const info = await writeBackup(chunk => { parts.push(new Blob([chunk])); }, opts);
+  return { blob: new Blob(parts, { type: 'application/json' }), ...info };
+}
+
+/** Sicherung als Datei im App-Cache (Android). Liefert { path, ... }. */
+export async function writeBackupToCache(filename, opts) {
+  let firstChunk = true;
+  const info = await writeBackup(async chunk => {
+    if (firstChunk) await Filesystem.writeFile({ path: filename, data: chunk, directory: 'CACHE', encoding: 'utf8' });
+    else await Filesystem.appendFile({ path: filename, data: chunk, directory: 'CACHE', encoding: 'utf8' });
+    firstChunk = false;
+  }, opts);
+  const { uri } = await Filesystem.getUri({ path: filename, directory: 'CACHE' });
+  return { path: uri, ...info };
+}
+
+function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -55,7 +85,6 @@ export async function saveFile(blob, filename) {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60000);
-  return true;
 }
 
 function stamp() {
@@ -69,45 +98,40 @@ function slug(s) {
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'stapel';
 }
 
+/**
+ * Sicherung als Datei weitergeben: in der Android-App über den Teilen-Dialog
+ * (dort z. B. „In Drive speichern“), auf Handys im Browser ebenfalls über Teilen, sonst als Download.
+ */
 export async function exportBackup({ deckId } = {}) {
   const stop = toast('Sicherung wird erstellt …', { duration: 120000 });
   try {
     const deck = deckId ? await getDeck(deckId) : null;
-    const decks = deck ? [deck] : await listDecks();
-    const cards = deck ? await cardsInDeck(deckId) : await allCards();
-    const logs = (await allLogs()).filter(l => !deck || l.deckId === deckId).map(({ id, ...rest }) => rest);
-    const ids = [...new Set(cards.flatMap(c => c.photoIds || []))];
-    const parts = [
-      '{"app":"florakarten","version":1,"exported":', String(Date.now()),
-      ',"decks":', JSON.stringify(decks),
-      ',"cards":', JSON.stringify(cards),
-      ',"revlog":', JSON.stringify(logs),
-      ',"settings":', JSON.stringify(deck ? null : await getSettings()),
-      ',"photos":[',
-    ];
-    let first = true;
-    for (const id of ids) {
-      const p = await getPhoto(id);
-      if (!p) continue;
-      const { blob, thumb, ...meta } = p;
-      const rec = { ...meta, data: await blobToDataURL(blob), thumbData: thumb ? await blobToDataURL(thumb) : null };
-      parts.push((first ? '' : ',') + JSON.stringify(rec));
-      first = false;
-    }
-    parts.push(']}');
-    const file = new Blob(parts, { type: 'application/json' });
     const name = deck ? `florakarten-${slug(deck.name)}-${stamp()}.json` : `florakarten-sicherung-${stamp()}.json`;
-    await saveFile(file, name);
+    let info;
+    if (isNative && Filesystem) {
+      info = await writeBackupToCache(name, { deckId });
+      stop();
+      if (Share) await Share.share({ title: name, files: [info.path], dialogTitle: 'Sicherung speichern oder senden' });
+    } else {
+      const built = await buildBackupBlob({ deckId });
+      info = built;
+      stop();
+      const file = new File([built.blob], name, { type: 'application/json' });
+      let shared = false;
+      if (/Android|iPhone|iPad/i.test(navigator.userAgent) && navigator.canShare?.({ files: [file] })) {
+        try { await navigator.share({ files: [file], title: name }); shared = true; } catch (e) { if (e?.name === 'AbortError') shared = true; }
+      }
+      if (!shared) downloadBlob(built.blob, name);
+    }
     if (!deck) await setMeta('lastBackup', Date.now());
-    stop();
-    toast(`Sicherung erstellt: ${cards.length} Karten, ${ids.length} Fotos`);
+    toast(`Sicherung erstellt: ${info.cards} Karten, ${info.photos} Fotos`);
   } catch (err) {
     stop();
-    toast('Sicherung fehlgeschlagen: ' + (err?.message || err));
+    if (!/cancel/i.test(err?.message || '')) toast('Sicherung fehlgeschlagen: ' + (err?.message || err));
   }
 }
 
-/** Sicherung einspielen. mode: 'merge' (zusammenführen) oder 'replace' (alles ersetzen). */
+/** Sicherung einspielen (Datei oder Blob). mode: 'merge' (zusammenführen) oder 'replace' (alles ersetzen). */
 export async function importBackup(file, mode = 'merge') {
   const data = JSON.parse(await file.text());
   if (data?.app !== 'florakarten' || !Array.isArray(data.cards)) throw new Error('Diese Datei ist keine Florakarten-Sicherung.');

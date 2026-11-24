@@ -7,6 +7,7 @@ import { getSettings, getMeta, setMeta } from './db.js';
 import { setDayStartHour } from './srs.js';
 import { createSampleDeck } from './sample.js';
 import { isNative, AppPlugin } from './native.js';
+import { initCloudAuto } from './cloud.js';
 
 import homeView from './views/home.js';
 import deckView from './views/deck.js';
@@ -163,6 +164,7 @@ async function boot() {
   }
 
   try { await navigator.storage?.persist?.(); } catch { /* optional */ }
+  initCloudAuto();
 
   if (isNative && AppPlugin) {
     // Android-Zurück-Taste: erst Vollbild/Dialog schließen, dann zurück, auf der Startseite App beenden.

@@ -42,9 +42,16 @@ function wrap(req) {
   });
 }
 
+let changeListener = null;
+/** Wird nach jeder Änderung an Stapeln, Karten, Fotos oder Lernverlauf aufgerufen (z. B. für die Cloud-Sicherung). */
+export function setChangeListener(fn) {
+  changeListener = fn;
+}
+
 /** Führt fn innerhalb einer Transaktion aus. fn darf nur IDB-Requests nutzen (kein fremdes await). */
 async function tx(stores, mode, fn) {
   const db = await openDb();
+  const notify = mode === 'readwrite' && stores.some(s => s !== 'meta');
   return new Promise((resolve, reject) => {
     const t = db.transaction(stores, mode);
     let out;
@@ -55,7 +62,10 @@ async function tx(stores, mode, fn) {
       reject(e);
       return;
     }
-    t.oncomplete = () => resolve(out);
+    t.oncomplete = () => {
+      resolve(out);
+      if (notify && changeListener) { try { changeListener(); } catch { /* egal */ } }
+    };
     t.onerror = () => reject(t.error);
     t.onabort = () => reject(t.error || new Error('Transaktion abgebrochen'));
   });

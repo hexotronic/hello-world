@@ -7,6 +7,7 @@ import { answer as srsAnswer, buildQueues, deckConfig, dayStart, dayStartPlus, p
 import { cardFace } from '../cardview.js';
 import { acceptedNames } from '../plants.js';
 import { checkAnswer, shuffle } from '../util.js';
+import { cloudSoon } from '../cloud.js';
 
 const RATINGS = [
   { r: 1, label: 'Nochmal', cls: 'again' },
@@ -273,6 +274,7 @@ export default async function reviewView({ deckId, mode = 'srs', cardIds, title 
   }
 
   function finish() {
+    cloudSoon();
     const mins = Math.max(1, Math.round((Date.now() - startedAt) / 60000));
     const later = learn.length;
     stageEl.replaceChildren(h('div', { class: 'finished' },
