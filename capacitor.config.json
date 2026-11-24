@@ -1,0 +1,8 @@
+{
+  "appId": "de.florakarten.app",
+  "appName": "Florakarten",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false
+  }
+}

@@ -1,0 +1,6 @@
+Die Schriftdateien in diesem Ordner sind Teilmengen (Latin) von:
+
+- Bricolage Grotesque – Copyright 2022 The Bricolage Grotesque Project Authors (https://github.com/ateliertriay/bricolage)
+- Newsreader – Copyright 2020 The Newsreader Project Authors (https://github.com/productiontype/Newsreader)
+
+Beide stehen unter der SIL Open Font License, Version 1.1: https://openfontlicense.org

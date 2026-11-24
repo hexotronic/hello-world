@@ -1,0 +1,21 @@
+{
+  "name": "florakarten",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Karteikarten-App mit Wiederholung in wachsenden Abständen, Zufallsfotos und Pflanzen-Extras",
+  "scripts": {
+    "start": "python3 -m http.server 8123 --directory www",
+    "android:sync": "cap sync android",
+    "android:build": "cap sync android && cd android && ./gradlew assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.6.0",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.6.0",
+    "@capacitor/filesystem": "8.1.5",
+    "@capacitor/share": "8.0.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.0"
+  }
+}
