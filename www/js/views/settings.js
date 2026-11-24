@@ -1,17 +1,18 @@
 // Einstellungen, Sicherung, Import, Speicher.
 import { app } from '../app.js';
 import { h, topbar, btn, segmented, field, dialog, confirmDialog, toast, pickFiles } from '../ui.js';
+import { icon } from '../icons.js';
 import { saveSettings, getMeta, setMeta, listDecks, wipeAll, raw } from '../db.js';
 import { setDayStartHour } from '../srs.js';
-import { setNameMode } from '../plants.js';
+import { setNameMode, DEFAULT_LIFE_FORMS, DEFAULT_USES } from '../plants.js';
 import { exportBackup, importBackup, parseTextImport, importTextCards } from '../backup.js';
 import { createSampleDeck } from '../sample.js';
 import { forgetAll } from '../images.js';
-import { fmtDate, fmtBytes } from '../util.js';
+import { fmtDate, fmtBytes, norm } from '../util.js';
 import { isNative } from '../native.js';
 import { cloudSection } from './cloudsection.js';
 
-const VERSION = '1.2.0';
+const VERSION = '1.3.0';
 
 export default async function settingsView(params = {}) {
   const s = app.settings;
@@ -24,6 +25,41 @@ export default async function settingsView(params = {}) {
     if ('dayStartHour' in patch) setDayStartHour(app.settings.dayStartHour);
     if ('nameMode' in patch) setNameMode(app.settings.nameMode);
   };
+
+  /** Bearbeitbare Auswahlliste (Lebensformen, Verwendungszwecke). */
+  function listEditor(key, defaults, what) {
+    const box = h('div', { class: 'list-editor' });
+    const render = () => {
+      const list = app.settings[key] || [];
+      const input = h('input', { class: 'input', id: 'add-' + key, placeholder: `Neue ${what}`, autocomplete: 'off', enterkeyhint: 'done' });
+      const add = async () => {
+        const v = input.value.trim();
+        if (!v) return;
+        if (list.some(x => norm(x) === norm(v))) { toast(`„${v}“ steht schon in der Liste`); return; }
+        await update({ [key]: [...list, v] });
+        render();
+        box.querySelector('input')?.focus();
+      };
+      input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); add(); } });
+      box.replaceChildren(
+        h('div', { class: 'chip-row' }, list.map((x, i) => h('span', { class: 'chip removable' }, x,
+          h('button', {
+            type: 'button', class: 'chip-x', 'aria-label': `„${x}“ entfernen`,
+            onclick: async () => { await update({ [key]: list.filter((_, k) => k !== i) }); render(); },
+          }, icon('close', 14))))),
+        h('div', { class: 'add-row' }, input, btn('Hinzufügen', add)),
+        h('button', {
+          type: 'button', class: 'link small', onclick: async () => {
+            if (await confirmDialog('Standardliste wiederherstellen?', 'Eigene Einträge dieser Liste werden entfernt. An deinen Karten ändert sich nichts.', { ok: 'Wiederherstellen', danger: false })) {
+              await update({ [key]: [...defaults] });
+              render();
+            }
+          },
+        }, 'Standardliste wiederherstellen'));
+    };
+    render();
+    return box;
+  }
 
   // Speicherinfo
   const storageInfo = h('p', { class: 'muted small' }, 'Speicher wird ermittelt …');
@@ -137,6 +173,14 @@ export default async function settingsView(params = {}) {
           { value: 'de', label: 'Deutsch' }, { value: 'la', label: 'Botanisch (Latein)' },
         ], s.nameMode, v => update({ nameMode: v }), { id: 'set-namemode' }),
           h('span', { class: 'field-hint' }, 'Gilt für Listen und Sortierung, die Rückseite beim Lernen, Tipps, Zufallsfotos, Training und die Reihenfolge beim Erfassen. Ein eigener Kartenname hat in Listen weiterhin Vorrang.'))),
+
+      h('section', { class: 'set-sec', id: 'lists' },
+        h('h2', { class: 'section-h' }, 'Auswahllisten'),
+        h('p', { class: 'muted' }, 'Diese Einträge tippst du beim Anlegen einer Pflanzenkarte einfach an. Entfernen ändert nichts an bestehenden Karten.'),
+        h('h3', { class: 'form-h' }, 'Lebensformen'),
+        listEditor('lifeForms', DEFAULT_LIFE_FORMS, 'Lebensform'),
+        h('h3', { class: 'form-h' }, 'Verwendungszwecke'),
+        listEditor('usesList', DEFAULT_USES, 'Verwendung')),
 
       h('section', { class: 'set-sec' },
         h('h2', { class: 'section-h' }, 'Lernen'),

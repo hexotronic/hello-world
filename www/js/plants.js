@@ -17,6 +17,17 @@ export const FAMILIES = [
   'Solanaceae (Nachtschattengewächse)', 'Urticaceae (Brennnesselgewächse)', 'Violaceae (Veilchengewächse)',
 ];
 
+/** Vorgaben für die Auswahllisten (in den Einstellungen änderbar). */
+export const DEFAULT_LIFE_FORMS = [
+  'Baum', 'Strauch', 'Zwergstrauch', 'Staude', 'Einjähriges Kraut', 'Zweijähriges Kraut', 'Gras', 'Farn', 'Moos',
+  'Kletterpflanze', 'Zwiebel-/Knollenpflanze', 'Wasserpflanze', 'Sukkulente',
+  'Phanerophyt', 'Chamaephyt', 'Hemikryptophyt', 'Geophyt', 'Therophyt', 'Hydrophyt',
+];
+export const DEFAULT_USES = [
+  'Heilpflanze', 'Essbar', 'Wildgemüse', 'Küchenkraut / Gewürz', 'Teepflanze', 'Bienenweide', 'Schmetterlingspflanze',
+  'Vogelnährgehölz', 'Zierpflanze', 'Färberpflanze', 'Faserpflanze', 'Futterpflanze', 'Holznutzung', 'Gründüngung', 'Zeigerpflanze',
+];
+
 export const TOXICITY = [
   { value: '', label: 'Unbekannt' },
   { value: 'none', label: 'Ungiftig' },

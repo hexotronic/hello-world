@@ -1,6 +1,6 @@
 // Schnell-Erfassung: viele Fotos auf einmal auswählen und nacheinander benennen.
 import { app } from '../app.js';
-import { h, topbar, btn, field, pickFiles, toast, emptyState } from '../ui.js';
+import { h, topbar, btn, field, pickFiles, toast, emptyState, chipPicker } from '../ui.js';
 import { icon } from '../icons.js';
 import { listDecks, allCards, emptyCard, saveCard, addPhoto, setMeta, getMeta, displayName } from '../db.js';
 import { processImage, blobURL } from '../images.js';
@@ -85,6 +85,8 @@ export default async function quickView(params = {}) {
     const cap = h('select', { class: 'input', id: 'q-cap', 'aria-label': 'Bildunterschrift' }, CAPTIONS.map(c => h('option', { value: c }, c || 'Bildunterschrift (optional)')));
     const tags = h('input', { class: 'input', id: 'q-tags', 'aria-label': 'Schlagwörter', value: stickyTags, placeholder: 'Schlagwörter, z. B. garten, exkursion-mai', autocomplete: 'off' });
     const match = h('div', { class: 'dup-hint', hidden: true });
+    const life = [];
+    const lifePicker = chipPicker(app.settings.lifeForms || [], life, { id: 'q-life', label: 'Lebensform' });
     const names = h('datalist', { id: 'q-names' }, [...new Set(everything.map(c => (latinFirst ? c.plant?.latinName : c.plant?.deName)).filter(Boolean))].sort().map(n => h('option', { value: n })));
     const fams = h('datalist', { id: 'q-fams' }, FAMILIES.map(f => h('option', { value: f })));
 
@@ -106,7 +108,7 @@ export default async function quickView(params = {}) {
       stickyTags = tags.value;
       stickyFamily = fam.value.trim();
       const card = emptyCard(deckId, 'plant');
-      Object.assign(card.plant, { deName: name, latinName: la.value.trim(), family: fam.value.trim() });
+      Object.assign(card.plant, { deName: name, latinName: la.value.trim(), family: fam.value.trim(), lifeForm: [...life] });
       card.tags = [...new Set(tags.value.split(/[,;]+/).map(t => t.trim().toLowerCase().replace(/\s+/g, '-')).filter(Boolean))];
       if (unnamed) { card.title = ''; card.tags.push('unbenannt'); }
       const p = await addPhoto({ ...current.data, caption: cap.value }, card.id);
@@ -142,6 +144,7 @@ export default async function quickView(params = {}) {
         h('figure', { class: 'quick-photo' }, h('img', { src: current.url, alt: 'Ausgewähltes Foto' })),
         h('div', { class: 'form' },
           first, names, match, second, fam, fams,
+          h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Lebensform (optional)'), lifePicker),
           h('div', { class: 'grid2' }, cap, tags),
           h('div', { class: 'btn-col' },
             btn('Speichern & weiter', () => saveNew(), { kind: 'primary', iconName: 'check' }),

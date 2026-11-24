@@ -28,7 +28,7 @@ const SORTS = [
   { value: 'lapses', label: 'Am häufigsten vergessen' },
 ];
 
-const sessionState = { q: '', filter: 'all', sort: 'name', deckId: '', tag: '' };
+const sessionState = { q: '', filter: 'all', sort: 'name', deckId: '', tag: '', prop: '' };
 
 export default async function browseView(params = {}) {
   const [cards, decks] = await Promise.all([allCards(), listDecks()]);
@@ -62,6 +62,13 @@ export default async function browseView(params = {}) {
     SORTS.map(s => h('option', { value: s.value }, s.label)));
   const tagSel = h('select', { class: 'input compact', id: 'browse-tag', 'aria-label': 'Schlagwort', value: st.tag, onchange: e => { st.tag = e.target.value; persist(); update(); } },
     h('option', { value: '' }, 'Alle Schlagwörter'), allTags.map(t => h('option', { value: t }, '#' + t)));
+  // Filter nach Lebensform oder Verwendung (Listen aus den Einstellungen plus Werte aus den Karten)
+  const lifeVals = [...new Set([...(app.settings.lifeForms || []), ...cards.flatMap(c => c.plant?.lifeForm || [])])];
+  const useVals = [...new Set([...(app.settings.usesList || []), ...cards.flatMap(c => c.plant?.usesList || [])])];
+  const propSel = h('select', { class: 'input compact', id: 'browse-prop', 'aria-label': 'Lebensform oder Verwendung', value: st.prop, onchange: e => { st.prop = e.target.value; persist(); update(); } },
+    h('option', { value: '' }, 'Lebensform / Verwendung'),
+    h('optgroup', { label: 'Lebensform' }, lifeVals.map(v => h('option', { value: 'lf:' + v }, v))),
+    h('optgroup', { label: 'Verwendung' }, useVals.map(v => h('option', { value: 'use:' + v }, v))));
   const chips = h('div', { class: 'chip-row scroll' });
 
   function persist() { Object.assign(sessionState, st); }
@@ -76,6 +83,8 @@ export default async function browseView(params = {}) {
   function matches(c) {
     if (st.deckId && c.deckId !== st.deckId) return false;
     if (st.tag && !(c.tags || []).includes(st.tag)) return false;
+    if (st.prop.startsWith('lf:') && !(c.plant?.lifeForm || []).includes(st.prop.slice(3))) return false;
+    if (st.prop.startsWith('use:') && !(c.plant?.usesList || []).includes(st.prop.slice(4))) return false;
     switch (st.filter) {
       case 'due': if (c.suspended || c.srs.state === 'new' || c.srs.due >= endToday) return false; break;
       case 'new': if (c.srs.state !== 'new') return false; break;
@@ -234,7 +243,7 @@ export default async function browseView(params = {}) {
     }),
     h('div', { class: 'browse-tools' },
       h('div', { class: 'search-wrap' }, icon('search', 20), search),
-      h('div', { class: 'select-row' }, deckSel, tagSel, sortSel),
+      h('div', { class: 'select-row' }, deckSel, tagSel, propSel, sortSel),
       chips,
       countEl),
     selBar,

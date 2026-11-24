@@ -185,6 +185,39 @@ export function toggle(label, checked, onChange, { id, hint } = {}) {
     h('span', { class: 'switch' }, input, h('span', { class: 'switch-track' })));
 }
 
+/**
+ * Mehrfachauswahl als antippbare Chips. selected (Array) wird direkt verändert.
+ * Werte der Karte, die nicht (mehr) in der Liste stehen, werden trotzdem angezeigt.
+ * onAdd: async () => neuer Wert (für „+ Eigene“).
+ */
+export function chipPicker(options, selected, { id, label, onAdd, addLabel = '+ Eigene', onChange } = {}) {
+  const wrap = h('div', { class: 'chip-row picker', id, role: 'group', 'aria-label': label });
+  const render = () => {
+    const all = [...options, ...selected.filter(s => !options.includes(s))];
+    const chips = all.map(o => {
+      const on = selected.includes(o);
+      return h('button', {
+        type: 'button', class: 'chip' + (on ? ' on' : ''), 'aria-pressed': String(on),
+        onclick: () => {
+          const i = selected.indexOf(o);
+          if (i >= 0) selected.splice(i, 1); else selected.push(o);
+          render();
+          onChange?.(selected);
+        },
+      }, on ? icon('check', 14) : null, o);
+    });
+    if (onAdd) chips.push(h('button', {
+      type: 'button', class: 'chip add', onclick: async () => {
+        const v = (await onAdd())?.trim();
+        if (v && !selected.includes(v)) { selected.push(v); render(); onChange?.(selected); }
+      },
+    }, addLabel));
+    wrap.replaceChildren(...chips);
+  };
+  render();
+  return wrap;
+}
+
 export function emptyState(iconName, title, text, ...actions) {
   return h('div', { class: 'empty' },
     h('div', { class: 'empty-icon' }, icon(iconName, 34)),

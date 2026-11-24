@@ -1,6 +1,6 @@
 // Karte anlegen oder bearbeiten.
 import { app } from '../app.js';
-import { h, topbar, iconBtn, btn, field, segmented, toggle, pickFiles, toast, confirmDialog, menu } from '../ui.js';
+import { h, topbar, iconBtn, btn, field, segmented, toggle, pickFiles, toast, confirmDialog, menu, chipPicker, promptDialog } from '../ui.js';
 import { icon } from '../icons.js';
 import {
   getCard, getDeck, listDecks, emptyCard, saveCard, deleteCards, allCards, addPhoto, getPhoto, savePhoto,
@@ -9,6 +9,7 @@ import {
 import { processImage, photoURL, blobURL, forgetPhoto } from '../images.js';
 import { newSrs, formatDays } from '../srs.js';
 import { FAMILIES, TOXICITY, CAPTIONS, getNameMode } from '../plants.js';
+import { saveSettings } from '../db.js';
 import { MONTHS_ABBR, MONTHS, norm, fmtDate, nameFromFilename } from '../util.js';
 import { newDeckFlow } from './home.js';
 
@@ -27,6 +28,8 @@ export default async function editView({ id, deckId, type }) {
   const startDeck = existing?.deckId || (decks.some(d => d.id === deckId) ? deckId : decks[0].id);
   let card = existing ? JSON.parse(JSON.stringify(existing)) : emptyCard(startDeck, type || 'plant');
   card.plant = { ...emptyCard('').plant, ...(card.plant || {}) };
+  card.plant.lifeForm = [...(card.plant.lifeForm || [])];
+  card.plant.usesList = [...(card.plant.usesList || [])];
   const isNew = !existing;
   const everything = await allCards();
 
@@ -131,7 +134,20 @@ export default async function editView({ id, deckId, type }) {
   const ta = (key, ph, rows = 3) => h('textarea', { class: 'input', id: 'ed-' + key, rows, value: p[key] || '', placeholder: ph });
   const featInput = ta('features', 'Erkennungsmerkmale: Blattform, Blüte, Wuchs, Geruch …', 4);
   const habInput = ta('habitat', 'Wo wächst sie? z. B. Wegränder, Magerwiesen', 2);
-  const usesInput = ta('uses', 'Heilpflanze, essbar, Bienenweide …', 2);
+  const usesInput = ta('uses', 'Details, z. B. „Blätter als Tee bei Husten“', 2);
+  // Schnellauswahl aus den Listen in den Einstellungen; „+ Eigene“ ergänzt auch die Liste
+  const addToList = (key, title) => async () => {
+    const v = (await promptDialog(title, { label: 'Neuer Eintrag', ok: 'Hinzufügen' }))?.trim();
+    if (!v) return null;
+    const list = app.settings[key] || [];
+    if (!list.some(x => norm(x) === norm(v))) {
+      app.settings = await saveSettings({ [key]: [...list, v] });
+      toast(`„${v}“ steht jetzt auch in der Auswahlliste`);
+    }
+    return v;
+  };
+  const lifePicker = chipPicker(app.settings.lifeForms || [], card.plant.lifeForm, { id: 'ed-life', label: 'Lebensform', onAdd: addToList('lifeForms', 'Eigene Lebensform') });
+  const usesPicker = chipPicker(app.settings.usesList || [], card.plant.usesList, { id: 'ed-uses', label: 'Verwendung', onAdd: addToList('usesList', 'Eigener Verwendungszweck') });
   const confInput = ta('confusion', 'Mit welchen Pflanzen kann man sie verwechseln, und woran erkennt man den Unterschied?', 2);
   const notesInput = ta('notes', 'Eigene Notizen, Fundorte, Eselsbrücken …', 2);
   const toxSelect = h('select', { class: 'input', id: 'ed-tox', value: p.toxicity || '' }, TOXICITY.map(t => h('option', { value: t.value }, t.label)));
@@ -182,9 +198,11 @@ export default async function editView({ id, deckId, type }) {
     famList,
     field('Merkmale', featInput),
     h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Blütezeit'), bloomRow),
+    h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Lebensform'), lifePicker,
+      h('span', { class: 'field-hint' }, 'Mehrfachauswahl möglich, z. B. „Staude“ und „Hemikryptophyt“. Liste anpassen: Einstellungen → Auswahllisten.')),
     field('Standort', habInput),
     field('Giftigkeit', toxSelect),
-    field('Verwendung', usesInput),
+    h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Verwendung'), usesPicker, usesInput),
     field('Verwechslungsgefahr', confInput),
     field('Notizen', notesInput),
     field('Eigene Frage (optional)', questionInput));

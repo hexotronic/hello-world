@@ -14,6 +14,7 @@ const MODES = [
   { id: 'mc-latin', label: 'Deutsch → Botanisch', desc: 'Lateinische Namen lernen', icon: 'leaf' },
   { id: 'mc-german', label: 'Botanisch → Deutsch', desc: 'Andersherum', icon: 'leaf' },
   { id: 'mc-family', label: 'Foto → Familie', desc: 'Pflanzenfamilien erkennen', icon: 'layers' },
+  { id: 'mc-lifeform', label: 'Foto → Lebensform', desc: 'Baum, Staude, Geophyt …', icon: 'flower' },
   { id: 'features', label: 'Merkmale → Name', desc: 'Nur anhand der Beschreibung', icon: 'search' },
 ];
 
@@ -31,11 +32,14 @@ function eligible(c, mode) {
     case 'mc-german': return p.deName && p.latinName;
     case 'mc-family': return c.photoIds?.length && p.family;
     case 'features': return p.features && nameOf(c);
+    case 'mc-lifeform': return c.photoIds?.length && p.lifeForm?.length;
   }
   return false;
 }
 
 function answerValue(c, mode) {
+  // Bei mehreren Lebensformen wird pro Frage eine davon abgefragt
+  if (mode === 'mc-lifeform') return c.plant.lifeForm[Math.floor(Math.random() * c.plant.lifeForm.length)];
   if (mode === 'mc-latin') return c.plant.latinName;
   if (mode === 'mc-family') return c.plant.family;
   return nameOf(c);
@@ -79,8 +83,13 @@ export default async function quizView(params = {}) {
           : emptyState('target', 'Zu wenige passende Karten', 'Für diese Übung brauchst du mindestens zwei Pflanzenkarten mit den nötigen Angaben (z. B. Foto und Name, oder deutscher und botanischer Name).')));
   }
 
-  function options(card, pl) {
-    const answer = answerValue(card, st.mode);
+  function options(card, pl, answer) {
+    if (st.mode === 'mc-lifeform') {
+      // Falsche Antworten: Lebensformen, die diese Pflanze nicht hat
+      const own = new Set(card.plant.lifeForm.map(norm));
+      const pool = [...new Set([...(app.settings.lifeForms || []), ...pl.flatMap(c => c.plant.lifeForm)])].filter(f => !own.has(norm(f)));
+      return shuffle([answer, ...shuffle(pool).slice(0, 3)]);
+    }
     if (st.mode === 'mc-family') {
       const fams = [...new Set([...pl.map(c => c.plant.family), ...FAMILIES])]
         .filter(f => norm(familyKey(f)) !== norm(familyKey(answer)));
@@ -101,7 +110,10 @@ export default async function quizView(params = {}) {
   let run = null;
   function start(list) {
     const pl = pool();
-    const qs = (st.count ? list.slice(0, st.count) : list).map(c => ({ card: c, opts: st.mode === 'type-photo' ? null : options(c, pl) }));
+    const qs = (st.count ? list.slice(0, st.count) : list).map(c => {
+      const answer = answerValue(c, st.mode);
+      return { card: c, answer, opts: st.mode === 'type-photo' ? null : options(c, pl, answer) };
+    });
     if (!run) app.pushLayer();
     run = { qs, i: 0, right: 0, wrong: [], answered: false };
     document.body.classList.add('fullscreen-view');
@@ -111,11 +123,10 @@ export default async function quizView(params = {}) {
   async function renderQuestion() {
     const r = run;
     if (r.i >= r.qs.length) return renderSummary();
-    const { card, opts } = r.qs[r.i];
+    const { card, opts, answer } = r.qs[r.i];
     const p = card.plant;
-    const answer = answerValue(card, st.mode);
     let prompt;
-    if (['mc-photo', 'type-photo', 'mc-family'].includes(st.mode)) {
+    if (['mc-photo', 'type-photo', 'mc-family', 'mc-lifeform'].includes(st.mode)) {
       const pid = card.photoIds[Math.floor(Math.random() * card.photoIds.length)];
       const img = h('img', { class: 'quiz-img', alt: 'Welche Pflanze?' });
       photoURL(pid, 'full').then(u => { img.src = u || ''; });
@@ -128,14 +139,16 @@ export default async function quizView(params = {}) {
     } else {
       prompt = h('div', { class: 'quiz-text' }, h('span', { class: 'quiz-q' }, 'Welche Pflanze ist gemeint?'), h('p', { class: 'quiz-features pre' }, p.features));
     }
-    const question = st.mode === 'mc-family' ? 'Zu welcher Familie gehört sie?' : (st.mode.endsWith('photo') ? 'Welche Pflanze ist das?' : null);
+    const question = st.mode === 'mc-family' ? 'Zu welcher Familie gehört sie?'
+      : st.mode === 'mc-lifeform' ? 'Welche Lebensform hat sie?'
+        : (st.mode.endsWith('photo') ? 'Welche Pflanze ist das?' : null);
     const feedback = h('div', { class: 'quiz-feedback' });
     const nextBtn = btn(r.i + 1 >= r.qs.length ? 'Auswertung' : 'Weiter', () => { r.i++; r.answered = false; renderQuestion(); }, { kind: 'primary', iconName: 'chevron', attrs: { hidden: true } });
 
     const finishAnswer = (ok, given, closeNote) => {
       r.answered = true;
       if (ok) r.right++;
-      else r.wrong.push({ card, given });
+      else r.wrong.push({ card, given, answer });
       addLog({ cardId: card.id, deckId: card.deckId, rating: ok ? 3 : 1, mode: 'quiz', quiz: st.mode });
       const extra = [p.deName !== answer ? p.deName : null, p.latinName !== answer ? p.latinName : null, st.mode !== 'mc-family' ? p.family : null].filter(Boolean).join(' · ');
       feedback.replaceChildren(h('div', { class: 'fb ' + (ok ? 'ok' : 'bad') },
@@ -202,7 +215,7 @@ export default async function quizView(params = {}) {
           h('h2', { class: 'section-h' }, 'Daneben'),
           h('div', { class: 'wrong-list' }, r.wrong.map(w => h('button', { type: 'button', class: 'wrong-row', onclick: () => app.go('edit', { id: w.card.id }) },
             w.card.photoIds?.length ? lazyPhoto(h('img', { class: 'cl-thumb', alt: '' }), w.card.photoIds[0]) : h('span', { class: 'cl-thumb none' }, icon('leaf', 18)),
-            h('span', { class: 'cl-main' }, h('span', { class: 'cl-name' }, answerValue(w.card, st.mode)),
+            h('span', { class: 'cl-main' }, h('span', { class: 'cl-name' }, ['mc-family', 'mc-lifeform'].includes(st.mode) ? `${displayName(w.card)}: ${w.answer}` : w.answer),
               h('span', { class: 'cl-sub' }, `Deine Antwort: ${w.given || '—'}`)))))) : h('p', { class: 'lead' }, 'Fehlerfrei!'),
         h('div', { class: 'finished-actions' },
           wrongCards.length ? btn('Falsche wiederholen', () => start(shuffle(wrongCards)), { kind: 'primary', iconName: 'undo' }) : null,

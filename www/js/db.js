@@ -1,7 +1,7 @@
 // IndexedDB-Speicher: Stapel, Karten, Fotos (als Blobs), Lernprotokoll, Einstellungen.
 import { uid } from './util.js';
 import { newSrs } from './srs.js';
-import { mainName } from './plants.js';
+import { mainName, DEFAULT_LIFE_FORMS, DEFAULT_USES } from './plants.js';
 
 const DB_NAME = 'florakarten';
 const DB_VERSION = 1;
@@ -115,6 +115,8 @@ const SETTINGS_DEFAULTS = {
   learnAheadMin: 20,
   speechLang: 'de-DE',
   nameMode: 'de',           // Hauptname für Pflanzen: 'de' oder 'la'
+  lifeForms: DEFAULT_LIFE_FORMS,  // Auswahlliste Lebensformen
+  usesList: DEFAULT_USES,         // Auswahlliste Verwendungszwecke
 };
 
 export async function getMeta(key, fallback = null) {
@@ -174,8 +176,8 @@ export function emptyCard(deckId, type = 'plant') {
     back: '',
     photosOnFront: true,
     plant: {
-      deName: '', latinName: '', family: '', features: '', bloom: [],
-      habitat: '', toxicity: '', uses: '', confusion: '', notes: '',
+      deName: '', latinName: '', family: '', features: '', bloom: [], lifeForm: [],
+      habitat: '', toxicity: '', usesList: [], uses: '', confusion: '', notes: '',
     },
     photoIds: [],
     tags: [],
@@ -228,7 +230,7 @@ export function displayName(card) {
 export function searchText(card) {
   const p = card.plant || {};
   return [card.title, card.front, card.back, p.deName, p.latinName, p.family, p.features, p.habitat,
-    p.uses, p.confusion, p.notes, ...(card.tags || [])].filter(Boolean).join(' \n ');
+    p.uses, p.confusion, p.notes, ...(p.lifeForm || []), ...(p.usesList || []), ...(card.tags || [])].filter(Boolean).join(' \n ');
 }
 
 // ---------- Fotos ----------

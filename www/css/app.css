@@ -831,3 +831,18 @@ body.fullscreen-view .review, body.fullscreen-view .random.playing, body.fullscr
 .rnd-name.latin { font-family: var(--f-latin); font-style: italic; font-weight: 600; }
 .rnd-second { font-family: var(--f-display); font-size: 1.1rem; font-weight: 600; color: var(--ink-2); }
 .cl-name.latin { font-family: var(--f-latin); font-style: italic; font-weight: 600; font-size: 1.08rem; }
+
+/* Auswahllisten (Lebensform, Verwendung) */
+.picker .chip { display: inline-flex; align-items: center; gap: 4px; }
+.picker .chip .icon { color: var(--moss); }
+.picker .chip.add { border-style: dashed; color: var(--moss); background: none; }
+.quick .picker { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.quick .picker::-webkit-scrollbar { display: none; }
+.list-editor { display: flex; flex-direction: column; gap: 10px; }
+.chip.removable { display: inline-flex; align-items: center; gap: 2px; padding-right: 4px; color: var(--ink); }
+.chip-x { display: grid; place-items: center; width: 26px; height: 26px; border: 0; border-radius: 50%; background: none; color: var(--ink-3); padding: 0; }
+.chip-x:hover { background: var(--sheet-2); color: var(--danger); }
+.add-row { display: flex; gap: 8px; }
+.add-row .btn { flex: none; }
+.hl-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
+.hl-tag { font-size: 0.8rem; font-weight: 650; padding: 1px 8px; border-radius: 99px; background: var(--moss-soft); color: var(--ink); }
