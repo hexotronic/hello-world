@@ -12,7 +12,7 @@ import { fmtDate, fmtBytes, norm } from '../util.js';
 import { isNative } from '../native.js';
 import { cloudSection } from './cloudsection.js';
 
-const VERSION = '1.6.0';
+const VERSION = '1.7.0';
 
 export default async function settingsView(params = {}) {
   const s = app.settings;

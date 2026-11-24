@@ -244,8 +244,9 @@ export function searchText(card) {
 }
 
 // ---------- Fotos ----------
-export async function addPhoto({ blob, thumb, w, h, caption = '' }, cardId) {
-  const p = { id: uid(), cardId, blob, thumb, w, h, caption, created: Date.now() };
+export async function addPhoto({ blob, thumb, w, h, caption = '', source = null }, cardId) {
+  // source: Herkunft bei Bildern aus dem Internet { author, license, source, page }
+  const p = { id: uid(), cardId, blob, thumb, w, h, caption, source, created: Date.now() };
   await raw.put('photos', p);
   return p;
 }

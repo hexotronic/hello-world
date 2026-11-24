@@ -8,8 +8,9 @@ import {
 } from '../db.js';
 import { processImage, photoURL, blobURL, forgetPhoto } from '../images.js';
 import { newSrs, formatDays } from '../srs.js';
-import { FAMILIES, TOXICITY, CAPTIONS, getNameMode } from '../plants.js';
+import { FAMILIES, TOXICITY, CAPTIONS, getNameMode, familyKey } from '../plants.js';
 import { saveSettings } from '../db.js';
+import { openImageSearch } from '../imagesearch.js';
 import { MONTHS_ABBR, MONTHS, norm, fmtDate, nameFromFilename } from '../util.js';
 import { newDeckFlow } from './home.js';
 
@@ -50,7 +51,7 @@ export default async function editView({ id, deckId, type }) {
     for (const pid of card.photoIds || []) {
       const meta = await getPhoto(pid);
       if (!meta) continue;
-      photos.push({ id: pid, caption: meta.caption || '', origCaption: meta.caption || '', url: await photoURL(pid, 'thumb'), existing: true });
+      photos.push({ id: pid, caption: meta.caption || '', origCaption: meta.caption || '', url: await photoURL(pid, 'thumb'), existing: true, source: meta.source || null });
     }
   }
   await loadPhotos();
@@ -65,6 +66,7 @@ export default async function editView({ id, deckId, type }) {
       ...photos.map((p, i) => h('div', { class: 'ph' },
         h('img', { src: p.url, alt: p.caption || `Foto ${i + 1}` }),
         i === 0 && photos.length > 1 ? h('span', { class: 'ph-main' }, 'Hauptfoto') : null,
+        p.source ? h('span', { class: 'ph-web', title: [p.source.author, p.source.license, p.source.source].filter(Boolean).join(' · ') }, icon('globe', 14), p.source.license || 'Web') : null,
         h('select', {
           class: 'ph-cap', 'aria-label': 'Bildunterschrift', value: p.caption,
           onchange: e => { p.caption = e.target.value; },
@@ -74,7 +76,34 @@ export default async function editView({ id, deckId, type }) {
           iconBtn('trash', 'Foto entfernen', () => { const [x] = photos.splice(i, 1); if (x.existing) removed.push(x.id); renderPhotos(); }, { class: 'small' })))),
       h('div', { class: 'ph-add' },
         h('button', { type: 'button', class: 'ph-add-btn', onclick: () => addPhotos('environment') }, icon('camera', 26), h('span', null, 'Kamera')),
-        h('button', { type: 'button', class: 'ph-add-btn', onclick: () => addPhotos() }, icon('image', 26), h('span', null, 'Galerie'))));
+        h('button', { type: 'button', class: 'ph-add-btn', onclick: () => addPhotos() }, icon('image', 26), h('span', null, 'Galerie')),
+        h('button', { type: 'button', class: 'ph-add-btn', onclick: () => webSearch() }, icon('globe', 26), h('span', null, 'Internet'))));
+  }
+
+  /** Beispielbilder zum eingegebenen (botanischen) Namen im Internet suchen. */
+  async function webSearch() {
+    const query = laInput.value.trim() || deInput.value.trim() || titleInput.value.trim() || (card.type === 'basic' ? frontInput.value.trim() : '');
+    if (!query) { toast('Bitte zuerst einen botanischen (oder deutschen) Namen eintragen.'); (card.type === 'plant' ? laInput : frontInput).focus(); return; }
+    await openImageSearch({
+      query,
+      onAdd: async (blob, item) => {
+        const data = await processImage(new File([blob], 'web.jpg', { type: blob.type || 'image/jpeg' }));
+        photos.push({ data, caption: '', url: blobURL(data.thumb), existing: false, source: { author: item.author, license: item.license, source: item.source, page: item.page } });
+        renderPhotos();
+      },
+      onTaxon: card.type === 'plant' ? taxon => {
+        const filled = [];
+        if (!laInput.value.trim() && taxon.name) { laInput.value = taxon.name; filled.push('botanischer Name'); }
+        if (!deInput.value.trim() && taxon.commonName) { deInput.value = taxon.commonName; filled.push('deutscher Name'); }
+        if (!famInput.value.trim() && taxon.family) {
+          const known = [...famSet].find(f => familyKey(f).toLowerCase() === taxon.family.toLowerCase());
+          famInput.value = known || (taxon.familyCommon ? `${taxon.family} (${taxon.familyCommon})` : taxon.family);
+          filled.push('Familie');
+        }
+        updateTitleHint();
+        toast(filled.length ? `Übernommen: ${filled.join(', ')}` : 'Die Felder sind schon ausgefüllt – nichts überschrieben.');
+      } : null,
+    });
   }
 
   async function addPhotos(capture) {
@@ -292,7 +321,7 @@ export default async function editView({ id, deckId, type }) {
         }
         ids.push(ph.id);
       } else {
-        const saved = await addPhoto({ ...ph.data, caption: ph.caption }, card.id);
+        const saved = await addPhoto({ ...ph.data, caption: ph.caption, source: ph.source || null }, card.id);
         ids.push(saved.id);
       }
     }

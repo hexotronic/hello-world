@@ -46,6 +46,13 @@ Karteikarten-App für Android (und jeden Browser) mit Wiederholung in wachsenden
 - „Aus der Cloud wiederherstellen“ und „Bestehende Sicherung verbinden“ (z. B. auf einem neuen Handy), wahlweise zusammenführen oder ersetzen
 - Ohne Google-Entwicklerkonto und ohne Server: Die App schreibt nur in die eine Datei, die du ausgewählt hast. Andere Cloud-Speicher mit Android-Anbindung (z. B. OneDrive, Nextcloud) funktionieren genauso.
 
+**Beispielbilder aus dem Internet**
+- Im Karten-Editor unter Fotos: **„Internet“** sucht zum eingegebenen botanischen (oder deutschen) Namen freie Bilder bei **iNaturalist** (geprüfte Pflanzenfotos) oder **Wikimedia Commons**
+- Bilder antippen zum Auswählen, auch aus beiden Quellen gemischt; „Mehr laden“ für weitere
+- „Namen & Familie übernehmen“ füllt leere Felder (deutscher/botanischer Name, Familie) mit den Angaben von iNaturalist
+- Urheber und Lizenz (Creative Commons) werden beim Foto gespeichert und im Vollbild angezeigt
+- Braucht eine Internetverbindung; funktioniert in der Android-App und im Browser
+
 **Fotonamen**
 - Fotos heißen nach der Pflanze, wahlweise deutsch oder botanisch (*Einstellungen → Fotos*), z. B. „Löwenzahn 3“ oder „Taraxacum officinale 3“
 - Sichtbar im Vollbild nach dem Aufdecken; dort lässt sich jedes Foto unter diesem Namen teilen oder speichern

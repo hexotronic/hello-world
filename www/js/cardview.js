@@ -112,6 +112,8 @@ export function openZoom(ids, start = 0, { card } = {}) {
     img.src = (await photoURL(ids[i], 'full')) || '';
     const meta = await getPhoto(ids[i]);
     cap.textContent = [card ? photoName(card, ids[i]) : '', meta?.caption, ids.length > 1 ? `${i + 1} / ${ids.length}` : ''].filter(Boolean).join(' · ');
+    // Herkunft bei Bildern aus dem Internet (Urheber und Lizenz)
+    if (meta?.source) cap.append(h('span', { class: 'zoom-src' }, [meta.source.author, meta.source.license, meta.source.source].filter(Boolean).join(' · ')));
   };
   scroller.addEventListener('click', e => {
     const rect = img.getBoundingClientRect();
