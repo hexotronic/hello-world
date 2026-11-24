@@ -36,6 +36,7 @@ Karteikarten-App für Android (und jeden Browser) mit Wiederholung in wachsenden
 - Antwort eintippen mit Tippfehler-Erkennung (z. B. „Gänseblümchn“ gilt als fast richtig)
 - **Training** ohne Einfluss auf die Planung: Foto → Name (Auswahl oder Eintippen), Deutsch ↔ Botanisch, Foto → Familie, Merkmale → Name. Im Modus *Knifflig* stammen die falschen Antworten bevorzugt aus derselben Familie.
 - **Fotos schnell erfassen**: viele Fotos auf einmal auswählen, nacheinander benennen, weitere Fotos derselben Pflanze mit einem Tipp anhängen
+- **Fotos zu einer vorhandenen Pflanze**: Pflanze einmal aus einer durchsuchbaren Liste wählen; alle weiteren Fotos (Galerie oder Kamera, auch „Alle auf einmal“) landen dort. Die Auswahl bleibt fest, auch beim nächsten Öffnen, bis sie geändert wird. Auch direkt aus einer Karte: ⋮ → „Fotos zu dieser Pflanze erfassen“
 - „Blüht im November“-Hinweis auf der Startseite
 
 **Cloud-Speicher: eigenes Google Drive**

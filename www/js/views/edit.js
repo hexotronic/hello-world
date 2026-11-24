@@ -311,11 +311,13 @@ export default async function editView({ id, deckId, type }) {
 
   async function more() {
     const choice = await menu(displayName(card), [
+      { label: 'Fotos zu dieser Pflanze erfassen', icon: 'camera', value: 'quick' },
       card.srs.state !== 'new' ? { label: 'Lernfortschritt zurücksetzen', icon: 'undo', value: 'reset' } : null,
       { label: card.suspended ? 'Wieder abfragen' : 'Aussetzen', icon: 'ban', value: 'suspend' },
       { label: card.marked ? 'Markierung entfernen' : 'Markieren', icon: 'star', value: 'mark' },
       { label: 'Karte löschen', icon: 'trash', value: 'delete', danger: true },
     ]);
+    if (choice === 'quick') { app.go('quick', { targetId: card.id }); return; }
     if (choice === 'reset' && await confirmDialog('Lernfortschritt zurücksetzen?', 'Die Karte wird wieder als neue Karte abgefragt.', { ok: 'Zurücksetzen' })) {
       card.srs = newSrs();
       await saveCard(card);

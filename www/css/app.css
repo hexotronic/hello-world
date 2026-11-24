@@ -846,3 +846,18 @@ body.fullscreen-view .review, body.fullscreen-view .random.playing, body.fullscr
 .add-row .btn { flex: none; }
 .hl-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
 .hl-tag { font-size: 0.8rem; font-weight: 650; padding: 1px 8px; border-radius: 99px; background: var(--moss-soft); color: var(--ink); }
+
+/* Schnell-Erfassung: feste Zielpflanze und Auswahl */
+.target-bar { display: flex; align-items: center; gap: 12px; padding: 10px 6px 10px 12px; border-radius: 14px; background: var(--moss-soft); }
+.target-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.target-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); }
+.target-name { font-size: 1.05rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.target-actions { display: flex; align-items: center; gap: 2px; flex: none; }
+.target-actions .btn { min-height: 38px; padding: 6px 10px; }
+.picker-sheet { max-height: 88vh; display: flex; flex-direction: column; }
+.picker-sheet .dialog-body { min-height: 0; flex: 1; display: flex; }
+.picker { display: flex; flex-direction: column; gap: 10px; min-height: 0; flex: 1; width: 100%; }
+.picker-list { overflow-y: auto; min-height: 0; max-height: 62vh; border-radius: var(--r); background: var(--paper); }
+.picker-list .cl-row { min-height: 62px; }
+.picker-h { padding: 10px 12px 4px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); }
+.picker-empty { padding: 16px; }
