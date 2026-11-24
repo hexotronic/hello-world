@@ -61,8 +61,8 @@ function go(name, params = {}, { replace = false } = {}) {
   try {
     if (replace) history.replaceState(state, '');
     else history.pushState(state, '');
-  } catch { /* in eingeschränkten Umgebungen ohne History */ }
-  depth = state.depth;
+    depth = state.depth;
+  } catch { /* in eingeschränkten Umgebungen ohne History: Zurück führt dann zur Übersicht */ }
   return render(name, params);
 }
 
@@ -75,14 +75,22 @@ function popLayer() {
   currentView?.onPop?.();
 }
 
+let popSeen = false;
 function back(fallback = 'home', params = {}) {
   if (depth > 0) {
-    try { history.back(); return; } catch { /* weiter unten */ }
+    popSeen = false;
+    try {
+      history.back();
+      // Falls der Verlauf nicht reagiert (eingebettete Vorschau), trotzdem weiterkommen.
+      setTimeout(() => { if (!popSeen) { depth = 0; go(fallback, params, { replace: true }); } }, 600);
+      return;
+    } catch { /* weiter unten */ }
   }
   go(fallback, params, { replace: true });
 }
 
 window.addEventListener('popstate', e => {
+  popSeen = true;
   // Offenes Vollbild oder offener Dialog: zuerst diesen schließen und auf der Seite bleiben.
   if (closeZoom() || closeTopDialog()) {
     try { history.pushState({ ...current, depth }, ''); } catch { /* egal */ }
