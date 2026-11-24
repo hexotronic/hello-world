@@ -12,7 +12,7 @@ import { fmtDate, fmtBytes, norm } from '../util.js';
 import { isNative } from '../native.js';
 import { cloudSection } from './cloudsection.js';
 
-const VERSION = '1.3.0';
+const VERSION = '1.4.0';
 
 export default async function settingsView(params = {}) {
   const s = app.settings;
@@ -95,6 +95,7 @@ export default async function settingsView(params = {}) {
     const stop = toast('Sicherung wird eingespielt …', { duration: 120000 });
     try {
       const r = await importBackup(file, mode);
+      await app.refreshSettings();
       stop();
       toast(`Eingespielt: ${r.decks} Stapel, ${r.cards} Karten, ${r.photos} Fotos`);
       app.go('home', {}, { replace: true });

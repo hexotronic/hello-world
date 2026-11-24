@@ -42,7 +42,17 @@ export const app = {
   applyTheme,
   pushLayer,
   popLayer,
+  refreshSettings,
 };
+
+/** Einstellungen neu laden und anwenden (z. B. nach dem Einspielen einer Sicherung). */
+async function refreshSettings() {
+  app.settings = await getSettings();
+  applyTheme(app.settings.theme);
+  setDayStartHour(app.settings.dayStartHour);
+  setNameMode(app.settings.nameMode);
+  return app.settings;
+}
 
 let depth = 0;
 let current = { name: 'home', params: {} };

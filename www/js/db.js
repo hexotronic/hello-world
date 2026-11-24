@@ -1,7 +1,7 @@
 // IndexedDB-Speicher: Stapel, Karten, Fotos (als Blobs), Lernprotokoll, Einstellungen.
 import { uid } from './util.js';
 import { newSrs } from './srs.js';
-import { mainName, DEFAULT_LIFE_FORMS, DEFAULT_USES } from './plants.js';
+import { mainName, DEFAULT_LIFE_FORMS, DEFAULT_USES, LEGACY_LIFE_FORMS, LEGACY_USES } from './plants.js';
 
 const DB_NAME = 'florakarten';
 const DB_VERSION = 1;
@@ -109,7 +109,7 @@ export const raw = {
 };
 
 // ---------- Einstellungen ----------
-const SETTINGS_DEFAULTS = {
+export const SETTINGS_DEFAULTS = {
   theme: 'system',
   dayStartHour: 4,
   learnAheadMin: 20,
@@ -126,12 +126,20 @@ export async function getMeta(key, fallback = null) {
 export function setMeta(key, value) {
   return raw.put('meta', { key, value });
 }
+const sameList = (a, b) => Array.isArray(a) && a.length === b.length && a.every((x, i) => x === b[i]);
+
 export async function getSettings() {
-  return { ...SETTINGS_DEFAULTS, ...(await getMeta('settings', {})) };
+  const s = { ...SETTINGS_DEFAULTS, ...(await getMeta('settings', {})) };
+  // Unveränderte alte Standardlisten auf die neuen Standardlisten umstellen
+  if (sameList(s.lifeForms, LEGACY_LIFE_FORMS)) s.lifeForms = DEFAULT_LIFE_FORMS;
+  if (sameList(s.usesList, LEGACY_USES)) s.usesList = DEFAULT_USES;
+  return s;
 }
 export async function saveSettings(patch) {
   const s = { ...(await getSettings()), ...patch };
   await setMeta('settings', s);
+  // Einstellungen und Auswahllisten gehören mit in die Cloud-Sicherung
+  if (changeListener) { try { changeListener(); } catch { /* egal */ } }
   return s;
 }
 

@@ -19,13 +19,21 @@ export const FAMILIES = [
 
 /** Vorgaben für die Auswahllisten (in den Einstellungen änderbar). */
 export const DEFAULT_LIFE_FORMS = [
+  'Einjährig', 'Zweijährig', 'Staude', 'Halbstrauch', 'Strauch', 'Baum', 'Sukkulente/Kaktee',
+];
+/** Frühere Standardlisten (Version 1.3) – unveränderte alte Listen werden auf die neuen umgestellt. */
+export const LEGACY_LIFE_FORMS = [
   'Baum', 'Strauch', 'Zwergstrauch', 'Staude', 'Einjähriges Kraut', 'Zweijähriges Kraut', 'Gras', 'Farn', 'Moos',
   'Kletterpflanze', 'Zwiebel-/Knollenpflanze', 'Wasserpflanze', 'Sukkulente',
   'Phanerophyt', 'Chamaephyt', 'Hemikryptophyt', 'Geophyt', 'Therophyt', 'Hydrophyt',
 ];
-export const DEFAULT_USES = [
+export const LEGACY_USES = [
   'Heilpflanze', 'Essbar', 'Wildgemüse', 'Küchenkraut / Gewürz', 'Teepflanze', 'Bienenweide', 'Schmetterlingspflanze',
   'Vogelnährgehölz', 'Zierpflanze', 'Färberpflanze', 'Faserpflanze', 'Futterpflanze', 'Holznutzung', 'Gründüngung', 'Zeigerpflanze',
+];
+export const DEFAULT_USES = [
+  'Beet- und Balkon', 'Blühende Topfpflanze', 'Schnitt', 'Beiwerk', 'Beetstaude/Freifläche', 'Steingarten',
+  'Hänge/Kriech/Kletter', 'Einfassung/Hecke', 'Kübel/Ziergehölz', 'Unerwünschter Wuchs',
 ];
 
 export const TOXICITY = [

@@ -30,6 +30,7 @@ export function cloudSection() {
     const stop = toast('Sicherung wird aus der Cloud geladen …', { duration: 120000 });
     try {
       const r = await restoreFromCloud(mode);
+      await app.refreshSettings();
       stop();
       toast(`Wiederhergestellt: ${r.decks} Stapel, ${r.cards} Karten, ${r.photos} Fotos`);
       return true;
@@ -96,7 +97,7 @@ export function cloudSection() {
     }
     if (!c.uri) {
       sec.replaceChildren(head(),
-        h('p', null, 'Sichere Karten, Fotos und Lernstand in deinem eigenen Google Drive. Danach sichert die App automatisch, und du kannst alles auf einem neuen Handy zurückholen.'),
+        h('p', null, 'Sichere Karten, Fotos, Lernstand, Einstellungen und deine Auswahllisten in deinem eigenen Google Drive. Danach sichert die App automatisch, und nach einem Update, einer Neuinstallation oder auf einem neuen Handy holst du alles zurück.'),
         h('ol', { class: 'steps' },
           h('li', null, '„Neue Sicherung anlegen“ antippen.'),
           h('li', null, 'Im Dialog oben links ', h('strong', null, '☰'), ' öffnen und ', h('strong', null, 'Drive'), ' mit deinem Google-Konto wählen.'),
@@ -117,7 +118,8 @@ export function cloudSection() {
           h('strong', null, providerLabel(c.provider)),
           h('span', { class: 'muted small cloud-file' }, c.name || 'Sicherungsdatei'),
           status)),
-      toggle('Automatisch sichern', c.auto, v => setCloudAuto(v), { id: 'cloud-auto', hint: 'Etwa eine Minute nach Änderungen, nach jeder Lernrunde und beim Verlassen der App.' }),
+      toggle('Automatisch sichern', c.auto, v => setCloudAuto(v), { id: 'cloud-auto', hint: 'Etwa eine Minute nach Änderungen (auch an Einstellungen und Auswahllisten), nach jeder Lernrunde und beim Verlassen der App.' }),
+      h('p', { class: 'field-hint' }, 'Gesichert werden Karten, Fotos, Lernstand, Einstellungen und Auswahllisten. Vor einem Update oder Neuinstallieren einmal „Jetzt sichern“, danach „Bestehende Sicherung verbinden“ → Zusammenführen.'),
       h('div', { class: 'btn-col' },
         btn('Jetzt sichern', () => backup(), { kind: 'primary', iconName: 'cloudUp' }),
         btn('Aus der Cloud wiederherstellen', restoreFlow, { iconName: 'cloudDown' }),

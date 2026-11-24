@@ -28,7 +28,7 @@ Karteikarten-App für Android (und jeden Browser) mit Wiederholung in wachsenden
 **Pflanzen-Extras**
 - Hauptname wählbar: **deutsch oder botanisch (Latein)** – gilt für Listen, Sortierung, Rückseite, Tipps, Zufallsfotos, Training und Erfassen (*Einstellungen → Darstellung*)
 - Kartentyp *Pflanze* mit deutschem und botanischem Namen, Familie (mit Vorschlagsliste), **Lebensform**, Merkmalen, Blütezeit, Standort, Giftigkeit, Verwendung, Verwechslungsgefahr und Notizen
-- **Auswahllisten** für Lebensformen (Baum, Strauch, Staude … und Raunkiær-Formen wie Geophyt, Therophyt) und Verwendungszwecke (Heilpflanze, Essbar, Bienenweide …): beim Erfassen nur antippen, in *Einstellungen → Auswahllisten* frei erweiterbar
+- **Auswahllisten** für Lebensformen (Einjährig, Zweijährig, Staude, Halbstrauch, Strauch, Baum, Sukkulente/Kaktee) und Verwendungszwecke (Beet- und Balkon, Blühende Topfpflanze, Schnitt, Beiwerk, Beetstaude/Freifläche, Steingarten, Hänge/Kriech/Kletter, Einfassung/Hecke, Kübel/Ziergehölz, Unerwünschter Wuchs): beim Erfassen nur antippen, in *Einstellungen → Auswahllisten* frei änderbar
 - Suche filterbar nach Lebensform oder Verwendung; Training „Foto → Lebensform“
 - Rückseite als Herbar-Etikett mit Blühkalender, botanische Namen kursiv, Vorlesen per Sprachausgabe
 - Mehrere Fotos pro Pflanze mit Beschriftung (Blüte, Blatt, Frucht, Rinde …); beim Lernen kommt jedes Mal ein anderes. Optional „Nur ein Foto zeigen“: kein Weiterwischen zu den anderen Fotos, bis die Antwort aufgedeckt ist
@@ -41,6 +41,7 @@ Karteikarten-App für Android (und jeden Browser) mit Wiederholung in wachsenden
 **Cloud-Speicher: eigenes Google Drive**
 - In der Android-App unter *Einstellungen → Cloud-Speicher* eine Datei im eigenen Google Drive anlegen (Android-Dialog „Speichern unter“ → ☰ → Drive → Konto und Ordner wählen)
 - Danach sichert die App automatisch: etwa eine Minute nach Änderungen, nach jeder Lernrunde und beim Verlassen der App
+- Gesichert werden auch Einstellungen und Auswahllisten; Änderungen daran lösen ebenfalls eine automatische Sicherung aus
 - „Aus der Cloud wiederherstellen“ und „Bestehende Sicherung verbinden“ (z. B. auf einem neuen Handy), wahlweise zusammenführen oder ersetzen
 - Ohne Google-Entwicklerkonto und ohne Server: Die App schreibt nur in die eine Datei, die du ausgewählt hast. Andere Cloud-Speicher mit Android-Anbindung (z. B. OneDrive, Nextcloud) funktionieren genauso.
 

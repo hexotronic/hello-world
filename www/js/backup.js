@@ -1,4 +1,6 @@
 // Sicherung (Export/Import als JSON inkl. Fotos) und Dateispeichern – im Browser und in der Android-App.
+import { SETTINGS_DEFAULTS, getMeta } from './db.js';
+import { LEGACY_LIFE_FORMS, LEGACY_USES } from './plants.js';
 import {
   listDecks, getDeck, allCards, cardsInDeck, getPhoto, allLogs, raw, tx, wipeAll, setMeta, getSettings,
   createDeck, emptyCard, saveCards,
@@ -160,8 +162,29 @@ export async function importBackup(file, mode = 'merge') {
     const rs = t.objectStore('revlog');
     for (const { id, ...l } of logs) rs.add(l);
   });
-  if (mode === 'replace' && data.settings) await setMeta('settings', data.settings);
+  if (data.settings) {
+    if (mode === 'replace') await setMeta('settings', data.settings);
+    else await setMeta('settings', mergeSettings(await getMeta('settings', null), data.settings));
+  }
   return { decks: (data.decks || []).length, cards: cards.length, photos: photos.length };
+}
+
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+/**
+ * Einstellungen aus einer Sicherung mit den vorhandenen zusammenführen:
+ * Was hier noch auf Standard steht, kommt aus der Sicherung. Eigene Listen werden vereinigt.
+ */
+function mergeSettings(local, remote) {
+  if (!local) return { ...remote };
+  const out = { ...local };
+  for (const [key, value] of Object.entries(remote)) {
+    const mine = local[key];
+    const untouched = same(mine, SETTINGS_DEFAULTS[key]) || (key === 'lifeForms' && same(mine, LEGACY_LIFE_FORMS)) || (key === 'usesList' && same(mine, LEGACY_USES));
+    if (mine === undefined || untouched) out[key] = value;
+    else if (Array.isArray(mine) && Array.isArray(value)) out[key] = [...value, ...mine.filter(x => !value.includes(x))];
+  }
+  return out;
 }
 
 /**
