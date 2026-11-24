@@ -76,6 +76,10 @@ Karteikarten-App für Android (und jeden Browser) mit Wiederholung in wachsenden
 - **Alle Fotos als ZIP exportieren** (gesamt oder pro Stapel): Ordner je Stapel, Dateien nach Pflanzennamen
 - Android-App: Fotos, die bei „Fotos schnell erfassen“ aus der Galerie gewählt werden, werden **in der Galerie umbenannt** (Android fragt einmal pro Erfassung um Erlaubnis; Android 11 oder neuer; Kamera-Fotos und reine Cloud-Fotos ausgenommen)
 
+**Bereiche ein- und ausschalten**
+- *Einstellungen → Bereiche ein- und ausschalten*: Hauptbereiche (Zufallsfotos, Training, Statistik, Schnell-Erfassung), Funktionen (Spracherkennung, Vorlesen, Bildsuche im Internet, Tipps, „Blüht im …“, Cloud-Hinweis) und einzelne Felder der Pflanzenkarten (Familie, Lebensform, Merkmale, Blütezeit, Standort, Giftigkeit, Verwendung, Verwechslung, Notizen, eigene Frage, Schlagwörter)
+- Ausgeschaltetes wird überall ausgeblendet (Navigation, Editor, Kartenrückseite, passende Übungen); gespeicherte Daten bleiben erhalten
+
 **Sonstiges**
 - Statistik: Lernserie, Behaltensquote, Kartenbestand, Prognose der nächsten 14 Tage, Verlauf der letzten 30 Tage, am häufigsten vergessene Karten
 - Sicherung als JSON-Datei inklusive Fotos und Lernverlauf; Einspielen per Zusammenführen oder Ersetzen

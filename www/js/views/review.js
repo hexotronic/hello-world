@@ -8,6 +8,7 @@ import { cardFace } from '../cardview.js';
 import { acceptedNames } from '../plants.js';
 import { checkAnswer, matchSpoken, shuffle } from '../util.js';
 import { speechSupported, micButton } from '../speech.js';
+import { isOn } from '../features.js';
 import { cloudSoon } from '../cloud.js';
 
 const RATINGS = [
@@ -122,7 +123,7 @@ export default async function reviewView({ deckId, mode = 'srs', cardIds, title 
   function renderBottom() {
     const c = current;
     if (!revealed) {
-      const canHint = cfg.showHint && c.type === 'plant' && (c.plant?.deName || c.plant?.latinName || c.plant?.family);
+      const canHint = cfg.showHint && isOn('hints') && c.type === 'plant' && (c.plant?.deName || c.plant?.latinName || c.plant?.family);
       const useType = cfg.typeAnswer && answersFor(c).some(Boolean);
       const input = useType ? h('input', {
         class: 'input type-input', id: 'type-answer', placeholder: c.type === 'plant' ? 'Name eintippen …' : 'Antwort eintippen …',
@@ -130,7 +131,7 @@ export default async function reviewView({ deckId, mode = 'srs', cardIds, title 
         onkeydown: e => { if (e.key === 'Enter') { e.preventDefault(); reveal(); } },
       }) : null;
       // Antwort auch sprechen (Mikrofon neben dem Eingabefeld)
-      const mic = input && speechSupported() ? micButton({
+      const mic = input && speechSupported() && isOn('speechIn') ? micButton({
         getLang: () => app.settings?.speechInLang || 'de-DE',
         // Namen aller Karten des Stapels: Hinweis an die Erkennung und Vergleich mit den anderen Pflanzen
         getPhrases: () => cards.flatMap(answersFor),
@@ -315,7 +316,7 @@ export default async function reviewView({ deckId, mode = 'srs', cardIds, title 
       h('div', { class: 'finished-actions' },
         deckId ? btn('Zurück zum Stapel', () => app.back(), { kind: 'primary' }) : btn('Zur Übersicht', () => app.go('home', {}, { replace: true }), { kind: 'primary' }),
         deckId && mode === 'srs' ? btn('Pauken', () => app.go('review', { deckId, mode: 'cram' }, { replace: true }), { iconName: 'bolt' }) : null,
-        btn('Zufallsfotos', () => app.go('random', deckId ? { deckId } : {}, { replace: true }), { iconName: 'shuffle' }))));
+        isOn('random') ? btn('Zufallsfotos', () => app.go('random', deckId ? { deckId } : {}, { replace: true }), { iconName: 'shuffle' }) : null)));
     bottom.replaceChildren();
   }
 

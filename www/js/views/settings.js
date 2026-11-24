@@ -12,8 +12,9 @@ import { fmtDate, fmtBytes, norm } from '../util.js';
 import { isNative } from '../native.js';
 import { SPEECH_LANGS, speechSupported } from '../speech.js';
 import { cloudSection } from './cloudsection.js';
+import { FEATURE_GROUPS, isOn } from '../features.js';
 
-const VERSION = '2.0.0';
+const VERSION = '2.1.0';
 
 export default async function settingsView(params = {}) {
   const s = app.settings;
@@ -26,6 +27,7 @@ export default async function settingsView(params = {}) {
     if ('dayStartHour' in patch) setDayStartHour(app.settings.dayStartHour);
     if ('nameMode' in patch) setNameMode(app.settings.nameMode);
     if ('photoNameMode' in patch) setPhotoNameMode(app.settings.photoNameMode);
+    if ('off' in patch) await app.refreshSettings();
   };
 
   /** Bearbeitbare Auswahlliste (Lebensformen, Verwendungszwecke). */
@@ -206,6 +208,20 @@ export default async function settingsView(params = {}) {
         listEditor('lifeForms', DEFAULT_LIFE_FORMS, 'Lebensform'),
         h('h3', { class: 'form-h' }, 'Verwendungszwecke'),
         listEditor('usesList', DEFAULT_USES, 'Verwendung')),
+
+      h('section', { class: 'set-sec', id: 'features' },
+        h('h2', { class: 'section-h' }, 'Bereiche ein- und ausschalten'),
+        h('p', { class: 'muted' }, 'Was du nicht brauchst, blendest du hier aus. Deine Daten bleiben dabei erhalten und sind nach dem Wiedereinschalten wieder da.'),
+        FEATURE_GROUPS.map(g => h('div', { class: 'feature-group' },
+          h('h3', { class: 'form-h' }, g.title),
+          g.items.map(it => toggle(it.label, isOn(it.key), async v => {
+            const off = new Set(app.settings.off || []);
+            if (v) off.delete(it.key); else off.add(it.key);
+            await update({ off: [...off] });
+          }, { id: 'feat-' + it.key.replace(':', '-'), hint: it.hint })))),
+        (app.settings.off || []).length ? h('button', {
+          type: 'button', class: 'link small', onclick: async () => { await update({ off: [] }); app.reload(); },
+        }, 'Alle Bereiche wieder einschalten') : null),
 
       h('section', { class: 'set-sec' },
         h('h2', { class: 'section-h' }, 'Lernen'),

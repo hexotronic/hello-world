@@ -7,6 +7,7 @@ import { photoURL, lazyPhoto } from '../images.js';
 import { openZoom, herbariumLabel } from '../cardview.js';
 import { shuffle, MONTHS, speak } from '../util.js';
 import { bloomsIn, hintText, mainName, mainIsLatin, otherName } from '../plants.js';
+import { isOn } from '../features.js';
 
 const prefs = { deckId: '', filter: 'all', tag: '', flow: 'manual', per: 'photo', count: 0, delay: 5, tab: 'play' };
 
@@ -62,7 +63,7 @@ export default async function randomView(params = {}) {
     const rerender = () => { save(); renderSetup(); };
     const filterChips = h('div', { class: 'chip-row' }, [
       { v: 'all', l: 'Alle' }, { v: 'marked', l: 'Markierte' }, { v: 'bloom', l: `Blüht im ${MONTHS[month - 1]}` }, { v: 'hard', l: 'Schwierige' },
-    ].map(f => h('button', { type: 'button', class: 'chip' + (st.filter === f.v ? ' on' : ''), onclick: () => { st.filter = f.v; rerender(); } }, f.l)));
+    ].filter(f => f.v !== 'bloom' || (isOn('field:bloom') && isOn('bloomBanner'))).map(f => h('button', { type: 'button', class: 'chip' + (st.filter === f.v ? ' on' : ''), onclick: () => { st.filter = f.v; rerender(); } }, f.l)));
 
     body.replaceChildren(
       h('p', { class: 'lead' }, 'Zufällige Fotos aus deiner Sammlung: Erkennst du die Pflanze? Das zählt nicht für die Lernplanung, du kannst also beliebig oft üben.'),
@@ -122,7 +123,7 @@ export default async function randomView(params = {}) {
     if (s.revealed) {
       answerBox.append(
         h('div', { class: 'rnd-name' + (nameLatin ? ' latin' : '') }, name,
-          iconBtn('volume', 'Vorlesen', () => speak(name, app.settings?.speechLang), { class: 'speak' })),
+          isOn('speechOut') ? iconBtn('volume', 'Vorlesen', () => speak(name, app.settings?.speechLang), { class: 'speak' }) : null),
         second ? h('div', { class: nameLatin ? 'rnd-second' : 'rnd-latin' }, second) : null,
         h('div', { class: 'rnd-fam muted' }, [p.family, card.title && card.title !== name ? `Kartenname: ${card.title}` : null].filter(Boolean).join(' · ')),
         h('details', { class: 'rnd-more' }, h('summary', null, 'Steckbrief'), card.type === 'plant' ? herbariumLabel(card, { speechLang: app.settings?.speechLang }) : h('p', { class: 'pre' }, card.back || '')));

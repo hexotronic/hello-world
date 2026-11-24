@@ -4,6 +4,7 @@ import { icon } from '../icons.js';
 import { getDeck, saveDeck, cardsInDeck, logsSince, deleteDeck, setMeta } from '../db.js';
 import { deckCounts, deckConfig, dayStart, dayStartPlus, dayIndex, formatDelay, maturity } from '../srs.js';
 import { exportBackup, exportPhotosZip } from '../backup.js';
+import { isOn } from '../features.js';
 
 function parseSteps(s) {
   return String(s).split(/[\s,;]+/).map(Number).filter(n => Number.isFinite(n) && n > 0);
@@ -135,9 +136,9 @@ export default async function deckView({ id }) {
       : h('div', { class: 'done-box' }, icon('check', 22), h('span', null, cards.length ? nextInfo : 'Dieser Stapel ist noch leer.')),
     h('div', { class: 'tiles' },
       tile('plus', 'Karte hinzufügen', null, () => app.go('edit', { deckId: id })),
-      tile('camera', 'Fotos schnell erfassen', 'Viele Fotos auf einmal', () => app.go('quick', { deckId: id })),
-      tile('shuffle', 'Zufallsfotos', `${photos} Fotos`, () => app.go('random', { deckId: id }), !photos),
-      tile('target', 'Training', 'Quiz & Eintippen', () => app.go('quiz', { deckId: id }), plants < 2),
+      isOn('quick') ? tile('camera', 'Fotos schnell erfassen', 'Viele Fotos auf einmal', () => app.go('quick', { deckId: id })) : null,
+      isOn('random') ? tile('shuffle', 'Zufallsfotos', `${photos} Fotos`, () => app.go('random', { deckId: id }), !photos) : null,
+      isOn('quiz') ? tile('target', 'Training', 'Quiz & Eintippen', () => app.go('quiz', { deckId: id }), plants < 2) : null,
       tile('bolt', 'Pauken', 'Alle Karten, ohne Planung', () => app.go('review', { deckId: id, mode: 'cram' }), !cards.length),
       tile('search', 'Karten ansehen', `${cards.length} Karten`, () => app.go('browse', { deckId: id }))),
     h('section', { class: 'deck-facts' },

@@ -7,6 +7,7 @@ import { lazyPhoto } from '../images.js';
 import { dayStartPlus, formatDays, maturity } from '../srs.js';
 import { norm, debounce, MONTHS } from '../util.js';
 import { bloomsIn, mainName, otherName, mainIsLatin } from '../plants.js';
+import { isOn } from '../features.js';
 
 const FILTERS = [
   { value: 'all', label: 'Alle' },
@@ -74,7 +75,7 @@ export default async function browseView(params = {}) {
   function persist() { Object.assign(sessionState, st); }
 
   function renderChips() {
-    chips.replaceChildren(...FILTERS.map(f => h('button', {
+    chips.replaceChildren(...FILTERS.filter(f => f.value !== 'bloom' || (isOn('field:bloom') && isOn('bloomBanner'))).map(f => h('button', {
       type: 'button', class: 'chip' + (st.filter === f.value ? ' on' : ''),
       onclick: () => { st.filter = f.value; limit = 150; persist(); renderChips(); update(); },
     }, f.value === 'bloom' ? `Blüht im ${MONTHS[month - 1]}` : f.label)));
@@ -243,7 +244,7 @@ export default async function browseView(params = {}) {
     }),
     h('div', { class: 'browse-tools' },
       h('div', { class: 'search-wrap' }, icon('search', 20), search),
-      h('div', { class: 'select-row' }, deckSel, tagSel, propSel, sortSel),
+      h('div', { class: 'select-row' }, isOn('field:tags') ? tagSel : null, deckSel, isOn('field:lifeForm') || isOn('field:uses') ? propSel : null, sortSel),
       chips,
       countEl),
     selBar,

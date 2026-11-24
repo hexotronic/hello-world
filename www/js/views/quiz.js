@@ -7,6 +7,11 @@ import { photoURL, lazyPhoto } from '../images.js';
 import { openZoom } from '../cardview.js';
 import { shuffle, norm, checkAnswer, matchSpoken, speak } from '../util.js';
 import { speechSupported, micButton, SPEECH_LANGS } from '../speech.js';
+import { isOn } from '../features.js';
+
+/** Übungen, deren Bereich bzw. Feld ausgeschaltet ist, werden ausgeblendet. */
+const MODE_NEEDS = { 'speak-photo': 'speechIn', 'mc-family': 'field:family', 'mc-lifeform': 'field:lifeForm', features: 'field:features' };
+const modeAvailable = m => (!MODE_NEEDS[m.id] || isOn(MODE_NEEDS[m.id])) && (m.id !== 'speak-photo' || speechSupported());
 import { FAMILIES, familyKey, sameFamily, acceptedNames, mainName, getNameMode } from '../plants.js';
 
 const MODES = [
@@ -63,6 +68,7 @@ function answerValue(c, mode, expect = 'both') {
 export default async function quizView(params = {}) {
   const [cards, decks] = await Promise.all([allCards(), listDecks()]);
   const st = { ...prefs };
+  if (!modeAvailable(MODES.find(m => m.id === st.mode) || {})) st.mode = 'mc-photo';
   if (params.deckId !== undefined) st.deckId = params.deckId;
   const root = h('div', { class: 'page quiz' });
   const save = () => Object.assign(prefs, st);
@@ -72,7 +78,7 @@ export default async function quizView(params = {}) {
   function renderSetup() {
     const pl = pool();
     const enough = pl.length >= 2;
-    const modeList = h('div', { class: 'mode-list', role: 'radiogroup' }, MODES.filter(m => m.id !== 'speak-photo' || speechSupported()).map(m => {
+    const modeList = h('div', { class: 'mode-list', role: 'radiogroup' }, MODES.filter(modeAvailable).map(m => {
       const n = cards.filter(c => (!st.deckId || c.deckId === st.deckId) && eligible(c, m.id, st.expect)).length;
       return h('button', {
         type: 'button', role: 'radio', 'aria-checked': String(st.mode === m.id),
@@ -157,7 +163,7 @@ export default async function quizView(params = {}) {
       prompt = h('div', { class: 'quiz-text' }, h('span', { class: 'quiz-q' }, 'Botanischer Name von'), h('strong', { class: 'quiz-big' }, p.deName));
     } else if (st.mode === 'mc-german') {
       prompt = h('div', { class: 'quiz-text' }, h('span', { class: 'quiz-q' }, 'Deutscher Name von'), h('strong', { class: 'quiz-big latin' }, p.latinName,
-        h('button', { type: 'button', class: 'icon-btn speak', 'aria-label': 'Vorlesen', onclick: () => speak(p.latinName, app.settings?.speechLang) }, icon('volume', 20))));
+        isOn('speechOut') ? h('button', { type: 'button', class: 'icon-btn speak', 'aria-label': 'Vorlesen', onclick: () => speak(p.latinName, app.settings?.speechLang) }, icon('volume', 20)) : null));
     } else {
       prompt = h('div', { class: 'quiz-text' }, h('span', { class: 'quiz-q' }, 'Welche Pflanze ist gemeint?'), h('p', { class: 'quiz-features pre' }, p.features));
     }
@@ -249,7 +255,7 @@ export default async function quizView(params = {}) {
         judge(checkAnswer(input.value, spokenAnswers(card, st.expect)));
       };
       input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); check(); } });
-      const mic = speechSupported() ? micButton({
+      const mic = speechSupported() && isOn('speechIn') ? micButton({
         getLang: () => app.settings.speechInLang || 'de-DE',
         getPhrases: speechPhrases,
         onResult: alts => {

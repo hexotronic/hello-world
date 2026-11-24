@@ -6,6 +6,7 @@ import { getPhoto, displayName } from './db.js';
 import { MONTHS_SHORT, MONTHS, formatMonths, speak } from './util.js';
 import { toxicityLabel, hintText, mainName, mainIsLatin, otherName, photoName, safeFileName } from './plants.js';
 import { shareFile } from './backup.js';
+import { isOn } from './features.js';
 
 export function monthBar(months, { compact = false } = {}) {
   const set = new Set(months || []);
@@ -30,24 +31,24 @@ export function herbariumLabel(card, { speechLang = 'de-DE' } = {}) {
   const main = mainName(p) || custom;
   const mainLatin = mainIsLatin(p);
   const other = otherName(p);
-  const say = text => iconBtn('volume', `„${text}“ vorlesen`, e => { e.stopPropagation(); speak(text, speechLang); }, { class: 'speak' });
+  const say = text => !isOn('speechOut') ? null : iconBtn('volume', `„${text}“ vorlesen`, e => { e.stopPropagation(); speak(text, speechLang); }, { class: 'speak' });
   return h('section', { class: 'herb-label', 'aria-label': 'Pflanzenetikett' },
     h('div', { class: 'hl-head' },
-      h('span', { class: 'hl-kicker' }, p.family || 'Familie unbekannt'),
-      tox ? h('span', { class: 'tox tox-' + (p.toxicity || 'unknown') }, tox) : null),
+      h('span', { class: 'hl-kicker' }, isOn('field:family') ? (p.family || 'Familie unbekannt') : 'Pflanze'),
+      tox && isOn('field:toxicity') ? h('span', { class: 'tox tox-' + (p.toxicity || 'unknown') }, tox) : null),
     h('div', { class: 'hl-names' },
       h('div', { class: 'hl-de' + (mainLatin ? ' latin' : '') }, main || '—', main ? say(main) : null),
       other ? h('div', { class: mainLatin ? 'hl-sub' : 'hl-latin' }, other, say(other)) : null),
     h('dl', { class: 'hl-rows' },
-      row('Lebensform', (p.lifeForm || []).join(' · ')),
-      row('Merkmale', p.features, 'pre'),
-      (p.bloom || []).length ? h('div', { class: 'hl-row' }, h('dt', null, 'Blütezeit'), h('dd', null, monthBar(p.bloom), h('span', { class: 'hl-months' }, formatMonths(p.bloom)))) : null,
-      row('Standort', p.habitat, 'pre'),
-      (p.usesList?.length || p.uses) ? h('div', { class: 'hl-row' }, h('dt', null, 'Verwendung'), h('dd', null,
+      isOn('field:lifeForm') ? row('Lebensform', (p.lifeForm || []).join(' · ')) : null,
+      isOn('field:features') ? row('Merkmale', p.features, 'pre') : null,
+      (p.bloom || []).length && isOn('field:bloom') ? h('div', { class: 'hl-row' }, h('dt', null, 'Blütezeit'), h('dd', null, monthBar(p.bloom), h('span', { class: 'hl-months' }, formatMonths(p.bloom)))) : null,
+      isOn('field:habitat') ? row('Standort', p.habitat, 'pre') : null,
+      (p.usesList?.length || p.uses) && isOn('field:uses') ? h('div', { class: 'hl-row' }, h('dt', null, 'Verwendung'), h('dd', null,
         p.usesList?.length ? h('div', { class: 'hl-tags' }, p.usesList.map(u => h('span', { class: 'hl-tag' }, u))) : null,
         p.uses ? h('div', { class: 'pre' }, p.uses) : null)) : null,
-      row('Verwechslung', p.confusion, 'pre warn'),
-      row('Notizen', p.notes, 'pre'),
+      isOn('field:confusion') ? row('Verwechslung', p.confusion, 'pre warn') : null,
+      isOn('field:notes') ? row('Notizen', p.notes, 'pre') : null,
       card.back ? row('Rückseite', card.back, 'pre') : null,
       custom && custom !== main ? row('Kartenname', custom) : null));
 }

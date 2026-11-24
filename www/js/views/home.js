@@ -3,6 +3,7 @@ import { h, topbar, iconBtn, btn, promptDialog, emptyState, toast } from '../ui.
 import { icon } from '../icons.js';
 import { listDecks, allCards, logsSince, createDeck, getMeta, setMeta } from '../db.js';
 import { cloudSupported, getCloud, providerLabel, ago } from '../cloud.js';
+import { isOn } from '../features.js';
 import { deckCounts, dayStart } from '../srs.js';
 import { bloomsIn } from '../plants.js';
 import { MONTHS } from '../util.js';
@@ -60,7 +61,7 @@ export default async function homeView() {
 
   // Cloud-Sicherung: Status oder Einladung
   let cloudEl = null;
-  if (cloudSupported) {
+  if (cloudSupported && isOn('cloudHint')) {
     const [c, dismissed] = await Promise.all([getCloud(), getMeta('cloudBannerDismissed')]);
     if (c.uri) {
       cloudEl = h('button', { type: 'button', class: 'cloud-status' + (c.lastError ? ' err' : ''), onclick: () => app.go('settings', { focus: 'cloud' }) },
@@ -91,7 +92,7 @@ export default async function homeView() {
         h('span', { class: 'legend' },
           h('i', { class: 'dot-new' }), 'neu ', h('i', { class: 'dot-learn' }), 'lernen ', h('i', { class: 'dot-due' }), 'fällig'))),
     cloudEl,
-    blooming.length ? h('button', {
+    blooming.length && isOn('bloomBanner') && isOn('field:bloom') ? h('button', {
       class: 'bloom-banner', type: 'button',
       onclick: () => app.go('browse', { filter: 'bloom' }),
     }, icon('calendar', 20), h('span', null, h('strong', null, `Blüht im ${MONTHS[month - 1]}: `), `${blooming.length} deiner Pflanzen`), icon('chevron', 18)) : null,
@@ -102,7 +103,7 @@ export default async function homeView() {
         btn('Beispielstapel laden', async () => { await createSampleDeck(); app.reload(); }, { iconName: 'flower' })),
     decks.length ? h('div', { class: 'home-actions' },
       btn('Neuer Stapel', async () => { if (await newDeckFlow()) app.reload(); }, { iconName: 'layers' }),
-      btn('Fotos schnell erfassen', () => app.go('quick', {}), { iconName: 'camera' })) : null,
+      isOn('quick') ? btn('Fotos schnell erfassen', () => app.go('quick', {}), { iconName: 'camera' }) : null) : null,
     h('button', { class: 'fab', type: 'button', 'aria-label': 'Karte hinzufügen', onclick: addCard }, icon('plus', 26)));
 
   return { el };

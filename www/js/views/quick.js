@@ -12,6 +12,7 @@ import { newDeckFlow } from './home.js';
 import { cloudSoon } from '../cloud.js';
 import { pickCard, rememberTarget } from '../cardpicker.js';
 import { lookupPlant, applyFacts, enrichLater } from '../plantfacts.js';
+import { isOn } from '../features.js';
 
 const TARGET_KEY = 'quickTarget';
 
@@ -339,9 +340,9 @@ export default async function quickView(params = {}) {
       h('div', { class: 'quick-item' },
         h('figure', { class: 'quick-photo' }, h('img', { src: current.url, alt: 'Ausgewähltes Foto' })),
         h('div', { class: 'form' },
-          first, names, match, second, fam, fams,
-          h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Lebensform (optional)'), lifePicker),
-          h('div', { class: 'grid2' }, cap, tags),
+          first, names, match, second, isOn('field:family') ? fam : null, fams,
+          isOn('field:lifeForm') ? h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Lebensform (optional)'), lifePicker) : null,
+          h('div', { class: 'grid2' }, cap, isOn('field:tags') ? tags : null),
           h('div', { class: 'btn-col' },
             btn('Speichern & weiter', () => saveNew(), { kind: 'primary', iconName: 'check' }),
             lastCard ? btn(`Gleiche Pflanze wie eben („${displayName(lastCard)}“)`, () => appendTo(lastCard, cap.value), { iconName: 'plus' }) : null,

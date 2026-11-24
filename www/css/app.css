@@ -905,3 +905,7 @@ body.fullscreen-view .review, body.fullscreen-view .random.playing, body.fullscr
 .facts-status.ok .icon { color: var(--moss); }
 .facts-status.bad .icon { color: var(--c-learn); }
 .autofilled { box-shadow: 0 0 0 3px color-mix(in srgb, var(--moss) 45%, transparent) !important; transition: box-shadow .4s; }
+
+/* Bereiche ein- und ausschalten */
+.feature-group { display: flex; flex-direction: column; gap: 12px; }
+.feature-group + .feature-group { padding-top: 6px; border-top: 1px solid var(--line); }

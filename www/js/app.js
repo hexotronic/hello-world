@@ -6,6 +6,7 @@ import { closeZoom } from './cardview.js';
 import { getSettings, getMeta, setMeta } from './db.js';
 import { setDayStartHour } from './srs.js';
 import { setNameMode, setPhotoNameMode } from './plants.js';
+import { isOn, setFeaturesOff } from './features.js';
 import { createSampleDeck } from './sample.js';
 import { isNative, AppPlugin } from './native.js';
 import { initCloudAuto } from './cloud.js';
@@ -29,9 +30,9 @@ const VIEWS = {
 const NAV = [
   { name: 'home', label: 'Stapel', icon: 'layers' },
   { name: 'browse', label: 'Suchen', icon: 'search' },
-  { name: 'random', label: 'Zufall', icon: 'shuffle' },
-  { name: 'quiz', label: 'Training', icon: 'target' },
-  { name: 'stats', label: 'Statistik', icon: 'chart' },
+  { name: 'random', label: 'Zufall', icon: 'shuffle', feature: 'random' },
+  { name: 'quiz', label: 'Training', icon: 'target', feature: 'quiz' },
+  { name: 'stats', label: 'Statistik', icon: 'chart', feature: 'stats' },
 ];
 
 export const app = {
@@ -52,6 +53,8 @@ async function refreshSettings() {
   setDayStartHour(app.settings.dayStartHour);
   setNameMode(app.settings.nameMode);
   setPhotoNameMode(app.settings.photoNameMode);
+  setFeaturesOff(app.settings.off);
+  buildNav();
   return app.settings;
 }
 
@@ -63,7 +66,9 @@ const viewEl = document.getElementById('view');
 const navEl = document.getElementById('nav');
 
 function buildNav() {
-  navEl.replaceChildren(...NAV.map(n => h('button', {
+  const items = NAV.filter(n => !n.feature || isOn(n.feature));
+  navEl.style.gridTemplateColumns = `repeat(${items.length}, 1fr)`;
+  navEl.replaceChildren(...items.map(n => h('button', {
     type: 'button', class: 'nav-item', dataset: { name: n.name },
     onclick: () => { if (current.name !== n.name || Object.keys(current.params || {}).length) go(n.name, {}, { replace: depth > 0 && NAV.some(x => x.name === current.name) }); },
   }, icon(n.icon, 22), h('span', null, n.label))));
@@ -165,6 +170,8 @@ async function boot() {
   setDayStartHour(app.settings.dayStartHour);
   setNameMode(app.settings.nameMode);
   setPhotoNameMode(app.settings.photoNameMode);
+  setFeaturesOff(app.settings.off);
+  buildNav();
   matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => applyTheme(app.settings.theme));
 
   if (!(await getMeta('seeded'))) {

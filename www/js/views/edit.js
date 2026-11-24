@@ -12,6 +12,7 @@ import { FAMILIES, TOXICITY, CAPTIONS, getNameMode, familyKey } from '../plants.
 import { saveSettings } from '../db.js';
 import { openImageSearch } from '../imagesearch.js';
 import { lookupPlant, applyFacts, FACT_LABELS } from '../plantfacts.js';
+import { isOn } from '../features.js';
 import { MONTHS_ABBR, MONTHS, norm, fmtDate, nameFromFilename } from '../util.js';
 import { newDeckFlow } from './home.js';
 
@@ -78,7 +79,7 @@ export default async function editView({ id, deckId, type }) {
       h('div', { class: 'ph-add' },
         h('button', { type: 'button', class: 'ph-add-btn', onclick: () => addPhotos('environment') }, icon('camera', 26), h('span', null, 'Kamera')),
         h('button', { type: 'button', class: 'ph-add-btn', onclick: () => addPhotos() }, icon('image', 26), h('span', null, 'Galerie')),
-        h('button', { type: 'button', class: 'ph-add-btn', onclick: () => webSearch() }, icon('globe', 26), h('span', null, 'Internet'))));
+        isOn('webImages') ? h('button', { type: 'button', class: 'ph-add-btn', onclick: () => webSearch() }, icon('globe', 26), h('span', null, 'Internet')) : null));
   }
 
   /** Beispielbilder zum eingegebenen (botanischen) Namen im Internet suchen. */
@@ -333,6 +334,17 @@ export default async function editView({ id, deckId, type }) {
       h('div', { class: 'fact' }, h('span', { class: 'fact-v' }, s.lapses || 0), h('span', { class: 'fact-l' }, 'Vergessen')),
       h('div', { class: 'fact' }, h('span', { class: 'fact-v' }, s.ease ? Math.round(s.ease * 100) + ' %' : '–'), h('span', { class: 'fact-l' }, 'Leichtigkeit'))),
     h('p', { class: 'muted small' }, `Erstellt ${fmtDate(card.created)} · geändert ${fmtDate(card.modified)}`)) : null;
+
+  // Ausgeschaltete Felder ausblenden (Werte bleiben erhalten und werden mitgespeichert)
+  const optional = {
+    family: [famInput], lifeForm: [lifePicker], features: [featInput], bloom: [bloomRow], habitat: [habInput], toxicity: [toxSelect],
+    uses: [usesPicker], confusion: [confInput], notes: [notesInput], question: [questionInput], tags: [tagsInput, tagChips],
+  };
+  for (const [key, els] of Object.entries(optional)) {
+    if (isOn('field:' + key)) continue;
+    for (const el of els) (el.closest('.field') || el).hidden = true;
+  }
+  if (app.settings.autoFacts === false) factsBar.hidden = true;
 
   form.append(...[
     field('Stapel', deckSelect),
