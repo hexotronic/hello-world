@@ -5,7 +5,8 @@ import { h, topbar, btn, field, pickFiles, toast, emptyState, chipPicker, segmen
 import { icon } from '../icons.js';
 import { listDecks, allCards, getCard, emptyCard, saveCard, addPhoto, setMeta, getMeta, displayName } from '../db.js';
 import { processImage, blobURL, photoURL } from '../images.js';
-import { FAMILIES, CAPTIONS, getNameMode } from '../plants.js';
+import { FAMILIES, CAPTIONS, getNameMode, photoBaseName } from '../plants.js';
+import { isNative, CloudFile, readNativeFile } from '../native.js';
 import { norm, nameFromFilename } from '../util.js';
 import { newDeckFlow } from './home.js';
 import { cloudSoon } from '../cloud.js';
@@ -20,8 +21,12 @@ export default async function quickView(params = {}) {
   let deckId = params.deckId || (decks.some(d => d.id === last) ? last : decks[0]?.id);
   const root = h('div', { class: 'page quick' });
 
+  // files: [{ name, load: () => Promise<File>, uri? }] – uri = Originalfoto in der Galerie (nur Android)
   let files = [];
   let i = 0;
+  // Originalfotos, die am Ende umbenannt werden: { uri, cardId, photoId }
+  let renameJobs = [];
+  let renameNote = '';
   let created = 0, appended = 0, skipped = 0;
   let lastCard = null;
   let stickyTags = '';
@@ -118,12 +123,31 @@ export default async function quickView(params = {}) {
       h('div', { class: 'quick-body' }, modeSwitch, section));
   }
 
+  const nativeGallery = () => isNative && CloudFile && app.settings.renameOriginals !== false;
+
   async function choose(capture) {
     if (mode === 'existing' && !target && !(await chooseTarget())) return;
-    const picked = await pickFiles({ multiple: !capture, capture });
-    if (!picked.length) return;
-    files = picked;
+    if (!capture && nativeGallery()) {
+      // Android: eigene Auswahl, damit die Originalfotos später umbenannt werden können
+      let res;
+      try {
+        res = await CloudFile.pickImages({ multiple: true });
+      } catch (err) {
+        if (err?.code !== 'CANCELLED') toast('Fotos konnten nicht geöffnet werden: ' + (err?.message || err));
+        return;
+      }
+      if (!res.items?.length) return;
+      files = res.items.map(it => ({
+        name: it.name, uri: it.uri,
+        load: async () => { const blob = await readNativeFile(it.path); return new File([blob], it.name, { type: blob.type || 'image/jpeg' }); },
+      }));
+    } else {
+      const picked = await pickFiles({ multiple: !capture, capture });
+      if (!picked.length) return;
+      files = picked.map(f => ({ name: f.name, load: async () => f }));
+    }
     i = 0;
+    renameNote = '';
     if (mode === 'new') await setMeta('lastDeck', deckId);
     loadCurrent();
   }
@@ -132,7 +156,7 @@ export default async function quickView(params = {}) {
     if (i >= files.length) return renderDone();
     root.replaceChildren(topbar({ title: `Foto ${i + 1} von ${files.length}`, back: renderDone }), h('div', { class: 'boot' }, icon('image', 32), h('p', null, 'Foto wird vorbereitet …')));
     try {
-      const data = await processImage(files[i]);
+      const data = await processImage(await files[i].load());
       current = { file: files[i], data, url: blobURL(data.blob) };
       if (mode === 'existing' && target) renderTargetItem();
       else renderItem();
@@ -144,15 +168,44 @@ export default async function quickView(params = {}) {
     }
   }
 
+  /** Originalfoto merken, damit es am Ende nach der Pflanze benannt wird. */
+  function queueRename(fileEntry, cardId, photoId) {
+    if (fileEntry?.uri) renameJobs.push({ uri: fileEntry.uri, cardId, photoId });
+  }
+
   /** Foto an eine vorhandene Karte anhängen (Karte frisch laden, damit nichts überschrieben wird). */
-  async function appendPhoto(cardId, data, caption) {
+  async function appendPhoto(cardId, data, caption, fileEntry) {
     const card = await getCard(cardId);
     if (!card) throw new Error('Die Karte gibt es nicht mehr.');
     const p = await addPhoto({ ...data, caption }, card.id);
     card.photoIds = [...(card.photoIds || []), p.id];
     await saveCard(card);
+    queueRename(fileEntry, card.id, p.id);
     appended++;
     return card;
+  }
+
+  /** Benennt alle gemerkten Originalfotos in der Galerie um (Android fragt einmal um Erlaubnis). */
+  async function renameOriginals() {
+    if (!renameJobs.length || !CloudFile) return;
+    const jobs = renameJobs;
+    renameJobs = [];
+    const items = [];
+    for (const j of jobs) {
+      const card = await getCard(j.cardId);
+      if (!card) continue;
+      const idx = (card.photoIds || []).indexOf(j.photoId);
+      items.push({ uri: j.uri, name: `${photoBaseName(card)} ${idx >= 0 ? idx + 1 : 1}` });
+    }
+    try {
+      const res = await CloudFile.renameImages({ items });
+      const failed = res.failed || [];
+      renameNote = `${res.renamed} ${res.renamed === 1 ? 'Originalfoto' : 'Originalfotos'} in der Galerie umbenannt`
+        + (failed.length ? ` · ${failed.length} nicht möglich (${failed[0].reason})` : '');
+    } catch (err) {
+      renameNote = 'Originalfotos konnten nicht umbenannt werden: ' + (err?.message || err);
+    }
+    CloudFile.clearPicked?.().catch(() => {});
   }
 
   function next() {
@@ -169,7 +222,7 @@ export default async function quickView(params = {}) {
 
     async function addThis() {
       try {
-        target = await appendPhoto(target.id, current.data, cap.value);
+        target = await appendPhoto(target.id, current.data, cap.value, current.file);
         next();
       } catch (err) {
         toast(err.message);
@@ -179,13 +232,13 @@ export default async function quickView(params = {}) {
     async function addAll() {
       const stop = toast(`${remaining} Fotos werden hinzugefügt …`, { duration: 120000 });
       try {
-        target = await appendPhoto(target.id, current.data, cap.value);
+        target = await appendPhoto(target.id, current.data, cap.value, current.file);
         URL.revokeObjectURL(current.url);
         current = null;
         for (let k = i + 1; k < files.length; k++) {
           try {
-            const data = await processImage(files[k]);
-            target = await appendPhoto(target.id, data, '');
+            const data = await processImage(await files[k].load());
+            target = await appendPhoto(target.id, data, '', files[k]);
           } catch {
             skipped++;
           }
@@ -253,6 +306,7 @@ export default async function quickView(params = {}) {
       const p = await addPhoto({ ...current.data, caption: cap.value }, card.id);
       card.photoIds = [p.id];
       await saveCard(card);
+      queueRename(current.file, card.id, p.id);
       everything.push(card);
       remember(card);
       lastCard = card;
@@ -262,7 +316,7 @@ export default async function quickView(params = {}) {
 
     async function appendTo(card, caption) {
       try {
-        lastCard = await appendPhoto(card.id, current.data, caption);
+        lastCard = await appendPhoto(card.id, current.data, caption, current.file);
         toast(`Foto zu „${displayName(lastCard)}“ hinzugefügt`);
         next();
       } catch (err) {
@@ -289,9 +343,13 @@ export default async function quickView(params = {}) {
     setTimeout(() => first.focus(), 60);
   }
 
-  function renderDone() {
+  async function renderDone() {
     cloudSoon();
     if (current) { URL.revokeObjectURL(current.url); current = null; }
+    if (renameJobs.length) {
+      root.replaceChildren(topbar({ title: 'Erfassung beendet' }), h('div', { class: 'boot' }, icon('image', 32), h('p', null, 'Originalfotos werden umbenannt …')));
+      await renameOriginals();
+    }
     const withTarget = mode === 'existing' && target;
     const summary = withTarget && !created
       ? `${appended} ${appended === 1 ? 'Foto' : 'Fotos'} zu „${displayName(target)}“ hinzugefügt`
@@ -303,6 +361,7 @@ export default async function quickView(params = {}) {
           h('div', { class: 'finished-icon' }, icon('check', 36)),
           h('h2', null, summary),
           skipped ? h('p', { class: 'muted' }, `${skipped} übersprungen`) : null,
+          renameNote ? h('p', { class: 'muted' }, renameNote) : null,
           withTarget
             ? h('div', { class: 'finished-actions' },
               btn('Noch ein Foto (Kamera)', () => choose('environment'), { kind: 'primary', iconName: 'camera' }),

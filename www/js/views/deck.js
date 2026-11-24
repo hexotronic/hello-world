@@ -3,7 +3,7 @@ import { h, topbar, iconBtn, btn, dialog, field, toggle, segmented, menu, confir
 import { icon } from '../icons.js';
 import { getDeck, saveDeck, cardsInDeck, logsSince, deleteDeck, setMeta } from '../db.js';
 import { deckCounts, deckConfig, dayStart, dayStartPlus, dayIndex, formatDelay, maturity } from '../srs.js';
-import { exportBackup } from '../backup.js';
+import { exportBackup, exportPhotosZip } from '../backup.js';
 
 function parseSteps(s) {
   return String(s).split(/[\s,;]+/).map(Number).filter(n => Number.isFinite(n) && n > 0);
@@ -89,6 +89,7 @@ export default async function deckView({ id }) {
       { label: 'Optionen', icon: 'sliders', value: 'options' },
       { label: 'Heute mehr neue Karten', icon: 'plus', value: 'extra' },
       { label: 'Stapel sichern (Export)', icon: 'download', value: 'export' },
+      { label: 'Fotos als ZIP exportieren', icon: 'image', value: 'zip' },
       { label: 'Stapel löschen', icon: 'trash', value: 'delete', danger: true },
     ]);
     if (choice === 'options') { if (await deckOptionsDialog(deck)) app.reload(); }
@@ -105,6 +106,7 @@ export default async function deckView({ id }) {
       }
     }
     if (choice === 'export') exportBackup({ deckId: deck.id });
+    if (choice === 'zip') exportPhotosZip({ deckId: deck.id });
     if (choice === 'delete') {
       const ok = await confirmDialog('Stapel löschen?', `„${deck.name}“ mit ${cards.length} Karten und ${photos} Fotos wird endgültig gelöscht.`);
       if (ok) { await deleteDeck(deck.id); toast('Stapel gelöscht'); app.go('home', {}, { replace: true }); }

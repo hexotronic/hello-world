@@ -5,7 +5,7 @@ import { closeTopDialog, toast } from './ui.js';
 import { closeZoom } from './cardview.js';
 import { getSettings, getMeta, setMeta } from './db.js';
 import { setDayStartHour } from './srs.js';
-import { setNameMode } from './plants.js';
+import { setNameMode, setPhotoNameMode } from './plants.js';
 import { createSampleDeck } from './sample.js';
 import { isNative, AppPlugin } from './native.js';
 import { initCloudAuto } from './cloud.js';
@@ -51,6 +51,7 @@ async function refreshSettings() {
   applyTheme(app.settings.theme);
   setDayStartHour(app.settings.dayStartHour);
   setNameMode(app.settings.nameMode);
+  setPhotoNameMode(app.settings.photoNameMode);
   return app.settings;
 }
 
@@ -163,6 +164,7 @@ async function boot() {
   applyTheme(app.settings.theme);
   setDayStartHour(app.settings.dayStartHour);
   setNameMode(app.settings.nameMode);
+  setPhotoNameMode(app.settings.photoNameMode);
   matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => applyTheme(app.settings.theme));
 
   if (!(await getMeta('seeded'))) {

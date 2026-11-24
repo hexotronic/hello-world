@@ -4,7 +4,8 @@ import { icon } from './icons.js';
 import { photoURL } from './images.js';
 import { getPhoto, displayName } from './db.js';
 import { MONTHS_SHORT, MONTHS, formatMonths, speak } from './util.js';
-import { toxicityLabel, hintText, mainName, mainIsLatin, otherName } from './plants.js';
+import { toxicityLabel, hintText, mainName, mainIsLatin, otherName, photoName, safeFileName } from './plants.js';
+import { shareFile } from './backup.js';
 
 export function monthBar(months, { compact = false } = {}) {
   const set = new Set(months || []);
@@ -52,7 +53,7 @@ export function herbariumLabel(card, { speechLang = 'de-DE' } = {}) {
 }
 
 /** Foto-Bereich mit Punkten zum Wechseln und Zoom per Antippen. */
-export function photoStage(card, startIndex = 0, { onChange, single = false } = {}) {
+export function photoStage(card, startIndex = 0, { onChange, single = false, named = false } = {}) {
   const all = card.photoIds || [];
   const start = Math.min(Math.max(0, startIndex), all.length - 1);
   // single: nur dieses eine Foto zeigen, kein Wechseln zu den anderen (auch nicht im Vollbild)
@@ -61,7 +62,7 @@ export function photoStage(card, startIndex = 0, { onChange, single = false } = 
   const img = h('img', { class: 'stage-img', alt: 'Foto der Karte', draggable: 'false' });
   const caption = h('span', { class: 'stage-caption', hidden: true });
   const dots = h('div', { class: 'stage-dots' });
-  const stage = h('figure', { class: 'stage', onclick: () => openZoom(ids, index) },
+  const stage = h('figure', { class: 'stage', onclick: () => openZoom(ids, index, named ? { card } : {}) },
     img, caption, ids.length > 1 ? dots : null,
     h('span', { class: 'stage-zoom' }, icon('zoom', 18)));
 
@@ -95,7 +96,8 @@ export function photoStage(card, startIndex = 0, { onChange, single = false } = 
 }
 
 /** Vollbildansicht mit Zoom (Doppeltippen/Klick) und Blättern. */
-export function openZoom(ids, start = 0) {
+/** card: nur übergeben, wenn der Name gezeigt werden darf (z. B. nach dem Aufdecken). */
+export function openZoom(ids, start = 0, { card } = {}) {
   if (!ids?.length) return;
   let i = start;
   let zoomed = false;
@@ -109,7 +111,7 @@ export function openZoom(ids, start = 0) {
     scroller.classList.remove('zoomed');
     img.src = (await photoURL(ids[i], 'full')) || '';
     const meta = await getPhoto(ids[i]);
-    cap.textContent = [meta?.caption, ids.length > 1 ? `${i + 1} / ${ids.length}` : ''].filter(Boolean).join(' · ');
+    cap.textContent = [card ? photoName(card, ids[i]) : '', meta?.caption, ids.length > 1 ? `${i + 1} / ${ids.length}` : ''].filter(Boolean).join(' · ');
   };
   scroller.addEventListener('click', e => {
     const rect = img.getBoundingClientRect();
@@ -132,6 +134,10 @@ export function openZoom(ids, start = 0) {
       ids.length > 1 ? iconBtn('back', 'Vorheriges Foto', () => go(-1)) : h('span'),
       cap,
       h('div', { class: 'zoom-right' },
+        card ? iconBtn('upload', 'Foto teilen oder speichern', async () => {
+          const meta = await getPhoto(ids[i]);
+          if (meta?.blob) shareFile(meta.blob, `${safeFileName(photoName(card, ids[i]))}.jpg`).catch(() => {});
+        }) : null,
         ids.length > 1 ? iconBtn('chevron', 'Nächstes Foto', () => go(1)) : null,
         iconBtn('close', 'Schließen', close))));
   wrap._close = close;
@@ -157,7 +163,7 @@ export function cardFace(card, opts = {}) {
   const showPhotos = ids.length && (isPlant || card.photosOnFront || revealed);
   const parts = [];
 
-  if (showPhotos) parts.push(photoStage(card, photoIndex, { onChange: opts.onPhotoChange, single: !!opts.singlePhoto && !revealed }).el);
+  if (showPhotos) parts.push(photoStage(card, photoIndex, { onChange: opts.onPhotoChange, single: !!opts.singlePhoto && !revealed, named: revealed }).el);
 
   if (isPlant) {
     const q = (card.front || '').trim() || (ids.length ? 'Welche Pflanze ist das?' : 'Welche Pflanze hat diese Merkmale?');

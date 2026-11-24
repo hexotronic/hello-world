@@ -117,6 +117,8 @@ export const SETTINGS_DEFAULTS = {
   nameMode: 'de',           // Hauptname für Pflanzen: 'de' oder 'la'
   lifeForms: DEFAULT_LIFE_FORMS,  // Auswahlliste Lebensformen
   usesList: DEFAULT_USES,         // Auswahlliste Verwendungszwecke
+  photoNameMode: '',              // Fotonamen: '' = wie Hauptname, 'de' oder 'la'
+  renameOriginals: true,          // Android: Originalfotos in der Galerie umbenennen
 };
 
 export async function getMeta(key, fallback = null) {

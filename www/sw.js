@@ -1,5 +1,5 @@
 // Offline-Cache: App-Dateien werden beim ersten Laden gespeichert.
-const CACHE = 'florakarten-v6';
+const CACHE = 'florakarten-v7';
 const FILES = [
   './',
   'css/app.css',
@@ -32,6 +32,7 @@ const FILES = [
   'js/native.js',
   'js/cloud.js',
   'js/cardpicker.js',
+  'js/zip.js',
   'js/views/cloudsection.js',
   'vendor/capacitor.js',
   'manifest.webmanifest',

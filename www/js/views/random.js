@@ -115,7 +115,7 @@ export default async function randomView(params = {}) {
     const nameLatin = card.type === 'plant' && mainIsLatin(p);
     const second = card.type === 'plant' ? otherName(p) : '';
     const img = h('img', { class: 'rnd-img', src: url || '', alt: 'Zufälliges Foto', draggable: 'false' });
-    const fig = h('figure', { class: 'rnd-photo', onclick: () => openZoom([pid]) }, img,
+    const fig = h('figure', { class: 'rnd-photo', onclick: () => openZoom([pid], 0, s.revealed ? { card } : {}) }, img,
       meta?.caption ? h('span', { class: 'stage-caption' }, meta.caption) : null);
 
     const answerBox = h('div', { class: 'rnd-answer' + (s.revealed ? ' show' : '') });
@@ -239,7 +239,7 @@ export default async function randomView(params = {}) {
       const tile = h('button', {
         type: 'button', class: 'g-tile', onclick: () => {
           if (!showNames && !tile.classList.contains('revealed')) { tile.classList.add('revealed'); return; }
-          openZoom(card.photoIds, card.photoIds.indexOf(pid));
+          openZoom(card.photoIds, card.photoIds.indexOf(pid), { card });
         },
       }, lazyPhoto(h('img', { alt: '' }), pid, 'thumb'), h('span', { class: 'g-name' }, displayName(card)));
       return tile;

@@ -1,18 +1,18 @@
 // Einstellungen, Sicherung, Import, Speicher.
 import { app } from '../app.js';
-import { h, topbar, btn, segmented, field, dialog, confirmDialog, toast, pickFiles } from '../ui.js';
+import { h, topbar, btn, segmented, field, toggle, dialog, confirmDialog, toast, pickFiles } from '../ui.js';
 import { icon } from '../icons.js';
 import { saveSettings, getMeta, setMeta, listDecks, wipeAll, raw } from '../db.js';
 import { setDayStartHour } from '../srs.js';
-import { setNameMode, DEFAULT_LIFE_FORMS, DEFAULT_USES } from '../plants.js';
-import { exportBackup, importBackup, parseTextImport, importTextCards } from '../backup.js';
+import { setNameMode, setPhotoNameMode, DEFAULT_LIFE_FORMS, DEFAULT_USES } from '../plants.js';
+import { exportBackup, importBackup, parseTextImport, importTextCards, exportPhotosZip } from '../backup.js';
 import { createSampleDeck } from '../sample.js';
 import { forgetAll } from '../images.js';
 import { fmtDate, fmtBytes, norm } from '../util.js';
 import { isNative } from '../native.js';
 import { cloudSection } from './cloudsection.js';
 
-const VERSION = '1.5.0';
+const VERSION = '1.6.0';
 
 export default async function settingsView(params = {}) {
   const s = app.settings;
@@ -24,6 +24,7 @@ export default async function settingsView(params = {}) {
     if ('theme' in patch) app.applyTheme(app.settings.theme);
     if ('dayStartHour' in patch) setDayStartHour(app.settings.dayStartHour);
     if ('nameMode' in patch) setNameMode(app.settings.nameMode);
+    if ('photoNameMode' in patch) setPhotoNameMode(app.settings.photoNameMode);
   };
 
   /** Bearbeitbare Auswahlliste (Lebensformen, Verwendungszwecke). */
@@ -174,6 +175,21 @@ export default async function settingsView(params = {}) {
           { value: 'de', label: 'Deutsch' }, { value: 'la', label: 'Botanisch (Latein)' },
         ], s.nameMode, v => update({ nameMode: v }), { id: 'set-namemode' }),
           h('span', { class: 'field-hint' }, 'Gilt für Listen und Sortierung, die Rückseite beim Lernen, Tipps, Zufallsfotos, Training und die Reihenfolge beim Erfassen. Ein eigener Kartenname hat in Listen weiterhin Vorrang.'))),
+
+      h('section', { class: 'set-sec', id: 'photos' },
+        h('h2', { class: 'section-h' }, 'Fotos'),
+        h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Fotos benennen nach'), segmented([
+          { value: '', label: 'Wie Hauptname' }, { value: 'de', label: 'Deutsch' }, { value: 'la', label: 'Botanisch' },
+        ], s.photoNameMode || '', v => update({ photoNameMode: v }), { id: 'set-photoname' }),
+          h('span', { class: 'field-hint' }, 'Fotos heißen dann z. B. „Löwenzahn 3“ bzw. „Taraxacum officinale 3“ – im Vollbild nach dem Aufdecken, beim Teilen eines Fotos und im ZIP-Export.')),
+        native
+          ? toggle('Originalfotos in der Galerie umbenennen', s.renameOriginals !== false, v => update({ renameOriginals: v }), {
+            id: 'set-rename',
+            hint: 'Gilt für Fotos, die du bei „Fotos schnell erfassen“ aus der Galerie wählst. Am Ende fragt Android einmal um Erlaubnis. Kamera-Fotos und reine Cloud-Fotos (z. B. nur in Google Fotos) lassen sich nicht umbenennen.',
+          })
+          : h('p', { class: 'muted small' }, 'Originalfotos in der Galerie umbenennen geht nur in der Android-App.'),
+        h('div', { class: 'btn-col' },
+          btn('Alle Fotos als ZIP exportieren', () => exportPhotosZip(), { iconName: 'download' }))),
 
       h('section', { class: 'set-sec', id: 'lists' },
         h('h2', { class: 'section-h' }, 'Auswahllisten'),

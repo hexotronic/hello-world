@@ -7,7 +7,9 @@ import {
 } from './db.js';
 import { toast } from './ui.js';
 import { forgetAll } from './images.js';
-import { isNative, Filesystem, Share } from './native.js';
+import { isNative, Filesystem, Share, CloudFile } from './native.js';
+import { buildZip } from './zip.js';
+import { photoBaseName, safeFileName } from './plants.js';
 
 function blobToDataURL(blob) {
   return new Promise((resolve, reject) => {
@@ -75,6 +77,80 @@ export async function writeBackupToCache(filename, opts) {
   }, opts);
   const { uri } = await Filesystem.getUri({ path: filename, directory: 'CACHE' });
   return { path: uri, ...info };
+}
+
+/** Binärdatei (Blob) stückweise in den App-Cache schreiben (Android). Liefert die file://-URI. */
+export async function writeBlobToCache(blob, filename) {
+  const chunk = 3 * 1024 * 1024;
+  for (let i = 0; i < Math.max(1, blob.size); i += chunk) {
+    const url = await blobToDataURL(blob.slice(i, i + chunk));
+    const data = url.slice(url.indexOf(',') + 1);
+    if (i === 0) await Filesystem.writeFile({ path: filename, data, directory: 'CACHE' });
+    else await Filesystem.appendFile({ path: filename, data, directory: 'CACHE' });
+  }
+  return (await Filesystem.getUri({ path: filename, directory: 'CACHE' })).uri;
+}
+
+/** Eine Datei teilen bzw. speichern: Android-Teilen-Dialog, auf Handys Web-Teilen, sonst Download. */
+export async function shareFile(blob, filename) {
+  if (isNative && Filesystem && Share) {
+    const uri = await writeBlobToCache(blob, filename);
+    await Share.share({ title: filename, files: [uri], dialogTitle: filename });
+    return;
+  }
+  const file = new File([blob], filename, { type: blob.type || 'application/octet-stream' });
+  if (/Android|iPhone|iPad/i.test(navigator.userAgent) && navigator.canShare?.({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: filename }); return; } catch (e) { if (e?.name === 'AbortError') return; }
+  }
+  downloadBlob(blob, filename);
+}
+
+/** Alle Fotos (eines Stapels) als ZIP mit Pflanzennamen: Stapel/Name 1.jpg … */
+export async function exportPhotosZip({ deckId } = {}) {
+  const stop = toast('Fotos werden zusammengestellt …', { duration: 300000 });
+  try {
+    const decks = deckId ? [await getDeck(deckId)] : await listDecks();
+    const deckName = new Map(decks.map(d => [d.id, safeFileName(d.name)]));
+    const cards = (deckId ? await cardsInDeck(deckId) : await allCards()).filter(c => c.photoIds?.length && deckName.has(c.deckId));
+    const used = new Set();
+    const entries = [];
+    for (const c of cards) {
+      const base = safeFileName(photoBaseName(c));
+      for (let k = 0; k < c.photoIds.length; k++) {
+        const p = await getPhoto(c.photoIds[k]);
+        if (!p?.blob) continue;
+        let name = `Florakarten-Fotos/${deckName.get(c.deckId)}/${base} ${k + 1}.jpg`;
+        for (let n = 2; used.has(name.toLowerCase()); n++) name = `Florakarten-Fotos/${deckName.get(c.deckId)}/${base} ${k + 1} (${n}).jpg`;
+        used.add(name.toLowerCase());
+        entries.push({ name, blob: p.blob });
+      }
+    }
+    if (!entries.length) { stop(); toast('Keine Fotos zum Exportieren.'); return; }
+    const zip = await buildZip(entries);
+    const filename = deckId ? `florakarten-fotos-${slug(decks[0].name)}-${stamp()}.zip` : `florakarten-fotos-${stamp()}.zip`;
+    stop();
+    if (isNative && CloudFile && Filesystem) {
+      // „Speichern unter“: Speicherort frei wählen (z. B. Google Drive oder Downloads)
+      let target;
+      try {
+        target = await CloudFile.pickSaveLocation({ fileName: filename, mimeType: 'application/zip' });
+      } catch (err) {
+        if (err?.code === 'CANCELLED') return;
+        throw err;
+      }
+      const busy = toast('ZIP wird gespeichert …', { duration: 300000 });
+      const path = await writeBlobToCache(zip, 'fotos-export.zip');
+      await CloudFile.writeFromFile({ uri: target.uri, path });
+      CloudFile.forget({ uri: target.uri }).catch(() => {});
+      busy();
+    } else {
+      await shareFile(zip, filename);
+    }
+    toast(`${entries.length} Fotos exportiert`);
+  } catch (err) {
+    stop();
+    toast('Export fehlgeschlagen: ' + (err?.message || err), { duration: 6000 });
+  }
 }
 
 function downloadBlob(blob, filename) {

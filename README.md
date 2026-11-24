@@ -46,6 +46,12 @@ Karteikarten-App für Android (und jeden Browser) mit Wiederholung in wachsenden
 - „Aus der Cloud wiederherstellen“ und „Bestehende Sicherung verbinden“ (z. B. auf einem neuen Handy), wahlweise zusammenführen oder ersetzen
 - Ohne Google-Entwicklerkonto und ohne Server: Die App schreibt nur in die eine Datei, die du ausgewählt hast. Andere Cloud-Speicher mit Android-Anbindung (z. B. OneDrive, Nextcloud) funktionieren genauso.
 
+**Fotonamen**
+- Fotos heißen nach der Pflanze, wahlweise deutsch oder botanisch (*Einstellungen → Fotos*), z. B. „Löwenzahn 3“ oder „Taraxacum officinale 3“
+- Sichtbar im Vollbild nach dem Aufdecken; dort lässt sich jedes Foto unter diesem Namen teilen oder speichern
+- **Alle Fotos als ZIP exportieren** (gesamt oder pro Stapel): Ordner je Stapel, Dateien nach Pflanzennamen
+- Android-App: Fotos, die bei „Fotos schnell erfassen“ aus der Galerie gewählt werden, werden **in der Galerie umbenannt** (Android fragt einmal pro Erfassung um Erlaubnis; Android 11 oder neuer; Kamera-Fotos und reine Cloud-Fotos ausgenommen)
+
 **Sonstiges**
 - Statistik: Lernserie, Behaltensquote, Kartenbestand, Prognose der nächsten 14 Tage, Verlauf der letzten 30 Tage, am häufigsten vergessene Karten
 - Sicherung als JSON-Datei inklusive Fotos und Lernverlauf; Einspielen per Zusammenführen oder Ersetzen

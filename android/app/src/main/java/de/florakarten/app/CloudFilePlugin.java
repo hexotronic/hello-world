@@ -1,13 +1,23 @@
 package de.florakarten.app;
 
 import android.app.Activity;
+import android.app.PendingIntent;
+import android.content.ClipData;
 import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Intent;
 import android.content.UriPermission;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Build;
+import android.provider.DocumentsContract;
+import android.provider.MediaStore;
 import android.provider.OpenableColumns;
 import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.IntentSenderRequest;
+import androidx.activity.result.contract.ActivityResultContracts;
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -19,6 +29,9 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
+import org.json.JSONObject;
 
 /**
  * Speichert die Sicherung an einem frei gewählten Ort (z. B. eine Datei im eigenen Google Drive).
@@ -29,6 +42,224 @@ import java.io.OutputStream;
 public class CloudFilePlugin extends Plugin {
 
     private static final int RW = Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION;
+
+    // Umbenennen von Galerie-Fotos (Android 11+ fragt per System-Dialog um Erlaubnis)
+    private ActivityResultLauncher<IntentSenderRequest> writeRequestLauncher;
+    private PluginCall pendingRenameCall;
+    private final List<Uri> pendingMediaUris = new ArrayList<>();
+    private final List<String> pendingMediaNames = new ArrayList<>();
+    private int pendingRenamed;
+    private JSArray pendingFailed;
+
+    @Override
+    public void load() {
+        writeRequestLauncher = getActivity().registerForActivityResult(
+            new ActivityResultContracts.StartIntentSenderForResult(),
+            result -> onWriteRequestResult(result.getResultCode() == Activity.RESULT_OK)
+        );
+    }
+
+    /** Fotos aus der Galerie wählen; liefert pro Foto { uri, name, path } (path = Kopie im Cache). */
+    @PluginMethod
+    public void pickImages(PluginCall call) {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("image/*");
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, Boolean.TRUE.equals(call.getBoolean("multiple", true)));
+        intent.addFlags(RW | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        startActivityForResult(call, intent, "onImagesPicked");
+    }
+
+    @ActivityCallback
+    private void onImagesPicked(PluginCall call, ActivityResult result) {
+        if (call == null) return;
+        Intent data = result.getData();
+        if (result.getResultCode() != Activity.RESULT_OK || data == null) {
+            call.reject("Keine Fotos gewählt", "CANCELLED");
+            return;
+        }
+        final List<Uri> uris = new ArrayList<>();
+        ClipData clip = data.getClipData();
+        if (clip != null) {
+            for (int i = 0; i < clip.getItemCount(); i++) uris.add(clip.getItemAt(i).getUri());
+        } else if (data.getData() != null) {
+            uris.add(data.getData());
+        }
+        getBridge().execute(() -> {
+            ContentResolver resolver = getContext().getContentResolver();
+            File dir = new File(getContext().getCacheDir(), "picked");
+            dir.mkdirs();
+            JSArray items = new JSArray();
+            int n = 0;
+            for (Uri uri : uris) {
+                try {
+                    resolver.takePersistableUriPermission(uri, RW);
+                } catch (Exception ignored) {}
+                String name = describe(uri).getString("name", "foto.jpg");
+                File out = new File(dir, (n++) + "_" + name.replaceAll("[^A-Za-z0-9._-]", "_"));
+                try (InputStream in = resolver.openInputStream(uri); OutputStream os = new FileOutputStream(out)) {
+                    if (in == null) continue;
+                    copy(in, os);
+                    JSObject item = new JSObject();
+                    item.put("uri", uri.toString());
+                    item.put("name", name);
+                    item.put("path", Uri.fromFile(out).toString());
+                    items.put(item);
+                } catch (Exception ignored) {}
+            }
+            JSObject ret = new JSObject();
+            ret.put("items", items);
+            call.resolve(ret);
+        });
+    }
+
+    /** Löscht die Cache-Kopien aus pickImages. */
+    @PluginMethod
+    public void clearPicked(PluginCall call) {
+        File dir = new File(getContext().getCacheDir(), "picked");
+        File[] list = dir.listFiles();
+        if (list != null) for (File f : list) f.delete();
+        call.resolve();
+    }
+
+    /**
+     * Benennt Originalfotos um. items: [{ uri, name }] (name ohne Endung, die Endung bleibt erhalten).
+     * Ergebnis: { renamed, failed: [{ name, reason }] }
+     */
+    @PluginMethod
+    public void renameImages(PluginCall call) {
+        final JSArray items = call.getArray("items");
+        if (items == null) {
+            call.reject("items fehlen");
+            return;
+        }
+        if (pendingRenameCall != null) {
+            call.reject("Umbenennen läuft bereits");
+            return;
+        }
+        getBridge().execute(() -> {
+            ContentResolver resolver = getContext().getContentResolver();
+            int renamed = 0;
+            JSArray failed = new JSArray();
+            List<Uri> mediaUris = new ArrayList<>();
+            List<String> mediaNames = new ArrayList<>();
+            for (int i = 0; i < items.length(); i++) {
+                String newName = "?";
+                try {
+                    JSONObject it = items.getJSONObject(i);
+                    Uri uri = Uri.parse(it.getString("uri"));
+                    newName = buildName(it.getString("name"), describe(uri).getString("name", ""));
+                    if (tryRenameDocument(resolver, uri, newName)) {
+                        renamed++;
+                        continue;
+                    }
+                    Uri media = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        try {
+                            media = MediaStore.getMediaUri(getContext(), uri);
+                        } catch (Exception ignored) {}
+                    }
+                    if (media == null && "media".equals(uri.getAuthority())) media = uri;
+                    if (media != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        mediaUris.add(media);
+                        mediaNames.add(newName);
+                    } else {
+                        failed.put(fail(newName, Build.VERSION.SDK_INT < Build.VERSION_CODES.R
+                            ? "Umbenennen braucht Android 11 oder neuer"
+                            : "Diese Quelle erlaubt kein Umbenennen (z. B. Cloud-Foto)"));
+                    }
+                } catch (Exception e) {
+                    failed.put(fail(newName, String.valueOf(e.getMessage())));
+                }
+            }
+            if (mediaUris.isEmpty() || Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+                call.resolve(result(renamed, failed));
+                return;
+            }
+            try {
+                PendingIntent pi = MediaStore.createWriteRequest(resolver, mediaUris);
+                pendingRenameCall = call;
+                pendingMediaUris.clear();
+                pendingMediaUris.addAll(mediaUris);
+                pendingMediaNames.clear();
+                pendingMediaNames.addAll(mediaNames);
+                pendingRenamed = renamed;
+                pendingFailed = failed;
+                final IntentSenderRequest req = new IntentSenderRequest.Builder(pi.getIntentSender()).build();
+                getBridge().executeOnMainThread(() -> writeRequestLauncher.launch(req));
+            } catch (Exception e) {
+                for (String n : mediaNames) failed.put(fail(n, "Keine Erlaubnis: " + e.getMessage()));
+                call.resolve(result(renamed, failed));
+            }
+        });
+    }
+
+    private void onWriteRequestResult(final boolean granted) {
+        final PluginCall call = pendingRenameCall;
+        if (call == null) return;
+        pendingRenameCall = null;
+        final List<Uri> uris = new ArrayList<>(pendingMediaUris);
+        final List<String> names = new ArrayList<>(pendingMediaNames);
+        final JSArray failed = pendingFailed != null ? pendingFailed : new JSArray();
+        final int base = pendingRenamed;
+        getBridge().execute(() -> {
+            int renamed = base;
+            for (int i = 0; i < uris.size(); i++) {
+                if (!granted) {
+                    failed.put(fail(names.get(i), "Erlaubnis abgelehnt"));
+                    continue;
+                }
+                try {
+                    ContentValues v = new ContentValues();
+                    v.put(MediaStore.MediaColumns.DISPLAY_NAME, names.get(i));
+                    int n = getContext().getContentResolver().update(uris.get(i), v, null, null);
+                    if (n > 0) renamed++;
+                    else failed.put(fail(names.get(i), "Nicht umbenannt"));
+                } catch (Exception e) {
+                    failed.put(fail(names.get(i), String.valueOf(e.getMessage())));
+                }
+            }
+            call.resolve(result(renamed, failed));
+        });
+    }
+
+    private boolean tryRenameDocument(ContentResolver r, Uri uri, String newName) {
+        try {
+            if (!DocumentsContract.isDocumentUri(getContext(), uri)) return false;
+            int flags = 0;
+            try (Cursor c = r.query(uri, new String[] { DocumentsContract.Document.COLUMN_FLAGS }, null, null, null)) {
+                if (c != null && c.moveToFirst()) flags = c.getInt(0);
+            }
+            if ((flags & DocumentsContract.Document.FLAG_SUPPORTS_RENAME) == 0) return false;
+            return DocumentsContract.renameDocument(r, uri, newName) != null;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static String buildName(String base, String currentName) {
+        String ext = ".jpg";
+        int dot = currentName == null ? -1 : currentName.lastIndexOf('.');
+        if (dot > 0 && currentName.length() - dot <= 6) ext = currentName.substring(dot).toLowerCase();
+        String clean = base.replaceAll("[\\\\/:*?\"<>|]", "-").trim();
+        if (clean.isEmpty()) clean = "Foto";
+        if (clean.length() > 100) clean = clean.substring(0, 100).trim();
+        return clean + ext;
+    }
+
+    private static JSObject fail(String name, String reason) {
+        JSObject o = new JSObject();
+        o.put("name", name);
+        o.put("reason", reason);
+        return o;
+    }
+
+    private static JSObject result(int renamed, JSArray failed) {
+        JSObject o = new JSObject();
+        o.put("renamed", renamed);
+        o.put("failed", failed);
+        return o;
+    }
 
     /** Öffnet "Speichern unter". Ergebnis: { uri, name, provider, persistable }. */
     @PluginMethod

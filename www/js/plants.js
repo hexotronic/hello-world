@@ -86,6 +86,28 @@ export function otherName(p) {
   return o && o !== m ? o : '';
 }
 
+// Fotonamen: nach deutschem oder botanischem Namen (Einstellung), leer = wie Hauptname
+let photoNameMode = '';
+export function setPhotoNameMode(mode) {
+  photoNameMode = mode === 'de' || mode === 'la' ? mode : '';
+}
+/** Grundname für Fotos einer Karte, z. B. „Löwenzahn“ oder „Taraxacum officinale“. */
+export function photoBaseName(card) {
+  const p = card?.plant || {};
+  const mode = photoNameMode || nameMode;
+  const n = mode === 'la' ? (p.latinName || p.deName) : (p.deName || p.latinName);
+  return (n || card?.title || (card?.front || '').split('\n')[0] || 'Foto').trim().slice(0, 80);
+}
+/** Name eines Fotos einer Karte, z. B. „Löwenzahn 3“. */
+export function photoName(card, photoId) {
+  const i = (card?.photoIds || []).indexOf(photoId);
+  return `${photoBaseName(card)} ${i >= 0 ? i + 1 : 1}`;
+}
+/** Für Dateinamen ungeeignete Zeichen ersetzen. */
+export function safeFileName(s) {
+  return String(s || '').replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').trim() || 'Foto';
+}
+
 export function primaryName(card) {
   return mainName(card.plant) || card.title || card.back || '';
 }
