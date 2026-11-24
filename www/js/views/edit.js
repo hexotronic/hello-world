@@ -8,7 +8,7 @@ import {
 } from '../db.js';
 import { processImage, photoURL, blobURL, forgetPhoto } from '../images.js';
 import { newSrs, formatDays } from '../srs.js';
-import { FAMILIES, TOXICITY, CAPTIONS } from '../plants.js';
+import { FAMILIES, TOXICITY, CAPTIONS, getNameMode } from '../plants.js';
 import { MONTHS_ABBR, MONTHS, norm, fmtDate, nameFromFilename } from '../util.js';
 import { newDeckFlow } from './home.js';
 
@@ -152,22 +152,32 @@ export default async function editView({ id, deckId, type }) {
   const backInput = h('textarea', { class: 'input', id: 'ed-back', rows: 4, value: card.back, placeholder: 'Antwort' });
   let photosOnFront = card.photosOnFront !== false;
 
-  // Duplikat-Hinweis
+  // Duplikat-Hinweis (deutscher oder botanischer Name schon vorhanden?)
   const checkDup = () => {
-    const name = norm(deInput.value);
-    if (!name) { dupHint.hidden = true; return; }
-    const other = everything.find(c => c.id !== card.id && norm(c.plant?.deName) === name);
+    const de = norm(deInput.value), la = norm(laInput.value);
+    if (!de && !la) { dupHint.hidden = true; return; }
+    const other = everything.find(c => c.id !== card.id && ((de && norm(c.plant?.deName) === de) || (la && norm(c.plant?.latinName) === la)));
     dupHint.hidden = !other;
     if (other) dupHint.replaceChildren(icon('info', 18), h('span', null, `Es gibt schon eine Karte „${displayName(other)}“. `),
       h('button', { type: 'button', class: 'link', onclick: () => app.go('edit', { id: other.id }) }, 'Öffnen'));
   };
   deInput.addEventListener('change', checkDup);
-  deInput.addEventListener('input', () => { titleInput.placeholder = deInput.value ? `Leer lassen = „${deInput.value}“` : 'z. B. „Eiche am Spielplatz“'; });
+  laInput.addEventListener('change', checkDup);
+  // Reihenfolge der Namensfelder nach Einstellung „Hauptname“
+  const latinFirst = getNameMode() === 'la';
+  const updateTitleHint = () => {
+    const main = latinFirst ? (laInput.value || deInput.value) : (deInput.value || laInput.value);
+    titleInput.placeholder = main ? `Leer lassen = „${main}“` : 'z. B. „Eiche am Spielplatz“';
+  };
+  deInput.addEventListener('input', updateTitleHint);
+  laInput.addEventListener('input', updateTitleHint);
+  const deField = field(latinFirst ? 'Deutscher Name' : 'Deutscher Name (Hauptname)', deInput);
+  const laField = field(latinFirst ? 'Botanischer Name (Hauptname)' : 'Botanischer Name', laInput, 'Gattung groß, Art klein – z. B. Bellis perennis');
 
   const plantSection = h('div', { class: 'form-section' },
-    field('Deutscher Name', deInput),
+    latinFirst ? laField : deField,
     dupHint,
-    field('Botanischer Name', laInput, 'Gattung groß, Art klein – z. B. Bellis perennis'),
+    latinFirst ? deField : laField,
     field('Familie', famInput),
     famList,
     field('Merkmale', featInput),
@@ -314,6 +324,6 @@ export default async function editView({ id, deckId, type }) {
     }),
     form);
 
-  if (isNew) setTimeout(() => (card.type === 'plant' ? deInput : frontInput).focus(), 80);
+  if (isNew) setTimeout(() => (card.type === 'plant' ? (latinFirst ? laInput : deInput) : frontInput).focus(), 80);
   return { el: root, fullscreen: true };
 }

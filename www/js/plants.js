@@ -43,15 +43,38 @@ export function acceptedNames(card, { latin = true } = {}) {
   return list.length ? list : [card.back].filter(Boolean);
 }
 
+// Welcher Name ist der Hauptname? 'de' = deutsch, 'la' = botanisch (lateinisch). Einstellbar.
+let nameMode = 'de';
+export function setNameMode(mode) {
+  nameMode = mode === 'la' ? 'la' : 'de';
+}
+export function getNameMode() {
+  return nameMode;
+}
+/** Hauptname einer Pflanze nach Einstellung, mit Rückfall auf den anderen Namen. */
+export function mainName(p) {
+  return nameMode === 'la' ? (p?.latinName || p?.deName || '') : (p?.deName || p?.latinName || '');
+}
+/** Ist der angezeigte Hauptname der botanische Name? */
+export function mainIsLatin(p) {
+  const m = mainName(p);
+  return !!m && m === p?.latinName && m !== p?.deName;
+}
+/** Der jeweils andere Name (falls vorhanden und verschieden). */
+export function otherName(p) {
+  const m = mainName(p);
+  const o = m === p?.deName ? p?.latinName : p?.deName;
+  return o && o !== m ? o : '';
+}
+
 export function primaryName(card) {
-  const p = card.plant || {};
-  return p.deName || p.latinName || card.title || card.back || '';
+  return mainName(card.plant) || card.title || card.back || '';
 }
 
 /** Stufenweise Tipps: 1 = Familie, 2 = Anfangsbuchstabe und Länge, 3 = erste Silbe. */
 export function hintText(card, level) {
   const p = card.plant || {};
-  const name = p.deName || p.latinName || card.title || '';
+  const name = mainName(p) || card.title || '';
   const hints = [];
   if (level >= 1) hints.push(p.family ? `Familie: ${p.family}` : (p.latinName ? `Gattung beginnt mit „${p.latinName[0]}“` : 'Kein Familien-Tipp vorhanden'));
   if (level >= 2 && name) {

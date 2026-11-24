@@ -26,6 +26,7 @@ Karteikarten-App für Android (und jeden Browser) mit Wiederholung in wachsenden
 - Hinweis, wenn es eine Pflanze schon gibt
 
 **Pflanzen-Extras**
+- Hauptname wählbar: **deutsch oder botanisch (Latein)** – gilt für Listen, Sortierung, Rückseite, Tipps, Zufallsfotos, Training und Erfassen (*Einstellungen → Darstellung*)
 - Kartentyp *Pflanze* mit deutschem und botanischem Namen, Familie (mit Vorschlagsliste), Merkmalen, Blütezeit, Standort, Giftigkeit, Verwendung, Verwechslungsgefahr und Notizen
 - Rückseite als Herbar-Etikett mit Blühkalender, botanische Namen kursiv, Vorlesen per Sprachausgabe
 - Mehrere Fotos pro Pflanze mit Beschriftung (Blüte, Blatt, Frucht, Rinde …); beim Lernen kommt jedes Mal ein anderes. Optional „Nur ein Foto zeigen“: kein Weiterwischen zu den anderen Fotos, bis die Antwort aufgedeckt ist

@@ -3,6 +3,7 @@ import { app } from '../app.js';
 import { h, topbar, btn, segmented, field, dialog, confirmDialog, toast, pickFiles } from '../ui.js';
 import { saveSettings, getMeta, setMeta, listDecks, wipeAll, raw } from '../db.js';
 import { setDayStartHour } from '../srs.js';
+import { setNameMode } from '../plants.js';
 import { exportBackup, importBackup, parseTextImport, importTextCards } from '../backup.js';
 import { createSampleDeck } from '../sample.js';
 import { forgetAll } from '../images.js';
@@ -10,7 +11,7 @@ import { fmtDate, fmtBytes } from '../util.js';
 import { isNative } from '../native.js';
 import { cloudSection } from './cloudsection.js';
 
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 
 export default async function settingsView(params = {}) {
   const s = app.settings;
@@ -21,6 +22,7 @@ export default async function settingsView(params = {}) {
     app.settings = await saveSettings(patch);
     if ('theme' in patch) app.applyTheme(app.settings.theme);
     if ('dayStartHour' in patch) setDayStartHour(app.settings.dayStartHour);
+    if ('nameMode' in patch) setNameMode(app.settings.nameMode);
   };
 
   // Speicherinfo
@@ -130,7 +132,11 @@ export default async function settingsView(params = {}) {
         h('h2', { class: 'section-h' }, 'Darstellung'),
         h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Farbschema'), segmented([
           { value: 'system', label: 'System' }, { value: 'light', label: 'Hell' }, { value: 'dark', label: 'Dunkel' },
-        ], s.theme, v => update({ theme: v }), { id: 'set-theme' }))),
+        ], s.theme, v => update({ theme: v }), { id: 'set-theme' })),
+        h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Hauptname für Pflanzen'), segmented([
+          { value: 'de', label: 'Deutsch' }, { value: 'la', label: 'Botanisch (Latein)' },
+        ], s.nameMode, v => update({ nameMode: v }), { id: 'set-namemode' }),
+          h('span', { class: 'field-hint' }, 'Gilt für Listen und Sortierung, die Rückseite beim Lernen, Tipps, Zufallsfotos, Training und die Reihenfolge beim Erfassen. Ein eigener Kartenname hat in Listen weiterhin Vorrang.'))),
 
       h('section', { class: 'set-sec' },
         h('h2', { class: 'section-h' }, 'Lernen'),

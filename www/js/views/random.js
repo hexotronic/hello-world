@@ -6,7 +6,7 @@ import { allCards, getCard, listDecks, getPhoto, addLog, saveCards, displayName 
 import { photoURL, lazyPhoto } from '../images.js';
 import { openZoom, herbariumLabel } from '../cardview.js';
 import { shuffle, MONTHS, speak } from '../util.js';
-import { bloomsIn, hintText } from '../plants.js';
+import { bloomsIn, hintText, mainName, mainIsLatin, otherName } from '../plants.js';
 
 const prefs = { deckId: '', filter: 'all', tag: '', flow: 'manual', per: 'photo', count: 0, delay: 5, tab: 'play' };
 
@@ -111,7 +111,9 @@ export default async function randomView(params = {}) {
     const [url, meta] = await Promise.all([photoURL(pid, 'full'), getPhoto(pid)]);
     if (session !== s) return;
     const p = card.plant || {};
-    const name = card.type === 'plant' ? (p.deName || card.title || p.latinName) : displayName(card);
+    const name = card.type === 'plant' ? (mainName(p) || card.title) : displayName(card);
+    const nameLatin = card.type === 'plant' && mainIsLatin(p);
+    const second = card.type === 'plant' ? otherName(p) : '';
     const img = h('img', { class: 'rnd-img', src: url || '', alt: 'Zufälliges Foto', draggable: 'false' });
     const fig = h('figure', { class: 'rnd-photo', onclick: () => openZoom([pid]) }, img,
       meta?.caption ? h('span', { class: 'stage-caption' }, meta.caption) : null);
@@ -119,9 +121,9 @@ export default async function randomView(params = {}) {
     const answerBox = h('div', { class: 'rnd-answer' + (s.revealed ? ' show' : '') });
     if (s.revealed) {
       answerBox.append(
-        h('div', { class: 'rnd-name' }, name,
+        h('div', { class: 'rnd-name' + (nameLatin ? ' latin' : '') }, name,
           iconBtn('volume', 'Vorlesen', () => speak(name, app.settings?.speechLang), { class: 'speak' })),
-        card.type === 'plant' && p.latinName && p.latinName !== name ? h('div', { class: 'rnd-latin' }, p.latinName) : null,
+        second ? h('div', { class: nameLatin ? 'rnd-second' : 'rnd-latin' }, second) : null,
         h('div', { class: 'rnd-fam muted' }, [p.family, card.title && card.title !== name ? `Kartenname: ${card.title}` : null].filter(Boolean).join(' · ')),
         h('details', { class: 'rnd-more' }, h('summary', null, 'Steckbrief'), card.type === 'plant' ? herbariumLabel(card, { speechLang: app.settings?.speechLang }) : h('p', { class: 'pre' }, card.back || '')));
     } else if (s.hint) {

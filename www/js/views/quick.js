@@ -4,7 +4,7 @@ import { h, topbar, btn, field, pickFiles, toast, emptyState } from '../ui.js';
 import { icon } from '../icons.js';
 import { listDecks, allCards, emptyCard, saveCard, addPhoto, setMeta, getMeta, displayName } from '../db.js';
 import { processImage, blobURL } from '../images.js';
-import { FAMILIES, CAPTIONS } from '../plants.js';
+import { FAMILIES, CAPTIONS, getNameMode } from '../plants.js';
 import { norm, nameFromFilename } from '../util.js';
 import { newDeckFlow } from './home.js';
 import { cloudSoon } from '../cloud.js';
@@ -24,11 +24,11 @@ export default async function quickView(params = {}) {
   let stickyFamily = '';
   let current = null; // {file, data, url}
 
+  // Bekannte Pflanzen, auffindbar über deutschen Namen, botanischen Namen oder Kartennamen
   const byName = new Map();
-  for (const c of everything) {
-    const n = norm(c.plant?.deName || c.title);
-    if (n) byName.set(n, c);
-  }
+  const remember = c => { for (const n of [c.plant?.deName, c.plant?.latinName, c.title]) if (norm(n)) byName.set(norm(n), c); };
+  everything.forEach(remember);
+  const latinFirst = getNameMode() === 'la';
 
   function renderStart() {
     root.replaceChildren(
@@ -77,30 +77,32 @@ export default async function quickView(params = {}) {
 
   function renderItem() {
     const suggested = nameFromFilename(current.file.name);
-    const de = h('input', { class: 'input', id: 'q-de', 'aria-label': 'Deutscher Name', value: suggested, placeholder: 'Deutscher Name', autocomplete: 'off', list: 'q-names', enterkeyhint: 'next' });
-    const la = h('input', { class: 'input latin', id: 'q-la', 'aria-label': 'Botanischer Name', placeholder: 'Botanischer Name (optional)', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
+    const de = h('input', { class: 'input', id: 'q-de', 'aria-label': 'Deutscher Name', value: latinFirst ? '' : suggested, placeholder: latinFirst ? 'Deutscher Name (optional)' : 'Deutscher Name', autocomplete: 'off', list: latinFirst ? null : 'q-names', enterkeyhint: 'next' });
+    const la = h('input', { class: 'input latin', id: 'q-la', 'aria-label': 'Botanischer Name', value: latinFirst ? suggested : '', placeholder: latinFirst ? 'Botanischer Name' : 'Botanischer Name (optional)', autocomplete: 'off', list: latinFirst ? 'q-names' : null, autocapitalize: 'off', spellcheck: 'false', enterkeyhint: latinFirst ? 'next' : 'done' });
+    const first = latinFirst ? la : de;
+    const second = latinFirst ? de : la;
     const fam = h('input', { class: 'input', id: 'q-fam', 'aria-label': 'Familie', value: stickyFamily, list: 'q-fams', placeholder: 'Familie (optional)', autocomplete: 'off' });
     const cap = h('select', { class: 'input', id: 'q-cap', 'aria-label': 'Bildunterschrift' }, CAPTIONS.map(c => h('option', { value: c }, c || 'Bildunterschrift (optional)')));
     const tags = h('input', { class: 'input', id: 'q-tags', 'aria-label': 'Schlagwörter', value: stickyTags, placeholder: 'Schlagwörter, z. B. garten, exkursion-mai', autocomplete: 'off' });
     const match = h('div', { class: 'dup-hint', hidden: true });
-    const names = h('datalist', { id: 'q-names' }, [...new Set(everything.map(c => c.plant?.deName).filter(Boolean))].sort().map(n => h('option', { value: n })));
+    const names = h('datalist', { id: 'q-names' }, [...new Set(everything.map(c => (latinFirst ? c.plant?.latinName : c.plant?.deName)).filter(Boolean))].sort().map(n => h('option', { value: n })));
     const fams = h('datalist', { id: 'q-fams' }, FAMILIES.map(f => h('option', { value: f })));
 
     const checkMatch = () => {
-      const c = byName.get(norm(de.value));
+      const c = byName.get(norm(first.value));
       match.hidden = !c;
       if (c) {
         match.replaceChildren(icon('info', 18), h('span', null, `„${displayName(c)}“ gibt es schon (${c.photoIds?.length || 0} Fotos). `),
           h('button', { type: 'button', class: 'link', onclick: () => appendTo(c, cap.value) }, 'Foto dort hinzufügen'));
       }
     };
-    de.addEventListener('input', checkMatch);
-    de.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); la.focus(); } });
-    la.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); saveNew(); } });
+    first.addEventListener('input', checkMatch);
+    first.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); second.focus(); } });
+    second.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); saveNew(); } });
 
     async function saveNew(unnamed = false) {
       const name = de.value.trim();
-      if (!name && !la.value.trim() && !unnamed) { toast('Bitte einen Namen eingeben oder „Ohne Namen speichern“ wählen.'); de.focus(); return; }
+      if (!name && !la.value.trim() && !unnamed) { toast('Bitte einen Namen eingeben oder „Ohne Namen speichern“ wählen.'); first.focus(); return; }
       stickyTags = tags.value;
       stickyFamily = fam.value.trim();
       const card = emptyCard(deckId, 'plant');
@@ -111,7 +113,7 @@ export default async function quickView(params = {}) {
       card.photoIds = [p.id];
       await saveCard(card);
       everything.push(card);
-      if (name) byName.set(norm(name), card);
+      remember(card);
       lastCard = card;
       created++;
       next();
@@ -139,7 +141,7 @@ export default async function quickView(params = {}) {
       h('div', { class: 'quick-item' },
         h('figure', { class: 'quick-photo' }, h('img', { src: current.url, alt: 'Ausgewähltes Foto' })),
         h('div', { class: 'form' },
-          de, names, match, la, fam, fams,
+          first, names, match, second, fam, fams,
           h('div', { class: 'grid2' }, cap, tags),
           h('div', { class: 'btn-col' },
             btn('Speichern & weiter', () => saveNew(), { kind: 'primary', iconName: 'check' }),
@@ -148,7 +150,7 @@ export default async function quickView(params = {}) {
               btn('Ohne Namen speichern', () => saveNew(true), { kind: 'ghost' }),
               btn('Überspringen', () => { skipped++; next(); }, { kind: 'ghost' }))))));
     checkMatch();
-    setTimeout(() => de.focus(), 60);
+    setTimeout(() => first.focus(), 60);
   }
 
   function renderDone() {

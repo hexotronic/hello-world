@@ -1,6 +1,7 @@
 // IndexedDB-Speicher: Stapel, Karten, Fotos (als Blobs), Lernprotokoll, Einstellungen.
 import { uid } from './util.js';
 import { newSrs } from './srs.js';
+import { mainName } from './plants.js';
 
 const DB_NAME = 'florakarten';
 const DB_VERSION = 1;
@@ -113,6 +114,7 @@ const SETTINGS_DEFAULTS = {
   dayStartHour: 4,
   learnAheadMin: 20,
   speechLang: 'de-DE',
+  nameMode: 'de',           // Hauptname für Pflanzen: 'de' oder 'la'
 };
 
 export async function getMeta(key, fallback = null) {
@@ -217,7 +219,7 @@ export async function deleteCards(ids) {
 /** Name, unter dem eine Karte in Listen erscheint: eigener Kartenname, sonst Pflanzenname, sonst Vorderseite. */
 export function displayName(card) {
   return (card.title || '').trim()
-    || (card.type === 'plant' ? (card.plant?.deName || card.plant?.latinName) : '')
+    || (card.type === 'plant' ? mainName(card.plant) : '')
     || (card.front || '').split('\n')[0].slice(0, 80)
     || 'Unbenannte Karte';
 }

@@ -6,7 +6,7 @@ import { allCards, listDecks, addLog, saveCards, displayName } from '../db.js';
 import { photoURL, lazyPhoto } from '../images.js';
 import { openZoom } from '../cardview.js';
 import { shuffle, norm, checkAnswer, speak } from '../util.js';
-import { FAMILIES, familyKey, sameFamily, acceptedNames } from '../plants.js';
+import { FAMILIES, familyKey, sameFamily, acceptedNames, mainName, getNameMode } from '../plants.js';
 
 const MODES = [
   { id: 'mc-photo', label: 'Foto → Name', desc: 'Wähle aus vier Namen', icon: 'image' },
@@ -19,7 +19,7 @@ const MODES = [
 
 const prefs = { mode: 'mc-photo', deckId: '', count: 10, tricky: true };
 
-const nameOf = c => c.plant?.deName || c.title || c.plant?.latinName || '';
+const nameOf = c => mainName(c.plant) || c.title || '';
 
 function eligible(c, mode) {
   if (c.type !== 'plant' || c.suspended) return false;
@@ -148,7 +148,8 @@ export default async function quizView(params = {}) {
 
     let answerArea;
     if (opts) {
-      answerArea = h('div', { class: 'opt-list' + (st.mode === 'mc-latin' ? ' latin' : '') }, opts.map((o, k) => h('button', {
+      const latinOpts = st.mode === 'mc-latin' || (getNameMode() === 'la' && ['mc-photo', 'features'].includes(st.mode));
+      answerArea = h('div', { class: 'opt-list' + (latinOpts ? ' latin' : '') }, opts.map((o, k) => h('button', {
         type: 'button', class: 'opt', dataset: { k: k + 1 },
         onclick: e => {
           if (r.answered) return;

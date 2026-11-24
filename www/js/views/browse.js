@@ -6,7 +6,7 @@ import { allCards, listDecks, saveCards, deleteCards, displayName, searchText } 
 import { lazyPhoto } from '../images.js';
 import { dayStartPlus, formatDays, maturity } from '../srs.js';
 import { norm, debounce, MONTHS } from '../util.js';
-import { bloomsIn } from '../plants.js';
+import { bloomsIn, mainName, otherName, mainIsLatin } from '../plants.js';
 
 const FILTERS = [
   { value: 'all', label: 'Alle' },
@@ -116,9 +116,10 @@ export default async function browseView(params = {}) {
   function row(c) {
     const name = displayName(c);
     const p = c.plant || {};
-    const sub = c.type === 'plant'
-      ? [p.latinName, p.deName && c.title && c.title !== p.deName ? p.deName : null].filter(Boolean).join(' · ')
-      : (c.back || '').split('\n')[0];
+    // Unter dem Listennamen steht der andere Pflanzenname (bei eigenem Kartennamen beide)
+    const subNames = c.type === 'plant' ? (c.title ? [mainName(p), otherName(p)] : [otherName(p)]).filter(n => n && n !== name) : [];
+    const sub = c.type === 'plant' ? subNames.join(' · ') : (c.back || '').split('\n')[0];
+    const subLatin = subNames.length === 1 && subNames[0] === p.latinName;
     const thumb = c.photoIds?.length
       ? lazyPhoto(h('img', { class: 'cl-thumb', alt: '' }), c.photoIds[0], 'thumb')
       : h('span', { class: 'cl-thumb none' }, icon(c.type === 'plant' ? 'leaf' : 'stack', 20));
@@ -133,8 +134,8 @@ export default async function browseView(params = {}) {
       selecting ? h('span', { class: 'cl-check' }, icon(isSel ? 'checkbox' : 'square', 22)) : null,
       thumb,
       h('span', { class: 'cl-main' },
-        h('span', { class: 'cl-name' }, c.marked ? h('span', { class: 'mark-star', 'aria-label': 'markiert' }, icon('star', 14)) : null, name),
-        sub ? h('span', { class: 'cl-sub' + (c.type === 'plant' && p.latinName ? ' latin' : '') }, sub) : null,
+        h('span', { class: 'cl-name' + (!c.title && c.type === 'plant' && mainIsLatin(p) ? ' latin' : '') }, c.marked ? h('span', { class: 'mark-star', 'aria-label': 'markiert' }, icon('star', 14)) : null, name),
+        sub ? h('span', { class: 'cl-sub' + (subLatin ? ' latin' : '') }, sub) : null,
         h('span', { class: 'cl-meta' },
           !st.deckId ? h('span', null, deckName.get(c.deckId) || '') : null,
           (c.tags || []).slice(0, 3).map(t => h('span', { class: 'tagpill' }, '#' + t)),

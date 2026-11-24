@@ -4,7 +4,7 @@ import { icon } from './icons.js';
 import { photoURL } from './images.js';
 import { getPhoto, displayName } from './db.js';
 import { MONTHS_SHORT, MONTHS, formatMonths, speak } from './util.js';
-import { toxicityLabel, hintText } from './plants.js';
+import { toxicityLabel, hintText, mainName, mainIsLatin, otherName } from './plants.js';
 
 export function monthBar(months, { compact = false } = {}) {
   const set = new Set(months || []);
@@ -26,15 +26,17 @@ export function herbariumLabel(card, { speechLang = 'de-DE' } = {}) {
   const p = card.plant || {};
   const tox = toxicityLabel(p.toxicity);
   const custom = (card.title || '').trim();
+  const main = mainName(p) || custom;
+  const mainLatin = mainIsLatin(p);
+  const other = otherName(p);
+  const say = text => iconBtn('volume', `„${text}“ vorlesen`, e => { e.stopPropagation(); speak(text, speechLang); }, { class: 'speak' });
   return h('section', { class: 'herb-label', 'aria-label': 'Pflanzenetikett' },
     h('div', { class: 'hl-head' },
       h('span', { class: 'hl-kicker' }, p.family || 'Familie unbekannt'),
       tox ? h('span', { class: 'tox tox-' + (p.toxicity || 'unknown') }, tox) : null),
     h('div', { class: 'hl-names' },
-      h('div', { class: 'hl-de' }, p.deName || custom || '—',
-        (p.deName || custom) ? iconBtn('volume', 'Vorlesen', e => { e.stopPropagation(); speak(p.deName || custom, speechLang); }, { class: 'speak' }) : null),
-      p.latinName ? h('div', { class: 'hl-latin' }, p.latinName,
-        iconBtn('volume', 'Botanischen Namen vorlesen', e => { e.stopPropagation(); speak(p.latinName, speechLang); }, { class: 'speak' })) : null),
+      h('div', { class: 'hl-de' + (mainLatin ? ' latin' : '') }, main || '—', main ? say(main) : null),
+      other ? h('div', { class: mainLatin ? 'hl-sub' : 'hl-latin' }, other, say(other)) : null),
     h('dl', { class: 'hl-rows' },
       row('Merkmale', p.features, 'pre'),
       (p.bloom || []).length ? h('div', { class: 'hl-row' }, h('dt', null, 'Blütezeit'), h('dd', null, monthBar(p.bloom), h('span', { class: 'hl-months' }, formatMonths(p.bloom)))) : null,
@@ -43,7 +45,7 @@ export function herbariumLabel(card, { speechLang = 'de-DE' } = {}) {
       row('Verwechslung', p.confusion, 'pre warn'),
       row('Notizen', p.notes, 'pre'),
       card.back ? row('Rückseite', card.back, 'pre') : null,
-      custom && custom !== p.deName ? row('Kartenname', custom) : null));
+      custom && custom !== main ? row('Kartenname', custom) : null));
 }
 
 /** Foto-Bereich mit Punkten zum Wechseln und Zoom per Antippen. */
