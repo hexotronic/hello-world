@@ -11,6 +11,10 @@ on:
       - '.github/workflows/android.yml'
   workflow_dispatch:
 
+concurrency:
+  group: android-apk
+  cancel-in-progress: false
+
 jobs:
   apk:
     runs-on: ubuntu-latest
@@ -28,25 +32,36 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      # Signaturschlüssel: aus dem Secret FLORAKARTEN_KEYSTORE (Base64) – damit bleiben Updates installierbar.
-      # Ohne Secret wird der Debug-Schlüssel des Runners zwischengespeichert und wiederverwendet.
-      - name: Signaturschlüssel aus Secret
+      # Signaturschlüssel: Damit neue APKs als Update über die installierte App gehen, muss jeder Build
+      # mit DEMSELBEN Schlüssel signieren. Der Schlüssel liegt als Base64-Text im Secret FLORAKARTEN_KEYSTORE
+      # (Settings → Secrets and variables → Actions) und nie im Repository.
+      # Ohne Secret: Notlösung mit einem im Build-Zwischenspeicher abgelegten Schlüssel (verfällt nach 7 Tagen ohne Build).
+      - name: Notfall-Schlüssel aus dem Zwischenspeicher
+        uses: actions/cache@v4
+        with:
+          path: ~/.florakarten-key
+          key: florakarten-fallback-keystore-v2
+
+      - name: Signaturschlüssel bereitstellen
         env:
           KEYSTORE_B64: ${{ secrets.FLORAKARTEN_KEYSTORE }}
         run: |
           if [ -n "$KEYSTORE_B64" ]; then
-            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/florakarten.keystore"
-            echo "FLORA_KEYSTORE=$RUNNER_TEMP/florakarten.keystore" >> "$GITHUB_ENV"
-            echo "Signiere mit dem Schlüssel aus dem Secret."
+            echo "$KEYSTORE_B64" | tr -d ' \n\r' | base64 -d > "$RUNNER_TEMP/florakarten.keystore"
+            KS="$RUNNER_TEMP/florakarten.keystore"
+            echo "Signiere mit dem Schlüssel aus dem Secret FLORAKARTEN_KEYSTORE."
           else
-            echo "Kein Secret FLORAKARTEN_KEYSTORE gesetzt – nutze zwischengespeicherten Debug-Schlüssel."
+            KS="$HOME/.florakarten-key/fallback.keystore"
+            if [ ! -f "$KS" ]; then
+              mkdir -p "$(dirname "$KS")"
+              keytool -genkeypair -keystore "$KS" -storetype PKCS12 -storepass android -alias androiddebugkey \
+                -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Florakarten,O=Privat,C=DE"
+              echo "::warning::Kein Secret FLORAKARTEN_KEYSTORE – neuer Notfall-Schlüssel erzeugt. Diese APK lässt sich nicht als Update über Versionen mit anderem Schlüssel installieren."
+            fi
           fi
-
-      - name: Debug-Schlüssel zwischenspeichern (falls kein Secret)
-        uses: actions/cache@v4
-        with:
-          path: ~/.android/debug.keystore
-          key: florakarten-debug-keystore-v1
+          echo "FLORA_KEYSTORE=$KS" >> "$GITHUB_ENV"
+          echo "Zertifikat (SHA-256):"
+          keytool -list -v -keystore "$KS" -storepass android -alias androiddebugkey | grep -m1 "SHA256:"
 
       - name: Abhängigkeiten installieren
         run: npm ci

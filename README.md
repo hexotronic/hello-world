@@ -58,9 +58,10 @@ Karteikarten-App für Android (und jeden Browser) mit Wiederholung in wachsenden
 3. `florakarten.apk` auf dem Handy öffnen und die Installation aus dieser Quelle erlauben.
 
 Der Build startet automatisch bei jeder Änderung an der App. Er lässt sich auch von Hand über *Run workflow* starten.
-Die APK ist nicht im Play Store, sondern mit einem eigenen Schlüssel signiert. Damit neue Versionen als Update über die alte gehen (und die Daten bleiben), muss der Schlüssel bei jedem Build derselbe sein:
-- **Empfohlen:** Den Schlüssel als Base64-Text im Repository-Secret `FLORAKARTEN_KEYSTORE` hinterlegen (*Settings → Secrets and variables → Actions → New repository secret*). Der Schlüssel gehört nie ins Repository selbst.
-- Ohne Secret merkt sich GitHub den Schlüssel im Build-Zwischenspeicher. Der wird aber nach einer Woche ohne Build gelöscht; dann muss die App einmal neu installiert werden (vorher sichern).
+Die APK ist nicht im Play Store, sondern mit einem eigenen Schlüssel signiert. Android installiert ein Update nur, wenn es mit **demselben** Schlüssel signiert ist wie die installierte App – sonst kommt „Konflikt mit vorhandenem Paket“.
+- **Einmal einrichten:** Den Schlüssel als Base64-Text im Repository-Secret `FLORAKARTEN_KEYSTORE` hinterlegen (*Settings → Secrets and variables → Actions → New repository secret*). Dann signiert jeder Build gleich. Der Schlüssel gehört nie ins Repository selbst.
+- Ohne Secret nutzt der Build einen Notfall-Schlüssel aus dem Build-Zwischenspeicher. Der verfällt nach 7 Tagen ohne Build; dann muss die App einmal neu installiert werden (vorher sichern).
+- Im Build-Protokoll steht unter „Signaturschlüssel bereitstellen“ der Fingerabdruck (SHA-256) des verwendeten Zertifikats.
 
 > Wichtig: Wird die App deinstalliert, sind die Daten auf dem Handy weg. Mit eingerichtetem Cloud-Speicher holst du sie danach über *Bestehende Sicherung verbinden* zurück.
 
