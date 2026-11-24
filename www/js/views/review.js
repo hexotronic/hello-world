@@ -2,7 +2,7 @@
 import { app } from '../app.js';
 import { h, topbar, iconBtn, btn, menu, confirmDialog, toast } from '../ui.js';
 import { icon } from '../icons.js';
-import { getDeck, getCard, cardsInDeck, allCards, saveCard, addLog, logsSince, deleteLastLog, deleteCards } from '../db.js';
+import { getDeck, getCard, cardsInDeck, allCards, saveCard, addLog, logsSince, deleteLastLog, deleteCards, saveDeck } from '../db.js';
 import { answer as srsAnswer, buildQueues, deckConfig, dayStart, dayStartPlus, previewIntervals } from '../srs.js';
 import { cardFace } from '../cardview.js';
 import { acceptedNames } from '../plants.js';
@@ -108,6 +108,7 @@ export default async function reviewView({ deckId, mode = 'srs', cardIds, title 
     const c = current;
     stageEl.replaceChildren(cardFace(c, {
       revealed, photoIndex, hintLevel, typed,
+      singlePhoto: cfg.singlePhoto,
       speechLang: app.settings?.speechLang,
       onPhotoChange: i => { photoIndex = i; },
     }));
@@ -239,11 +240,13 @@ export default async function reviewView({ deckId, mode = 'srs', cardIds, title 
       { label: 'Bearbeiten', icon: 'edit', value: 'edit', hint: 'E' },
       { label: c.marked ? 'Markierung entfernen' : 'Markieren', icon: 'star', value: 'mark', hint: 'M' },
       mode === 'srs' ? { label: 'Für heute zurückstellen', icon: 'clock', value: 'bury' } : null,
+      { label: cfg.singlePhoto ? 'Wieder alle Fotos zeigen' : 'Nur ein Foto zeigen', icon: 'image', value: 'single', hint: 'P' },
       { label: 'Aussetzen (nicht mehr abfragen)', icon: 'ban', value: 'suspend' },
       { label: 'Karte löschen', icon: 'trash', value: 'delete', danger: true },
     ]);
     if (choice === 'edit') app.go('edit', { id: c.id });
     if (choice === 'mark') toggleMark();
+    if (choice === 'single') toggleSingle();
     if (choice === 'bury') {
       c.buriedUntil = dayStartPlus(1);
       await saveCard(c, { touch: false });
@@ -263,6 +266,17 @@ export default async function reviewView({ deckId, mode = 'srs', cardIds, title 
         next();
       }
     }
+  }
+
+  /** Umschalten: nur ein Foto oder alle Fotos – wird im Stapel gespeichert. */
+  async function toggleSingle() {
+    cfg.singlePhoto = !cfg.singlePhoto;
+    if (deck) {
+      deck.config = { ...(deck.config || {}), singlePhoto: cfg.singlePhoto };
+      await saveDeck(deck);
+    }
+    toast(cfg.singlePhoto ? 'Ab jetzt nur ein Foto pro Karte' : 'Alle Fotos werden gezeigt');
+    show();
   }
 
   async function toggleMark() {
@@ -304,6 +318,7 @@ export default async function reviewView({ deckId, mode = 'srs', cardIds, title 
     } else if (e.key === 'h' && !revealed) bottom.querySelector('.hint-btn')?.click();
     else if (e.key === 'e') app.go('edit', { id: current.id });
     else if (e.key === 'm') toggleMark();
+    else if (e.key === 'p') toggleSingle();
     else if (e.key === 'z' || e.key === 'u') undo();
   };
   document.addEventListener('keydown', onKey);

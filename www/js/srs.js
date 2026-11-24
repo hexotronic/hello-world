@@ -20,6 +20,7 @@ export const DECK_DEFAULTS = {
   typeAnswer: false,        // Antwort eintippen
   showHint: true,           // Tipp-Knopf bei Pflanzenkarten
   randomPhoto: true,        // bei mehreren Fotos zufälliges zeigen
+  singlePhoto: false,       // nur ein Foto zeigen, nicht zu den anderen wechseln (bis zum Aufdecken)
 };
 
 export function deckConfig(deck) {

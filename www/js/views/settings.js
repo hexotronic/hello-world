@@ -169,7 +169,7 @@ export default async function settingsView(params = {}) {
       h('section', { class: 'set-sec about' },
         h('h2', { class: 'section-h' }, 'Über Florakarten'),
         h('p', null, `Version ${VERSION}. Offline-Karteikarten mit Wiederholung in wachsenden Abständen, Zufallsfotos und Pflanzen-Extras. Für den privaten Gebrauch.`),
-        h('p', { class: 'muted small' }, 'Tastatur beim Lernen: Leertaste = aufdecken / Gut, 1–4 = Bewertung, H = Tipp, M = markieren, E = bearbeiten, Z = rückgängig.'))));
+        h('p', { class: 'muted small' }, 'Tastatur beim Lernen: Leertaste = aufdecken / Gut, 1–4 = Bewertung, H = Tipp, M = markieren, P = nur ein Foto / alle Fotos, E = bearbeiten, Z = rückgängig.'))));
 
   return {
     el: root,

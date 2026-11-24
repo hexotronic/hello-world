@@ -37,7 +37,8 @@ export async function deckOptionsDialog(deck) {
     h('h3', { class: 'form-h' }, 'Beim Lernen'),
     toggle('Antwort eintippen', v.typeAnswer, x => { v.typeAnswer = x; }, { id: 'opt-type', hint: 'Name eingeben statt nur aufdecken. Kleine Tippfehler werden erkannt.' }),
     toggle('Tipp-Knopf anzeigen', v.showHint, x => { v.showHint = x; }, { id: 'opt-hint', hint: 'Zeigt nacheinander Familie, Anfangsbuchstaben und Silbe.' }),
-    toggle('Zufälliges Foto zeigen', v.randomPhoto, x => { v.randomPhoto = x; }, { id: 'opt-rphoto', hint: 'Bei mehreren Fotos pro Karte jedes Mal ein anderes zeigen.' }));
+    toggle('Zufälliges Foto zeigen', v.randomPhoto, x => { v.randomPhoto = x; }, { id: 'opt-rphoto', hint: 'Bei mehreren Fotos pro Karte jedes Mal ein anderes zeigen.' }),
+    toggle('Nur ein Foto zeigen', v.singlePhoto, x => { v.singlePhoto = x; }, { id: 'opt-single', hint: 'Bei mehreren Fotos nur eins zeigen, ohne zu den anderen wischen zu können. Nach dem Aufdecken siehst du alle.' }));
 
   const ok = await dialog({
     title: 'Stapel-Optionen',

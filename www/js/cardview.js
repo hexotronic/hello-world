@@ -47,9 +47,12 @@ export function herbariumLabel(card, { speechLang = 'de-DE' } = {}) {
 }
 
 /** Foto-Bereich mit Punkten zum Wechseln und Zoom per Antippen. */
-export function photoStage(card, startIndex = 0, { onChange } = {}) {
-  const ids = card.photoIds || [];
-  let index = Math.min(Math.max(0, startIndex), ids.length - 1);
+export function photoStage(card, startIndex = 0, { onChange, single = false } = {}) {
+  const all = card.photoIds || [];
+  const start = Math.min(Math.max(0, startIndex), all.length - 1);
+  // single: nur dieses eine Foto zeigen, kein Wechseln zu den anderen (auch nicht im Vollbild)
+  const ids = single ? [all[start]] : all;
+  let index = single ? 0 : start;
   const img = h('img', { class: 'stage-img', alt: 'Foto der Karte', draggable: 'false' });
   const caption = h('span', { class: 'stage-caption', hidden: true });
   const dots = h('div', { class: 'stage-dots' });
@@ -69,7 +72,7 @@ export function photoStage(card, startIndex = 0, { onChange } = {}) {
       type: 'button', class: 'dot' + (k === index ? ' on' : ''), 'aria-label': `Foto ${k + 1} von ${ids.length}`,
       onclick: e => { e.stopPropagation(); show(k); },
     })));
-    onChange?.(index);
+    onChange?.(single ? start : index);
   }
 
   // Wischen zwischen Fotos
@@ -149,7 +152,7 @@ export function cardFace(card, opts = {}) {
   const showPhotos = ids.length && (isPlant || card.photosOnFront || revealed);
   const parts = [];
 
-  if (showPhotos) parts.push(photoStage(card, photoIndex, { onChange: opts.onPhotoChange }).el);
+  if (showPhotos) parts.push(photoStage(card, photoIndex, { onChange: opts.onPhotoChange, single: !!opts.singlePhoto && !revealed }).el);
 
   if (isPlant) {
     const q = (card.front || '').trim() || (ids.length ? 'Welche Pflanze ist das?' : 'Welche Pflanze hat diese Merkmale?');

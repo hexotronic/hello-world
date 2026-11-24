@@ -28,7 +28,7 @@ Karteikarten-App für Android (und jeden Browser) mit Wiederholung in wachsenden
 **Pflanzen-Extras**
 - Kartentyp *Pflanze* mit deutschem und botanischem Namen, Familie (mit Vorschlagsliste), Merkmalen, Blütezeit, Standort, Giftigkeit, Verwendung, Verwechslungsgefahr und Notizen
 - Rückseite als Herbar-Etikett mit Blühkalender, botanische Namen kursiv, Vorlesen per Sprachausgabe
-- Mehrere Fotos pro Pflanze mit Beschriftung (Blüte, Blatt, Frucht, Rinde …); beim Lernen kommt jedes Mal ein anderes
+- Mehrere Fotos pro Pflanze mit Beschriftung (Blüte, Blatt, Frucht, Rinde …); beim Lernen kommt jedes Mal ein anderes. Optional „Nur ein Foto zeigen“: kein Weiterwischen zu den anderen Fotos, bis die Antwort aufgedeckt ist
 - Stufenweise Tipps: Familie → Anfangsbuchstabe und Länge → erste Silbe
 - Antwort eintippen mit Tippfehler-Erkennung (z. B. „Gänseblümchn“ gilt als fast richtig)
 - **Training** ohne Einfluss auf die Planung: Foto → Name (Auswahl oder Eintippen), Deutsch ↔ Botanisch, Foto → Familie, Merkmale → Name. Im Modus *Knifflig* stammen die falschen Antworten bevorzugt aus derselben Familie.
@@ -77,7 +77,7 @@ npm start            # startet http://localhost:8123
 - Einzelne Stapel lassen sich über das Stapel-Menü (⋮) exportieren.
 
 ## Tastatur (am Rechner)
-Leertaste/Enter = aufdecken bzw. „Gut“, `1`–`4` = Bewertung, `H` = Tipp, `M` = markieren, `E` = bearbeiten, `Z` = rückgängig.
+Leertaste/Enter = aufdecken bzw. „Gut“, `1`–`4` = Bewertung, `H` = Tipp, `M` = markieren, `P` = nur ein Foto / alle Fotos, `E` = bearbeiten, `Z` = rückgängig.
 
 ## Aufbau
 ```
