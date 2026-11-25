@@ -12,6 +12,7 @@ import { FAMILIES, TOXICITY, CAPTIONS, getNameMode, familyKey } from '../plants.
 import { saveSettings } from '../db.js';
 import { openImageSearch } from '../imagesearch.js';
 import { lookupPlant, applyFacts, skippedFacts, FACT_LABELS } from '../plantfacts.js';
+import { aiReady, aiFacts, aiAbort, mergeAi } from '../aifacts.js';
 import { isOn } from '../features.js';
 import { MONTHS_ABBR, MONTHS, norm, fmtDate, nameFromFilename } from '../util.js';
 import { newDeckFlow } from './home.js';
@@ -178,7 +179,7 @@ export default async function editView({ id, deckId, type }) {
     return v;
   };
   const lifePicker = chipPicker(app.settings.lifeForms || [], card.plant.lifeForm, { id: 'ed-life', label: 'Lebensform', onAdd: addToList('lifeForms', 'Eigene Lebensform') });
-  const usesPicker = chipPicker(app.settings.usesList || [], card.plant.usesList, { id: 'ed-uses', label: 'Verwendung', onAdd: addToList('usesList', 'Eigener Verwendungszweck') });
+  const usesPicker = chipPicker(app.settings.usesList || [], card.plant.usesList, { id: 'ed-uses-list', label: 'Verwendung', onAdd: addToList('usesList', 'Eigener Verwendungszweck') });
   const confInput = ta('confusion', 'Mit welchen Pflanzen kann man sie verwechseln, und woran erkennt man den Unterschied?', 2);
   const notesInput = ta('notes', 'Eigene Notizen, Fundorte, Eselsbrücken …', 2);
   const toxSelect = h('select', { class: 'input', id: 'ed-tox', value: p.toxicity || '' }, TOXICITY.map(t => h('option', { value: t.value }, t.label)));
@@ -278,14 +279,57 @@ export default async function editView({ id, deckId, type }) {
       factsBar.replaceChildren(
         h('span', { class: 'facts-status ok' }, icon('check', 16), h('span', null, h('strong', null, 'Ergänzt: '), filled.filter(k => k !== 'notes').map(k => FACT_LABELS[k]).join(', '), ` (${src})`)),
         h('div', { class: 'row-gap' },
-          btn('Rückgängig', () => { if (undoState) { writeFields(undoState); undoState = null; factsBar.replaceChildren(h('span', { class: 'facts-status' }, 'Rückgängig gemacht.'), btn('Erneut suchen', () => fetchFacts({ manual: true }), { kind: 'ghost' })); } }, { kind: 'ghost' }),
+          btn('Rückgängig', () => { if (undoState) { aiRun++; aiAbort(); writeFields(undoState); undoState = null; factsBar.replaceChildren(h('span', { class: 'facts-status' }, 'Rückgängig gemacht.'), btn('Erneut suchen', () => fetchFacts({ manual: true }), { kind: 'ghost' })); } }, { kind: 'ghost' }),
           btn('Erneut suchen', () => fetchFacts({ manual: true }), { kind: 'ghost' })));
+      refineWithAi(facts, values, new Set(filled), skip);
     } catch (err) {
       lastLookup = '';
       factsBar.replaceChildren(h('span', { class: 'facts-status bad' }, icon('info', 16), err?.message || String(err)),
         btn('Nochmal versuchen', () => fetchFacts({ manual: true }), { kind: 'ghost' }));
     }
   }
+  // ---------- Danach: mit dem Sprachmodell auf dem Gerät verfeinern ----------
+  let aiRun = 0;
+  let aiBusy = false;
+  async function refineWithAi(facts, filledValues, filledKeys, skip) {
+    if (!(await aiReady(app.settings))) return;
+    const run = ++aiRun;
+    const startedAt = Date.now();
+    if (aiBusy) aiAbort();
+    const bar = h('span', { style: 'width:0%' });
+    const line = h('div', { class: 'facts-ai' },
+      h('span', { class: 'facts-status' }, icon('sparkle', 16), 'KI liest den Artikel … (läuft im Hintergrund – du kannst weiter tippen oder schon speichern)'),
+      h('div', { class: 'rv-progress' }, bar),
+      btn('KI abbrechen', () => { aiRun++; aiAbort(); line.replaceChildren(h('span', { class: 'facts-status' }, 'KI-Auswertung abgebrochen.')); }, { kind: 'ghost' }));
+    factsBar.append(line);
+    aiBusy = true;
+    try {
+      const ai = await aiFacts(facts, {
+        name: deInput.value.trim() || laInput.value.trim(), lifeForms: app.settings.lifeForms || [], skip,
+        onProgress: f => { bar.style.width = Math.round(f * 100) + '%'; },
+      });
+      if (run !== aiRun) return;
+      // Nur Felder ändern, die eben automatisch gefüllt wurden (und seitdem unverändert sind) oder noch leer sind
+      const merge = cur => mergeAi(cur, ai, filledKeys, filledValues);
+      if (!line.isConnected) {
+        // Editor schon verlassen: Ergebnis in die gespeicherte Karte übernehmen (nur wenn danach gespeichert wurde)
+        const saved = await getCard(card.id);
+        if (saved?.plant && saved.modified >= startedAt && merge(saved.plant).length) await saveCard(saved);
+        return;
+      }
+      const cur = readFields();
+      const changed = merge(cur);
+      if (changed.length) writeFields(cur, changed);
+      line.replaceChildren(h('span', { class: 'facts-status ok' }, icon('sparkle', 16),
+        changed.length ? h('span', null, h('strong', null, 'Von der KI zusammengefasst: '), changed.map(k => FACT_LABELS[k]).join(', '))
+          : 'Die KI hat nichts Besseres gefunden.'));
+    } catch (err) {
+      if (run === aiRun) line.replaceChildren(h('span', { class: 'facts-status bad' }, icon('info', 16), 'KI-Auswertung fehlgeschlagen: ' + (err?.message || err)));
+    } finally {
+      if (run === aiRun) aiBusy = false;
+    }
+  }
+
   // Automatisch, sobald ein Name eingegeben wurde (beim Verlassen des Feldes)
   const autoFacts = () => { if (card.type === 'plant' && app.settings.autoFacts !== false) fetchFacts(); };
   laInput.addEventListener('change', autoFacts);

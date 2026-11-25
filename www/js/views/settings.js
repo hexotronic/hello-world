@@ -12,10 +12,11 @@ import { fmtDate, fmtBytes, norm } from '../util.js';
 import { isNative } from '../native.js';
 import { SPEECH_LANGS, speechSupported } from '../speech.js';
 import { cloudSection } from './cloudsection.js';
+import { aiSection } from './aisection.js';
 import { FEATURE_GROUPS, isOn } from '../features.js';
 import { FACT_KEYS } from '../plantfacts.js';
 
-const VERSION = '2.2.0';
+const VERSION = '2.3.0';
 
 export default async function settingsView(params = {}) {
   const s = app.settings;
@@ -166,6 +167,7 @@ export default async function settingsView(params = {}) {
 
   const native = isNative;
   const cloud = cloudSection();
+  const ai = aiSection();
 
   root.append(
     topbar({ title: 'Einstellungen', back: () => app.back() }),
@@ -210,7 +212,8 @@ export default async function settingsView(params = {}) {
             if (v) off.delete(key); else off.add(key);
             await update({ factsOff: [...off] });
           }, { id: 'fact-' + key, hint: fieldOff ? 'Feld ist unter „Bereiche ein- und ausschalten“ ausgeblendet und wird deshalb nicht ergänzt.' : null });
-        }))),
+        })),
+        ai.el),
 
       h('section', { class: 'set-sec', id: 'lists' },
         h('h2', { class: 'section-h' }, 'Auswahllisten'),
@@ -281,7 +284,7 @@ export default async function settingsView(params = {}) {
   return {
     el: root,
     tab: 'home',
-    destroy: cloud.destroy,
+    destroy: () => { cloud.destroy?.(); ai.destroy?.(); },
     afterMount: () => { if (params.focus === 'cloud') cloud.el.scrollIntoView({ block: 'start' }); },
   };
 }

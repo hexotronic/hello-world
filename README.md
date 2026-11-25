@@ -63,6 +63,13 @@ Karteikarten-App für Android (und jeden Browser) mit Wiederholung in wachsenden
 - Abschaltbar unter *Einstellungen → Steckbrief*; dort lässt sich auch jede einzelne Angabe abwählen (z. B. Standort oder Giftigkeit nie automatisch ausfüllen). Felder, die unter *Bereiche* ausgeblendet sind, werden ebenfalls nicht ergänzt. Tests für den Faktenleser: `npm run test:facts`
 - Die Angaben stammen aus Wikipedia/iNaturalist – vor allem Giftigkeit und Blütezeit bitte kurz prüfen
 
+**KI-Auswertung auf dem Handy (experimentell)**
+- *Einstellungen → Steckbrief → KI-Auswertung auf dem Handy*: ein kleines Sprachmodell (LFM2.5 von Liquid AI) einmalig herunterladen – „Genauer“ (1,2 Mrd. Parameter, ca. 760–850 MB) oder „Klein & schnell“ (350 Mio., ca. 255–295 MB)
+- Läuft komplett auf dem Gerät mit [Transformers.js](https://huggingface.co/docs/transformers.js) – mit der Grafikkarte (WebGPU, Android 12+ mit Qualcomm-/ARM-Grafik), sonst deutlich langsamer mit dem Prozessor. Transformers.js (jsDelivr), die Rechen-Laufzeit und das Modell (Hugging Face) werden beim ersten Einschalten geladen und im App-Speicher behalten
+- Nach der Internet-Suche füllt die schnelle Texterkennung die Felder sofort; danach fasst die KI Merkmale, Verwendung und Verwechslungen kurz zusammen und ergänzt Standort, Lebensform und Blütezeit, falls nichts gefunden wurde. Giftigkeit kommt immer aus der Texterkennung
+- Jede KI-Angabe wird gegen den passenden Abschnitt des Artikels geprüft (z. B. Verwechslungen nur aus „Verwechslung“/„Unterscheidung“); Erfundenes wird verworfen. Selbst Getipptes wird nie überschrieben, „Rückgängig“ nimmt auch die KI-Änderungen zurück
+- „Probelauf“ zeigt, wie lange das Modell auf dem eigenen Gerät braucht
+
 **Beispielbilder aus dem Internet**
 - Im Karten-Editor unter Fotos: **„Internet“** sucht zum eingegebenen botanischen (oder deutschen) Namen freie Bilder bei **iNaturalist** (geprüfte Pflanzenfotos) oder **Wikimedia Commons**
 - Bilder antippen zum Auswählen, auch aus beiden Quellen gemischt; „Mehr laden“ für weitere

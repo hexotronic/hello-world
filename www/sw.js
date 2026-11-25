@@ -1,5 +1,5 @@
 // Offline-Cache: App-Dateien werden beim ersten Laden gespeichert.
-const CACHE = 'florakarten-v12';
+const CACHE = 'florakarten-v13';
 const FILES = [
   './',
   'css/app.css',
@@ -39,6 +39,11 @@ const FILES = [
   'js/plantfacts.js',
   'js/features.js',
   'js/views/cloudsection.js',
+  'js/views/aisection.js',
+  'js/llmfacts.js',
+  'js/llm.js',
+  'js/llm-worker.js',
+  'js/aifacts.js',
   'vendor/capacitor.js',
   'manifest.webmanifest',
   'icons/icon-192.png',
@@ -52,7 +57,8 @@ self.addEventListener('install', e => {
 
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
-    .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+    // nur alte App-Caches löschen – das Sprachmodell (transformers-cache) bleibt erhalten
+    .then(keys => Promise.all(keys.filter(k => k.startsWith('florakarten-') && k !== CACHE).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 

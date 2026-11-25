@@ -909,3 +909,15 @@ body.fullscreen-view .review, body.fullscreen-view .random.playing, body.fullscr
 /* Bereiche ein- und ausschalten */
 .feature-group { display: flex; flex-direction: column; gap: 12px; }
 .feature-group + .feature-group { padding-top: 6px; border-top: 1px solid var(--line); }
+
+/* KI-Auswertung */
+.ai-box { display: flex; flex-direction: column; gap: 10px; padding-top: 8px; border-top: 1px solid var(--line); margin-top: 6px; }
+.ai-status { display: flex; align-items: flex-start; gap: 8px; font-size: 0.92rem; color: var(--ink-2); }
+.ai-status .icon { flex: none; margin-top: 2px; color: var(--ink-3); }
+.ai-status.ok .icon { color: var(--moss); }
+.ai-progress { max-width: none; }
+.facts-ai { display: flex; flex-direction: column; gap: 6px; width: 100%; padding-top: 4px; }
+.facts-ai .rv-progress { max-width: none; width: 100%; }
+.warn-text { color: var(--c-learn); }
+.ai-probe { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 12px; background: var(--sheet-2); }
+.ai-probe p { margin: 0 0 4px; }

@@ -12,6 +12,7 @@ import { newDeckFlow } from './home.js';
 import { cloudSoon } from '../cloud.js';
 import { pickCard, rememberTarget } from '../cardpicker.js';
 import { lookupPlant, applyFacts, skippedFacts, enrichLater } from '../plantfacts.js';
+import { aiReady, aiFacts, mergeAi } from '../aifacts.js';
 import { isOn } from '../features.js';
 
 const TARGET_KEY = 'quickTarget';
@@ -315,9 +316,19 @@ export default async function quickView(params = {}) {
       if (app.settings.autoFacts !== false && (name || card.plant.latinName)) {
         const latin = card.plant.latinName, german = name;
         enrichLater(async () => {
-          const facts = await lookupPlant({ latin, german, lifeForms: app.settings.lifeForms || [] });
-          const fresh = await getCard(card.id);
-          if (fresh && applyFacts(fresh.plant, facts, { families: FAMILIES, skip: skippedFacts(app.settings) }).length) await saveCard(fresh);
+          const lifeForms = app.settings.lifeForms || [];
+          const skip = skippedFacts(app.settings);
+          const facts = await lookupPlant({ latin, german, lifeForms });
+          let fresh = await getCard(card.id);
+          if (!fresh) return;
+          const filled = applyFacts(fresh.plant, facts, { families: FAMILIES, skip });
+          if (filled.length) await saveCard(fresh);
+          // danach mit dem Sprachmodell verfeinern (falls eingeschaltet und geladen)
+          if (!(await aiReady(app.settings))) return;
+          const filledValues = JSON.parse(JSON.stringify(fresh.plant));
+          const ai = await aiFacts(facts, { name: german || latin, lifeForms, skip });
+          fresh = await getCard(card.id);
+          if (fresh?.plant && mergeAi(fresh.plant, ai, new Set(filled), filledValues).length) await saveCard(fresh);
         });
       }
       everything.push(card);

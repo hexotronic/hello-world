@@ -28,7 +28,7 @@ export function sections(text) {
   return out.map(s => ({ ...s, text: s.text.replace(/\s+/g, ' ').trim() }));
 }
 
-function sentencesOf(text) {
+export function sentencesOf(text) {
   return String(text)
     .replace(/\s+/g, ' ')
     .split(/(?<=[.!?])\s+(?=[A-ZÄÖÜ(„"])/)
@@ -238,6 +238,7 @@ export async function lookupPlant({ latin = '', german = '', lifeForms = [] }) {
   let parsed = null;
   if (wiki) {
     parsed = parseWikiPlant(wiki.text, { lifeForms });
+    out.wikiText = wiki.text;   // für die KI-Auswertung (wird nicht gespeichert)
     out.sources.push({ name: 'Wikipedia', title: wiki.title, url: `https://de.wikipedia.org/wiki/${encodeURIComponent(wiki.title.replace(/ /g, '_'))}`, license: 'CC BY-SA 4.0' });
   }
   // 2) iNaturalist für saubere Namen und Familie

@@ -1,6 +1,6 @@
 {
   "name": "florakarten",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "private": true,
   "description": "Karteikarten-App mit Wiederholung in wachsenden Abständen, Zufallsfotos und Pflanzen-Extras",
   "scripts": {
@@ -8,7 +8,8 @@
     "android:sync": "cap sync android",
     "android:build": "cap sync android && cd android && ./gradlew assembleDebug",
     "test:speech": "node tests/speech-eval.mjs",
-    "test:facts": "node tests/facts-eval.mjs"
+    "test:facts": "node tests/facts-eval.mjs",
+    "test:ai": "node tests/ai-eval.mjs"
   },
   "dependencies": {
     "@capacitor/android": "8.6.0",

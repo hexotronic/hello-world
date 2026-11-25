@@ -7,6 +7,7 @@ import { getSettings, getMeta, setMeta } from './db.js';
 import { setDayStartHour } from './srs.js';
 import { setNameMode, setPhotoNameMode } from './plants.js';
 import { isOn, setFeaturesOff } from './features.js';
+import { setLlmModel } from './llm.js';
 import { createSampleDeck } from './sample.js';
 import { isNative, AppPlugin } from './native.js';
 import { initCloudAuto } from './cloud.js';
@@ -54,6 +55,7 @@ async function refreshSettings() {
   setNameMode(app.settings.nameMode);
   setPhotoNameMode(app.settings.photoNameMode);
   setFeaturesOff(app.settings.off);
+  setLlmModel(app.settings.aiModel);
   buildNav();
   return app.settings;
 }
@@ -171,6 +173,7 @@ async function boot() {
   setNameMode(app.settings.nameMode);
   setPhotoNameMode(app.settings.photoNameMode);
   setFeaturesOff(app.settings.off);
+  setLlmModel(app.settings.aiModel);
   buildNav();
   matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => applyTheme(app.settings.theme));
 

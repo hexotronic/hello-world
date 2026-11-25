@@ -1,36 +1,75 @@
 // Steckbrief mit einem kleinen Sprachmodell aus dem Wikipedia-Text herauslesen:
 // Text vorbereiten, Anweisung bauen, Antwort prüfen. Reine Funktionen (auch in Node testbar).
-import { sections, sectionText, clip, monthsFrom, monthsMentioned } from './plantfacts.js';
+import { sections, sectionText, sentencesOf, clip, monthsFrom, monthsMentioned } from './plantfacts.js';
 import { norm } from './util.js';
 
 /** Die Fakten, die das Modell liefern kann (Schlüssel wie in den Pflanzenangaben). */
 export const LLM_FIELDS = ['features', 'bloom', 'lifeForm', 'habitat', 'toxicity', 'uses', 'confusion'];
 
-/** Wikipedia-Artikel auf die für den Steckbrief wichtigen Abschnitte kürzen. */
-export function articleForLlm(text, maxChars = 3200) {
+/** Für den Steckbrief wichtige Abschnitte eines Wikipedia-Artikels (gekürzt). */
+export function articleParts(text) {
   const secs = sections(text);
   const pick = (re, max) => clip(sectionText(secs, re), max);
-  const parts = [
-    ['', clip(secs[0]?.text || '', 500)],
-    ['Beschreibung', pick(/^(Beschreibung|Merkmale|Vegetative Merkmale|Erscheinungsbild|Gestalt|Beschreibung und Ökologie)/i, 1000)],
-    ['Blüte', pick(/^(Blüte|Blütenstand|Generative Merkmale|Blütenknospen|Blütezeit)/i, 450)],
-    ['Vorkommen', pick(/(Vorkommen|Standort|Verbreitung|Ökologie)/i, 550)],
-    ['Verwendung', pick(/^(Verwendung|Nutzung|Heilpflanze|Speisepflanze|Zierpflanze|Anbau)/i, 450)],
-    ['Giftigkeit', pick(/(Giftigkeit|Toxikologie|Inhaltsstoffe)/i, 350)],
-    ['Verwechslung', pick(/(Verwechslung|Unterscheidung|Ähnliche Arten)/i, 350)],
-  ].filter(([, t]) => t);
-  let out = parts.map(([title, t]) => (title ? `${title}: ${t}` : t)).join('\n');
+  return {
+    lead: clip(secs[0]?.text || '', 500),
+    descr: pick(/^(Beschreibung|Merkmale|Vegetative Merkmale|Erscheinungsbild|Gestalt|Beschreibung und Ökologie)/i, 1000),
+    flower: pick(/^(Blüte|Blütenstand|Generative Merkmale|Blütenknospen|Blütezeit)/i, 450),
+    habitat: pick(/(Vorkommen|Standort|Verbreitung)/i, 550),
+    uses: pick(/^(Verwendung|Nutzung|Heilpflanze|Speisepflanze|Zierpflanze|Anbau)/i, 450),
+    // Giftigkeit: Sätze aus dem ganzen Artikel, die davon handeln
+    tox: clip(sentencesOf(secs.map(x => x.text).join(' ')).filter(x => /giftig|toxisch|giftstoff/i.test(x) && !/liste giftiger/i.test(x)).slice(0, 2).join(' '), 350),
+    confusion: pick(/(Verwechslung|Unterscheidung|Ähnliche Arten)/i, 350),
+  };
+}
+
+const PART_TITLES = { descr: 'Beschreibung', flower: 'Blüte', habitat: 'Vorkommen', uses: 'Verwendung', tox: 'Giftigkeit', confusion: 'Verwechslung' };
+
+/** Gekürzter Artikeltext für das Modell. */
+export function articleForLlm(textOrParts, maxChars = 3200) {
+  const parts = typeof textOrParts === 'string' ? articleParts(textOrParts) : textOrParts;
+  let out = Object.entries(parts).filter(([, t]) => t).map(([k, t]) => (PART_TITLES[k] ? `${PART_TITLES[k]}: ${t}` : t)).join('\n');
   if (out.length > maxChars) out = clip(out, maxChars);
   return out;
 }
 
-/** Chat-Nachrichten für das Modell. */
-export function llmMessages({ name, article, lifeForms = [] }) {
+/**
+ * Belegstellen je Feld: eine Angabe des Modells zählt nur, wenn sie im passenden Abschnitt steht
+ * (z. B. Verwechslungen nur im Abschnitt „Verwechslung“). Leere Belegstelle = Feld nicht abfragen.
+ */
+export function factSources(parts) {
+  const j = (...xs) => xs.filter(Boolean).join(' ');
+  const all = j(...Object.values(parts));
+  return {
+    features: j(parts.lead, parts.descr, parts.flower),
+    bloom: j(parts.descr, parts.flower, parts.lead),
+    lifeForm: j(parts.lead, parts.descr),
+    habitat: j(parts.habitat, parts.descr),
+    toxicity: /giftig|toxisch|giftstoff|vergiftung/i.test(all) ? all : '',
+    uses: j(parts.uses, /verwend|genutzt|nutzung|heilpflanze|zierpflanze|essbar|genießbar/i.test(parts.lead) ? parts.lead : ''),
+    confusion: parts.confusion,
+  };
+}
+
+const FIELD_RULES = {
+  features: ['merkmale', 'Woran erkennt man die Pflanze? Wuchs, Höhe, Blätter, Blüten. Höchstens 20 Wörter.'],
+  bloom: ['bluetezeit', 'Monate der Blüte, genau wie im Text, z. B. "Mai bis Juli".'],
+  lifeForm: ['lebensform', 'Genau eins von: {forms}.'],
+  habitat: ['standort', 'Wo wächst sie? Lebensraum, Boden, Licht. Keine Länder. Höchstens 15 Wörter.'],
+  toxicity: ['giftigkeit', 'Genau eins von: ungiftig, schwach giftig, giftig, stark giftig. Leer, wenn der Text nichts dazu sagt.'],
+  uses: ['verwendung', 'Wofür wird sie genutzt? Höchstens 12 Wörter.'],
+  confusion: ['verwechslung', 'Namen ähnlicher Pflanzen, mit denen man sie verwechseln kann. Leer, wenn der Text keine nennt.'],
+};
+
+/** Chat-Nachrichten für das Modell. fields: gewünschte Felder (Standard: alle). */
+export function llmMessages({ name, article, lifeForms = [], fields = LLM_FIELDS }) {
   const forms = (lifeForms.length ? lifeForms : ['Einjährig', 'Zweijährig', 'Staude', 'Halbstrauch', 'Strauch', 'Baum']).join(', ');
+  const use = fields.filter(f => FIELD_RULES[f]);
+  const template = '{' + use.map(f => `"${FIELD_RULES[f][0]}": ""`).join(', ') + '}';
+  const rules = use.map(f => `- ${FIELD_RULES[f][0]}: ${FIELD_RULES[f][1].replace('{forms}', forms)}`).join('\n');
   return [
     {
       role: 'system',
-      content: 'Du füllst Pflanzen-Steckbriefe aus. Du nutzt nur Angaben aus dem gegebenen Text und erfindest nichts. Du antwortest nur mit JSON.',
+      content: 'Du liest Texte über Pflanzen und trägst Fakten in einen Steckbrief ein. Du verwendest nur, was im Text steht. Steht etwas nicht im Text, bleibt der Wert "". Du antwortest nur mit JSON auf Deutsch.',
     },
     {
       role: 'user',
@@ -39,16 +78,11 @@ export function llmMessages({ name, article, lifeForms = [] }) {
 ${article}
 """
 
-Fülle diesen Steckbrief auf Deutsch aus. Schreibe kurz (höchstens 25 Wörter pro Feld). Steht etwas nicht im Text, schreibe "".
-{
-"merkmale": "woran man die Pflanze erkennt: Wuchs, Höhe, Blätter, Blüten",
-"bluetezeit": "Monate, z. B. Juni bis August",
-"lebensform": "eins von: ${forms}",
-"standort": "wo sie wächst: Lebensraum, Boden, Licht",
-"giftigkeit": "ungiftig, schwach giftig, giftig oder stark giftig",
-"verwendung": "Nutzung, z. B. als Heil-, Zier- oder Nahrungspflanze",
-"verwechslung": "ähnliche Pflanzen, mit denen man sie verwechseln kann"
-}`,
+Fülle die Werte aus dem Text aus:
+${template}
+
+Regeln:
+${rules}`,
     },
   ];
 }
@@ -90,11 +124,12 @@ export function groundedShare(answer, source) {
 
 /** Text säubern: Platzhalter verwerfen, Länge begrenzen, nur wenn im Quelltext belegt. */
 function cleanText(value, source, max) {
+  if (!source) return '';
   let v = Array.isArray(value) ? value.join(', ') : String(value ?? '');
   v = v.replace(/\s+/g, ' ').trim().replace(/^["„“]|["“”]$/g, '');
   if (EMPTY.test(v)) return '';
   // Wiederholung des Beispiels aus der Anweisung
-  if (/woran man die Pflanze erkennt|z\. B\. als Heil-|mit denen man sie verwechseln/i.test(v)) return '';
+  if (/woran erkennt man|höchstens \d+ wörter|lebensraum, boden, licht|namen ähnlicher pflanzen|wuchs, höhe, blätter, blüten/i.test(v)) return '';
   if (groundedShare(v, source) < 0.6) return '';
   if (v.length > max) v = clip(v, max);
   return v.charAt(0).toUpperCase() + v.slice(1);
@@ -112,6 +147,7 @@ const LIFE_HINTS = [
 
 /** Lebensform(en) auf die eigene Auswahlliste abbilden; nur, wenn der Text dazu passt. */
 function cleanLifeForm(value, source, lifeForms) {
+  if (!source) return [];
   const items = (Array.isArray(value) ? value : String(value ?? '').split(/,|\/(?!Kak)| oder | und /)).map(x => String(x).trim()).filter(Boolean);
   const out = [];
   for (const item of items) {
@@ -138,6 +174,7 @@ function cleanToxicity(value, source) {
 
 /** Monate nur übernehmen, wenn sie auch im Text stehen. */
 function cleanBloom(value, source) {
+  if (!source) return [];
   const months = monthsFrom(Array.isArray(value) ? value.join(', ') : value);
   if (!months.length || months.length > 10) return [];
   const present = new Set(monthsMentioned(source));
@@ -152,6 +189,7 @@ function cleanBloom(value, source) {
  */
 export function llmToFacts(obj, source, { lifeForms = [] } = {}) {
   if (!obj || typeof obj !== 'object') return {};
+  const src = k => (typeof source === 'string' ? source : source?.[k] || '');
   const get = (...keys) => {
     for (const k of keys) {
       const hit = Object.keys(obj).find(x => norm(x).replace(/[^a-z]/g, '') === k);
@@ -160,14 +198,21 @@ export function llmToFacts(obj, source, { lifeForms = [] } = {}) {
     return '';
   };
   const out = {
-    features: cleanText(get('merkmale', 'beschreibung'), source, 360),
-    bloom: cleanBloom(get('bluetezeit', 'blutezeit', 'bluhzeit'), source),
-    lifeForm: cleanLifeForm(get('lebensform'), source, lifeForms),
-    habitat: cleanText(get('standort', 'vorkommen'), source, 300),
-    toxicity: cleanToxicity(get('giftigkeit', 'giftig'), source),
-    uses: cleanText(get('verwendung', 'nutzung'), source, 260),
-    confusion: cleanText(get('verwechslung', 'verwechslungen'), source, 260),
+    features: cleanText(get('merkmale', 'beschreibung'), src('features'), 360),
+    bloom: cleanBloom(get('bluetezeit', 'blutezeit', 'bluhzeit'), src('bloom')),
+    lifeForm: cleanLifeForm(get('lebensform'), src('lifeForm'), lifeForms),
+    habitat: cleanText(get('standort', 'vorkommen'), src('habitat'), 300),
+    toxicity: cleanToxicity(get('giftigkeit', 'giftig'), src('toxicity')),
+    uses: cleanText(get('verwendung', 'nutzung'), src('uses'), 260),
+    confusion: cleanText(get('verwechslung', 'verwechslungen'), src('confusion'), 260),
   };
+  // dieselbe Antwort in mehreren Feldern: nur im ersten behalten
+  const seen = new Set();
+  for (const k of ['features', 'habitat', 'uses', 'confusion']) {
+    if (!out[k]) continue;
+    const key = norm(out[k]);
+    if (seen.has(key)) out[k] = ''; else seen.add(key);
+  }
   for (const k of Object.keys(out)) if (Array.isArray(out[k]) ? !out[k].length : !out[k]) delete out[k];
   return out;
 }

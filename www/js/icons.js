@@ -30,6 +30,7 @@ const P = {
   grid: '<rect x="4" y="4" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1"/>',
   tag: '<path d="M3.5 12.2V3.5h8.7l8.3 8.3-8.7 8.7z"/><circle cx="8" cy="8" r="1.5"/>',
   bolt: '<path d="M13 2.5L4.5 14h7l-1 7.5L19 10h-7z"/>',
+  sparkle: '<path d="M10 3.5l1.6 4.4 4.4 1.6-4.4 1.6L10 15.5l-1.6-4.4-4.4-1.6 4.4-1.6z"/><path d="M17.5 14l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/>',
   chevron: '<path d="M9 5.5l6.5 6.5L9 18.5"/>',
   clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
   ban: '<circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/>',

@@ -122,6 +122,8 @@ export const SETTINGS_DEFAULTS = {
   speechInLang: 'de-DE',          // Sprache der Spracherkennung
   autoFacts: true,                // Familie & Steckbrief automatisch aus dem Internet ergänzen
   factsOff: [],                   // Fakten, die dabei nicht ergänzt werden (siehe plantfacts.js FACT_KEYS)
+  aiFacts: false,                 // Steckbrief zusätzlich mit dem Sprachmodell auf dem Gerät auswerten
+  aiModel: 'large',               // Sprachmodell: 'large' (genauer) oder 'small' (klein & schnell), siehe llm.js
   off: [],                        // ausgeschaltete Bereiche (siehe features.js)
 };
 
