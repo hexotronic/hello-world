@@ -121,6 +121,7 @@ export const SETTINGS_DEFAULTS = {
   renameOriginals: true,          // Android: Originalfotos in der Galerie umbenennen
   speechInLang: 'de-DE',          // Sprache der Spracherkennung
   autoFacts: true,                // Familie & Steckbrief automatisch aus dem Internet ergänzen
+  factsOff: [],                   // Fakten, die dabei nicht ergänzt werden (siehe plantfacts.js FACT_KEYS)
   off: [],                        // ausgeschaltete Bereiche (siehe features.js)
 };
 

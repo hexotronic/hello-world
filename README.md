@@ -27,7 +27,7 @@ Karteikarten-App für Android (und jeden Browser) mit Wiederholung in wachsenden
 
 **Pflanzen-Extras**
 - Hauptname wählbar: **deutsch oder botanisch (Latein)** – gilt für Listen, Sortierung, Rückseite, Tipps, Zufallsfotos, Training und Erfassen (*Einstellungen → Darstellung*)
-- Kartentyp *Pflanze* mit deutschem und botanischem Namen, Familie (mit Vorschlagsliste), **Lebensform**, Merkmalen, Blütezeit, Standort, Giftigkeit, Verwendung, Verwechslungsgefahr und Notizen
+- Kartentyp *Pflanze* mit deutschem und botanischem Namen, **Lebensform** und **Verwendung** (stehen auf der Rückseite, im Editor und bei der Schnell-Erfassung direkt unter den Namen), Familie (mit Vorschlagsliste), Merkmalen, Blütezeit, Standort, Giftigkeit, Verwechslungsgefahr und Notizen
 - **Auswahllisten** für Lebensformen (Einjährig, Zweijährig, Staude, Halbstrauch, Strauch, Baum, Sukkulente/Kaktee) und Verwendungszwecke (Beet- und Balkon, Blühende Topfpflanze, Schnitt, Beiwerk, Beetstaude/Freifläche, Steingarten, Hänge/Kriech/Kletter, Einfassung/Hecke, Kübel/Ziergehölz, Unerwünschter Wuchs): beim Erfassen nur antippen, in *Einstellungen → Auswahllisten* frei änderbar
 - Suche filterbar nach Lebensform oder Verwendung; Training „Foto → Lebensform“
 - Rückseite als Herbar-Etikett mit Blühkalender, botanische Namen kursiv, Vorlesen per Sprachausgabe
@@ -60,7 +60,7 @@ Karteikarten-App für Android (und jeden Browser) mit Wiederholung in wachsenden
 - Nach Eingabe des botanischen oder deutschen Namens sucht die App bei **iNaturalist** und in der **deutschen Wikipedia** und füllt **leere** Felder: Familie (z. B. „Plantaginaceae (Wegerichgewächse)“), fehlender deutscher/botanischer Name, Merkmale, Blütezeit (Monate im Blühkalender), Lebensform, Standort, Giftigkeit, Verwendung, Verwechslung; die Quelle wird in den Notizen vermerkt
 - Ausgefüllte Felder bleiben unangetastet; „Rückgängig“ und „Erneut suchen“ direkt unter den Namen
 - In der Schnell-Erfassung passiert das im Hintergrund
-- Abschaltbar unter *Einstellungen → Steckbrief*; Tests für den Faktenleser: `npm run test:facts`
+- Abschaltbar unter *Einstellungen → Steckbrief*; dort lässt sich auch jede einzelne Angabe abwählen (z. B. Standort oder Giftigkeit nie automatisch ausfüllen). Felder, die unter *Bereiche* ausgeblendet sind, werden ebenfalls nicht ergänzt. Tests für den Faktenleser: `npm run test:facts`
 - Die Angaben stammen aus Wikipedia/iNaturalist – vor allem Giftigkeit und Blütezeit bitte kurz prüfen
 
 **Beispielbilder aus dem Internet**

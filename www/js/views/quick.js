@@ -11,7 +11,7 @@ import { norm, nameFromFilename } from '../util.js';
 import { newDeckFlow } from './home.js';
 import { cloudSoon } from '../cloud.js';
 import { pickCard, rememberTarget } from '../cardpicker.js';
-import { lookupPlant, applyFacts, enrichLater } from '../plantfacts.js';
+import { lookupPlant, applyFacts, skippedFacts, enrichLater } from '../plantfacts.js';
 import { isOn } from '../features.js';
 
 const TARGET_KEY = 'quickTarget';
@@ -279,6 +279,8 @@ export default async function quickView(params = {}) {
     const match = h('div', { class: 'dup-hint', hidden: true });
     const life = [];
     const lifePicker = chipPicker(app.settings.lifeForms || [], life, { id: 'q-life', label: 'Lebensform' });
+    const uses = [];
+    const usesPicker = chipPicker(app.settings.usesList || [], uses, { id: 'q-uses', label: 'Verwendung' });
     const names = h('datalist', { id: 'q-names' }, [...new Set(everything.map(c => (latinFirst ? c.plant?.latinName : c.plant?.deName)).filter(Boolean))].sort().map(n => h('option', { value: n })));
     const fams = h('datalist', { id: 'q-fams' }, FAMILIES.map(f => h('option', { value: f })));
 
@@ -302,7 +304,7 @@ export default async function quickView(params = {}) {
       stickyTags = tags.value;
       stickyFamily = fam.value.trim();
       const card = emptyCard(deckId, 'plant');
-      Object.assign(card.plant, { deName: name, latinName: la.value.trim(), family: fam.value.trim(), lifeForm: [...life] });
+      Object.assign(card.plant, { deName: name, latinName: la.value.trim(), family: fam.value.trim(), lifeForm: [...life], usesList: [...uses] });
       card.tags = [...new Set(tags.value.split(/[,;]+/).map(t => t.trim().toLowerCase().replace(/\s+/g, '-')).filter(Boolean))];
       if (unnamed) { card.title = ''; card.tags.push('unbenannt'); }
       const p = await addPhoto({ ...current.data, caption: cap.value }, card.id);
@@ -315,7 +317,7 @@ export default async function quickView(params = {}) {
         enrichLater(async () => {
           const facts = await lookupPlant({ latin, german, lifeForms: app.settings.lifeForms || [] });
           const fresh = await getCard(card.id);
-          if (fresh && applyFacts(fresh.plant, facts, { families: FAMILIES }).length) await saveCard(fresh);
+          if (fresh && applyFacts(fresh.plant, facts, { families: FAMILIES, skip: skippedFacts(app.settings) }).length) await saveCard(fresh);
         });
       }
       everything.push(card);
@@ -340,8 +342,10 @@ export default async function quickView(params = {}) {
       h('div', { class: 'quick-item' },
         h('figure', { class: 'quick-photo' }, h('img', { src: current.url, alt: 'Ausgewähltes Foto' })),
         h('div', { class: 'form' },
-          first, names, match, second, isOn('field:family') ? fam : null, fams,
+          first, names, match, second,
           isOn('field:lifeForm') ? h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Lebensform (optional)'), lifePicker) : null,
+          isOn('field:uses') ? h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Verwendung (optional)'), usesPicker) : null,
+          isOn('field:family') ? fam : null, fams,
           h('div', { class: 'grid2' }, cap, isOn('field:tags') ? tags : null),
           h('div', { class: 'btn-col' },
             btn('Speichern & weiter', () => saveNew(), { kind: 'primary', iconName: 'check' }),

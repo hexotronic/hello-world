@@ -2,6 +2,7 @@
 import { norm } from './util.js';
 import { findTaxon } from './webimages.js';
 import { familyKey } from './plants.js';
+import { isOn } from './features.js';
 
 const WIKI = 'https://de.wikipedia.org/w/api.php';
 const MONTH_NAMES = ['januar', 'februar', 'märz', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'dezember'];
@@ -36,7 +37,7 @@ function sentencesOf(text) {
 }
 
 /** Abschnitte, deren Überschrift zum Muster passt (inkl. Unterabschnitte). */
-function sectionText(secs, re, { withChildren = true } = {}) {
+export function sectionText(secs, re, { withChildren = true } = {}) {
   const parts = [];
   for (let i = 0; i < secs.length; i++) {
     if (!re.test(secs[i].title)) continue;
@@ -48,7 +49,7 @@ function sectionText(secs, re, { withChildren = true } = {}) {
   return parts.filter(Boolean).join(' ');
 }
 
-function clip(text, max) {
+export function clip(text, max) {
   if (!text) return '';
   if (text.length <= max) return text;
   const cut = text.slice(0, max);
@@ -97,6 +98,26 @@ export function parseBloom(text) {
     if (found.length) return [...new Set(found)].sort((x, y) => x - y);
   }
   return [];
+}
+
+/** Monate aus einer kurzen Angabe wie „Juni bis August“, „April–Mai“ oder „Mai, Juni“. */
+export function monthsFrom(str) {
+  const s = String(str || '');
+  const ranges = s.matchAll(/([A-Za-zäÄ]+)\.?\s*(?:bis(?:\s+in\s+den)?(?:\s+(?:Ende|Anfang|Mitte))?|–|-|—)\s*(?:(?:Ende|Anfang|Mitte)\s+)?([A-Za-zäÄ]+)/gi);
+  for (const range of ranges) {
+    const a = HAS_MONTH.test(range[1]) && monthIndex(range[1]), b = HAS_MONTH.test(range[2]) && monthIndex(range[2]);
+    if (a && b) {
+      const months = [];
+      for (let m = a; ; m = (m % 12) + 1) { months.push(m); if (m === b || months.length > 12) break; }
+      return months.sort((x, y) => x - y);
+    }
+  }
+  return [...new Set([...s.matchAll(MONTH_RE)].map(m => monthIndex(m[1])).filter(Boolean))].sort((x, y) => x - y);
+}
+
+/** Alle im Text genannten Monate (1–12). */
+export function monthsMentioned(text) {
+  return [...new Set([...String(text || '').matchAll(MONTH_RE)].map(m => monthIndex(m[1])).filter(Boolean))];
 }
 
 /** Lebensform(en) aus der Beschreibung, abgebildet auf die eigene Auswahlliste. */
@@ -243,6 +264,20 @@ export async function lookupPlant({ latin = '', german = '', lifeForms = [] }) {
 }
 
 // ---------- Übernehmen ----------
+/** Fakten, die automatisch ergänzt werden können (Reihenfolge wie in den Einstellungen). */
+export const FACT_KEYS = [
+  ['deName', 'Deutscher Name'], ['latinName', 'Botanischer Name'], ['family', 'Familie'],
+  ['lifeForm', 'Lebensform'], ['uses', 'Verwendung'], ['features', 'Merkmale'], ['bloom', 'Blütezeit'],
+  ['habitat', 'Standort'], ['toxicity', 'Giftigkeit'], ['confusion', 'Verwechslung'], ['notes', 'Quellenangabe in den Notizen'],
+];
+
+/** Fakten, die nicht ergänzt werden: in den Einstellungen abgewählt oder Feld unter „Bereiche“ ausgeblendet. */
+export function skippedFacts(settings = {}) {
+  const skip = new Set(settings.factsOff || []);
+  for (const [k] of FACT_KEYS) if (k !== 'deName' && k !== 'latinName' && !isOn('field:' + k)) skip.add(k);
+  return skip;
+}
+
 export const FACT_LABELS = {
   deName: 'deutscher Name', latinName: 'botanischer Name', family: 'Familie', features: 'Merkmale', bloom: 'Blütezeit',
   lifeForm: 'Lebensform', toxicity: 'Giftigkeit', habitat: 'Standort', uses: 'Verwendung', confusion: 'Verwechslung', notes: 'Quelle',
@@ -250,13 +285,14 @@ export const FACT_LABELS = {
 
 /**
  * Gefundene Fakten in die Pflanzenangaben p übernehmen. onlyEmpty: nur leere Felder füllen.
- * families: bekannte Familiennamen (für die Schreibweise „Asteraceae (Korbblütler)“). Ergebnis: gefüllte Felder.
+ * families: bekannte Familiennamen (für die Schreibweise „Asteraceae (Korbblütler)“).
+ * skip: Felder, die nicht ergänzt werden sollen (siehe skippedFacts). Ergebnis: gefüllte Felder.
  */
-export function applyFacts(p, facts, { onlyEmpty = true, families = [] } = {}) {
+export function applyFacts(p, facts, { onlyEmpty = true, families = [], skip = new Set() } = {}) {
   const filled = [];
   const isEmpty = v => (Array.isArray(v) ? !v.length : !String(v ?? '').trim());
   const set = (key, value) => {
-    if (value == null || isEmpty(value)) return;
+    if (skip.has(key) || value == null || isEmpty(value)) return;
     if (onlyEmpty && !isEmpty(p[key])) return;
     p[key] = Array.isArray(value) ? [...value] : value;
     filled.push(key);
@@ -269,7 +305,7 @@ export function applyFacts(p, facts, { onlyEmpty = true, families = [] } = {}) {
   }
   for (const k of ['features', 'bloom', 'lifeForm', 'toxicity', 'habitat', 'uses', 'confusion']) set(k, facts[k]);
   // Herkunft vermerken (Wikipedia-Texte stehen unter CC BY-SA)
-  if (filled.length && facts.sources?.length && !/Quelle:/.test(p.notes || '')) {
+  if (!skip.has('notes') && filled.length && facts.sources?.length && !/Quelle:/.test(p.notes || '')) {
     const note = 'Quelle: ' + facts.sources.map(s => (s.name === 'Wikipedia' ? `Wikipedia „${s.title}“ (${s.license})` : s.name)).join(', ');
     p.notes = p.notes ? `${p.notes}\n${note}` : note;
     filled.push('notes');

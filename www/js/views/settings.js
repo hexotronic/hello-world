@@ -13,8 +13,9 @@ import { isNative } from '../native.js';
 import { SPEECH_LANGS, speechSupported } from '../speech.js';
 import { cloudSection } from './cloudsection.js';
 import { FEATURE_GROUPS, isOn } from '../features.js';
+import { FACT_KEYS } from '../plantfacts.js';
 
-const VERSION = '2.1.0';
+const VERSION = '2.2.0';
 
 export default async function settingsView(params = {}) {
   const s = app.settings;
@@ -198,8 +199,18 @@ export default async function settingsView(params = {}) {
         h('h2', { class: 'section-h' }, 'Steckbrief'),
         toggle('Familie & Steckbrief automatisch ergänzen', s.autoFacts !== false, v => update({ autoFacts: v }), {
           id: 'set-autofacts',
-          hint: 'Nach Eingabe des botanischen oder deutschen Namens sucht die App bei iNaturalist und in der deutschen Wikipedia und füllt leere Felder: Familie, Namen, Merkmale, Blütezeit, Lebensform, Standort, Giftigkeit, Verwendung, Verwechslung. Bei der Schnell-Erfassung geschieht das im Hintergrund. Braucht Internet.',
-        })),
+          hint: 'Nach Eingabe des botanischen oder deutschen Namens sucht die App bei iNaturalist und in der deutschen Wikipedia und füllt leere Felder. Bei der Schnell-Erfassung geschieht das im Hintergrund. Braucht Internet.',
+        }),
+        h('h3', { class: 'form-h' }, 'Diese Angaben ergänzen'),
+        h('p', { class: 'muted small' }, 'Was du ausschaltest, lässt die automatische Suche leer – auch wenn sie etwas findet.'),
+        h('div', { class: 'feature-group', id: 'fact-switches' }, FACT_KEYS.map(([key, label]) => {
+          const fieldOff = key !== 'deName' && key !== 'latinName' && !isOn('field:' + key);
+          return toggle(label, !(s.factsOff || []).includes(key), async v => {
+            const off = new Set(app.settings.factsOff || []);
+            if (v) off.delete(key); else off.add(key);
+            await update({ factsOff: [...off] });
+          }, { id: 'fact-' + key, hint: fieldOff ? 'Feld ist unter „Bereiche ein- und ausschalten“ ausgeblendet und wird deshalb nicht ergänzt.' : null });
+        }))),
 
       h('section', { class: 'set-sec', id: 'lists' },
         h('h2', { class: 'section-h' }, 'Auswahllisten'),

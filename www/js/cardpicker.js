@@ -62,7 +62,7 @@ export async function pickCard({ title = 'Pflanze auswählen' } = {}) {
       input.addEventListener('input', debounce(render, 100));
       render();
       setTimeout(() => input.focus(), 80);
-      return h('div', { class: 'picker' }, h('div', { class: 'search-wrap' }, icon('search', 20), input), list);
+      return h('div', { class: 'card-picker' }, h('div', { class: 'search-wrap' }, icon('search', 20), input), list);
     },
   });
 }

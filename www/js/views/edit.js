@@ -11,7 +11,7 @@ import { newSrs, formatDays } from '../srs.js';
 import { FAMILIES, TOXICITY, CAPTIONS, getNameMode, familyKey } from '../plants.js';
 import { saveSettings } from '../db.js';
 import { openImageSearch } from '../imagesearch.js';
-import { lookupPlant, applyFacts, FACT_LABELS } from '../plantfacts.js';
+import { lookupPlant, applyFacts, skippedFacts, FACT_LABELS } from '../plantfacts.js';
 import { isOn } from '../features.js';
 import { MONTHS_ABBR, MONTHS, norm, fmtDate, nameFromFilename } from '../util.js';
 import { newDeckFlow } from './home.js';
@@ -260,10 +260,11 @@ export default async function editView({ id, deckId, type }) {
       const facts = await lookupPlant({ latin, german, lifeForms: app.settings.lifeForms || [] });
       const before = readFields();
       const values = readFields();
-      let filled = applyFacts(values, facts, { families: [...famSet] });
+      const skip = skippedFacts(app.settings);
+      let filled = applyFacts(values, facts, { families: [...famSet], skip });
       if (!filled.length && manual) {
         if (await confirmDialog('Alle Felder sind schon ausgefüllt', 'Sollen die gefundenen Angaben die vorhandenen überschreiben?', { ok: 'Überschreiben', danger: false })) {
-          filled = applyFacts(values, facts, { onlyEmpty: false, families: [...famSet] });
+          filled = applyFacts(values, facts, { onlyEmpty: false, families: [...famSet], skip });
         }
       }
       if (!filled.length) {
@@ -296,15 +297,16 @@ export default async function editView({ id, deckId, type }) {
     dupHint,
     latinFirst ? deField : laField,
     factsBar,
+    // Lebensform und Verwendung zuerst, direkt unter den Namen
+    h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Lebensform'), lifePicker,
+      h('span', { class: 'field-hint' }, 'Mehrfachauswahl möglich, z. B. „Staude“ und „Hemikryptophyt“. Liste anpassen: Einstellungen → Auswahllisten.')),
+    h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Verwendung'), usesPicker, usesInput),
     field('Familie', famInput),
     famList,
     field('Merkmale', featInput),
     h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Blütezeit'), bloomRow),
-    h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Lebensform'), lifePicker,
-      h('span', { class: 'field-hint' }, 'Mehrfachauswahl möglich, z. B. „Staude“ und „Hemikryptophyt“. Liste anpassen: Einstellungen → Auswahllisten.')),
     field('Standort', habInput),
     field('Giftigkeit', toxSelect),
-    h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Verwendung'), usesPicker, usesInput),
     field('Verwechslungsgefahr', confInput),
     field('Notizen', notesInput),
     field('Eigene Frage (optional)', questionInput));
