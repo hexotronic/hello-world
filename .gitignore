@@ -5,3 +5,6 @@ node_modules/
 # Signaturschlüssel nie einchecken
 *.keystore
 *.jks
+
+# KI-Laufzeit: wird beim Android-Build heruntergeladen (siehe .github/workflows/android.yml)
+www/vendor/transformers/

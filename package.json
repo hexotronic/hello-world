@@ -1,6 +1,6 @@
 {
   "name": "florakarten",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "private": true,
   "description": "Karteikarten-App mit Wiederholung in wachsenden Abständen, Zufallsfotos und Pflanzen-Extras",
   "scripts": {

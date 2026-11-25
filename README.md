@@ -65,7 +65,7 @@ Karteikarten-App für Android (und jeden Browser) mit Wiederholung in wachsenden
 
 **KI-Auswertung auf dem Handy (experimentell)**
 - *Einstellungen → Steckbrief → KI-Auswertung auf dem Handy*: ein kleines Sprachmodell (LFM2.5 von Liquid AI) einmalig herunterladen – „Genauer“ (1,2 Mrd. Parameter, ca. 760–850 MB) oder „Klein & schnell“ (350 Mio., ca. 255–295 MB)
-- Läuft komplett auf dem Gerät mit [Transformers.js](https://huggingface.co/docs/transformers.js) – mit der Grafikkarte (WebGPU, Android 12+ mit Qualcomm-/ARM-Grafik), sonst deutlich langsamer mit dem Prozessor. Transformers.js (jsDelivr), die Rechen-Laufzeit und das Modell (Hugging Face) werden beim ersten Einschalten geladen und im App-Speicher behalten
+- Läuft komplett auf dem Gerät mit [Transformers.js](https://huggingface.co/docs/transformers.js) – mit der Grafikkarte (WebGPU, Android 12+ mit Qualcomm-/ARM-Grafik), sonst deutlich langsamer mit dem Prozessor. In der Android-App sind Transformers.js und die Rechen-Laufzeit (ONNX Runtime Web) enthalten (beim Build heruntergeladen); die Web-Version lädt sie von jsDelivr. Das Modell kommt von Hugging Face und bleibt im App-Speicher
 - Nach der Internet-Suche füllt die schnelle Texterkennung die Felder sofort; danach fasst die KI Merkmale, Verwendung und Verwechslungen kurz zusammen und ergänzt Standort, Lebensform und Blütezeit, falls nichts gefunden wurde. Giftigkeit kommt immer aus der Texterkennung
 - Jede KI-Angabe wird gegen den passenden Abschnitt des Artikels geprüft (z. B. Verwechslungen nur aus „Verwechslung“/„Unterscheidung“); Erfundenes wird verworfen. Selbst Getipptes wird nie überschrieben, „Rückgängig“ nimmt auch die KI-Änderungen zurück
 - „Probelauf“ zeigt, wie lange das Modell auf dem eigenen Gerät braucht

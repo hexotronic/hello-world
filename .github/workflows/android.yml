@@ -66,6 +66,24 @@ jobs:
       - name: Abhängigkeiten installieren
         run: npm ci
 
+      # KI-Laufzeit für die Steckbrief-Auswertung direkt in die App legen (lokal statt vom CDN laden).
+      # Die Dateien liegen nicht im Repository: transformers.min.js enthält eine Zeichenkette, die der
+      # Geheimnis-Scanner von GitHub fälschlich für einen API-Schlüssel hält.
+      - name: KI-Laufzeit (Transformers.js + ONNX Runtime Web) bereitstellen
+        run: |
+          T="$RUNNER_TEMP/tjs"; D="$GITHUB_WORKSPACE/www/vendor/transformers"
+          mkdir -p "$T" "$D"
+          ORT=$(npm view @huggingface/transformers@4.3.2 dependencies.onnxruntime-web)
+          echo "onnxruntime-web $ORT"
+          (cd "$T" && npm pack --silent @huggingface/transformers@4.3.2 "onnxruntime-web@$ORT" >/dev/null \
+            && mkdir t o && tar xzf huggingface-transformers-4.3.2.tgz -C t && tar xzf onnxruntime-web-*.tgz -C o)
+          cp "$T/t/package/dist/transformers.min.js" "$D/"
+          cp "$T/t/package/LICENSE" "$D/LICENSE-transformers.txt"
+          for f in ort-wasm-simd-threaded.mjs ort-wasm-simd-threaded.wasm ort-wasm-simd-threaded.asyncify.mjs ort-wasm-simd-threaded.asyncify.wasm; do
+            cp "$T/o/package/dist/$f" "$D/"
+          done
+          ls -la "$D"
+
       - name: Web-App ins Android-Projekt kopieren
         run: npx cap sync android
 

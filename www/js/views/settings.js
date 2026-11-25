@@ -16,7 +16,7 @@ import { aiSection } from './aisection.js';
 import { FEATURE_GROUPS, isOn } from '../features.js';
 import { FACT_KEYS } from '../plantfacts.js';
 
-const VERSION = '2.3.0';
+const VERSION = '2.3.1';
 
 export default async function settingsView(params = {}) {
   const s = app.settings;

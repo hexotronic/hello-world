@@ -1,36 +1,55 @@
 // Sprachmodell im Hintergrund-Thread: laden (einmaliger Download, danach aus dem Speicher), Text erzeugen.
 // Nachrichten: { id, cmd: 'status'|'load'|'generate'|'abort'|'clear', ... } → { id, type: 'progress'|'token'|'done'|'error', ... }
 //
-// Transformers.js (Hugging Face) wird beim ersten Gebrauch von jsDelivr geladen und – wie das Modell und die
-// WebAssembly-Laufzeit – im App-Speicher (Cache „transformers-cache“) abgelegt, damit es danach ohne Netz startet.
-const TJS_URL = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.2/dist/transformers.min.js';
+// Transformers.js (Hugging Face) und die Rechen-Laufzeit (ONNX Runtime Web) liegen in der Android-App unter
+// vendor/transformers/ (beim Build heruntergeladen). Fehlen sie (Web-Version), kommen sie von jsDelivr und
+// werden – wie das Modell – im App-Speicher (Cache „transformers-cache“) abgelegt.
+const TJS_VERSION = '4.3.2';
+const TJS_CDN = `https://cdn.jsdelivr.net/npm/@huggingface/transformers@${TJS_VERSION}/dist/transformers.min.js`;
+const LOCAL = new URL('../vendor/transformers/', import.meta.url).href;
 const CACHE_KEY = 'transformers-cache';
-let T = null;   // geladene Bibliothek
+let T = null;          // geladene Bibliothek
+let local = false;     // Laufzeit liegt in der App
 let env, AutoTokenizer, AutoModelForCausalLM, TextStreamer, ModelRegistry, stopper;
 
-async function lib() {
-  if (T) return T;
+async function fromCdn() {
   let code;
   try {
     const cache = await caches.open(CACHE_KEY);
-    let res = await cache.match(TJS_URL);
+    let res = await cache.match(TJS_CDN);
     if (!res) {
-      res = await fetch(TJS_URL, { credentials: 'omit' });
+      res = await fetch(TJS_CDN, { credentials: 'omit' });
       if (!res.ok) throw new Error('HTTP ' + res.status);
-      await cache.put(TJS_URL, res.clone());
+      await cache.put(TJS_CDN, res.clone());
     }
     code = await res.blob();
   } catch {
     throw new Error('Die KI-Laufzeit konnte nicht geladen werden – keine Internetverbindung?');
   }
   const url = URL.createObjectURL(new Blob([code], { type: 'text/javascript' }));
-  try { T = await import(url); } finally { URL.revokeObjectURL(url); }
+  try { return await import(url); } finally { URL.revokeObjectURL(url); }
+}
+
+async function lib() {
+  if (T) return T;
+  try {
+    T = await import(LOCAL + 'transformers.min.js');   // Android-App: liegt bei (zusammen mit der Laufzeit)
+    local = true;
+  } catch { /* Web-Version: nicht enthalten */ }
+  if (!T) T = await fromCdn();
   ({ env, AutoTokenizer, AutoModelForCausalLM, TextStreamer, ModelRegistry } = T);
   stopper = new T.InterruptableStoppingCriteria();
   env.allowLocalModels = false;
   env.cacheKey = CACHE_KEY;
   env.backends.onnx.wasm.numThreads = self.crossOriginIsolated ? Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 2) - 1)) : 1;
   return T;
+}
+
+/** Pfade zur WebAssembly-Laufzeit: mit WebGPU die „asyncify“-Variante, sonst die normale (kennt alle Rechenbausteine). */
+function setWasmPaths(device) {
+  const base = local ? LOCAL : `https://cdn.jsdelivr.net/npm/onnxruntime-web@${env.backends.onnx.versions?.web}/dist/`;
+  const name = device === 'webgpu' ? 'ort-wasm-simd-threaded.asyncify' : 'ort-wasm-simd-threaded';
+  env.backends.onnx.wasm.wasmPaths = { mjs: `${base}${name}.mjs`, wasm: `${base}${name}.wasm` };
 }
 
 let current = null;          // { key, tokenizer, model }
@@ -43,16 +62,11 @@ async function pickBackend() {
   await lib();
   try {
     const a = await navigator.gpu?.requestAdapter?.({ powerPreference: 'high-performance' });
-    if (a) return (backend = { device: 'webgpu', dtype: a.features.has('shader-f16') ? 'q4f16' : 'q4' });
+    if (a) backend = { device: 'webgpu', dtype: a.features.has('shader-f16') ? 'q4f16' : 'q4' };
   } catch { /* kein WebGPU */ }
-  // Nur Prozessor: die normale WebAssembly-Laufzeit (die Standard-Laufzeit mit WebGPU-Unterstützung
-  // kennt nicht alle Rechenbausteine, die quantisierte Modelle auf dem Prozessor brauchen)
-  const v = env.backends.onnx.versions?.web;
-  if (v) {
-    const cdn = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${v}/dist/`;
-    env.backends.onnx.wasm.wasmPaths = { mjs: cdn + 'ort-wasm-simd-threaded.mjs', wasm: cdn + 'ort-wasm-simd-threaded.wasm' };
-  }
-  return (backend = { device: 'wasm', dtype: 'q4' });
+  if (!backend) backend = { device: 'wasm', dtype: 'q4' };
+  setWasmPaths(backend.device);
+  return backend;
 }
 
 const keyOf = (m, b) => `${m.id}|${b.dtype}|${b.device}`;
@@ -105,7 +119,7 @@ self.onmessage = async e => {
     if (cmd === 'status') {
       const b = await pickBackend();
       const r = await ModelRegistry.is_cached_files(e.data.model.id, { dtype: b.dtype, device: b.device, include_processor: false });
-      result = { cached: r.allCached, files: r.files, loaded: current?.key === keyOf(e.data.model, b), ...b };
+      result = { cached: r.allCached, files: r.files, loaded: current?.key === keyOf(e.data.model, b), local, ...b };
     } else if (cmd === 'load') {
       await load(e.data.model, reply);
       result = { loaded: true };
