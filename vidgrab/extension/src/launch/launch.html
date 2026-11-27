@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VidGrab – Video öffnen</title>
+  <link rel="stylesheet" href="../ui/style.css">
+</head>
+<body>
+  <div class="page launch">
+    <img src="../../icons/icon.svg" alt="" width="64" height="64" style="margin: 0 auto">
+    <h1 id="title">Video öffnen</h1>
+    <p class="muted">Tippe auf den Knopf. Firefox fragt eventuell nach, ob die App geöffnet werden darf.</p>
+    <a id="open" class="btn primary" href="#">In App öffnen</a>
+    <div class="row">
+      <button id="copy" class="btn" type="button">Link kopieren</button>
+      <button id="close" class="btn" type="button">Tab schließen</button>
+    </div>
+    <code id="url"></code>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="../common/media.js"></script>
+  <script src="../ui/ui.js"></script>
+  <script src="launch.js"></script>
+</body>
+</html>

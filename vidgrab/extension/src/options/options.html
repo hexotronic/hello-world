@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VidGrab – Einstellungen</title>
+  <link rel="stylesheet" href="../ui/style.css">
+</head>
+<body>
+  <form class="page" id="form">
+    <header>
+      <img src="../../icons/icon.svg" alt="" width="36" height="36">
+      <h1>VidGrab – Einstellungen</h1>
+    </header>
+
+    <fieldset>
+      <legend>Player</legend>
+      <label class="field">
+        Standard-App
+        <select id="player" name="player"></select>
+      </label>
+      <label class="field" id="custom-wrap" hidden>
+        Paketname der App
+        <input type="text" id="customPackage" name="customPackage" placeholder="z. B. com.example.player" autocomplete="off" spellcheck="false">
+        <span class="hint">Den Paketnamen findest du in der Play-Store-Adresse der App (…?id=<b>paketname</b>).</span>
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Wie soll die App gestartet werden?</legend>
+      <label class="radio">
+        <input type="radio" name="launchMethod" value="tab">
+        <span>Über die aktuelle Seite <span class="hint">Empfohlen. Das Popup schließt sich, Firefox öffnet den Player.</span></span>
+      </label>
+      <label class="radio">
+        <input type="radio" name="launchMethod" value="popup">
+        <span>Direkt aus dem Popup <span class="hint">Falls die erste Methode bei dir nichts tut.</span></span>
+      </label>
+      <label class="radio">
+        <input type="radio" name="launchMethod" value="page">
+        <span>Über eine Startseite im neuen Tab <span class="hint">Am robustesten, öffnet aber einen zusätzlichen Tab.</span></span>
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Anzeige</legend>
+      <label class="check">
+        <input type="checkbox" id="showAudio" name="showAudio">
+        <span>Audio-Dateien anzeigen <span class="hint">MP3, M4A, AAC …</span></span>
+      </label>
+      <label class="check">
+        <input type="checkbox" id="showVariants" name="showVariants">
+        <span>HLS-Varianten einzeln anzeigen <span class="hint">Sonst erscheinen sie als Qualitäts-Knöpfe an der Master-Playlist.</span></span>
+      </label>
+      <label class="check">
+        <input type="checkbox" id="analyzeManifests" name="analyzeManifests">
+        <span>Streams analysieren <span class="hint">Liest m3u8/mpd-Dateien, um Qualitäten, Dauer, Live und DRM zu erkennen.</span></span>
+      </label>
+      <label class="field">
+        Kleine Dateien ausblenden unter (MB)
+        <input type="number" id="minSizeMB" name="minSizeMB" min="0" max="500" step="0.5" inputmode="decimal">
+        <span class="hint">Filtert Vorschau-Clips und Werbung. 0 = nichts ausblenden.</span>
+      </label>
+    </fieldset>
+
+    <p class="status" id="status" role="status"></p>
+
+    <section class="help">
+      <h2>Tipps</h2>
+      <ul>
+        <li>Viele Seiten laden den Stream erst beim Abspielen. Starte das Video kurz und öffne dann VidGrab.</li>
+        <li>„M3U“ speichert eine Playlist mit Referer und User-Agent der Seite. Damit laufen in VLC auch Streams, die sonst „403 Forbidden“ liefern.</li>
+        <li>DRM-geschützte Dienste (Netflix, Prime Video, Disney+ …) lassen sich nicht extern abspielen.</li>
+      </ul>
+    </section>
+  </form>
+
+  <script src="../common/media.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>
