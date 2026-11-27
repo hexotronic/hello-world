@@ -29,27 +29,39 @@ Startmethode auf „Direkt aus dem Popup“ oder „Über eine Startseite im neu
 
 ## Installation auf Android
 
-Firefox für Android installiert nur **signierte** Add-ons (außer Nightly/Beta mit geänderter Konfiguration).
+Zwei Dinge muss man wissen:
 
-### Variante A – signieren lassen und dauerhaft installieren (empfohlen)
+1. **Normales Firefox installiert nur von Mozilla signierte Add-ons.** Unsignierte Dateien gehen nur in
+   Firefox **Nightly** (oder Beta) mit geänderter Einstellung.
+2. **Datei lässt sich nicht auswählen (ausgegraut)?** Der Datei-Dialog von Firefox erkennt `.xpi` auf
+   manchen Geräten nicht. Dann die **`.zip`-Variante** nehmen (gleicher Inhalt) bzw. die Datei in `.zip`
+   umbenennen.
 
-1. Bei <https://addons.mozilla.org/developers/addon/api/key/> API-Schlüssel erzeugen (kostenloses Konto).
-2. Auf einem Rechner im Ordner `vidgrab/`:
-   ```bash
-   npm install
-   npx web-ext sign --source-dir extension --channel unlisted \
-     --api-key "DEIN_JWT_ISSUER" --api-secret "DEIN_JWT_SECRET"
-   ```
-   Die signierte `.xpi` liegt danach in `web-ext-artifacts/`. „unlisted“ heißt: Mozilla signiert nur,
-   das Add-on wird nicht öffentlich gelistet.
-3. Die `.xpi` aufs Handy kopieren.
-4. Firefox: **Einstellungen → Über Firefox → 5× auf das Firefox-Logo tippen** (schaltet das Debug-Menü frei).
-5. Zurück zu den Einstellungen → **„Erweiterung aus Datei installieren“** → `.xpi` auswählen.
+Das Menü „Erweiterung aus Datei installieren“ ist versteckt:
+**Einstellungen → Über Firefox → mehrmals (5–10×) auf das Firefox-Logo tippen**, bis
+„Debug-Menü aktiviert“ erscheint. Danach steht es in den Einstellungen.
 
-### Variante B – Firefox Nightly/Beta ohne Signatur
+### Variante A – schnell, ohne Konto: Firefox Nightly
 
-In `about:config` `xpinstall.signatures.required` auf `false` setzen, dann wie oben ab Schritt 4 die
-unsignierte `.xpi` aus `npm run build` (liegt in `dist/`) installieren.
+1. „Firefox Nightly for Developers“ aus dem Play Store installieren.
+2. In Nightly `about:config` öffnen, nach `xpinstall.signatures.required` suchen und auf **false** setzen.
+3. Debug-Menü freischalten (siehe oben) → **„Erweiterung aus Datei installieren“** →
+   `vidgrab-<version>.zip` auswählen.
+
+### Variante B – dauerhaft im normalen Firefox: von Mozilla signieren lassen
+
+Geht komplett im Handy-Browser, kostenlos:
+
+1. Auf <https://addons.mozilla.org/developers/> mit einem Mozilla-Konto anmelden.
+2. **„Submit a New Add-on“** → **„On your own“** wählen (= nicht öffentlich, nur signieren).
+3. `vidgrab-<version>.xpi` (oder `.zip`) hochladen, „Firefox for Android“ als Plattform anhaken, absenden.
+4. Nach der automatischen Prüfung (meist wenige Minuten) unter *Manage Status & Versions* die
+   **signierte Datei herunterladen**.
+5. Falls nötig in `.zip` umbenennen (z. B. mit der App „Dateien“), dann im normalen Firefox:
+   Debug-Menü freischalten → **„Erweiterung aus Datei installieren“** → Datei auswählen.
+
+Alternativ vom Rechner aus: `npx web-ext sign --source-dir extension --channel unlisted --api-key … --api-secret …`
+(API-Schlüssel unter <https://addons.mozilla.org/developers/addon/api/key/>).
 
 ### Variante C – Entwicklertest per USB
 
@@ -79,7 +91,7 @@ Bitte nur Inhalte abspielen, für die du die Rechte hast.
 npm install       # web-ext
 npm test          # Unit-Tests (Node, ohne Browser)
 npm run lint      # Mozilla-Prüfung des Add-ons
-npm run build     # erzeugt dist/vidgrab-<version>.xpi (unsigniert)
+npm run build     # erzeugt dist/vidgrab-<version>.xpi und .zip (unsigniert, gleicher Inhalt)
 npm run icons     # PNG-Symbole aus icons/icon.svg rendern (benötigt Playwright)
 ```
 

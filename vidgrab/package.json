@@ -6,7 +6,7 @@
   "scripts": {
     "test": "node --test tests/*.test.js",
     "lint": "web-ext lint --source-dir extension",
-    "build": "web-ext build --source-dir extension --artifacts-dir dist --overwrite-dest --filename vidgrab-{version}.xpi",
+    "build": "web-ext build --source-dir extension --artifacts-dir dist --overwrite-dest --filename vidgrab-{version}.xpi && web-ext build --source-dir extension --artifacts-dir dist --overwrite-dest --filename vidgrab-{version}.zip",
     "start:android": "web-ext run --source-dir extension -t firefox-android --firefox-apk org.mozilla.firefox",
     "icons": "node scripts/make-icons.js"
   },
