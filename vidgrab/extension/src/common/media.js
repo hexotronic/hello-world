@@ -41,6 +41,7 @@
     showVariants: false,
     minSizeMB: 1,
     analyzeManifests: true,
+    showOverlay: true,
   };
 
   function baseMime(mime) {
@@ -101,6 +102,8 @@
     if (/(?:^|[_.-])(?:seg|segment|frag|fragment|chunk)[-_]?\d+/.test(file)) return true;
     // Byte-Range in der URL (z. B. ?range=0-65535 oder /range/0-65535)
     if (/(?:^|[?&])(?:range|bytes?range)=\d+-\d+/i.test(u.search)) return true;
+    // Teilstücke per Byte-Parameter (z. B. ?bytestart=0&byteend=99999)
+    if (/(?:^|[?&])(?:bytestart|byteend|byte_start|byte_end)=\d+/i.test(u.search)) return true;
     if (/\/range\/\d+-\d+/.test(path)) return true;
     return false;
   }
@@ -387,6 +390,12 @@
       (sortRank(a) - sortRank(b)) || ((b.size || 0) - (a.size || 0)) || ((a.firstSeen || 0) - (b.firstSeen || 0)));
   }
 
+  /** Bester Kandidat zum direkten Abspielen (für den Knopf am Video). */
+  function pickBest(items, settings) {
+    const candidates = sortItems(items.filter((i) => i.kind !== 'audio' && !hiddenReason(i, settings)));
+    return candidates.find((i) => !(i.analysis && i.analysis.drm)) || candidates[0] || null;
+  }
+
   function playerName(pkg) {
     const p = PLAYERS.find((x) => x.id === pkg);
     if (p) return p.id ? p.name : 'App';
@@ -403,7 +412,7 @@
     baseMime, getExtension, normalizeUrl, isSegmentUrl, classify, classifyDom, parseSize,
     parseHls, parseDash, parseIsoDuration, buildIntentUrl, intentMime, buildM3u,
     safeFilename, filenameFromUrl, formatBytes, formatDuration, formatBitrate, typeLabel,
-    maxQuality, hiddenReason, sortItems, playerName, effectivePlayer,
+    maxQuality, hiddenReason, sortItems, pickBest, playerName, effectivePlayer,
   };
 
   root.VidGrab = api;

@@ -209,3 +209,22 @@ test('Player', () => {
   assert.equal(V.effectivePlayer({ player: 'custom', customPackage: ' com.foo.bar ' }), 'com.foo.bar');
   assert.equal(V.effectivePlayer({}), 'org.videolan.vlc');
 });
+
+test('Teilstücke mit bytestart/byteend werden ignoriert', () => {
+  assert.equal(V.classify('https://video.cdn.test/v/abc.mp4?bytestart=0&byteend=99999&oh=1', 'video/mp4'), null);
+  assert.equal(V.classify('https://video.cdn.test/v/abc.mp4?oh=1', 'video/mp4').kind, 'video');
+});
+
+test('pickBest bevorzugt Master-Playlists ohne DRM und ignoriert Kleines', () => {
+  const items = [
+    { url: 'ad', kind: 'video', size: 300 * 1024 },
+    { url: 'mp4', kind: 'video', size: 50 * 1048576 },
+    { url: 'drm', kind: 'dash', analysis: { drm: true } },
+    { url: 'master', kind: 'hls', analysis: { isMaster: true } },
+    { url: 'audio', kind: 'audio', size: 9e9 },
+  ];
+  assert.equal(V.pickBest(items, {}).url, 'master');
+  assert.equal(V.pickBest(items.filter((i) => i.url !== 'master'), {}).url, 'mp4');
+  assert.equal(V.pickBest([{ url: 'drm', kind: 'dash', analysis: { drm: true } }], {}).url, 'drm');
+  assert.equal(V.pickBest([{ url: 'ad', kind: 'video', size: 1000 }], {}), null);
+});

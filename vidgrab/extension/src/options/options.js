@@ -16,6 +16,7 @@
   if (player.value !== s.player) player.value = V.DEFAULT_SETTINGS.player;
   form.customPackage.value = s.customPackage;
   for (const r of form.querySelectorAll('input[name="launchMethod"]')) r.checked = r.value === s.launchMethod;
+  form.showOverlay.checked = s.showOverlay !== false;
   form.showAudio.checked = !!s.showAudio;
   form.showVariants.checked = !!s.showVariants;
   form.analyzeManifests.checked = !!s.analyzeManifests;
@@ -31,6 +32,7 @@
       player: player.value,
       customPackage: form.customPackage.value.trim(),
       launchMethod: checked ? checked.value : V.DEFAULT_SETTINGS.launchMethod,
+      showOverlay: form.showOverlay.checked,
       showAudio: form.showAudio.checked,
       showVariants: form.showVariants.checked,
       analyzeManifests: form.analyzeManifests.checked,

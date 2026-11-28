@@ -257,6 +257,20 @@ async function downloadM3u(msg) {
   }
 }
 
+/** Startet den Player über den Haupt-Frame des Tabs (Videos in iframes). */
+async function openInTop(sender, msg) {
+  if (!sender.tab || typeof msg.url !== 'string') return false;
+  const t = tabs.get(sender.tab.id);
+  const intent = V.buildIntentUrl(msg.url, {
+    pkg: V.effectivePlayer(settings),
+    mime: V.intentMime(msg.kind),
+    title: (t && t.pageTitle) || sender.tab.title || '',
+  });
+  if (!intent) return false;
+  await browser.tabs.sendMessage(sender.tab.id, { type: 'vidgrab-open', url: intent }, { frameId: 0 });
+  return true;
+}
+
 browser.runtime.onMessage.addListener((msg, sender) => {
   if (!msg || typeof msg.type !== 'string') return undefined;
   switch (msg.type) {
@@ -281,6 +295,19 @@ browser.runtime.onMessage.addListener((msg, sender) => {
     }
     case 'download-m3u':
       return downloadM3u(msg);
+    case 'best-media': {
+      // Knopf am Video: bester Stream des Tabs (wenn das Video selbst nur blob: abspielt)
+      const t = sender.tab ? tabs.get(sender.tab.id) : null;
+      if (!t) return Promise.resolve({ item: null, pageTitle: '' });
+      return Promise.resolve({ item: V.pickBest([...t.items.values()], settings), pageTitle: t.pageTitle });
+    }
+    case 'open-in-top':
+      return openInTop(sender, msg);
+    case 'open-list':
+      if (!sender.tab) return undefined;
+      return browser.tabs
+        .create({ url: browser.runtime.getURL('src/popup/popup.html') + '?tabId=' + sender.tab.id })
+        .then(() => true);
     default:
       return undefined;
   }

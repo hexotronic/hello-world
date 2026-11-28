@@ -146,3 +146,30 @@ test('Direktaufruf einer Videodatei als Hauptdokument', async () => {
   assert.equal(item.kind, 'video');
   assert.equal(item.size, 99999999);
 });
+
+test('Knopf am Video: best-media und Start über den Haupt-Frame', async () => {
+  const tabMessages = [];
+  browserMock.tabs.sendMessage = async (tabId, msg, opts) => {
+    tabMessages.push({ tabId, msg, opts });
+    return true;
+  };
+  wr.onBeforeRequest.fire({ tabId: 5, url: 'https://seite.test/serie', type: 'main_frame' });
+  browserMock.tabs.onUpdated.fire(5, { title: 'Folge 1' });
+  response(5, 'https://ads.test/preroll.mp4', { 'Content-Type': 'video/mp4', 'Content-Length': '400000' });
+  response(5, 'https://cdn.test/folge1.mp4', { 'Content-Type': 'video/mp4', 'Content-Length': '300000000' });
+  await tick();
+
+  const sender = { tab: { id: 5, title: 'Folge 1' }, frameId: 3, url: 'https://player.test/embed' };
+  const [best] = browserMock.runtime.onMessage.fire({ type: 'best-media' }, sender);
+  assert.equal((await best).item.url, 'https://cdn.test/folge1.mp4');
+
+  const [opened] = browserMock.runtime.onMessage.fire({ type: 'open-in-top', url: 'https://cdn.test/folge1.mp4', kind: 'video' }, sender);
+  assert.equal(await opened, true);
+  assert.equal(tabMessages.length, 1);
+  assert.equal(tabMessages[0].tabId, 5);
+  assert.deepEqual(tabMessages[0].opts, { frameId: 0 });
+  assert.equal(
+    tabMessages[0].msg.url,
+    'intent://cdn.test/folge1.mp4#Intent;scheme=https;action=android.intent.action.VIEW;type=video/*;package=org.videolan.vlc;S.title=Folge%201;end'
+  );
+});

@@ -15,6 +15,21 @@ const state = {
 };
 
 const OWN_PAGE = browser.runtime.getURL('');
+// Über den „⋯“-Knopf am Video wird diese Seite als normaler Tab geöffnet.
+const OPENED_AS_TAB = new URLSearchParams(location.search).has('tabId');
+
+/** Popup schließen – bzw. als Tab: zurück zur Seite und diesen Tab schließen. */
+async function closeSelf() {
+  if (OPENED_AS_TAB) {
+    try {
+      const me = await browser.tabs.getCurrent();
+      if (state.tab) await browser.tabs.update(state.tab.id, { active: true });
+      if (me) await browser.tabs.remove(me.id);
+      return;
+    } catch (e) { /* Fallback unten */ }
+  }
+  window.close();
+}
 
 const ICONS = {
   play: 'M8 5v14l11-7z',
@@ -94,7 +109,7 @@ function launchUrl(intent, mediaUrl) {
 
 async function openLaunchPage(intent, mediaUrl) {
   await browser.tabs.create({ url: launchUrl(intent, mediaUrl) });
-  window.close();
+  closeSelf();
 }
 
 async function play(mediaUrl, kind, pkg) {
@@ -109,8 +124,9 @@ async function play(mediaUrl, kind, pkg) {
   }
   if (method === 'tab') {
     try {
+      if (OPENED_AS_TAB) await browser.tabs.update(state.tab.id, { active: true }).catch(() => {});
       await browser.tabs.sendMessage(state.tab.id, { type: 'vidgrab-open', url: intent }, { frameId: 0 });
-      window.close();
+      closeSelf();
       return;
     } catch (e) {
       // Seite ohne Content-Script (z. B. about:-Seiten) – Startseite als Ausweg
@@ -207,7 +223,7 @@ function actionButtons(item) {
     h('button', { class: 'btn primary', type: 'button', onclick: () => copy(url) }, icon('copy'), 'Link kopieren'),
     h('div', { class: 'row' },
       h('button', { class: 'btn small', type: 'button', title: 'Playlist speichern und mit VLC öffnen', onclick: () => saveM3u(item, url) }, icon('file'), 'M3U für VLC'),
-      h('button', { class: 'btn small', type: 'button', onclick: () => browser.tabs.create({ url }).then(() => window.close()) }, icon('open'), 'Im Tab öffnen')
+      h('button', { class: 'btn small', type: 'button', onclick: () => browser.tabs.create({ url }).then(closeSelf) }, icon('open'), 'Im Tab öffnen')
     )
   );
 }
@@ -279,7 +295,7 @@ async function init() {
   $('rescan').addEventListener('click', rescan);
   $('rescan2').addEventListener('click', rescan);
   $('clear').addEventListener('click', clearList);
-  $('settings').addEventListener('click', () => browser.runtime.openOptionsPage().then(() => window.close()));
+  $('settings').addEventListener('click', () => browser.runtime.openOptionsPage().then(closeSelf));
   $('toggle-hidden').addEventListener('click', () => {
     state.showHidden = !state.showHidden;
     render();

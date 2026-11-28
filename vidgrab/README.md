@@ -23,6 +23,20 @@ Läuft auch in Firefox für den Desktop (dort mit „Link kopieren“ und „M3U
 2. Firefox-Menü (⋮) → **Erweiterungen** → **VidGrab**.
 3. Beim gewünschten Eintrag auf **„In VLC öffnen“** tippen. Firefox fragt evtl. „In App öffnen?“ → bestätigen.
 
+**Noch schneller:** Auf jedem Video im Browser erscheint oben rechts der Knopf **„▶ VLC“** (bzw. die
+eingestellte App). Ein Tipp öffnet das Video direkt im Player, **„⋯“** zeigt alle gefundenen Videos.
+Läuft das Video im Browser über einen Stream (blob:), nimmt der Knopf automatisch den besten erkannten
+Stream der Seite. Abschaltbar in den Einstellungen („Knopf direkt am Video anzeigen“).
+
+**Firefox soll nicht jedes Mal nachfragen?** Das ist eine Firefox-Einstellung, kein Add-on-Verhalten:
+Firefox → Einstellungen → **„Links in Apps öffnen“** → **„Immer“**. (Nebenwirkung: auch normale Links,
+z. B. zu YouTube oder Maps, öffnen dann direkt die passende App. In privaten Tabs fragt Firefox immer.)
+
+**Video läuft in VLC nur ein paar Sekunden?** Meist wurde ein Werbe-/Vorschau-Clip oder nur ein Teilstück
+erwischt. Über **„⋯“** bzw. das VidGrab-Menü einen anderen Eintrag wählen (HLS-Stream oder die größte
+Datei). Bricht ein Stream nach kurzer Zeit mit Fehler ab, verlangt der Server meist den Referer der
+Seite → **„M3U“** speichern und die Datei mit VLC öffnen.
+
 Standard-Player und Startmethode lassen sich in den Einstellungen ändern
 (Add-ons verwalten → VidGrab → Einstellungen). Falls der Knopf auf deinem Gerät nichts tut, stelle die
 Startmethode auf „Direkt aus dem Popup“ oder „Über eine Startseite im neuen Tab“.
