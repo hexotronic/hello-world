@@ -42,7 +42,17 @@
     minSizeMB: 1,
     analyzeManifests: true,
     showOverlay: true,
+    maxHeight: 1080, // 0 = unbegrenzt
   };
+
+  const QUALITY_LIMITS = [
+    { value: 0, name: 'Unbegrenzt (höchste verfügbare)' },
+    { value: 2160, name: '2160p (4K)' },
+    { value: 1440, name: '1440p' },
+    { value: 1080, name: '1080p (empfohlen)' },
+    { value: 720, name: '720p' },
+    { value: 480, name: '480p' },
+  ];
 
   function baseMime(mime) {
     return String(mime || '').split(';')[0].trim().toLowerCase();
@@ -204,7 +214,11 @@
         const a = parseAttributes(line.slice(line.indexOf(':') + 1));
         if (a.URI) {
           const url = resolveUrl(a.URI, baseUrl);
-          if (url) res.renditions.push({ type: a.TYPE || 'IFRAME', name: a.NAME || '', language: a.LANGUAGE || '', url });
+          if (url) {
+            res.renditions.push({
+              type: a.TYPE || 'IFRAME', groupId: a['GROUP-ID'] || '', name: a.NAME || '', language: a.LANGUAGE || '', url,
+            });
+          }
         }
       } else if (line.startsWith('#EXT-X-KEY:') || line.startsWith('#EXT-X-SESSION-KEY:')) {
         const a = parseAttributes(line.slice(line.indexOf(':') + 1));
@@ -230,6 +244,7 @@
           res.variants.push({
             url, resolution, height, bandwidth,
             codecs: pendingVariant.CODECS || '',
+            audioGroup: pendingVariant.AUDIO || '',
             label: height ? height + 'p' : (formatBitrate(bandwidth) || 'Variante'),
           });
         }
@@ -239,6 +254,10 @@
 
     res.variants.sort((a, b) => (b.height - a.height) || (b.bandwidth - a.bandwidth));
     // Gleiche Auflösung mehrfach? Dann Bitrate dazuschreiben.
+    // Ton als getrennte Spur? Dann hat die Varianten-Playlist allein keinen Ton.
+    for (const v of res.variants) {
+      v.separateAudio = !!v.audioGroup && res.renditions.some((r) => r.type === 'AUDIO' && r.groupId === v.audioGroup);
+    }
     const heights = {};
     for (const v of res.variants) heights[v.label] = (heights[v.label] || 0) + 1;
     for (const v of res.variants) {
@@ -390,6 +409,26 @@
       (sortRank(a) - sortRank(b)) || ((b.size || 0) - (a.size || 0)) || ((a.firstSeen || 0) - (b.firstSeen || 0)));
   }
 
+  /**
+   * Welche Adresse soll der Player bekommen? Bei HLS-Master-Playlists mit Qualitäten über dem
+   * eingestellten Maximum wird direkt die passende Variante gewählt (sonst nimmt VLC z. B. 4K).
+   * Varianten mit getrennter Tonspur bleiben unberührt – allein hätten sie keinen Ton.
+   * @returns {{url: string, label: string, limited: boolean}}
+   */
+  function chooseStream(item, settings) {
+    const s = Object.assign({}, DEFAULT_SETTINGS, settings);
+    const max = Number(s.maxHeight) || 0;
+    const a = item.analysis;
+    const plain = { url: item.url, label: '', limited: false };
+    if (!max || item.kind !== 'hls' || !a || !a.isMaster || !a.variants || !a.variants.length) return plain;
+    const top = Math.max(...a.variants.map((v) => v.height || 0));
+    if (top <= max) return plain;
+    const usable = a.variants.filter((v) => v.height && !v.separateAudio);
+    if (!usable.length) return plain;
+    const pick = usable.find((v) => v.height <= max) || usable[usable.length - 1];
+    return { url: pick.url, label: pick.height + 'p', limited: true };
+  }
+
   /** Bester Kandidat zum direkten Abspielen (für den Knopf am Video). */
   function pickBest(items, settings) {
     const candidates = sortItems(items.filter((i) => i.kind !== 'audio' && !hiddenReason(i, settings)));
@@ -408,7 +447,7 @@
   }
 
   const api = {
-    EXT, PLAYERS, DEFAULT_SETTINGS,
+    EXT, PLAYERS, DEFAULT_SETTINGS, QUALITY_LIMITS, chooseStream,
     baseMime, getExtension, normalizeUrl, isSegmentUrl, classify, classifyDom, parseSize,
     parseHls, parseDash, parseIsoDuration, buildIntentUrl, intentMime, buildM3u,
     safeFilename, filenameFromUrl, formatBytes, formatDuration, formatBitrate, typeLabel,

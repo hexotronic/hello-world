@@ -228,3 +228,38 @@ test('pickBest bevorzugt Master-Playlists ohne DRM und ignoriert Kleines', () =>
   assert.equal(V.pickBest([{ url: 'drm', kind: 'dash', analysis: { drm: true } }], {}).url, 'drm');
   assert.equal(V.pickBest([{ url: 'ad', kind: 'video', size: 1000 }], {}), null);
 });
+
+const MASTER_4K = `#EXTM3U
+#EXT-X-STREAM-INF:BANDWIDTH=25000000,RESOLUTION=3840x2160
+2160/index.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=8000000,RESOLUTION=1920x1080
+1080/index.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=4000000,RESOLUTION=1280x720
+720/index.m3u8
+`;
+
+test('chooseStream: 4K-Master startet mit der eingestellten Maximalqualität', () => {
+  const analysis = V.parseHls(MASTER_4K, 'https://cdn.test/s/master.m3u8');
+  const item = { url: 'https://cdn.test/s/master.m3u8', kind: 'hls', analysis };
+  assert.deepEqual(V.chooseStream(item, {}), { url: 'https://cdn.test/s/1080/index.m3u8', label: '1080p', limited: true });
+  assert.equal(V.chooseStream(item, { maxHeight: 720 }).url, 'https://cdn.test/s/720/index.m3u8');
+  assert.equal(V.chooseStream(item, { maxHeight: 480 }).url, 'https://cdn.test/s/720/index.m3u8'); // niedrigste vorhandene
+  assert.equal(V.chooseStream(item, { maxHeight: 0 }).url, item.url); // unbegrenzt -> Master
+  assert.equal(V.chooseStream(item, { maxHeight: 2160 }).url, item.url); // passt -> Master (VLC regelt selbst)
+  assert.equal(V.chooseStream({ url: 'https://x.test/a.mp4', kind: 'video' }, {}).url, 'https://x.test/a.mp4');
+});
+
+test('chooseStream: Varianten mit getrennter Tonspur bleiben beim Master', () => {
+  const text = `#EXTM3U
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="aac",NAME="Deutsch",URI="audio/de.m3u8"
+#EXT-X-STREAM-INF:BANDWIDTH=25000000,RESOLUTION=3840x2160,AUDIO="aac"
+2160/index.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=8000000,RESOLUTION=1920x1080,AUDIO="aac"
+1080/index.m3u8
+`;
+  const analysis = V.parseHls(text, 'https://cdn.test/s/master.m3u8');
+  assert.equal(analysis.variants[0].separateAudio, true);
+  const item = { url: 'https://cdn.test/s/master.m3u8', kind: 'hls', analysis };
+  assert.equal(V.chooseStream(item, {}).url, item.url);
+  assert.equal(V.chooseStream(item, {}).limited, false);
+});

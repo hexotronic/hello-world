@@ -204,7 +204,7 @@
           flash(entry, 'Noch kein Stream erkannt. Video kurz abspielen und nochmal tippen.');
           return;
         }
-        url = res.item.url;
+        url = V.chooseStream(res.item, settings).url; // z. B. 1080p statt 4K
         c = { kind: res.item.kind };
         title = title || res.pageTitle || '';
       }

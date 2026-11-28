@@ -201,28 +201,32 @@ function metaLine(item) {
   if (q) parts.push('bis ' + q + 'p');
   if (a.isMaster && a.variants.length) parts.push(a.variants.length + (a.variants.length === 1 ? ' Qualität' : ' Qualitäten'));
   if (a.pending) parts.push('wird analysiert …');
+  const chosen = V.chooseStream(item, state.settings);
+  if (chosen.limited) parts.push('startet mit ' + chosen.label);
   return parts.join(' · ');
 }
 
 function actionButtons(item) {
   const pkg = V.effectivePlayer(state.settings);
   const url = item.url;
+  // Zum Abspielen ggf. eine Qualitätsstufe unterhalb des Maximums (statt z. B. 4K)
+  const playUrl = V.chooseStream(item, state.settings).url;
   if (state.android) {
     const label = pkg ? 'In ' + V.playerName(pkg) + ' öffnen' : 'Mit App öffnen';
     return h('div', { class: 'buttons' },
-      h('button', { class: 'btn primary', type: 'button', onclick: () => play(url, item.kind, pkg) }, icon('play'), label),
+      h('button', { class: 'btn primary', type: 'button', onclick: () => play(playUrl, item.kind, pkg) }, icon('play'), label),
       h('div', { class: 'row' },
-        pkg ? h('button', { class: 'btn small', type: 'button', title: 'Mit anderer App öffnen', onclick: () => play(url, item.kind, '') }, icon('apps'), 'Andere App') : null,
+        pkg ? h('button', { class: 'btn small', type: 'button', title: 'Mit anderer App öffnen', onclick: () => play(playUrl, item.kind, '') }, icon('apps'), 'Andere App') : null,
         h('button', { class: 'btn small', type: 'button', onclick: () => copy(url) }, icon('copy'), 'Kopieren'),
         state.canShare ? h('button', { class: 'btn small', type: 'button', onclick: () => share(url) }, icon('share'), 'Teilen') : null,
-        h('button', { class: 'btn small', type: 'button', title: 'Playlist mit Referer speichern (für geschützte Streams)', onclick: () => saveM3u(item, url) }, icon('file'), 'M3U')
+        h('button', { class: 'btn small', type: 'button', title: 'Playlist mit Referer speichern (für geschützte Streams)', onclick: () => saveM3u(item, playUrl) }, icon('file'), 'M3U')
       )
     );
   }
   return h('div', { class: 'buttons' },
     h('button', { class: 'btn primary', type: 'button', onclick: () => copy(url) }, icon('copy'), 'Link kopieren'),
     h('div', { class: 'row' },
-      h('button', { class: 'btn small', type: 'button', title: 'Playlist speichern und mit VLC öffnen', onclick: () => saveM3u(item, url) }, icon('file'), 'M3U für VLC'),
+      h('button', { class: 'btn small', type: 'button', title: 'Playlist speichern und mit VLC öffnen', onclick: () => saveM3u(item, playUrl) }, icon('file'), 'M3U für VLC'),
       h('button', { class: 'btn small', type: 'button', onclick: () => browser.tabs.create({ url }).then(closeSelf) }, icon('open'), 'Im Tab öffnen')
     )
   );
@@ -231,10 +235,13 @@ function actionButtons(item) {
 function qualityChips(item) {
   const a = item.analysis;
   if (!a || !a.isMaster || a.variants.length < 2) return null;
+  // Varianten mit getrennter Tonspur hätten allein keinen Ton – nicht anbieten.
+  const usable = a.variants.filter((v) => !v.separateAudio);
+  if (usable.length < 2) return null;
   const pkg = V.effectivePlayer(state.settings);
   return h('div', { class: 'qualities' },
     h('span', { class: 'label' }, state.android ? 'Direkt starten:' : 'Variante kopieren:'),
-    a.variants.slice(0, 12).map((v) =>
+    usable.slice(0, 12).map((v) =>
       h('button', {
         class: 'quality',
         type: 'button',

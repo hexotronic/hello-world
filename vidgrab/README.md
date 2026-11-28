@@ -32,6 +32,13 @@ Stream der Seite. Abschaltbar in den Einstellungen („Knopf direkt am Video anz
 Firefox → Einstellungen → **„Links in Apps öffnen“** → **„Immer“**. (Nebenwirkung: auch normale Links,
 z. B. zu YouTube oder Maps, öffnen dann direkt die passende App. In privaten Tabs fragt Firefox immer.)
 
+**4K ruckelt?** VidGrab → Einstellungen → **„Maximale Qualität beim Abspielen“** (Standard: 1080p).
+Bei Streams mit mehreren Qualitäten (HLS) startet VidGrab dann direkt die passende Stufe statt 4K – das
+Popup zeigt „startet mit 1080p“. Hat ein Stream die Tonspur getrennt, bleibt es beim Original (sonst fehlte
+der Ton); dann wählt VLC selbst. Bei DASH-Streams und einzelnen MP4-Dateien gibt es nichts zu wählen.
+Zusätzlich hilft in VLC: Einstellungen → Video → **Hardwarebeschleunigung** auf „Automatisch“ bzw.
+„Vollständig“ und unter Erweitert den **Netzwerk-Cache** erhöhen (z. B. 3000 ms).
+
 **Video läuft in VLC nur ein paar Sekunden?** Meist wurde ein Werbe-/Vorschau-Clip oder nur ein Teilstück
 erwischt. Über **„⋯“** bzw. das VidGrab-Menü einen anderen Eintrag wählen (HLS-Stream oder die größte
 Datei). Bricht ein Stream nach kurzer Zeit mit Fehler ab, verlangt der Server meist den Referer der

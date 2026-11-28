@@ -10,11 +10,15 @@
 
   for (const p of V.PLAYERS) player.append(new Option(p.name, p.id));
   player.append(new Option('Andere App (Paketname eingeben)', 'custom'));
+  const maxHeight = document.getElementById('maxHeight');
+  for (const q of V.QUALITY_LIMITS) maxHeight.append(new Option(q.name, String(q.value)));
 
   const s = Object.assign({}, V.DEFAULT_SETTINGS, await browser.storage.local.get(V.DEFAULT_SETTINGS));
   player.value = s.player;
   if (player.value !== s.player) player.value = V.DEFAULT_SETTINGS.player;
   form.customPackage.value = s.customPackage;
+  maxHeight.value = String(s.maxHeight);
+  if (maxHeight.value !== String(s.maxHeight)) maxHeight.value = String(V.DEFAULT_SETTINGS.maxHeight);
   for (const r of form.querySelectorAll('input[name="launchMethod"]')) r.checked = r.value === s.launchMethod;
   form.showOverlay.checked = s.showOverlay !== false;
   form.showAudio.checked = !!s.showAudio;
@@ -33,6 +37,7 @@
       customPackage: form.customPackage.value.trim(),
       launchMethod: checked ? checked.value : V.DEFAULT_SETTINGS.launchMethod,
       showOverlay: form.showOverlay.checked,
+      maxHeight: Number(maxHeight.value) || 0,
       showAudio: form.showAudio.checked,
       showVariants: form.showVariants.checked,
       analyzeManifests: form.analyzeManifests.checked,
