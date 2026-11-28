@@ -34,10 +34,13 @@ Stream der Seite. Abschaltbar in den Einstellungen („Knopf direkt am Video anz
 Firefox → Einstellungen → **„Links in Apps öffnen“** → **„Immer“**. (Nebenwirkung: auch normale Links,
 z. B. zu YouTube oder Maps, öffnen dann direkt die passende App. In privaten Tabs fragt Firefox immer.)
 
-**4K ruckelt?** VidGrab → Einstellungen → **„Maximale Qualität beim Abspielen“** (Standard: 1080p).
-Bei Streams mit mehreren Qualitäten (HLS) startet VidGrab dann direkt die passende Stufe statt 4K – das
-Popup zeigt „startet mit 1080p“. Hat ein Stream die Tonspur getrennt, bleibt es beim Original (sonst fehlte
-der Ton); dann wählt VLC selbst. Bei DASH-Streams und einzelnen MP4-Dateien gibt es nichts zu wählen.
+**Qualität:** Bei Streams mit mehreren Qualitäten (HLS) startet VidGrab standardmäßig direkt die
+**höchste Stufe** – das Popup zeigt z. B. „startet mit 2160p“. (Bekäme VLC die Übersicht, finge es oft
+niedrig an.) Hat ein Stream die Tonspur getrennt, bekommt VLC das Original (sonst fehlte der Ton) und
+wählt selbst. Bei DASH-Streams und einzelnen MP4-Dateien gibt es nichts zu wählen.
+
+**4K ruckelt?** VidGrab → Einstellungen → **„Maximale Qualität beim Abspielen“** → z. B. „Höchstens 1080p“,
+oder „Automatisch“, damit VLC sich der Verbindung anpasst.
 Zusätzlich hilft in VLC: Einstellungen → Video → **Hardwarebeschleunigung** auf „Automatisch“ bzw.
 „Vollständig“ und unter Erweitert den **Netzwerk-Cache** erhöhen (z. B. 3000 ms).
 

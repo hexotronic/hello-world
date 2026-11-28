@@ -42,16 +42,17 @@
     minSizeMB: 1,
     analyzeManifests: true,
     showOverlay: true,
-    maxHeight: 1080, // 0 = unbegrenzt
+    maxHeight: 0, // 0 = immer höchste Stufe, -1 = VLC entscheidet, sonst Obergrenze in Pixeln
   };
 
   const QUALITY_LIMITS = [
-    { value: 0, name: 'Unbegrenzt (höchste verfügbare)' },
-    { value: 2160, name: '2160p (4K)' },
-    { value: 1440, name: '1440p' },
-    { value: 1080, name: '1080p (empfohlen)' },
-    { value: 720, name: '720p' },
-    { value: 480, name: '480p' },
+    { value: 0, name: 'Höchste Qualität (Standard)' },
+    { value: -1, name: 'Automatisch (VLC passt sich an)' },
+    { value: 2160, name: 'Höchstens 2160p (4K)' },
+    { value: 1440, name: 'Höchstens 1440p' },
+    { value: 1080, name: 'Höchstens 1080p' },
+    { value: 720, name: 'Höchstens 720p' },
+    { value: 480, name: 'Höchstens 480p' },
   ];
 
   function baseMime(mime) {
@@ -410,22 +411,29 @@
   }
 
   /**
-   * Welche Adresse soll der Player bekommen? Bei HLS-Master-Playlists mit Qualitäten über dem
-   * eingestellten Maximum wird direkt die passende Variante gewählt (sonst nimmt VLC z. B. 4K).
+   * Welche Adresse soll der Player bekommen? Bei HLS-Master-Playlists wird direkt eine Variante
+   * gewählt: standardmäßig die höchste, sonst die beste bis zur eingestellten Obergrenze.
+   * (Bekommt VLC den Master, startet es oft niedrig und schaltet erst später hoch.)
    * Varianten mit getrennter Tonspur bleiben unberührt – allein hätten sie keinen Ton.
-   * @returns {{url: string, label: string, limited: boolean}}
+   * @returns {{url: string, label: string, limited: boolean}} limited = eine Variante wurde gewählt
    */
   function chooseStream(item, settings) {
     const s = Object.assign({}, DEFAULT_SETTINGS, settings);
     const max = Number(s.maxHeight) || 0;
     const a = item.analysis;
     const plain = { url: item.url, label: '', limited: false };
-    if (!max || item.kind !== 'hls' || !a || !a.isMaster || !a.variants || !a.variants.length) return plain;
-    const top = Math.max(...a.variants.map((v) => v.height || 0));
-    if (top <= max) return plain;
-    const usable = a.variants.filter((v) => v.height && !v.separateAudio);
+    if (max < 0 || item.kind !== 'hls' || !a || !a.isMaster || !a.variants || !a.variants.length) return plain;
+    const usable = a.variants.filter((v) => v.height && !v.separateAudio); // absteigend sortiert
     if (!usable.length) return plain;
-    const pick = usable.find((v) => v.height <= max) || usable[usable.length - 1];
+    let pick;
+    if (max === 0) {
+      const top = Math.max(...a.variants.map((v) => v.height || 0));
+      // Höchste Stufe hat getrennten Ton? Dann lieber den Master als eine schlechtere Stufe.
+      if (usable[0].height < top) return plain;
+      pick = usable[0];
+    } else {
+      pick = usable.find((v) => v.height <= max) || usable[usable.length - 1];
+    }
     return { url: pick.url, label: pick.height + 'p', limited: true };
   }
 

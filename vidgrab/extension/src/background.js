@@ -57,6 +57,16 @@ browser.storage.onChanged.addListener((changes, area) => {
   for (const id of tabs.keys()) updateBadge(id);
 });
 
+// Bis 1.2.x war „höchstens 1080p“ voreingestellt. Beim Update auf den neuen Standard
+// („höchste Qualität“) zurücksetzen.
+browser.runtime.onInstalled.addListener((details) => {
+  if (details.reason !== 'update' || !details.previousVersion) return;
+  const [major, minor] = details.previousVersion.split('.').map(Number);
+  if (major < 1 || (major === 1 && minor < 3)) {
+    browser.storage.local.remove('maxHeight').catch(() => {});
+  }
+});
+
 // ------------------------------------------------------------------- Einträge
 
 function addItem(tabId, data) {

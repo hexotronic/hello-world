@@ -16,16 +16,23 @@ function event() {
 }
 
 const badges = {};
+const removedKeys = [];
 const sentMessages = [];
 const fetched = [];
 const browserMock = {
   storage: {
-    local: { get: async (defaults) => Object.assign({}, defaults) },
+    local: {
+      get: async (defaults) => Object.assign({}, defaults),
+      remove: async (key) => {
+        removedKeys.push(key);
+      },
+    },
     onChanged: event(),
   },
   webRequest: { onBeforeRequest: event(), onHeadersReceived: event() },
   tabs: { onRemoved: event(), onUpdated: event() },
   runtime: {
+    onInstalled: event(),
     onMessage: event(),
     sendMessage: async (msg) => {
       sentMessages.push(msg);
@@ -172,4 +179,12 @@ test('Knopf am Video: best-media und Start über den Haupt-Frame', async () => {
     tabMessages[0].msg.url,
     'intent://cdn.test/folge1.mp4#Intent;scheme=https;action=android.intent.action.VIEW;type=video/*;package=org.videolan.vlc;S.title=Folge%201;end'
   );
+});
+
+test('Update von 1.2.x setzt die alte 1080p-Voreinstellung zurück', () => {
+  browserMock.runtime.onInstalled.fire({ reason: 'update', previousVersion: '1.2.1' });
+  assert.deepEqual(removedKeys, ['maxHeight']);
+  browserMock.runtime.onInstalled.fire({ reason: 'update', previousVersion: '1.3.0' });
+  browserMock.runtime.onInstalled.fire({ reason: 'install' });
+  assert.deepEqual(removedKeys, ['maxHeight']);
 });
