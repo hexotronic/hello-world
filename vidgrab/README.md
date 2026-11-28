@@ -23,8 +23,10 @@ Läuft auch in Firefox für den Desktop (dort mit „Link kopieren“ und „M3U
 2. Firefox-Menü (⋮) → **Erweiterungen** → **VidGrab**.
 3. Beim gewünschten Eintrag auf **„In VLC öffnen“** tippen. Firefox fragt evtl. „In App öffnen?“ → bestätigen.
 
-**Noch schneller:** Auf jedem Video im Browser erscheint oben rechts der Knopf **„▶ VLC“** (bzw. die
-eingestellte App). Ein Tipp öffnet das Video direkt im Player, **„⋯“** zeigt alle gefundenen Videos.
+**Noch schneller:** Auf jedem Video im Browser sitzt oben rechts ein kleines, halbtransparentes Symbol (▶↗).
+**Tippen** öffnet das Video direkt in VLC bzw. der eingestellten App, **lange drücken** zeigt alle gefundenen
+Videos. Läuft das Video, blendet sich das Symbol nach ein paar Sekunden fast ganz aus und erscheint bei
+Berührung wieder.
 Läuft das Video im Browser über einen Stream (blob:), nimmt der Knopf automatisch den besten erkannten
 Stream der Seite. Abschaltbar in den Einstellungen („Knopf direkt am Video anzeigen“).
 

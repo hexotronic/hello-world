@@ -1,6 +1,6 @@
 {
   "name": "vidgrab",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "private": true,
   "description": "Firefox-Add-on (Android & Desktop): Video-Dateien und Streams finden und in VLC & Co. abspielen",
   "scripts": {

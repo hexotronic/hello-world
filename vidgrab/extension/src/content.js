@@ -80,48 +80,38 @@
   const Overlay = (() => {
     const MIN_W = 160;
     const MIN_H = 90;
-    const entries = new Map(); // video -> { host, wrap, mainLabel, msg, msgTimer }
+    const entries = new Map(); // video -> { host, main, msg, msgTimer }
     let rafPending = false;
     let interval = null;
 
     const enabled = () => isAndroid && settings.showOverlay !== false;
 
-    function svgPlay() {
-      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    // Zuletzt berührt/getippt – danach blendet der Knopf bei laufendem Video aus.
+    let lastActivity = Date.now();
+    const IDLE_MS = 3000;
+
+    function svgIcon() {
+      const NS = 'http://www.w3.org/2000/svg';
+      const svg = document.createElementNS(NS, 'svg');
       svg.setAttribute('viewBox', '0 0 24 24');
-      svg.setAttribute('width', '14');
-      svg.setAttribute('height', '14');
+      svg.setAttribute('width', '16');
+      svg.setAttribute('height', '16');
       svg.setAttribute('aria-hidden', 'true');
-      const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      p.setAttribute('d', 'M7 4v16l13-8z');
-      p.setAttribute('fill', '#fff');
-      svg.append(p);
+      const play = document.createElementNS(NS, 'path');
+      play.setAttribute('d', 'M5 6.5v11l8.5-5.5z');
+      play.setAttribute('fill', '#fff');
+      const arrow = document.createElementNS(NS, 'path');
+      arrow.setAttribute('d', 'M15 4h5v5M20 4l-5.5 5.5');
+      arrow.setAttribute('fill', 'none');
+      arrow.setAttribute('stroke', '#fff');
+      arrow.setAttribute('stroke-width', '2');
+      arrow.setAttribute('stroke-linecap', 'round');
+      arrow.setAttribute('stroke-linejoin', 'round');
+      svg.append(play, arrow);
       return svg;
     }
 
     // Nur CSSOM-Stile (element.style): funktioniert auch auf Seiten mit strenger CSP.
-    function styleButton(btn, accent) {
-      Object.assign(btn.style, {
-        all: 'initial',
-        boxSizing: 'border-box',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '6px',
-        height: '36px',
-        minWidth: '36px',
-        padding: '0 12px',
-        borderRadius: '18px',
-        background: accent ? 'rgba(216, 79, 0, 0.94)' : 'rgba(20, 20, 24, 0.78)',
-        color: '#fff',
-        font: '600 14px/1 system-ui, -apple-system, Roboto, sans-serif',
-        cursor: 'pointer',
-        boxShadow: '0 1px 6px rgba(0, 0, 0, 0.45)',
-        userSelect: 'none',
-        webkitTapHighlightColor: 'transparent',
-      });
-    }
-
     function create(video) {
       const host = document.createElement('vidgrab-button');
       Object.assign(host.style, {
@@ -131,55 +121,85 @@
         left: '0px',
         zIndex: '2147483647',
         display: 'none',
+        opacity: '0.8',
+        transition: 'opacity 0.4s',
       });
       const root = host.attachShadow({ mode: 'closed' });
       const wrap = document.createElement('div');
-      Object.assign(wrap.style, { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' });
-      const row = document.createElement('div');
-      Object.assign(row.style, { display: 'flex', gap: '6px' });
+      Object.assign(wrap.style, { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' });
 
+      // 40×40 Tippfläche, sichtbar nur ein kleiner, halbtransparenter Kreis
       const main = document.createElement('button');
-      styleButton(main, true);
-      main.title = 'Video in externer App öffnen';
-      const mainLabel = document.createElement('span');
-      main.append(svgPlay(), mainLabel);
-
-      const more = document.createElement('button');
-      styleButton(more, false);
-      more.title = 'Alle gefundenen Videos anzeigen';
-      more.textContent = '⋯';
-      more.style.padding = '0 10px';
-      more.style.fontSize = '18px';
-      more.style.border = '1px solid rgba(255, 255, 255, 0.45)';
+      Object.assign(main.style, {
+        all: 'initial',
+        boxSizing: 'border-box',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '40px',
+        height: '40px',
+        cursor: 'pointer',
+        webkitTapHighlightColor: 'transparent',
+        userSelect: 'none',
+      });
+      const dot = document.createElement('span');
+      Object.assign(dot.style, {
+        boxSizing: 'border-box',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '30px',
+        height: '30px',
+        borderRadius: '50%',
+        background: 'rgba(0, 0, 0, 0.38)',
+        border: '1px solid rgba(255, 255, 255, 0.28)',
+      });
+      dot.append(svgIcon());
+      main.append(dot);
 
       const msg = document.createElement('div');
       Object.assign(msg.style, {
         display: 'none',
-        maxWidth: '240px',
-        padding: '8px 10px',
+        maxWidth: '220px',
+        padding: '7px 9px',
         borderRadius: '8px',
-        background: 'rgba(20, 20, 24, 0.9)',
+        background: 'rgba(20, 20, 24, 0.88)',
         color: '#fff',
-        font: '13px/1.35 system-ui, -apple-system, Roboto, sans-serif',
+        font: '12px/1.35 system-ui, -apple-system, Roboto, sans-serif',
         textAlign: 'right',
       });
 
-      row.append(main, more);
-      wrap.append(row, msg);
+      wrap.append(main, msg);
       root.append(wrap);
 
       // Die Seite (bzw. ihr Player) soll von unseren Tipps nichts mitbekommen.
-      for (const type of ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'click', 'dblclick']) {
+      for (const type of ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'click', 'dblclick', 'contextmenu']) {
         wrap.addEventListener(type, (e) => e.stopPropagation());
       }
-      const entry = { video, host, mainLabel, msg, msgTimer: null };
+      const entry = { video, host, main, msg, msgTimer: null };
+
+      // Kurz tippen = im Player öffnen, lange drücken = Liste aller Videos
+      let pressTimer = null;
+      let longPressed = false;
+      main.addEventListener('pointerdown', () => {
+        longPressed = false;
+        clearTimeout(pressTimer);
+        pressTimer = setTimeout(() => {
+          longPressed = true;
+          browser.runtime.sendMessage({ type: 'open-list' }).catch(() => {});
+        }, 600);
+      });
+      for (const type of ['pointerup', 'pointercancel', 'pointerleave']) {
+        main.addEventListener(type, () => clearTimeout(pressTimer));
+      }
+      main.addEventListener('contextmenu', (e) => e.preventDefault());
       main.addEventListener('click', (e) => {
         e.preventDefault();
+        if (longPressed) {
+          longPressed = false;
+          return;
+        }
         openVideo(entry);
-      });
-      more.addEventListener('click', (e) => {
-        e.preventDefault();
-        browser.runtime.sendMessage({ type: 'open-list' }).catch(() => {});
       });
       return entry;
     }
@@ -242,18 +262,21 @@
         host.style.display = 'none';
         return;
       }
-      entry.mainLabel.textContent = pkg2label();
+      entry.main.title = 'In ' + playerLabel() + ' öffnen · lange drücken: alle Videos';
       host.style.display = 'block';
-      const w = host.getBoundingClientRect().width || 120;
+      // Läuft das Video und wurde nichts berührt, fast unsichtbar (wie die Player-Steuerung)
+      const playing = !video.paused && !video.ended;
+      host.style.opacity = playing && Date.now() - lastActivity > IDLE_MS ? '0.15' : '0.8';
+      const w = host.getBoundingClientRect().width || 40;
       const right = Math.min(r.right, vw);
-      const top = Math.max(r.top, 0) + 8;
-      host.style.left = Math.max(Math.min(right - w - 8, vw - w - 4), 4) + 'px';
+      const top = Math.max(r.top, 0) + 4;
+      host.style.left = Math.max(Math.min(right - w - 4, vw - w - 2), 2) + 'px';
       host.style.top = top + 'px';
     }
 
-    function pkg2label() {
+    function playerLabel() {
       const pkg = V.effectivePlayer(settings);
-      return pkg ? V.playerName(pkg) : 'Öffnen';
+      return pkg ? V.playerName(pkg) : 'App';
     }
 
     function update() {
@@ -289,6 +312,13 @@
       window.addEventListener('scroll', requestUpdate, { capture: true, passive: true });
       window.addEventListener('resize', requestUpdate, { passive: true });
       document.addEventListener('fullscreenchange', requestUpdate);
+      for (const ev of ['play', 'pause', 'ended']) document.addEventListener(ev, requestUpdate, true);
+      const wake = () => {
+        lastActivity = Date.now();
+        requestUpdate();
+      };
+      document.addEventListener('pointerdown', wake, { capture: true, passive: true });
+      document.addEventListener('touchstart', wake, { capture: true, passive: true });
     }
 
     return { track, refresh: requestUpdate };
