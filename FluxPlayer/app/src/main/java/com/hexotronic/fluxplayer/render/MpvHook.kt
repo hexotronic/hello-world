@@ -6,12 +6,14 @@ import android.util.Log
 
 /** Ein Render-Pass eines mpv-User-Shaders („//!HOOK“-Format). */
 data class HookPass(
+    val hook: String,
     val desc: String,
     val binds: List<String>,
     val save: String,
     val width: String,
     val height: String,
-    val body: String
+    val body: String,
+    val unsupported: List<String> = emptyList()
 )
 
 /**
@@ -24,6 +26,8 @@ object MpvHook {
     fun parse(text: String): List<HookPass> {
         val passes = ArrayList<HookPass>()
         var desc = ""
+        var hook = ""
+        val unsupported = ArrayList<String>()
         var binds = ArrayList<String>()
         var save = ""
         var width = ""
@@ -34,9 +38,10 @@ object MpvHook {
 
         fun flush() {
             if (started) {
-                passes += HookPass(desc, binds.toList(), save, width, height, body.toString().trim())
+                passes += HookPass(hook, desc, binds.toList(), save, width, height, body.toString().trim(), unsupported.toList())
             }
-            desc = ""; binds = ArrayList(); save = ""; width = ""; height = ""
+            desc = ""; hook = ""; binds = ArrayList(); save = ""; width = ""; height = ""
+            unsupported.clear()
             body.setLength(0)
         }
 
@@ -52,10 +57,13 @@ object MpvHook {
                 val value = line.substring(3).substringAfter(' ', "").trim()
                 when (key) {
                     "DESC" -> desc = value
+                    "HOOK" -> hook = value
                     "BIND" -> binds += value
                     "SAVE" -> save = value
                     "WIDTH" -> width = value
                     "HEIGHT" -> height = value
+                    "COMPONENTS", "WHEN", "OFFSET" -> Unit
+                    else -> unsupported += key
                 }
             } else {
                 inHeader = false
@@ -64,12 +72,60 @@ object MpvHook {
         }
         flush()
         return passes.map { p ->
+            val h = p.hook.ifEmpty { "MAIN" }
+            val sizeRef = p.binds.firstOrNull { it != "HOOKED" } ?: h
             p.copy(
-                save = p.save.ifEmpty { "MAIN" },
-                width = p.width.ifEmpty { "${p.binds.firstOrNull() ?: "MAIN"}.w" },
-                height = p.height.ifEmpty { "${p.binds.firstOrNull() ?: "MAIN"}.h" }
+                hook = h,
+                save = p.save.ifEmpty { h },
+                width = p.width.ifEmpty { "$sizeRef.w" },
+                height = p.height.ifEmpty { "$sizeRef.h" }
             )
         }
+    }
+
+    /**
+     * Prüft, ob ein (z. B. vom Nutzer geladener) mpv-Shader mit diesem Player läuft.
+     * @return null wenn ok, sonst eine verständliche Begründung.
+     */
+    fun validate(text: String): String? {
+        val passes = try {
+            parse(text)
+        } catch (e: Exception) {
+            return "Datei konnte nicht gelesen werden."
+        }
+        if (passes.isEmpty()) return "Keine mpv-Shader-Passes (//!HOOK) gefunden."
+        val hook = passes.first().hook
+        if (hook != "MAIN" && hook != "LUMA") return "Nur Shader für MAIN oder LUMA werden unterstützt (gefunden: $hook)."
+        if (passes.any { it.hook != hook }) return "Shader mit mehreren Hook-Zielen werden nicht unterstützt."
+        val unsupported = passes.flatMap { it.unsupported }.toSet()
+        if (unsupported.isNotEmpty()) return "Nicht unterstützte Direktiven: ${unsupported.joinToString()} (z. B. TEXTURE/COMPUTE)."
+        val known = HashSet<String>().apply { add(hook); add("HOOKED") }
+        val sizes = HashMap<String, IntArray>().apply {
+            put(hook, intArrayOf(640, 360))
+            put("HOOKED", intArrayOf(640, 360))
+        }
+        var outW = 640
+        for (p in passes) {
+            val missing = p.binds.filter { it !in known }
+            if (missing.isNotEmpty()) return "Unbekannte Texturen: ${missing.joinToString()}."
+            val w = try {
+                evalSize(p.width, sizes)
+            } catch (e: Exception) {
+                return "Größenangabe nicht auswertbar: ${p.width}"
+            }
+            val h = try {
+                evalSize(p.height, sizes)
+            } catch (e: Exception) {
+                return "Größenangabe nicht auswertbar: ${p.height}"
+            }
+            if (w <= 0 || h <= 0 || w > 640 * 8) return "Ungültige Ausgabegröße."
+            known += p.save
+            if (p.save == hook) outW = w else sizes[p.save] = intArrayOf(w, h)
+            if (!p.body.contains("hook()")) return "Pass ohne hook()-Funktion."
+        }
+        if (passes.none { it.save == hook }) return "Der Shader schreibt kein Ergebnis zurück ($hook)."
+        if (outW <= 640) return "Das ist kein Upscaler (Ausgabe nicht größer als Eingabe)."
+        return null
     }
 
     /** Wertet einen Größenausdruck in umgekehrter polnischer Notation aus, z. B. „conv2d_tf.w 2 *“. */
@@ -115,12 +171,13 @@ object MpvHook {
             sb.append("uniform vec2 ${name}_pt;\n")
             sb.append("#define ${name}_pos (gl_FragCoord.xy / uOutSize)\n")
             sb.append("#define ${name}_tex(pos) texture(${name}_raw, (pos))\n")
-            sb.append("#define ${name}_texOff(off) ${name}_tex(${name}_pos + ${name}_pt * (off))\n")
+            sb.append("#define ${name}_texOff(off) ${name}_tex(${name}_pos + ${name}_pt * vec2(off))\n")
             sb.append("#define ${name}_mul 1.0\n")
         }
-        if ("MAIN" in pass.binds) {
-            for (suffix in listOf("raw", "size", "pt", "pos", "mul")) sb.append("#define HOOKED_$suffix MAIN_$suffix\n")
-            sb.append("#define HOOKED_tex(pos) MAIN_tex(pos)\n#define HOOKED_texOff(off) MAIN_texOff(off)\n")
+        val hooked = pass.hook
+        if (hooked in pass.binds && "HOOKED" !in pass.binds) {
+            for (suffix in listOf("raw", "size", "pt", "pos", "mul")) sb.append("#define HOOKED_$suffix ${hooked}_$suffix\n")
+            sb.append("#define HOOKED_tex(pos) ${hooked}_tex(pos)\n#define HOOKED_texOff(off) ${hooked}_texOff(off)\n")
         }
         sb.append(pass.body).append('\n')
         sb.append("void main() {\n    fragColor = hook();\n}\n")
@@ -141,6 +198,10 @@ class HookUpscaler(private val passes: List<HookPass>, private val drawQuad: () 
     private val outSizeLoc = IntArray(passes.size)
     private val bindLocs = Array(passes.size) { IntArray(passes[it].binds.size * 3) }
     private val targets = HashMap<String, Target>()
+    private val hookName = passes.firstOrNull()?.hook ?: "MAIN"
+    private var progLumaIn = 0
+    private var progCombine = 0
+    private var progCopy = 0
     var ok = false
         private set
 
@@ -156,7 +217,11 @@ class HookUpscaler(private val passes: List<HookPass>, private val drawQuad: () 
                     bindLocs[i][j * 3 + 2] = GLES20.glGetUniformLocation(prog, "${name}_pt")
                 }
             }
-            ok = passes.isNotEmpty() && passes.last().save == "MAIN"
+            if (hookName == "LUMA") {
+                progLumaIn = GlUtil.buildProgram(Shaders.VS_ES3, Shaders.LUMA_IN_FS)
+                progCombine = GlUtil.buildProgram(Shaders.VS_ES3, Shaders.LUMA_COMBINE_FS)
+            }
+            ok = passes.isNotEmpty() && passes.any { it.save == hookName }
         } catch (e: Exception) {
             Log.w("HookUpscaler", "Shader konnte nicht gebaut werden", e)
             release()
@@ -166,28 +231,55 @@ class HookUpscaler(private val passes: List<HookPass>, private val drawQuad: () 
     /** Ausgabegröße für eine Eingabe der Größe w×h (bei Anime4K x2: doppelt). */
     fun outputSize(w: Int, h: Int): IntArray {
         val sizes = HashMap<String, IntArray>()
-        sizes["MAIN"] = intArrayOf(w, h)
+        sizes[hookName] = intArrayOf(w, h)
+        sizes["HOOKED"] = intArrayOf(w, h)
         var out = intArrayOf(w, h)
         for (p in passes) {
             val s = intArrayOf(MpvHook.evalSize(p.width, sizes), MpvHook.evalSize(p.height, sizes))
-            if (p.save == "MAIN") out = s else sizes[p.save] = s
+            if (p.save == hookName) {
+                out = s
+                sizes[hookName] = s
+                sizes["HOOKED"] = s
+            } else sizes[p.save] = s
         }
         return out
     }
 
-    /** Rechnet [srcTex] (w×h) hoch und schreibt das Ergebnis in [outFbo] (Größe = [outputSize]). */
+    /** Rechnet [srcTex] (RGB, w×h) hoch und schreibt das Ergebnis in [outFbo] (Größe = [outputSize]). */
     fun run(srcTex: Int, w: Int, h: Int, outFbo: Int) {
         if (!ok) return
         val sizes = HashMap<String, IntArray>()
         val texIds = HashMap<String, Int>()
-        sizes["MAIN"] = intArrayOf(w, h)
-        texIds["MAIN"] = srcTex
         GLES20.glDisable(GLES20.GL_BLEND)
+        var input = srcTex
+        if (hookName == "LUMA") {
+            // Helligkeit (BT.709) für Luma-Netze extrahieren
+            val y = target("__Y_IN", w, h)
+            GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, y.fbo)
+            GLES20.glViewport(0, 0, w, h)
+            GLES20.glUseProgram(progLumaIn)
+            GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, srcTex)
+            GLES20.glUniform1i(GLES20.glGetUniformLocation(progLumaIn, "uSrc"), 0)
+            drawQuad()
+            input = y.tex
+        }
+        sizes[hookName] = intArrayOf(w, h)
+        texIds[hookName] = input
+        sizes["HOOKED"] = intArrayOf(w, h)
+        texIds["HOOKED"] = input
+        var outW = w
+        var outH = h
         passes.forEachIndexed { i, p ->
             val ow = MpvHook.evalSize(p.width, sizes)
             val oh = MpvHook.evalSize(p.height, sizes)
-            val fbo = if (p.save == "MAIN") outFbo else target(p.save, ow, oh).fbo
-            GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, fbo)
+            val isOut = p.save == hookName
+            val tgt = when {
+                isOut && hookName == "MAIN" && i == passes.lastIndex -> null
+                isOut -> target("__OUT_$i", ow, oh)
+                else -> target(p.save, ow, oh)
+            }
+            GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, tgt?.fbo ?: outFbo)
             GLES20.glViewport(0, 0, ow, oh)
             GLES20.glUseProgram(programs[i])
             GLES20.glUniform2f(outSizeLoc[i], ow.toFloat(), oh.toFloat())
@@ -201,10 +293,44 @@ class HookUpscaler(private val passes: List<HookPass>, private val drawQuad: () 
                 GLES20.glUniform2f(bindLocs[i][j * 3 + 2], 1f / sz[0], 1f / sz[1])
             }
             drawQuad()
-            if (p.save != "MAIN") {
-                sizes[p.save] = intArrayOf(ow, oh)
-                texIds[p.save] = target(p.save, ow, oh).tex
+            if (tgt != null) {
+                val key = if (isOut) hookName else p.save
+                sizes[key] = intArrayOf(ow, oh)
+                texIds[key] = tgt.tex
+                if (isOut) {
+                    sizes["HOOKED"] = intArrayOf(ow, oh)
+                    texIds["HOOKED"] = tgt.tex
+                }
             }
+            if (isOut) {
+                outW = ow
+                outH = oh
+            }
+        }
+        val result = texIds[hookName] ?: return
+        if (hookName == "LUMA") {
+            // hochgerechnete Helligkeit + Farbe aus der bikubischen Vergrößerung
+            GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, outFbo)
+            GLES20.glViewport(0, 0, outW, outH)
+            GLES20.glUseProgram(progCombine)
+            GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, srcTex)
+            GLES20.glActiveTexture(GLES20.GL_TEXTURE1)
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, result)
+            GLES20.glUniform1i(GLES20.glGetUniformLocation(progCombine, "uSrc"), 0)
+            GLES20.glUniform1i(GLES20.glGetUniformLocation(progCombine, "uLuma"), 1)
+            GLES20.glUniform2f(GLES20.glGetUniformLocation(progCombine, "uOutSize"), outW.toFloat(), outH.toFloat())
+            drawQuad()
+        } else if (passes.last().save != hookName) {
+            // Ergebnis liegt in einer Zwischentextur (Hook-Ziel nicht im letzten Pass) -> kopieren
+            if (progCopy == 0) progCopy = GlUtil.buildProgram(Shaders.VS_ES3, Shaders.BLIT_FS)
+            GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, outFbo)
+            GLES20.glViewport(0, 0, outW, outH)
+            GLES20.glUseProgram(progCopy)
+            GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, result)
+            GLES20.glUniform1i(GLES20.glGetUniformLocation(progCopy, "uTex"), 0)
+            drawQuad()
         }
     }
 
@@ -238,6 +364,12 @@ class HookUpscaler(private val passes: List<HookPass>, private val drawQuad: () 
         releaseTargets()
         for (p in programs) GlUtil.deleteProgram(p)
         programs.fill(0)
+        GlUtil.deleteProgram(progLumaIn)
+        GlUtil.deleteProgram(progCombine)
+        GlUtil.deleteProgram(progCopy)
+        progCopy = 0
+        progLumaIn = 0
+        progCombine = 0
         ok = false
     }
 

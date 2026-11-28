@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.hexotronic.fluxplayer.BuildConfig
 import com.hexotronic.fluxplayer.data.AspectMode
 import com.hexotronic.fluxplayer.data.DecoderPreference
+import com.hexotronic.fluxplayer.data.FrameGenFps
 import com.hexotronic.fluxplayer.data.FrameGenMode
 import com.hexotronic.fluxplayer.data.FrameGenQuality
 import com.hexotronic.fluxplayer.data.OrientationMode
@@ -44,7 +45,7 @@ fun SettingsScreen() {
 
     var fgMode by remember { mutableStateOf(p.frameGenMode) }
     var fgQuality by remember { mutableStateOf(p.frameGenQuality) }
-    var highRefresh by remember { mutableStateOf(p.highRefreshRate) }
+    var fgFps by remember { mutableStateOf(p.frameGenFps) }
     var stats by remember { mutableStateOf(p.showStats) }
     var slowBoost by remember { mutableStateOf(p.slowMoBoost) }
     var upscaler by remember { mutableStateOf(p.upscaler) }
@@ -83,8 +84,8 @@ fun SettingsScreen() {
         SwitchSetting("Zeitlupen-Boost", "In Zeitlupe automatisch stärkere Bewegungsschätzung (bis „Ultra“)", slowBoost) {
             slowBoost = it; p.slowMoBoost = it
         }
-        SwitchSetting("Hohe Bildwiederholrate", "Display während der Wiedergabe auf maximale Hz schalten", highRefresh) {
-            highRefresh = it; p.highRefreshRate = it
+        ChoiceSetting("Ziel-Bildrate", fgFps, FrameGenFps.entries, { it.label }, { null }) {
+            fgFps = it; p.frameGenFps = it
         }
         SwitchSetting("Statistik einblenden", "fps-Anzeige und Anteil generierter Bilder", stats) {
             stats = it; p.showStats = it
@@ -102,7 +103,7 @@ fun SettingsScreen() {
                 upAuto
             ) { upAuto = it; p.upscalerAuto = it }
             if (!upAuto) {
-                ChoiceSetting("Modell", upscaler, UpscalerMode.entries.filter { it != UpscalerMode.OFF }, { it.label }, { it.description }) {
+                ChoiceSetting("Modell", upscaler, UpscalerMode.entries.filter { it != UpscalerMode.OFF && it != UpscalerMode.CUSTOM }, { it.label }, { it.description }) {
                     upscaler = it; p.upscaler = it
                 }
                 ChoiceSetting("Hochrechnen auf", factor, UpscaleFactor.entries, { it.label }, { null }) {

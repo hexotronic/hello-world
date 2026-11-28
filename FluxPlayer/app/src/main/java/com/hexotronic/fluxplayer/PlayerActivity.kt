@@ -64,6 +64,7 @@ import androidx.media3.ui.SubtitleView
 import com.google.common.util.concurrent.ListenableFuture
 import com.hexotronic.fluxplayer.data.AspectMode
 import com.hexotronic.fluxplayer.data.DecoderPreference
+import com.hexotronic.fluxplayer.data.FrameGenFps
 import com.hexotronic.fluxplayer.data.FrameGenMode
 import com.hexotronic.fluxplayer.data.FrameGenQuality
 import com.hexotronic.fluxplayer.data.HistoryStore
@@ -175,6 +176,46 @@ class PlayerActivity : ComponentActivity(),
         if (uri != null) addSubtitle(uri)
     }
     private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    private val upscalerPicker = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) importCustomUpscaler(uri)
+    }
+
+    private fun upscalerDir(): java.io.File = java.io.File(filesDir, "upscalers").apply { mkdirs() }
+
+    private fun refreshCustomUpscalers() {
+        ui.customUpscalers = upscalerDir().listFiles { f -> f.name.endsWith(".glsl") }
+            ?.map { it.name }?.sorted() ?: emptyList()
+        val sel = prefs.customUpscaler?.takeIf { it in ui.customUpscalers }
+        ui.customUpscaler = sel
+        glView.renderer.customModelPath = sel?.let { java.io.File(upscalerDir(), it).absolutePath }
+    }
+
+    private fun importCustomUpscaler(uri: Uri) {
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                try {
+                    val name = MediaRepository.displayName(this@PlayerActivity, uri)
+                    val bytes = contentResolver.openInputStream(uri)?.use { StreamResolver.readLimited(it, 4 * 1024 * 1024) }
+                        ?: return@withContext "Datei konnte nicht gelesen werden."
+                    val text = bytes.toString(Charsets.UTF_8)
+                    com.hexotronic.fluxplayer.render.MpvHook.validate(text)?.let { return@withContext it }
+                    val safe = name.replace(Regex("[^A-Za-z0-9._+-]"), "_").let { if (it.endsWith(".glsl")) it else "$it.glsl" }
+                    java.io.File(upscalerDir(), safe).writeText(text)
+                    "OK:$safe"
+                } catch (e: Exception) {
+                    "Fehler beim Laden: ${e.message}"
+                }
+            }
+            if (result.startsWith("OK:")) {
+                val file = result.removePrefix("OK:")
+                refreshCustomUpscalers()
+                selectCustomUpscaler(file)
+                showFeedback(FeedbackKind.INFO, "Upscaler geladen: $file", autoHideMs = 2500)
+            } else {
+                Toast.makeText(this@PlayerActivity, "Nicht geladen: $result", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 
     private val displayListener = object : DisplayManager.DisplayListener {
         override fun onDisplayAdded(displayId: Int) {}
@@ -361,6 +402,7 @@ class PlayerActivity : ComponentActivity(),
         ui.frameGenMode = prefs.frameGenMode
         ui.frameGenQuality = prefs.frameGenQuality
         ui.highRefresh = prefs.highRefreshRate
+        ui.frameGenFps = prefs.frameGenFps
         ui.slowMoBoost = prefs.slowMoBoost
         ui.upscaler = prefs.upscaler
         ui.sharpness = prefs.sharpness
@@ -385,8 +427,12 @@ class PlayerActivity : ComponentActivity(),
         r.sharpness = ui.sharpness
         r.upscaleFactor = ui.upscaleFactor
         val appAssets = applicationContext.assets
-        r.assetLoader = { path -> appAssets.open(path).bufferedReader().use { it.readText() } }
-        applyHighRefresh(ui.highRefresh)
+        r.assetLoader = { path ->
+            if (path.startsWith("file:")) java.io.File(path.removePrefix("file:")).readText()
+            else appAssets.open(path).bufferedReader().use { it.readText() }
+        }
+        refreshCustomUpscalers()
+        applyDisplayMode(ui.frameGenFps)
         applySubtitleStyle()
         applyZoom()
         if (ui.orientation != OrientationMode.AUTO) applyOrientation()
@@ -413,15 +459,34 @@ class PlayerActivity : ComponentActivity(),
         }
     }
 
-    private fun applyHighRefresh(enabled: Boolean) {
-        val d = currentDisplay() ?: return
-        val current = d.mode
-        val modeId = if (enabled) {
-            d.supportedModes
-                .filter { it.physicalWidth == current.physicalWidth && it.physicalHeight == current.physicalHeight }
-                .maxByOrNull { it.refreshRate }?.modeId ?: 0
-        } else 0
+    /**
+     * Display-Modus passend zur Ziel-fps: bevorzugt eine Bildwiederholrate, die genau der Ziel-fps
+     * oder einem ganzzahligen Vielfachen entspricht (z. B. 60 Hz für 60 fps, 120 Hz für 30 fps),
+     * sonst das Maximum; der Renderer taktet die Ausgabe dann auf die Ziel-fps.
+     */
+    private fun applyDisplayMode(setting: FrameGenFps) {
+        val d = currentDisplay()
+        val modes = d?.let { disp ->
+            val current = disp.mode
+            disp.supportedModes.filter {
+                it.physicalWidth == current.physicalWidth && it.physicalHeight == current.physicalHeight
+            }
+        } ?: emptyList()
+        ui.displayMaxHz = modes.maxOfOrNull { it.refreshRate } ?: (d?.refreshRate ?: 60f)
+        val modeId = when {
+            setting == FrameGenFps.SYSTEM || modes.isEmpty() -> 0
+            setting == FrameGenFps.MAX -> modes.maxByOrNull { it.refreshRate }?.modeId ?: 0
+            else -> {
+                val target = setting.fps.toFloat()
+                val multiples = modes.filter {
+                    val r = it.refreshRate / target
+                    r >= 0.98f && kotlin.math.abs(r - Math.round(r)) < 0.02f
+                }
+                (multiples.minByOrNull { it.refreshRate } ?: modes.maxByOrNull { it.refreshRate })?.modeId ?: 0
+            }
+        }
         window.attributes = window.attributes.apply { preferredDisplayModeId = modeId }
+        glView.renderer.targetFps = if (setting.fps > 0) setting.fps else 0
         mainHandler.postDelayed({ updateDisplayRate() }, 600)
         updateDisplayRate()
     }
@@ -1380,6 +1445,31 @@ class PlayerActivity : ComponentActivity(),
         )
     }
 
+    override fun loadCustomUpscaler() {
+        try {
+            upscalerPicker.launch(arrayOf("*/*"))
+        } catch (_: Exception) {
+            Toast.makeText(this, "Kein Dateimanager verfügbar", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    override fun selectCustomUpscaler(name: String) {
+        prefs.customUpscaler = name
+        refreshCustomUpscalers()
+        if (ui.upscalerAuto) setUpscalerAuto(false)
+        if (!ui.upscalerEnabled) setUpscalerEnabled(true)
+        setUpscaler(UpscalerMode.CUSTOM)
+    }
+
+    override fun deleteCustomUpscaler(name: String) {
+        java.io.File(upscalerDir(), name).delete()
+        if (prefs.customUpscaler == name) {
+            prefs.customUpscaler = null
+            if (ui.upscaler == UpscalerMode.CUSTOM) setUpscaler(UpscalerMode.EDGE)
+        }
+        refreshCustomUpscalers()
+    }
+
     override fun setUpscalerAuto(auto: Boolean) {
         ui.upscalerAuto = auto
         prefs.upscalerAuto = auto
@@ -1413,10 +1503,10 @@ class PlayerActivity : ComponentActivity(),
         glView.renderer.quality = quality
     }
 
-    override fun setHighRefresh(enabled: Boolean) {
-        ui.highRefresh = enabled
-        prefs.highRefreshRate = enabled
-        applyHighRefresh(enabled)
+    override fun setFrameGenFps(fps: FrameGenFps) {
+        ui.frameGenFps = fps
+        prefs.frameGenFps = fps
+        applyDisplayMode(fps)
     }
 
     override fun setShowStats(enabled: Boolean) {

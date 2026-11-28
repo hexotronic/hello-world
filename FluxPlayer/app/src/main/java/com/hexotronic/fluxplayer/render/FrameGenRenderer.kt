@@ -79,13 +79,17 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
     @Volatile var adjustments: FloatArray = floatArrayOf(0f, 1f, 1f, 1f)
     @Volatile var statsEnabled: Boolean = false
     @Volatile var nominalVsyncNs: Long = 16_666_667L
+    /** Ziel-Ausgabebildrate (0 = jede Display-Aktualisierung). */
+    @Volatile var targetFps: Int = 0
     @Volatile var upscaler: UpscalerMode = UpscalerMode.OFF
     @Volatile var upscaleFactor: UpscaleFactor = UpscaleFactor.AUTO
     /** Modell und Faktor automatisch wählen (mit Herunterschalten bei Rucklern). */
     @Volatile var upscalerAuto: Boolean = false
     @Volatile private var resetAutoDowngrade = false
-    /** Lädt Modell-Dateien (assets) für die KI-Upscaler. */
+    /** Lädt Modell-Dateien: „upscalers/…“ aus den Assets, „file:…“ aus dem Dateisystem. */
     @Volatile var assetLoader: ((String) -> String?)? = null
+    /** Pfad des eigenen Upscalers (für [UpscalerMode.CUSTOM]). */
+    @Volatile var customModelPath: String? = null
     /** Schärfung 0..1 (nur mit Upscaler). */
     @Volatile var sharpness: Float = 0.3f
     /** Aktuelles Wiedergabetempo (für Zeitlupen-Timing). */
@@ -127,7 +131,7 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
 
     // KI-Upscaler
     private var ai: HookUpscaler? = null
-    private var aiFor: UpscalerMode? = null
+    private var aiFor: String? = null
     private var aiFailed = false
     private var floatTargets: Boolean? = null
     private var aiOut1Tex = 0
@@ -141,6 +145,7 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
     private var appliedMode: UpscalerMode? = null
     private var appliedSharp = -1f
     private var appliedFactor: UpscaleFactor? = null
+    private var appliedCustom: String? = null
     private var lastUpscaleNote = ""
     private var autoChosen: UpscalerMode = UpscalerMode.EDGE
     private var autoDowngrade = 0
@@ -216,6 +221,11 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
     private var statsDraws = 0
     private var statsGenerated = 0
     private var lastActiveMode = "–"
+    private var vsyncCounter = 0L
+    private var heldTargetNs = 0L
+    private var statsUnique = 0
+    private var lastShownSeq = -1L
+    private var lastShownT = -1f
     private var lastUpscaleFactor = 1f
     private var lastLagNs = 0L
 
@@ -542,8 +552,10 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
     /** Geänderte Upscaler-Einstellungen sofort auf das aktuelle Bild anwenden (auch in der Pause). */
     private fun applyUpscaleSettingsIfChanged() {
         val eff = effectiveUpscaler()
-        if (appliedMode == eff && appliedSharp == sharpness && appliedFactor == upscaleFactor) return
+        val custom = customModelPath
+        if (appliedMode == eff && appliedSharp == sharpness && appliedFactor == upscaleFactor && appliedCustom == custom) return
         appliedMode = eff
+        appliedCustom = custom
         appliedSharp = sharpness
         appliedFactor = upscaleFactor
         val last = lastIngest
@@ -730,7 +742,7 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
                     Log.w(TAG, "KI-Upscaler-Lauf fehlgeschlagen", e)
                     net.release()
                     ai = null
-                    aiFailed = true
+                    if (mode != UpscalerMode.CUSTOM) aiFailed = true
                     false
                 }
                 if (!done) note = "KI-Fehler → Kantenadaptiv"
@@ -795,15 +807,19 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
         }
     }
 
+    private fun modelSource(mode: UpscalerMode): String? =
+        if (mode == UpscalerMode.CUSTOM) customModelPath?.let { "file:$it" } else mode.asset
+
     private fun ensureAi(mode: UpscalerMode): HookUpscaler? {
-        if (aiFor == mode) return ai
+        val source = modelSource(mode) ?: return null
+        if (aiFor == source) return ai
         ai?.release()
         ai = null
-        aiFor = mode
+        aiFor = source
         val supported = floatTargets ?: HookUpscaler.floatTargetsSupported().also { floatTargets = it }
         if (!supported) return null
         val text = try {
-            mode.asset?.let { assetLoader?.invoke(it) }
+            assetLoader?.invoke(source)
         } catch (e: Exception) {
             null
         } ?: return null
@@ -815,8 +831,12 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
         }
         if (net == null || !net.ok) {
             net?.release()
-            if (!aiFailed) listener?.onRendererError("KI-Upscaler wird von dieser GPU nicht unterstützt – nutze Kantenadaptiv.")
-            aiFailed = true
+            if (mode == UpscalerMode.CUSTOM) {
+                listener?.onRendererError("Eigener Upscaler läuft auf dieser GPU nicht – nutze Kantenadaptiv.")
+            } else {
+                if (!aiFailed) listener?.onRendererError("KI-Upscaler wird von dieser GPU nicht unterstützt – nutze Kantenadaptiv.")
+                aiFailed = true
+            }
             return null
         }
         ai = net
@@ -1003,7 +1023,7 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
             displayedSlot = a
             return Selection(a, null, 0f)
         }
-        val targetReal = now + vsync / 2
+        val targetReal = pacedTarget(now + vsync / 2, vsync)
         // 1) aktuelle Kette = Kette des neuesten fälligen Bildes
         var real: Slot? = null
         for (s in slots) {
@@ -1042,6 +1062,33 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
         return Selection(chosen, b, t)
     }
 
+    /**
+     * Ziel-fps: Bei ganzzahligem Verhältnis (z. B. 60 fps auf 120 Hz) wird nur jedes N-te Refresh ein neues
+     * Bild berechnet – gleichmäßige Taktung. Sonst Raster auf der Zeitachse.
+     */
+    private fun pacedTarget(t: Long, vsync: Long): Long {
+        val fps = targetFps
+        vsyncCounter++
+        if (fps <= 0 || vsync <= 0) {
+            heldTargetNs = t
+            return t
+        }
+        val displayHz = 1e9 / vsync
+        if (displayHz <= fps * 1.05) {
+            heldTargetNs = t
+            return t
+        }
+        val ratio = displayHz / fps
+        val n = Math.round(ratio).toInt()
+        return if (n >= 2 && kotlin.math.abs(ratio - n) < 0.08) {
+            if (vsyncCounter % n == 0L || heldTargetNs == 0L || t - heldTargetNs > 4 * n * vsync) heldTargetNs = t
+            heldTargetNs
+        } else {
+            val step = (1e9 / fps).toLong()
+            (t / step) * step
+        }
+    }
+
     private fun clearScreen() {
         GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0)
         GLES20.glViewport(0, 0, surfW, surfH)
@@ -1072,6 +1119,12 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
         lastUpscaleFactor = frameW.toFloat() / max(1, srcW)
         clearScreen()
         displayPass(sel, shown, generated, screenRect())
+        val key = if (generated) t else -1f
+        if (shown.seq != lastShownSeq || key != lastShownT) {
+            statsUnique++
+            lastShownSeq = shown.seq
+            lastShownT = key
+        }
         statsDraws++
         if (generated) statsGenerated++
     }
@@ -1169,7 +1222,7 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
         }
         val elapsed = now - statsWindowStart
         if (elapsed < 500_000_000L) return
-        val out = statsDraws * 1e9f / elapsed
+        val out = statsUnique * 1e9f / elapsed
         val src = if (intervalEmaNs > 0.0 && realtime) (1e9 / intervalEmaNs).toFloat() else 0f
         val pct = if (statsDraws > 0) statsGenerated * 100 / statsDraws else 0
         val active = when {
@@ -1195,6 +1248,7 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
         )
         statsWindowStart = now
         statsDraws = 0
+        statsUnique = 0
         statsGenerated = 0
     }
 

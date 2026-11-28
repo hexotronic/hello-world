@@ -11,9 +11,10 @@ class UpscaleAutoTest {
         assertEquals(UpscalerMode.AI_M, UpscaleAuto.choose(854, 480, 30f, 1f, true, true, 0))
         assertEquals(UpscalerMode.AI_S, UpscaleAuto.choose(1280, 720, 30f, 1f, true, true, 0))
         assertEquals(UpscalerMode.EDGE, UpscaleAuto.choose(1280, 720, 60f, 1f, true, true, 0))
-        // Zeitlupe: weniger Bilder pro Sekunde -> stärkeres Modell möglich
+        // Zeitlupe: weniger Bilder pro Sekunde -> stärkeres Modell
         assertEquals(UpscalerMode.AI_S, UpscaleAuto.choose(1280, 720, 60f, 0.25f, true, true, 0))
         assertEquals(UpscalerMode.AI_M, UpscaleAuto.choose(1280, 720, 60f, 0.2f, true, true, 0))
+        assertEquals(UpscalerMode.AI_VL, UpscaleAuto.choose(854, 480, 24f, 0.25f, true, true, 0))
     }
 
     @Test
@@ -21,6 +22,7 @@ class UpscaleAutoTest {
         assertEquals(UpscalerMode.EDGE, UpscaleAuto.choose(854, 480, 30f, 1f, true, false, 0))
         assertEquals(UpscalerMode.AI_S, UpscaleAuto.choose(854, 480, 30f, 1f, true, true, 1))
         assertEquals(UpscalerMode.EDGE, UpscaleAuto.choose(854, 480, 30f, 1f, true, true, 2))
+        assertEquals(UpscalerMode.AI_M, UpscaleAuto.choose(854, 480, 24f, 0.25f, true, true, 1))
         assertEquals(UpscalerMode.EDGE, UpscaleAuto.choose(854, 480, 30f, 1f, true, true, 9))
     }
 

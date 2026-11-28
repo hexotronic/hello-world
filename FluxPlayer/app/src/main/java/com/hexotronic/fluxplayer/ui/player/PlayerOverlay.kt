@@ -342,7 +342,7 @@ private fun FrameGenChip(ui: PlayerUiState, onClick: () -> Unit) {
             val label = when (ui.frameGenMode) {
                 FrameGenMode.OFF -> "FG aus"
                 FrameGenMode.BLEND -> "FG Blend"
-                FrameGenMode.MOTION -> "FG ${ui.displayHz.toInt()} Hz"
+                FrameGenMode.MOTION -> "FG " + if (ui.frameGenFps.fps > 0) "${ui.frameGenFps.fps} fps" else "${ui.displayHz.toInt()} Hz"
             }
             Text(label, color = if (active) Color.Black else Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
         }

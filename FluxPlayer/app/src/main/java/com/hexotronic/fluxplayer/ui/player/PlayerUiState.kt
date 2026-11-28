@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.hexotronic.fluxplayer.data.AspectMode
 import com.hexotronic.fluxplayer.data.DecoderPreference
+import com.hexotronic.fluxplayer.data.FrameGenFps
 import com.hexotronic.fluxplayer.data.FrameGenMode
 import com.hexotronic.fluxplayer.data.FrameGenQuality
 import com.hexotronic.fluxplayer.data.MediaEntry
@@ -57,9 +58,13 @@ class PlayerUiState {
     var upscaleFactor by mutableStateOf(UpscaleFactor.AUTO)
     var upscalerEnabled by mutableStateOf(true)
     var upscalerAuto by mutableStateOf(true)
+    var customUpscalers by mutableStateOf<List<String>>(emptyList())
+    var customUpscaler by mutableStateOf<String?>(null)
     var upscaleInfo by mutableStateOf("")
     var slowMoMuted by mutableStateOf(false)
     var displayHz by mutableFloatStateOf(60f)
+    var displayMaxHz by mutableFloatStateOf(60f)
+    var frameGenFps by mutableStateOf(FrameGenFps.MAX)
     var stats by mutableStateOf<RenderStats?>(null)
     var showStats by mutableStateOf(false)
     var error by mutableStateOf<String?>(null)
@@ -115,7 +120,7 @@ interface PlayerActions {
     fun setSpeed(speed: Float)
     fun setFrameGenMode(mode: FrameGenMode)
     fun setFrameGenQuality(quality: FrameGenQuality)
-    fun setHighRefresh(enabled: Boolean)
+    fun setFrameGenFps(fps: FrameGenFps)
     fun setShowStats(enabled: Boolean)
     fun setSlowMoBoost(enabled: Boolean)
     fun setUpscaler(mode: UpscalerMode)
@@ -123,6 +128,9 @@ interface PlayerActions {
     fun setUpscaleFactor(factor: UpscaleFactor)
     fun setUpscalerEnabled(enabled: Boolean)
     fun setUpscalerAuto(auto: Boolean)
+    fun loadCustomUpscaler()
+    fun selectCustomUpscaler(name: String)
+    fun deleteCustomUpscaler(name: String)
 
     fun setAspect(mode: AspectMode)
     fun setZoomPercent(percent: Int)

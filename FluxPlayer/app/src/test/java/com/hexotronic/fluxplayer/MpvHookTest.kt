@@ -13,10 +13,11 @@ class MpvHookTest {
 
     @Test
     fun parsesAllAnime4KModels() {
-        val expected = mapOf(UpscalerMode.AI_S to 5, UpscalerMode.AI_M to 9, UpscalerMode.AI_L to 10)
-        for ((mode, count) in expected) {
+        for (mode in UpscalerMode.entries.filter { it.asset != null }) {
             val passes = MpvHook.parse(asset(mode))
-            assertEquals("$mode Passes", count, passes.size)
+            assertEquals("$mode gültig", null, MpvHook.validate(asset(mode)))
+            assertTrue("$mode Passes", passes.size >= 5)
+            assertTrue(passes.all { it.hook == "MAIN" })
             assertEquals("MAIN", passes.last().save)
             assertTrue(passes.last().width.endsWith("2 *"))
             assertTrue(passes.all { it.body.contains("vec4 hook()") })
@@ -40,14 +41,34 @@ class MpvHookTest {
     @Test
     fun dumpPassesForGpuTest() {
         val dir = File("build/shaders").apply { mkdirs() }
+        File(dir, "luma_in.glsl").writeText(com.hexotronic.fluxplayer.render.Shaders.LUMA_IN_FS)
+        File(dir, "luma_combine.glsl").writeText(com.hexotronic.fluxplayer.render.Shaders.LUMA_COMBINE_FS)
         fun q(s: String) = "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n") + "\""
-        for (mode in listOf(UpscalerMode.AI_S, UpscalerMode.AI_M, UpscalerMode.AI_L)) {
-            val passes = MpvHook.parse(asset(mode))
+        val sources = ArrayList<Pair<String, String>>()
+        File("src/main/assets/upscalers").listFiles { f -> f.name.endsWith(".glsl") }!!.forEach { sources += it.nameWithoutExtension to it.readText() }
+        System.getenv("FLUX_CANDIDATES")?.let { c ->
+            File(c).listFiles { f -> f.name.endsWith(".glsl") }?.forEach { sources += ("cand_" + it.nameWithoutExtension) to it.readText() }
+        }
+        for ((name, text) in sources) {
+            val err = MpvHook.validate(text)
+            assertEquals("$name muss gültig sein", null, err)
+            val passes = MpvHook.parse(text)
             val json = passes.joinToString(",\n", "[\n", "\n]") { p ->
-                "{\"binds\":[" + p.binds.joinToString(",") { q(it) } + "],\"save\":" + q(p.save) +
+                "{\"hook\":" + q(p.hook) + ",\"binds\":[" + p.binds.joinToString(",") { q(it) } + "],\"save\":" + q(p.save) +
                     ",\"width\":" + q(p.width) + ",\"height\":" + q(p.height) + ",\"fs\":" + q(MpvHook.fragmentSource(p)) + "}"
             }
-            File(dir, "ai_${mode.name}.json").writeText(json)
+            File(dir, "ai_$name.json").writeText(json)
         }
+    }
+
+    @Test
+    fun rejectsUnsupportedShaders() {
+        assertTrue(MpvHook.validate("just text") != null)
+        val tex = "//!TEXTURE LUT\n//!SIZE 4 4\n//!HOOK MAIN\n//!BIND MAIN\n//!WIDTH MAIN.w 2 *\nvec4 hook() { return MAIN_tex(MAIN_pos); }\n"
+        assertTrue(MpvHook.validate(tex)!!.contains("TEXTURE"))
+        val noUpscale = "//!HOOK MAIN\n//!BIND MAIN\nvec4 hook() { return MAIN_tex(MAIN_pos); }\n"
+        assertTrue(MpvHook.validate(noUpscale)!!.contains("kein Upscaler"))
+        val ok = "//!HOOK MAIN\n//!BIND HOOKED\n//!WIDTH HOOKED.w 2 *\n//!HEIGHT HOOKED.h 2 *\nvec4 hook() { return HOOKED_tex(HOOKED_pos); }\n"
+        assertEquals(null, MpvHook.validate(ok))
     }
 }

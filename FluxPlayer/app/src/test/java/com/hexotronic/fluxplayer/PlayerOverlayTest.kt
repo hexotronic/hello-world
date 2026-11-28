@@ -6,6 +6,7 @@ import androidx.media3.common.C
 import androidx.test.core.app.ApplicationProvider
 import com.hexotronic.fluxplayer.data.AspectMode
 import com.hexotronic.fluxplayer.data.DecoderPreference
+import com.hexotronic.fluxplayer.data.FrameGenFps
 import com.hexotronic.fluxplayer.data.FrameGenMode
 import com.hexotronic.fluxplayer.data.FrameGenQuality
 import com.hexotronic.fluxplayer.data.MediaEntry
@@ -64,7 +65,7 @@ class PlayerOverlayTest {
         override fun setSpeed(speed: Float) {}
         override fun setFrameGenMode(mode: FrameGenMode) {}
         override fun setFrameGenQuality(quality: FrameGenQuality) {}
-        override fun setHighRefresh(enabled: Boolean) {}
+        override fun setFrameGenFps(fps: FrameGenFps) {}
         override fun setShowStats(enabled: Boolean) {}
         override fun setSlowMoBoost(enabled: Boolean) {}
         override fun setUpscaler(mode: UpscalerMode) {}
@@ -72,6 +73,9 @@ class PlayerOverlayTest {
         override fun setUpscaleFactor(factor: UpscaleFactor) {}
         override fun setUpscalerEnabled(enabled: Boolean) {}
         override fun setUpscalerAuto(auto: Boolean) {}
+        override fun loadCustomUpscaler() {}
+        override fun selectCustomUpscaler(name: String) {}
+        override fun deleteCustomUpscaler(name: String) {}
         override fun setAspect(mode: AspectMode) {}
         override fun setZoomPercent(percent: Int) {}
         override fun resetZoom() {}
@@ -110,6 +114,8 @@ class PlayerOverlayTest {
             slowMoMuted = true
             upscaleInfo = "854×480 → 1708×960 (×2,00)"
             upscaler = UpscalerMode.AI_M
+            customUpscalers = listOf("FSRCNNX_x2_8-0-4-1.glsl")
+            customUpscaler = "FSRCNNX_x2_8-0-4-1.glsl"
         }
         rule.setContent { FluxTheme { PlayerOverlay(ui, actions) } }
         rule.waitForIdle()

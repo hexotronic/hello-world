@@ -60,11 +60,24 @@ function run(SHADERS, scenes, quality) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     return (aiTargets[k] = { t, f: fbo(t) });
   }
+  if (SHADERS.luma_in) { progs.lumaIn = program(SHADERS.vs_es3, SHADERS.luma_in, 'luma_in'); progs.lumaComb = program(SHADERS.vs_es3, SHADERS.luma_combine, 'luma_combine'); }
   function runAi(net, srcTex, w, h, outFbo) {
-    const sizes = { MAIN: [w, h] }, texs = { MAIN: srcTex };
-    for (const p of net) {
+    const hook = net[0].hook || 'MAIN';
+    let input = srcTex;
+    if (hook === 'LUMA') {
+      const y = aiTarget('__Y_IN', w, h);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, y.f); gl.viewport(0, 0, w, h); gl.useProgram(progs.lumaIn);
+      bind(0, srcTex); gl.uniform1i(u(progs.lumaIn, 'uSrc'), 0); draw();
+      input = y.t;
+    }
+    const sizes = { [hook]: [w, h], HOOKED: [w, h] }, texs = { [hook]: input, HOOKED: input };
+    let outW = w, outH = h;
+    for (let i = 0; i < net.length; i++) {
+      const p = net[i];
       const ow = evalSize(p.width, sizes), oh = evalSize(p.height, sizes);
-      const tgt = p.save === 'MAIN' ? null : aiTarget(p.save, ow, oh);
+      const isOut = p.save === hook;
+      const tgt = (isOut && hook === 'MAIN' && i === net.length - 1) ? null : aiTarget(isOut ? '__OUT_' + i : p.save, ow, oh);
+      if (isOut) { outW = ow; outH = oh; }
       gl.bindFramebuffer(gl.FRAMEBUFFER, tgt ? tgt.f : outFbo); gl.viewport(0, 0, ow, oh); gl.useProgram(p.prog);
       gl.uniform2f(u(p.prog, 'uOutSize'), ow, oh);
       p.binds.forEach((name, j) => {
@@ -74,7 +87,13 @@ function run(SHADERS, scenes, quality) {
         gl.uniform2f(u(p.prog, name + '_pt'), 1 / sizes[name][0], 1 / sizes[name][1]);
       });
       draw();
-      if (tgt) { sizes[p.save] = [ow, oh]; texs[p.save] = tgt.t; }
+      if (tgt) { const k = isOut ? hook : p.save; sizes[k] = [ow, oh]; texs[k] = tgt.t; if (isOut) { sizes.HOOKED = [ow, oh]; texs.HOOKED = tgt.t; } }
+    }
+    if (hook === 'LUMA') {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, outFbo); gl.viewport(0, 0, outW, outH); gl.useProgram(progs.lumaComb);
+      bind(0, srcTex); bind(1, texs.LUMA);
+      gl.uniform1i(u(progs.lumaComb, 'uSrc'), 0); gl.uniform1i(u(progs.lumaComb, 'uLuma'), 1); gl.uniform2f(u(progs.lumaComb, 'uOutSize'), outW, outH);
+      draw();
     }
   }
   if (SHADERS.upscale_old) progs.upscaleOld = program(SHADERS.vs_es3, SHADERS.upscale_old, 'upscale_old');
@@ -328,13 +347,21 @@ function run(SHADERS, scenes, quality) {
   }
   // ---------------------------------------------------------------- Upscaler
   out.upscale = [];
-  function upTest(name, img, aliased) {
+  function upTest(name, img, aliased, noise) {
     // 2x verkleinern (Box), wieder auf W x H hochrechnen, mit Original vergleichen
     const w2 = W / 2, h2 = H / 2;
     const small = new Uint8Array(w2 * h2 * 4);
     for (let y = 0; y < h2; y++) for (let x = 0; x < w2; x++) for (let c = 0; c < 4; c++) {
       const i = (a, b) => ((b * W + a) * 4 + c);
       small[(y * w2 + x) * 4 + c] = aliased ? img[i(2 * x, 2 * y)] : Math.round((img[i(2 * x, 2 * y)] + img[i(2 * x + 1, 2 * y)] + img[i(2 * x, 2 * y + 1)] + img[i(2 * x + 1, 2 * y + 1)]) / 4);
+    }
+    if (noise) {
+      let sd = 12345;
+      const rnd = () => { sd = (sd * 1664525 + 1013904223) >>> 0; return sd / 4294967296; };
+      for (let i = 0; i < small.length; i += 4) {
+        const g = Math.sqrt(-2 * Math.log(rnd() + 1e-9)) * Math.cos(2 * Math.PI * rnd()) * noise;
+        for (let c = 0; c < 3; c++) small[i + c] = Math.max(0, Math.min(255, Math.round(small[i + c] + g)));
+      }
     }
     const tS = tex(w2, h2, 1, false, small);
     gl.bindTexture(gl.TEXTURE_2D, tS);
@@ -432,5 +459,10 @@ function run(SHADERS, scenes, quality) {
   upTest('harte Kanten', edges);
   // harte Kanten ohne Antialiasing in der Quelle (Treppen) – Referenz bleibt das glatte Original
   upTest('Treppen-Quelle', edges, true);
+  for (const [pname, data] of Object.entries(SHADERS.photos || {})) {
+    const img = new Uint8Array(data);
+    upTest('Foto ' + pname, img, false, 0);
+    upTest('Foto ' + pname + ' verrauscht', img, false, 6);
+  }
   return out;
 }

@@ -5,10 +5,11 @@ const dir = process.argv[2];
 const SH = {};
 for (const f of fs.readdirSync(dir)) {
   if (f.endsWith('.glsl')) SH[f.replace('.glsl', '')] = fs.readFileSync(path.join(dir, f), 'utf8');
-  if (f.startsWith('ai_') && f.endsWith('.json')) { SH.ai = SH.ai || {}; SH.ai[f.slice(3, -5)] = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')); }
+  if (f.startsWith('ai_') && f.endsWith('.json')) { SH.ai = SH.ai || {}; SH.ai[f.slice(3, -5).replace('Anime4K_Upscale_', 'A4K_')] = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')); }
 }
 const harness = fs.readFileSync(path.join(__dirname, 'harness.js'), 'utf8');
 if (process.env.UPSCALE_OLD) SH.upscale_old = fs.readFileSync(process.env.UPSCALE_OLD, 'utf8');
+if (process.env.PHOTOS) { SH.photos = {}; for (const f of fs.readdirSync(process.env.PHOTOS)) if (f.endsWith('.rgba')) SH.photos[f.replace('.rgba', '')] = Array.from(fs.readFileSync(path.join(process.env.PHOTOS, f))); }
 // UPVARIANTS: optionale Shader-Varianten für Experimente (Umgebungsvariable UPVARIANT)
 if (process.env.UPVARIANT === 'noalong' || process.env.UPVARIANT === 'both') SH.upscale = SH.upscale.replace('res = mix(res, 0.5 * (res + along), edge);', '');
 if (process.env.UPVARIANT === 'sharpbil' || process.env.UPVARIANT === 'both') SH.upscale = SH.upscale.replace('res = clamp(res + (res - avg) * amount, lo - k, hi + k);', 'res = clamp(res + (res - tex(uv)) * amount * 1.5, lo - k, hi + k);');

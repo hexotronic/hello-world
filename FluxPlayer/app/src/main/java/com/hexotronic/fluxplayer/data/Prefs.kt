@@ -30,6 +30,10 @@ class Prefs(context: Context) {
         get() = if (sp.contains("upscaler_on")) sp.getBoolean("upscaler_on", true)
         else enumValue("upscaler", UpscalerMode.EDGE) != UpscalerMode.OFF
         set(v) = putBool("upscaler_on", v)
+    /** Dateiname des gewählten eigenen Upscalers (im App-Verzeichnis „upscalers“). */
+    var customUpscaler: String?
+        get() = sp.getString("custom_upscaler", null)
+        set(v) = sp.edit().putString("custom_upscaler", v).apply()
     /** true = Player wählt Modell und Faktor selbst, false = selbst bestimmen. */
     var upscalerAuto: Boolean
         get() = sp.getBoolean("upscaler_auto", true)
@@ -40,6 +44,10 @@ class Prefs(context: Context) {
     var sharpness: Float
         get() = sp.getFloat("sharpness", 0.3f)
         set(v) = sp.edit().putFloat("sharpness", v).apply()
+    var frameGenFps: FrameGenFps
+        get() = if (sp.contains("fg_fps")) enumValue("fg_fps", FrameGenFps.MAX)
+        else if (highRefreshRate) FrameGenFps.MAX else FrameGenFps.SYSTEM
+        set(v) = putString("fg_fps", v.name)
     var showStats: Boolean
         get() = sp.getBoolean("show_stats", false)
         set(v) = putBool("show_stats", v)

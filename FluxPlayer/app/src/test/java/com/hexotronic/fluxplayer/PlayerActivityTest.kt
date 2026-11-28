@@ -110,6 +110,31 @@ class PlayerActivityTest {
     }
 
     @Test
+    fun customUpscalerSelectAndDelete() {
+        val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val dir = java.io.File(ctx.filesDir, "upscalers").apply { mkdirs() }
+        val shader = "//!HOOK MAIN\n//!BIND HOOKED\n//!WIDTH HOOKED.w 2 *\n//!HEIGHT HOOKED.h 2 *\nvec4 hook() { return HOOKED_tex(HOOKED_pos); }\n"
+        java.io.File(dir, "mein_upscaler.glsl").writeText(shader)
+        val intent = Intent(ctx, PlayerActivity::class.java)
+            .setAction(Intent.ACTION_VIEW)
+            .setDataAndType(Uri.parse("file:///sdcard/custom.mp4"), "video/mp4")
+        val controller = Robolectric.buildActivity(PlayerActivity::class.java, intent).setup()
+        idle(500)
+        val activity = controller.get()
+        val prefs = com.hexotronic.fluxplayer.data.Prefs(ctx)
+        activity.selectCustomUpscaler("mein_upscaler.glsl")
+        assertEquals("mein_upscaler.glsl", prefs.customUpscaler)
+        assertEquals(com.hexotronic.fluxplayer.data.UpscalerMode.CUSTOM, prefs.upscaler)
+        assertTrue(!prefs.upscalerAuto && prefs.upscalerEnabled)
+        activity.deleteCustomUpscaler("mein_upscaler.glsl")
+        assertTrue(!java.io.File(dir, "mein_upscaler.glsl").exists())
+        assertEquals(null, prefs.customUpscaler)
+        assertEquals(com.hexotronic.fluxplayer.data.UpscalerMode.EDGE, prefs.upscaler)
+        controller.pause().stop().destroy()
+        idle()
+    }
+
+    @Test
     fun sharedTextStartsResolver() {
         val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
         val intent = Intent(ctx, PlayerActivity::class.java)

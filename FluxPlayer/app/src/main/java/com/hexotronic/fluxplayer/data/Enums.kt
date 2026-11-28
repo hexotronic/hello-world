@@ -33,6 +33,18 @@ enum class FrameGenQuality(
     )
 }
 
+/** Ziel-Bildrate der Frame-Generierung (Ausgabe-fps). */
+enum class FrameGenFps(val label: String, val fps: Int) {
+    SYSTEM("System (Display nicht umschalten)", -1),
+    MAX("Display-Maximum", 0),
+    F30("30 fps", 30),
+    F48("48 fps", 48),
+    F60("60 fps", 60),
+    F90("90 fps", 90),
+    F120("120 fps", 120),
+    F144("144 fps", 144)
+}
+
 /** Upscaler: wird einmal pro Videobild angewendet (nicht pro Display-Refresh). */
 enum class UpscalerMode(val label: String, val description: String, val asset: String? = null) {
     OFF("Aus", "Keine Hochskalierung – Bild wird nur von der GPU gefiltert"),
@@ -40,9 +52,12 @@ enum class UpscalerMode(val label: String, val description: String, val asset: S
     EDGE("Kantenadaptiv", "Glättet Treppen an Kanten (FSR-artig), sehr schnell"),
     AI_S("KI S (Anime4K)", "Neuronales Netz, klein – läuft auf fast allen Handys flüssig", "upscalers/Anime4K_Upscale_CNN_x2_S.glsl"),
     AI_M("KI M (Anime4K)", "Neuronales Netz, mittel – deutlich schärfere Linien und Details", "upscalers/Anime4K_Upscale_CNN_x2_M.glsl"),
-    AI_L("KI L (Anime4K)", "Neuronales Netz, groß – beste Qualität, nur für starke GPUs", "upscalers/Anime4K_Upscale_CNN_x2_L.glsl");
+    AI_L("KI L (Anime4K)", "Neuronales Netz, groß – sehr gute Qualität, für starke GPUs", "upscalers/Anime4K_Upscale_CNN_x2_L.glsl"),
+    AI_VL("KI VL (Anime4K)", "Größtes Netz – beste gemessene Qualität, sehr GPU-intensiv (ideal für Zeitlupe, niedrige Auflösungen)", "upscalers/Anime4K_Upscale_CNN_x2_VL.glsl"),
+    AI_M_DENOISE("KI M + Entrauschen", "Wie KI M, entfernt zusätzlich Rauschen und Kompressionsartefakte (Streams, alte Videos)", "upscalers/Anime4K_Upscale_Denoise_CNN_x2_M.glsl"),
+    CUSTOM("Eigener Upscaler", "Selbst geladene mpv-Shader-Datei (.glsl)");
 
-    val isAi: Boolean get() = asset != null
+    val isAi: Boolean get() = asset != null || this == CUSTOM
 }
 
 /** Wie stark hochgerechnet wird (bezogen auf die Videoauflösung). */

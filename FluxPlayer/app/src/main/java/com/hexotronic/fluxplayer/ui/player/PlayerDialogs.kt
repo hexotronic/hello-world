@@ -70,12 +70,16 @@ import androidx.media3.common.C
 import androidx.media3.common.Player
 import com.hexotronic.fluxplayer.data.AspectMode
 import com.hexotronic.fluxplayer.data.DecoderPreference
+import com.hexotronic.fluxplayer.data.FrameGenFps
 import com.hexotronic.fluxplayer.data.FrameGenMode
 import com.hexotronic.fluxplayer.data.FrameGenQuality
 import com.hexotronic.fluxplayer.data.OrientationMode
 import com.hexotronic.fluxplayer.data.UpscaleFactor
 import com.hexotronic.fluxplayer.data.UpscalerMode
 import androidx.compose.material.icons.rounded.AutoFixHigh
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material3.IconButton
+import androidx.compose.foundation.layout.Box
 import kotlin.math.exp
 import kotlin.math.ln
 import com.hexotronic.fluxplayer.ui.theme.Accent
@@ -421,11 +425,35 @@ private fun UpscalerDialog(ui: PlayerUiState, actions: PlayerActions, close: () 
             )
         } else {
             SectionTitle("Modell")
-            UpscalerMode.entries.filter { it != UpscalerMode.OFF }.forEach { m ->
+            UpscalerMode.entries.filter { it != UpscalerMode.OFF && it != UpscalerMode.CUSTOM }.forEach { m ->
                 RadioRow(m.label, m.description, ui.upscaler == m) {
                     if (!ui.upscalerEnabled) actions.setUpscalerEnabled(true)
                     actions.setUpscaler(m)
                 }
+            }
+            SectionTitle("Eigene Upscaler")
+            if (ui.customUpscalers.isEmpty()) {
+                Text(
+                    "Noch keine geladen. Unterstützt werden mpv-User-Shader (.glsl) für MAIN oder LUMA, " +
+                        "z. B. FSRCNNX oder weitere Anime4K-Varianten.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            ui.customUpscalers.forEach { name ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f)) {
+                        RadioRow(name, "Eigene Datei", ui.upscaler == UpscalerMode.CUSTOM && ui.customUpscaler == name) {
+                            actions.selectCustomUpscaler(name)
+                        }
+                    }
+                    IconButton(onClick = { actions.deleteCustomUpscaler(name) }) {
+                        Icon(Icons.Rounded.Delete, "Entfernen")
+                    }
+                }
+            }
+            OutlinedButton(onClick = { actions.loadCustomUpscaler() }, modifier = Modifier.fillMaxWidth()) {
+                Text("Upscaler-Datei laden (.glsl)…")
             }
             SectionTitle("Hochrechnen auf")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -489,11 +517,33 @@ private fun FrameGenDialog(ui: PlayerUiState, actions: PlayerActions, close: () 
             ui.slowMoBoost
         ) { actions.setSlowMoBoost(it) }
         HorizontalDivider(Modifier.padding(vertical = 8.dp))
-        SwitchRow(
-            "Hohe Bildwiederholrate anfordern",
-            "Display auf maximale Hz schalten (aktuell ${ui.displayHz.roundToInt()} Hz)",
-            ui.highRefresh
-        ) { actions.setHighRefresh(it) }
+        SectionTitle("Ziel-Bildrate (Ausgabe)")
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FrameGenFps.entries.forEach { f ->
+                val possible = f.fps <= 0 || f.fps <= ui.displayMaxHz + 1f
+                val label = when (f) {
+                    FrameGenFps.SYSTEM -> "System"
+                    FrameGenFps.MAX -> "Max (${ui.displayMaxHz.roundToInt()} Hz)"
+                    else -> "${f.fps}"
+                }
+                FilterChip(
+                    selected = ui.frameGenFps == f,
+                    enabled = possible,
+                    onClick = { actions.setFrameGenFps(f) },
+                    label = { Text(label) }
+                )
+            }
+        }
+        Text(
+            when (ui.frameGenFps) {
+                FrameGenFps.SYSTEM -> "Das Display bleibt, wie das System es einstellt (aktuell ${ui.displayHz.roundToInt()} Hz)."
+                FrameGenFps.MAX -> "Display auf maximale Bildwiederholrate – flüssigstes Bild, höchster Verbrauch."
+                else -> "Ausgabe mit ${ui.frameGenFps.fps} fps (Display ${ui.displayHz.roundToInt()} Hz). " +
+                    "Niedrigere Werte sparen Akku; ideal ist ein Vielfaches der Video-fps (z. B. 48/72/96/120 bei 24-fps-Filmen)."
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         SwitchRow("Statistik einblenden", "Quell-/Ausgabe-fps und Anteil generierter Bilder", ui.showStats) { actions.setShowStats(it) }
         ui.stats?.let { s ->
             if (s.sourceFps > 0) {

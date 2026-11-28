@@ -570,6 +570,61 @@ internal object Shaders {
         """
     )
 
+    /** Helligkeit (BT.709) für mpv-LUMA-Shader. */
+    val LUMA_IN_FS: String = es3(
+        "",
+        """
+        uniform sampler2D uSrc;
+        out vec4 fragColor;
+
+        void main() {
+            vec3 c = texelFetch(uSrc, ivec2(gl_FragCoord.xy), 0).rgb;
+            fragColor = vec4(dot(c, vec3(0.2126, 0.7152, 0.0722)), 0.0, 0.0, 1.0);
+        }
+        """
+    )
+
+    /** Hochgerechnete Helligkeit + Farbe aus bikubischer Vergrößerung (Farbdifferenzen bleiben erhalten). */
+    val LUMA_COMBINE_FS: String = es3(
+        "",
+        """
+        uniform sampler2D uSrc;
+        uniform sampler2D uLuma;
+        uniform vec2 uOutSize;
+        out vec4 fragColor;
+
+        vec3 tex(vec2 p) {
+            return textureLod(uSrc, p, 0.0).rgb;
+        }
+
+        void main() {
+            vec2 uv = gl_FragCoord.xy / uOutSize;
+            vec2 fsz = vec2(textureSize(uSrc, 0));
+            vec2 inv = 1.0 / fsz;
+            vec2 sp = uv * fsz;
+            vec2 tc1 = floor(sp - 0.5) + 0.5;
+            vec2 f = sp - tc1;
+            vec2 f2 = f * f;
+            vec2 f3 = f2 * f;
+            vec2 w0 = f2 - 0.5 * (f3 + f);
+            vec2 w1 = 1.5 * f3 - 2.5 * f2 + 1.0;
+            vec2 w3 = 0.5 * (f3 - f2);
+            vec2 w2 = 1.0 - w0 - w1 - w3;
+            vec2 w12 = w1 + w2;
+            vec2 t0 = (tc1 - 1.0) * inv;
+            vec2 t3 = (tc1 + 2.0) * inv;
+            vec2 t12 = (tc1 + w2 / w12) * inv;
+            vec3 rgb =
+                (tex(vec2(t0.x, t0.y)) * w0.x + tex(vec2(t12.x, t0.y)) * w12.x + tex(vec2(t3.x, t0.y)) * w3.x) * w0.y +
+                (tex(vec2(t0.x, t12.y)) * w0.x + tex(vec2(t12.x, t12.y)) * w12.x + tex(vec2(t3.x, t12.y)) * w3.x) * w12.y +
+                (tex(vec2(t0.x, t3.y)) * w0.x + tex(vec2(t12.x, t3.y)) * w12.x + tex(vec2(t3.x, t3.y)) * w3.x) * w3.y;
+            float y = texelFetch(uLuma, ivec2(gl_FragCoord.xy), 0).r;
+            float yb = dot(rgb, vec3(0.2126, 0.7152, 0.0722));
+            fragColor = vec4(clamp(rgb + (y - yb), 0.0, 1.0), 1.0);
+        }
+        """
+    )
+
     /** 1:1-Kopie einer bildschirmgroßen Textur (zwischengespeichertes Upscaling). */
     val BLIT_FS: String = es3(
         "",

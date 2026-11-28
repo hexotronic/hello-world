@@ -38,7 +38,9 @@ flüssig mit 60/90/120 Hz laufen, plus **frei zoombares Bild**.
   (räumliche Nachbarn + zeitliche Vorhersage, Subpixel-Genauigkeit) → Median-Filter;
   das Zwischenbild entsteht durch Warping beider Nachbarbilder entlang des Bewegungsfelds,
   bei unsicheren Stellen (Verdeckungen) wird weich auf Überblendung zurückgefallen
-- Qualitätsstufen *Leistung / Ausgewogen / Qualität / Ultra*, Display wird auf maximale Hz geschaltet
+- Qualitätsstufen *Leistung / Ausgewogen / Qualität / Ultra*
+- **Ziel-Bildrate** wählbar: System, Display-Maximum, 30/48/60/90/120/144 fps – das Display wird
+  auf genau diese Rate oder ein Vielfaches umgeschaltet (spart Akku), sonst wird die Ausgabe getaktet
 - **Ultra (Zeitlupe)**: Bewegungsfeld in halber Auflösung über 4 Pyramidenstufen, Kanten-Verfeinerung
   mit Farbvergleich, **bidirektionaler Fluss** (Vorwärts + Rückwärts) mit Verdeckungserkennung per
   Fixpunkt-Iteration – Objektkanten bleiben sauber statt auszufransen
@@ -53,9 +55,11 @@ flüssig mit 60/90/120 Hz laufen, plus **frei zoombares Bild**.
   (KI M → KI S → Kantenadaptiv), bei Rucklern schaltet die Automatik selbst eine Stufe herunter;
   oder **selbst bestimmen**: Modell und Faktor frei wählen
 - Modelle: *Bikubisch* (Catmull-Rom), *Kantenadaptiv* (glättet Treppen, FSR-artig) und
-  **KI S / M / L** – neuronale Upscaler (Anime4K CNN x2 von bloc97, MIT-Lizenz, siehe
+  **KI S / M / L / VL** sowie **KI M + Entrauschen** – neuronale Upscaler (Anime4K CNN x2 von bloc97, MIT-Lizenz, siehe
   `app/src/main/assets/upscalers/LICENSE-Anime4K.txt`), ausgeführt über einen eingebauten
   Interpreter für mpv-User-Shader (`render/MpvHook.kt`); Zwischenergebnisse in RGBA16F
+- **Eigene Upscaler laden**: mpv-User-Shader (.glsl) für MAIN oder LUMA, z. B. FSRCNNX; die Datei wird
+  vor dem Übernehmen geprüft (nicht unterstützt: //!TEXTURE, //!COMPUTE)
 - Faktor wählbar: Automatisch (bis Displayauflösung), 1,5×, 2×, 3×, 4× (max. 2560 px);
   KI-Modelle rechnen je Durchgang 2×, ab 3× zweimal hintereinander
 - Kontrastadaptive Schärfung; Frame-Generierung arbeitet direkt auf den hochgerechneten Bildern
