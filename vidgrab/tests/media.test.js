@@ -278,3 +278,20 @@ test('chooseStream: Varianten mit getrennter Tonspur bleiben beim Master', () =>
   assert.equal(V.chooseStream(item, {}).url, item.url);
   assert.equal(V.chooseStream(item, {}).limited, false);
 });
+
+test('Eigene App: Paketname, Anzeigename und Rückfall auf Android-Auswahl', () => {
+  assert.equal(V.isValidPackage('com.example.player'), true);
+  assert.equal(V.isValidPackage('de.mein_name.app2'), true);
+  assert.equal(V.isValidPackage('player'), false);
+  assert.equal(V.isValidPackage('com.example player'), false);
+  assert.equal(V.isValidPackage('https://play.google.com'), false);
+
+  const custom = { player: 'custom', customPackage: 'de.privat.player', customName: 'Mein Player' };
+  assert.equal(V.effectivePlayer(custom), 'de.privat.player');
+  assert.equal(V.playerLabel(custom), 'Mein Player');
+  assert.equal(V.playerLabel({ player: 'custom', customPackage: 'de.privat.player' }), 'player');
+  assert.equal(V.effectivePlayer({ player: 'custom', customPackage: 'kaputt' }), '');
+  assert.equal(V.playerLabel({ player: 'custom', customPackage: 'kaputt' }), 'App');
+  assert.equal(V.playerLabel({ player: '' }), 'App');
+  assert.equal(V.playerLabel({ player: 'dev.anilbeesetti.nextplayer' }), 'Next Player');
+});

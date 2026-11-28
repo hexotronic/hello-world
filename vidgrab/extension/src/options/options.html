@@ -19,11 +19,31 @@
         Standard-App
         <select id="player" name="player"></select>
       </label>
-      <label class="field" id="custom-wrap" hidden>
-        Paketname der App
-        <input type="text" id="customPackage" name="customPackage" placeholder="z. B. com.example.player" autocomplete="off" spellcheck="false">
-        <span class="hint">Den Paketnamen findest du in der Play-Store-Adresse der App (…?id=<b>paketname</b>).</span>
-      </label>
+      <p class="hint" id="chooser-hint" hidden>
+        Beim ersten Abspielen zeigt Android alle Apps, die das Video öffnen können – auch eigene.
+        Deine App wählen und auf <b>„Immer“</b> tippen: Ab dann öffnet sie direkt, ohne Nachfrage.
+        (Ändern: Android-Einstellungen → Apps → diese App → „Standardmäßig öffnen“ → Standardeinstellungen löschen.)
+      </p>
+      <div id="custom-wrap" class="custom" hidden>
+        <label class="field">
+          Paketname der App
+          <input type="text" id="customPackage" name="customPackage" placeholder="z. B. com.example.player" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <span class="hint error" id="pkg-error" hidden>Das sieht nicht wie ein Paketname aus (Beispiel: com.example.player). Bis das passt, fragt Android nach der App.</span>
+        </label>
+        <label class="field">
+          Name auf dem Knopf
+          <input type="text" id="customName" name="customName" placeholder="z. B. Mein Player" maxlength="30" autocomplete="off">
+        </label>
+        <details class="hint">
+          <summary>Wo finde ich den Paketnamen?</summary>
+          <ul>
+            <li>App aus dem Play Store: App-Seite öffnen → Teilen → Link kopieren. Im Link steht <code>id=paketname</code>.</li>
+            <li>Andere Apps: Eine App wie „App Manager“ oder „Package Name Viewer“ zeigt die Paketnamen aller installierten Apps.</li>
+            <li>Ganz ohne Paketnamen: oben „Android-Auswahl“ wählen und dort „Immer“ antippen.</li>
+          </ul>
+        </details>
+        <span class="hint">Die App muss Video-Links aus dem Browser annehmen können (wie VLC oder MX Player).</span>
+      </div>
     </fieldset>
 
     <fieldset>

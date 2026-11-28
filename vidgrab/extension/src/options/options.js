@@ -6,10 +6,12 @@
   const form = document.getElementById('form');
   const player = document.getElementById('player');
   const customWrap = document.getElementById('custom-wrap');
+  const chooserHint = document.getElementById('chooser-hint');
+  const pkgError = document.getElementById('pkg-error');
   const status = document.getElementById('status');
 
   for (const p of V.PLAYERS) player.append(new Option(p.name, p.id));
-  player.append(new Option('Andere App (Paketname eingeben)', 'custom'));
+  player.append(new Option('Eigene App (Paketname eingeben)', 'custom'));
   const maxHeight = document.getElementById('maxHeight');
   for (const q of V.QUALITY_LIMITS) maxHeight.append(new Option(q.name, String(q.value)));
 
@@ -17,6 +19,7 @@
   player.value = s.player;
   if (player.value !== s.player) player.value = V.DEFAULT_SETTINGS.player;
   form.customPackage.value = s.customPackage;
+  form.customName.value = s.customName || '';
   maxHeight.value = String(s.maxHeight);
   if (maxHeight.value !== String(s.maxHeight)) maxHeight.value = String(V.DEFAULT_SETTINGS.maxHeight);
   for (const r of form.querySelectorAll('input[name="launchMethod"]')) r.checked = r.value === s.launchMethod;
@@ -25,16 +28,24 @@
   form.showVariants.checked = !!s.showVariants;
   form.analyzeManifests.checked = !!s.analyzeManifests;
   form.minSizeMB.value = s.minSizeMB;
-  customWrap.hidden = player.value !== 'custom';
+  function updateVisibility() {
+    customWrap.hidden = player.value !== 'custom';
+    chooserHint.hidden = player.value !== '';
+    const pkg = form.customPackage.value.trim();
+    pkgError.hidden = !pkg || V.isValidPackage(pkg);
+  }
+  updateVisibility();
+  form.customPackage.addEventListener('input', updateVisibility);
 
   let statusTimer = null;
   async function save() {
-    customWrap.hidden = player.value !== 'custom';
+    updateVisibility();
     const checked = form.querySelector('input[name="launchMethod"]:checked');
     const min = parseFloat(String(form.minSizeMB.value).replace(',', '.'));
     await browser.storage.local.set({
       player: player.value,
       customPackage: form.customPackage.value.trim(),
+      customName: form.customName.value.trim().slice(0, 30),
       launchMethod: checked ? checked.value : V.DEFAULT_SETTINGS.launchMethod,
       showOverlay: form.showOverlay.checked,
       maxHeight: Number(maxHeight.value) || 0,

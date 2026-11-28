@@ -275,8 +275,7 @@
     }
 
     function playerLabel() {
-      const pkg = V.effectivePlayer(settings);
-      return pkg ? V.playerName(pkg) : 'App';
+      return V.playerLabel(settings);
     }
 
     function update() {

@@ -102,7 +102,7 @@ function launchUrl(intent, mediaUrl) {
     u: intent,
     m: mediaUrl,
     t: mediaTitle(),
-    p: V.playerName(V.effectivePlayer(state.settings)),
+    p: V.playerLabel(state.settings),
   });
   return browser.runtime.getURL('src/launch/launch.html') + '?' + params.toString();
 }
@@ -212,7 +212,7 @@ function actionButtons(item) {
   // Zum Abspielen ggf. eine Qualitätsstufe unterhalb des Maximums (statt z. B. 4K)
   const playUrl = V.chooseStream(item, state.settings).url;
   if (state.android) {
-    const label = pkg ? 'In ' + V.playerName(pkg) + ' öffnen' : 'Mit App öffnen';
+    const label = pkg ? 'In ' + V.playerLabel(state.settings) + ' öffnen' : 'Mit App öffnen';
     return h('div', { class: 'buttons' },
       h('button', { class: 'btn primary', type: 'button', onclick: () => play(playUrl, item.kind, pkg) }, icon('play'), label),
       h('div', { class: 'row' },

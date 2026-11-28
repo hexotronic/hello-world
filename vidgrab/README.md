@@ -34,6 +34,15 @@ Stream der Seite. Abschaltbar in den Einstellungen („Knopf direkt am Video anz
 Firefox → Einstellungen → **„Links in Apps öffnen“** → **„Immer“**. (Nebenwirkung: auch normale Links,
 z. B. zu YouTube oder Maps, öffnen dann direkt die passende App. In privaten Tabs fragt Firefox immer.)
 
+**Eigene bzw. andere App als Standard:** VidGrab → Einstellungen → „Standard-App“. Neben VLC, MX Player,
+mpv, Just Player, Next Player, Nova, KMPlayer, nPlayer, Kodi und Web Video Caster gibt es zwei Wege für
+jede andere App:
+
+- **„Android-Auswahl“** – beim ersten Abspielen zeigt Android alle passenden Apps (auch eigene). App
+  wählen, **„Immer“** antippen – ab dann öffnet sie direkt. Kein Paketname nötig.
+- **„Eigene App“** – Paketname (z. B. `de.example.player`) und einen Namen für den Knopf eintragen.
+  Den Paketnamen zeigt der Play-Store-Link (`id=…`) oder eine App wie „App Manager“.
+
 **Qualität:** Bei Streams mit mehreren Qualitäten (HLS) startet VidGrab standardmäßig direkt die
 **höchste Stufe** – das Popup zeigt z. B. „startet mit 2160p“. (Bekäme VLC die Übersicht, finge es oft
 niedrig an.) Hat ein Stream die Tonspur getrennt, bekommt VLC das Original (sonst fehlte der Ton) und

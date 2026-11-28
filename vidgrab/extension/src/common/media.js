@@ -29,13 +29,19 @@
     { id: 'com.mxtech.videoplayer.pro', name: 'MX Player Pro' },
     { id: 'is.xyz.mpv', name: 'mpv' },
     { id: 'com.brouken.player', name: 'Just Player' },
+    { id: 'dev.anilbeesetti.nextplayer', name: 'Next Player' },
+    { id: 'org.courville.nova', name: 'Nova Video Player' },
+    { id: 'com.kmplayer', name: 'KMPlayer' },
+    { id: 'com.newin.nplayer.pro', name: 'nPlayer' },
     { id: 'org.xbmc.kodi', name: 'Kodi' },
-    { id: '', name: 'App-Auswahl (jedes Mal fragen)' },
+    { id: 'com.instantbits.cast.webvideo', name: 'Web Video Caster' },
+    { id: '', name: 'Android-Auswahl (jede App, mit „Immer“ merken)' },
   ];
 
   const DEFAULT_SETTINGS = {
     player: 'org.videolan.vlc',
     customPackage: '',
+    customName: '',
     launchMethod: 'tab', // 'tab' | 'popup' | 'page'
     showAudio: false,
     showVariants: false,
@@ -449,9 +455,26 @@
     return pkg ? pkg.split('.').pop() : 'App';
   }
 
+  /** Android-Paketname wie com.example.player (mind. zwei Teile, Buchstabe am Anfang). */
+  function isValidPackage(name) {
+    return /^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$/.test(String(name || '').trim());
+  }
+
+  /** Name für Knöpfe („In … öffnen“), inkl. selbst vergebenem Namen für eigene Apps. */
+  function playerLabel(settings) {
+    const s = Object.assign({}, DEFAULT_SETTINGS, settings);
+    const pkg = effectivePlayer(s);
+    if (!pkg) return 'App';
+    if (s.player === 'custom') return String(s.customName || '').trim().slice(0, 30) || playerName(pkg);
+    return playerName(pkg);
+  }
+
   function effectivePlayer(settings) {
     const s = Object.assign({}, DEFAULT_SETTINGS, settings);
-    return s.player === 'custom' ? String(s.customPackage || '').trim() : s.player;
+    if (s.player !== 'custom') return s.player;
+    // Ungültiger Paketname -> Android-Auswahl statt eines Starts, der ins Leere geht
+    const pkg = String(s.customPackage || '').trim();
+    return isValidPackage(pkg) ? pkg : '';
   }
 
   const api = {
@@ -459,7 +482,7 @@
     baseMime, getExtension, normalizeUrl, isSegmentUrl, classify, classifyDom, parseSize,
     parseHls, parseDash, parseIsoDuration, buildIntentUrl, intentMime, buildM3u,
     safeFilename, filenameFromUrl, formatBytes, formatDuration, formatBitrate, typeLabel,
-    maxQuality, hiddenReason, sortItems, pickBest, playerName, effectivePlayer,
+    maxQuality, hiddenReason, sortItems, pickBest, playerName, playerLabel, isValidPackage, effectivePlayer,
   };
 
   root.VidGrab = api;
