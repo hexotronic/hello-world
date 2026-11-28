@@ -57,6 +57,35 @@ class PlayerActivityTest {
     }
 
     @Test
+    fun extremeSlowMotionMutesAudioAndRestoresIt() {
+        val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val intent = Intent(ctx, PlayerActivity::class.java)
+            .setAction(Intent.ACTION_VIEW)
+            .setDataAndType(Uri.parse("file:///sdcard/zeitlupe.mp4"), "video/mp4")
+        val controller = Robolectric.buildActivity(PlayerActivity::class.java, intent).setup()
+        idle(800)
+        val activity = controller.get()
+        val player = PlayerHolder.get(ctx)
+
+        activity.setSpeed(0.05f)
+        idle(500)
+        assertEquals(0.05f, player.playbackParameters.speed, 0.0001f)
+        assertTrue(player.trackSelectionParameters.disabledTrackTypes.contains(androidx.media3.common.C.TRACK_TYPE_AUDIO))
+
+        activity.setSpeed(0.25f)
+        idle(500)
+        assertEquals(0.25f, player.playbackParameters.speed, 0.0001f)
+        assertTrue(!player.trackSelectionParameters.disabledTrackTypes.contains(androidx.media3.common.C.TRACK_TYPE_AUDIO))
+
+        activity.setSpeed(0.01f) // unter Minimum -> 0,05
+        idle(300)
+        assertEquals(0.05f, player.playbackParameters.speed, 0.0001f)
+        activity.setSpeed(1f)
+        controller.pause().stop().destroy()
+        idle()
+    }
+
+    @Test
     fun sharedTextStartsResolver() {
         val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
         val intent = Intent(ctx, PlayerActivity::class.java)

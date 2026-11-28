@@ -72,6 +72,7 @@ import com.hexotronic.fluxplayer.data.MediaRepository
 import com.hexotronic.fluxplayer.data.OrientationMode
 import com.hexotronic.fluxplayer.data.PlaylistHandoff
 import com.hexotronic.fluxplayer.data.Prefs
+import com.hexotronic.fluxplayer.data.UpscalerMode
 import com.hexotronic.fluxplayer.net.StreamResolver
 import com.hexotronic.fluxplayer.player.AudioEffects
 import com.hexotronic.fluxplayer.player.HeaderStore
@@ -115,6 +116,9 @@ class PlayerActivity : ComponentActivity(),
         private const val EXTRA_HEADER_KEYS = "flux.hk"
         private const val EXTRA_HEADER_VALUES = "flux.hv"
         private const val EXTRA_HANDOFF = "flux.handoff"
+        private const val MIN_SPEED = 0.05f
+        private const val MAX_SPEED = 4f
+        private const val SLOWMO_AUDIO_LIMIT = 0.1f
 
         fun playEntries(context: Context, entries: List<MediaEntry>, index: Int) {
             PlaylistHandoff.put(entries, index)
@@ -158,6 +162,7 @@ class PlayerActivity : ComponentActivity(),
     private var seekTarget = -1L
     private var lastLiveSeek = 0L
     private var longPressActive = false
+    private var audioMutedForSlowMo = false
     private var speedBeforeLongPress = 1f
 
     // Fehlerbehandlung
@@ -355,6 +360,9 @@ class PlayerActivity : ComponentActivity(),
         ui.frameGenMode = prefs.frameGenMode
         ui.frameGenQuality = prefs.frameGenQuality
         ui.highRefresh = prefs.highRefreshRate
+        ui.slowMoBoost = prefs.slowMoBoost
+        ui.upscaler = prefs.upscaler
+        ui.sharpness = prefs.sharpness
         ui.showStats = prefs.showStats
         ui.backgroundPlayback = prefs.backgroundPlayback
         ui.orientation = prefs.orientation
@@ -367,6 +375,9 @@ class PlayerActivity : ComponentActivity(),
         r.quality = ui.frameGenQuality
         r.statsEnabled = ui.showStats
         r.adjustments = ui.adjustments
+        r.slowMoBoost = ui.slowMoBoost
+        r.upscaler = ui.upscaler
+        r.sharpness = ui.sharpness
         applyHighRefresh(ui.highRefresh)
         applySubtitleStyle()
         applyZoom()
@@ -526,6 +537,10 @@ class PlayerActivity : ComponentActivity(),
     private fun syncFromPlayer() {
         ui.isPlaying = player.isPlaying
         ui.speed = player.playbackParameters.speed
+        glView.renderer.playbackSpeed = ui.speed
+        audioMutedForSlowMo = ui.speed < SLOWMO_AUDIO_LIMIT - 1e-4f &&
+            player.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_AUDIO)
+        ui.slowMoMuted = audioMutedForSlowMo
         ui.repeatMode = player.repeatMode
         ui.shuffle = player.shuffleModeEnabled
         ui.currentIndex = player.currentMediaItemIndex
@@ -590,6 +605,7 @@ class PlayerActivity : ComponentActivity(),
             if (videoSize.width <= 0 || videoSize.height <= 0) return
             val par = if (videoSize.pixelWidthHeightRatio > 0f) videoSize.pixelWidthHeightRatio else 1f
             glView.renderer.setVideoSize(videoSize.width, videoSize.height)
+            updateContentFrameRate()
             zoom.setVideoSize(videoSize.width * par, videoSize.height.toFloat())
             applyZoom()
             ui.videoSize = "${videoSize.width}×${videoSize.height}" +
@@ -629,6 +645,7 @@ class PlayerActivity : ComponentActivity(),
             ui.tracksVersion++
             ui.hasVideo = tracks.isEmpty || tracks.containsType(C.TRACK_TYPE_VIDEO)
             ui.subtitleDelaySupported = textOffsetRenderer() != null
+            updateContentFrameRate()
         }
 
         override fun onCues(cueGroup: CueGroup) {
@@ -649,6 +666,7 @@ class PlayerActivity : ComponentActivity(),
 
         override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
             ui.speed = playbackParameters.speed
+            glView.renderer.playbackSpeed = playbackParameters.speed
         }
 
         override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) {
@@ -931,14 +949,14 @@ class PlayerActivity : ComponentActivity(),
         if (!prefs.longPressSpeed || !player.isPlaying) return
         longPressActive = true
         speedBeforeLongPress = player.playbackParameters.speed
-        player.setPlaybackSpeed(2f)
+        applySpeed(2f)
         showFeedback(FeedbackKind.SPEED, "2x", autoHideMs = 0)
     }
 
     override fun onLongPressEnd() {
         if (!longPressActive) return
         longPressActive = false
-        player.setPlaybackSpeed(speedBeforeLongPress)
+        applySpeed(speedBeforeLongPress)
         hideFeedbackSoon()
     }
 
@@ -1292,7 +1310,55 @@ class PlayerActivity : ComponentActivity(),
     }
 
     override fun setSpeed(speed: Float) {
-        player.setPlaybackSpeed(speed.coerceIn(0.25f, 4f))
+        applySpeed(speed)
+    }
+
+    /**
+     * Die Audio-Ausgabe von ExoPlayer unterstützt mindestens 0,1x. Darunter wird die Tonspur
+     * deaktiviert, damit die Video-Uhr frei mit bis zu 0,05x laufen kann.
+     */
+    private fun applySpeed(speed: Float) {
+        val s = speed.coerceIn(MIN_SPEED, MAX_SPEED)
+        val mute = s < SLOWMO_AUDIO_LIMIT - 1e-4f
+        if (mute != audioMutedForSlowMo) {
+            audioMutedForSlowMo = mute
+            ui.slowMoMuted = mute
+            player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+                .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, mute)
+                .build()
+            showFeedback(
+                FeedbackKind.INFO,
+                if (mute) "Unter 0,1x ohne Ton" else "Ton wieder an",
+                autoHideMs = 1500
+            )
+        }
+        player.setPlaybackSpeed(s)
+        glView.renderer.playbackSpeed = s
+    }
+
+    private fun updateContentFrameRate() {
+        val fps = player.videoFormat?.frameRate ?: -1f
+        glView.renderer.contentFrameRate = if (fps > 0f) fps else 0f
+    }
+
+    override fun setSlowMoBoost(enabled: Boolean) {
+        ui.slowMoBoost = enabled
+        prefs.slowMoBoost = enabled
+        glView.renderer.slowMoBoost = enabled
+    }
+
+    override fun setUpscaler(mode: UpscalerMode) {
+        ui.upscaler = mode
+        prefs.upscaler = mode
+        glView.renderer.upscaler = mode
+        glView.requestRender()
+    }
+
+    override fun setSharpness(value: Float) {
+        ui.sharpness = value
+        prefs.sharpness = value
+        glView.renderer.sharpness = value
+        glView.requestRender()
     }
 
     override fun setFrameGenMode(mode: FrameGenMode) {
@@ -1557,6 +1623,8 @@ class PlayerActivity : ComponentActivity(),
         out += "Frame-Generierung" to ""
         out += "Modus" to ui.frameGenMode.label + " · " + ui.frameGenQuality.label
         out += "Display" to String.format(Locale.GERMANY, "%.0f Hz", ui.displayHz)
+        out += "Upscaler" to ui.upscaler.label + String.format(Locale.GERMANY, " · Schärfe %d %%", (ui.sharpness * 100).roundToInt())
+        ui.stats?.let { s -> out += "Aktive Stufe" to s.qualityLabel + if (s.boosted) " (Zeitlupen-Boost)" else "" }
         ui.stats?.let { s ->
             out += "Quelle" to String.format(Locale.GERMANY, "%.2f fps", s.sourceFps)
             out += "Ausgabe" to String.format(Locale.GERMANY, "%.1f fps (%d %% generiert)", s.outputFps, s.generatedPercent)

@@ -11,6 +11,7 @@ import com.hexotronic.fluxplayer.data.FrameGenQuality
 import com.hexotronic.fluxplayer.data.MediaEntry
 import com.hexotronic.fluxplayer.data.OrientationMode
 import com.hexotronic.fluxplayer.data.Prefs
+import com.hexotronic.fluxplayer.data.UpscalerMode
 import com.hexotronic.fluxplayer.player.AudioEffects
 import com.hexotronic.fluxplayer.render.RenderStats
 import com.hexotronic.fluxplayer.ui.player.FeedbackKind
@@ -64,6 +65,9 @@ class PlayerOverlayTest {
         override fun setFrameGenQuality(quality: FrameGenQuality) {}
         override fun setHighRefresh(enabled: Boolean) {}
         override fun setShowStats(enabled: Boolean) {}
+        override fun setSlowMoBoost(enabled: Boolean) {}
+        override fun setUpscaler(mode: UpscalerMode) {}
+        override fun setSharpness(value: Float) {}
         override fun setAspect(mode: AspectMode) {}
         override fun setZoomPercent(percent: Int) {}
         override fun resetZoom() {}
@@ -94,11 +98,12 @@ class PlayerOverlayTest {
             duration = 600_000
             position = 120_000
             playlist = List(30) { "Titel $it" }
-            stats = RenderStats(23.98f, 120f, 80, "Bewegung", 1920, 1080, 240, 135, true)
+            stats = RenderStats(23.98f, 120f, 80, "Bewegung (bidirektional)", 1920, 1080, 960, 540, true, "Ultra (Zeitlupe)", true, true, "Kantenadaptiv", 1.33f, 900)
             showStats = true
             subtitleDelaySupported = true
             abStart = 1000
-            speed = 1.5f
+            speed = 0.05f
+            slowMoMuted = true
         }
         rule.setContent { FluxTheme { PlayerOverlay(ui, actions) } }
         rule.waitForIdle()

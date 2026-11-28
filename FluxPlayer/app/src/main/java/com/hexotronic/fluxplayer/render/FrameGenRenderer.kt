@@ -13,6 +13,7 @@ import android.util.Log
 import android.view.Surface
 import com.hexotronic.fluxplayer.data.FrameGenMode
 import com.hexotronic.fluxplayer.data.FrameGenQuality
+import com.hexotronic.fluxplayer.data.UpscalerMode
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.concurrent.atomic.AtomicBoolean
@@ -35,7 +36,13 @@ data class RenderStats(
     val frameHeight: Int,
     val flowWidth: Int,
     val flowHeight: Int,
-    val timestampMode: Boolean
+    val timestampMode: Boolean,
+    val qualityLabel: String,
+    val boosted: Boolean,
+    val bidirectional: Boolean,
+    val upscaler: String,
+    val upscaleFactor: Float,
+    val latencyMs: Int
 )
 
 /**
@@ -68,6 +75,15 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
     @Volatile var adjustments: FloatArray = floatArrayOf(0f, 1f, 1f, 1f)
     @Volatile var statsEnabled: Boolean = false
     @Volatile var nominalVsyncNs: Long = 16_666_667L
+    @Volatile var upscaler: UpscalerMode = UpscalerMode.OFF
+    /** Schärfung 0..1 (nur mit Upscaler). */
+    @Volatile var sharpness: Float = 0.3f
+    /** Aktuelles Wiedergabetempo (für Zeitlupen-Timing). */
+    @Volatile var playbackSpeed: Float = 1f
+    /** Bildrate des Videos laut Container (0 = unbekannt). */
+    @Volatile var contentFrameRate: Float = 0f
+    /** In Zeitlupe automatisch stärkere Bewegungsschätzung verwenden. */
+    @Volatile var slowMoBoost: Boolean = true
 
     @Volatile private var videoWidth = 0
     @Volatile private var videoHeight = 0
@@ -86,6 +102,8 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
     private var progCoarse = 0
     private var progRefine = 0
     private var progMedian = 0
+    private var progUpscale = 0
+    private var progBoundary = 0
     private var motionSupported = false
     private var builtQuality: FrameGenQuality? = null
     private var quadVbo = 0
@@ -99,6 +117,9 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
         var fbo = 0
         var flowTex = 0
         var flowFbo = 0
+        var bwdTex = 0
+        var bwdFbo = 0
+        var bwdValid = false
         var valid = false
         var flowValid = false
         var linked = false
@@ -116,14 +137,25 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
     private var fineH = 1
     private var coarseW = 1
     private var coarseH = 1
-    private var midW = 1
-    private var midH = 1
-    private var midTex = 0
-    private var midFbo = 0
+    private val levelTex = IntArray(MAX_LEVELS)
+    private val levelFbo = IntArray(MAX_LEVELS)
+    private var composeTex = 0
+    private var composeFbo = 0
+    private var activeQuality: FrameGenQuality = FrameGenQuality.BALANCED
+
+    private class FlowJob(val a: Slot, val aSeq: Long, val b: Slot, val bSeq: Long) {
+        val passes = ArrayDeque<() -> Unit>()
+    }
+
+    private val jobs = ArrayDeque<FlowJob>()
+
+    private class Selection(val a: Slot, val b: Slot?, val t: Float)
     private var coarseTex = 0
     private var coarseFbo = 0
     private var fineTmpTex = 0
     private var fineTmpFbo = 0
+    private var fineTmp2Tex = 0
+    private var fineTmp2Fbo = 0
     private var flowAllocatedFor: FrameGenQuality? = null
 
     private var seqCounter = 0L
@@ -141,6 +173,8 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
     private var statsDraws = 0
     private var statsGenerated = 0
     private var lastActiveMode = "–"
+    private var lastUpscaleFactor = 1f
+    private var lastLagNs = 0L
 
     fun setVideoSize(width: Int, height: Int) {
         videoWidth = width
@@ -184,12 +218,19 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
         try {
             progCopy = GlUtil.buildProgram(Shaders.VS_COPY, Shaders.FS_COPY_OES)
             progDisplay = GlUtil.buildProgram(Shaders.VS_ES3, Shaders.DISPLAY_FS)
+            progUpscale = try {
+                GlUtil.buildProgram(Shaders.VS_ES3, Shaders.UPSCALE_FS)
+            } catch (e: Exception) {
+                Log.w(TAG, "Upscaler nicht verfügbar", e)
+                0
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Basis-Shader fehlgeschlagen", e)
             listener?.onRendererError("OpenGL-Fehler: ${e.message}")
             return
         }
-        buildMotionPrograms(quality)
+        activeQuality = effectiveQuality()
+        buildMotionPrograms(activeQuality)
         quadVbo = GlUtil.createQuadBuffer()
         oesTex = GlUtil.createExternalTexture()
 
@@ -221,12 +262,19 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
         val now = System.nanoTime()
         trackVsync(now)
         try {
-            if (builtQuality != quality) buildMotionPrograms(quality)
+            val q = effectiveQuality()
+            if (q != activeQuality || builtQuality != q) {
+                activeQuality = q
+                buildMotionPrograms(q)
+            }
             ensureFrameTextures()
-            if (flowAllocatedFor != quality) allocateFlowTextures()
+            if (flowAllocatedFor != activeQuality) allocateFlowTextures()
             if (discontinuity.getAndSet(false)) handleDiscontinuity(now)
             consumeFrames(st, now)
-            drawDisplay(now)
+            val sel = select(now)
+            if (sel?.b != null && sel.t > 0.02f && sel.t < 0.98f) finishJobFor(sel.b)
+            runJobs(passBudget())
+            if (sel != null) draw(sel) else clearScreen()
             handleSnapshot()
         } catch (e: Exception) {
             Log.e(TAG, "Renderfehler", e)
@@ -238,18 +286,22 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
 
     private fun forgetGlObjects() {
         // Der alte Kontext ist weg – IDs sind ungültig und werden nur vergessen.
-        progCopy = 0; progDisplay = 0; progCoarse = 0; progRefine = 0; progMedian = 0
+        progCopy = 0; progDisplay = 0; progCoarse = 0; progRefine = 0; progMedian = 0; progUpscale = 0; progBoundary = 0
         motionSupported = false
         builtQuality = null
         quadVbo = 0
         oesTex = 0
         uniformCache.clear()
         for (s in slots) {
-            s.tex = 0; s.fbo = 0; s.flowTex = 0; s.flowFbo = 0
-            s.valid = false; s.flowValid = false; s.linked = false
+            s.tex = 0; s.fbo = 0; s.flowTex = 0; s.flowFbo = 0; s.bwdTex = 0; s.bwdFbo = 0
+            s.valid = false; s.flowValid = false; s.bwdValid = false; s.linked = false
         }
         frameW = 0; frameH = 0
-        coarseTex = 0; coarseFbo = 0; fineTmpTex = 0; fineTmpFbo = 0; midTex = 0; midFbo = 0
+        coarseTex = 0; coarseFbo = 0; fineTmpTex = 0; fineTmpFbo = 0; fineTmp2Tex = 0; fineTmp2Fbo = 0
+        composeTex = 0; composeFbo = 0
+        levelTex.fill(0)
+        levelFbo.fill(0)
+        jobs.clear()
         flowAllocatedFor = null
         lastIngest = null
         displayedSlot = null
@@ -259,20 +311,37 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
         GlUtil.deleteProgram(progCoarse)
         GlUtil.deleteProgram(progRefine)
         GlUtil.deleteProgram(progMedian)
-        progCoarse = 0; progRefine = 0; progMedian = 0
+        GlUtil.deleteProgram(progBoundary)
+        progCoarse = 0; progRefine = 0; progMedian = 0; progBoundary = 0
         uniformCache.clear()
         builtQuality = q
         motionSupported = try {
             progCoarse = GlUtil.buildProgram(Shaders.VS_ES3, Shaders.coarseFs(q.coarseRadius, 0.012f))
             progRefine = GlUtil.buildProgram(Shaders.VS_ES3, Shaders.refineFs(q.fineRadius, 0.010f, 0.015f))
             progMedian = GlUtil.buildProgram(Shaders.VS_ES3, Shaders.MEDIAN_FS)
+            if (q.bidirectional) progBoundary = GlUtil.buildProgram(Shaders.VS_ES3, Shaders.boundaryFs(0.02f))
             true
         } catch (e: Exception) {
             Log.w(TAG, "Bewegungsschätzung nicht verfügbar – Überblendung als Rückfall", e)
             listener?.onRendererError("Bewegungsinterpolation wird von der GPU nicht unterstützt – nutze Überblendung.")
             false
         }
-        for (s in slots) s.flowValid = false
+        for (s in slots) {
+            s.flowValid = false
+            s.bwdValid = false
+        }
+        jobs.clear()
+    }
+
+    private fun effectiveQuality(): FrameGenQuality {
+        val q = quality
+        if (!slowMoBoost || mode != FrameGenMode.MOTION) return q
+        val sp = playbackSpeed
+        return when {
+            sp <= 0.3f -> FrameGenQuality.ULTRA
+            sp <= 0.6f && q.ordinal < FrameGenQuality.QUALITY.ordinal -> FrameGenQuality.QUALITY
+            else -> q
+        }
     }
 
     private fun ensureFrameTextures() {
@@ -288,8 +357,10 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
 
         for (s in slots) {
             GlUtil.deleteFramebuffer(s.fbo); GlUtil.deleteTexture(s.tex)
-            s.fbo = 0; s.tex = 0; s.valid = false; s.flowValid = false
+            s.fbo = 0; s.tex = 0; s.valid = false; s.flowValid = false; s.bwdValid = false
         }
+        GlUtil.deleteFramebuffer(composeFbo); GlUtil.deleteTexture(composeTex)
+        jobs.clear()
         frameW = w
         frameH = h
         frameLevels = levelsFor(max(w, h))
@@ -297,41 +368,61 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
             s.tex = GlUtil.createStorageTexture(w, h, frameLevels, mipmapped = true, linear = true)
             s.fbo = GlUtil.createFramebuffer(s.tex)
         }
+        composeTex = GlUtil.createStorageTexture(w, h, 1, mipmapped = false, linear = true)
+        composeFbo = GlUtil.createFramebuffer(composeTex)
         lastIngest = null
         displayedSlot = null
         allocateFlowTextures()
     }
 
     private fun allocateFlowTextures() {
+        jobs.clear()
         GlUtil.deleteFramebuffer(coarseFbo); GlUtil.deleteTexture(coarseTex)
         GlUtil.deleteFramebuffer(fineTmpFbo); GlUtil.deleteTexture(fineTmpTex)
-        GlUtil.deleteFramebuffer(midFbo); GlUtil.deleteTexture(midTex)
+        GlUtil.deleteFramebuffer(fineTmp2Fbo); GlUtil.deleteTexture(fineTmp2Tex)
+        fineTmp2Fbo = 0; fineTmp2Tex = 0
+        for (i in 0 until MAX_LEVELS) {
+            GlUtil.deleteFramebuffer(levelFbo[i]); GlUtil.deleteTexture(levelTex[i])
+            levelFbo[i] = 0; levelTex[i] = 0
+        }
         for (s in slots) {
             GlUtil.deleteFramebuffer(s.flowFbo); GlUtil.deleteTexture(s.flowTex)
+            GlUtil.deleteFramebuffer(s.bwdFbo); GlUtil.deleteTexture(s.bwdTex)
             s.flowFbo = 0; s.flowTex = 0; s.flowValid = false
+            s.bwdFbo = 0; s.bwdTex = 0; s.bwdValid = false
         }
-        var fl = quality.fineLod
-        while (fl > 1 && (min(frameW, frameH) shr (fl + 2)) < 4) fl--
-        while (fl + 2 > frameLevels - 1 && fl > 0) fl--
+        val q = activeQuality
+        var cl = q.coarseLod
+        while (cl > 1 && (min(frameW, frameH) shr cl) < 4) cl--
+        cl = min(cl, frameLevels - 1).coerceAtLeast(1)
+        val fl = min(q.fineLod, cl - 1).coerceAtLeast(0)
+        coarseLod = cl
         fineLod = fl
-        coarseLod = fl + 2
-        fineW = max(1, frameW shr fineLod)
-        fineH = max(1, frameH shr fineLod)
-        coarseW = max(1, frameW shr coarseLod)
-        coarseH = max(1, frameH shr coarseLod)
-        midW = max(1, frameW shr (fineLod + 1))
-        midH = max(1, frameH shr (fineLod + 1))
+        fineW = max(1, frameW shr fl)
+        fineH = max(1, frameH shr fl)
+        coarseW = max(1, frameW shr cl)
+        coarseH = max(1, frameH shr cl)
         coarseTex = GlUtil.createStorageTexture(coarseW, coarseH, 1, mipmapped = false, linear = false)
         coarseFbo = GlUtil.createFramebuffer(coarseTex)
+        for (lod in (cl - 1) downTo (fl + 1)) {
+            levelTex[lod] = GlUtil.createStorageTexture(max(1, frameW shr lod), max(1, frameH shr lod), 1, mipmapped = false, linear = false)
+            levelFbo[lod] = GlUtil.createFramebuffer(levelTex[lod])
+        }
         fineTmpTex = GlUtil.createStorageTexture(fineW, fineH, 1, mipmapped = false, linear = false)
         fineTmpFbo = GlUtil.createFramebuffer(fineTmpTex)
-        midTex = GlUtil.createStorageTexture(midW, midH, 1, mipmapped = false, linear = false)
-        midFbo = GlUtil.createFramebuffer(midTex)
+        if (q.bidirectional) {
+            fineTmp2Tex = GlUtil.createStorageTexture(fineW, fineH, 1, mipmapped = false, linear = false)
+            fineTmp2Fbo = GlUtil.createFramebuffer(fineTmp2Tex)
+        }
         for (s in slots) {
             s.flowTex = GlUtil.createStorageTexture(fineW, fineH, 1, mipmapped = false, linear = false)
             s.flowFbo = GlUtil.createFramebuffer(s.flowTex)
+            if (q.bidirectional) {
+                s.bwdTex = GlUtil.createStorageTexture(fineW, fineH, 1, mipmapped = false, linear = false)
+                s.bwdFbo = GlUtil.createFramebuffer(s.bwdTex)
+            }
         }
-        flowAllocatedFor = quality
+        flowAllocatedFor = q
     }
 
     // ------------------------------------------------------------------ Bildannahme
@@ -386,7 +477,7 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
                 // Zeitstempel springen zurück -> veraltete Zukunftsbilder verwerfen
                 for (s in slots) if (s.valid && s !== displayedSlot && s.ts >= ts) s.valid = false
                 linked = false
-            } else if (dt > MAX_LINK_GAP_NS) {
+            } else if (dt > maxLinkGapNs()) {
                 linked = false
             }
         }
@@ -397,11 +488,12 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
         slot.valid = true
         slot.linked = linked
         slot.flowValid = false
+        slot.bwdValid = false
         if (linked && prev != null) {
             val dt = (ts - prev.ts).toDouble()
-            intervalEmaNs = if (intervalEmaNs == 0.0) dt else intervalEmaNs * 0.9 + dt * 0.1
+            intervalEmaNs = if (intervalEmaNs == 0.0) dt else intervalEmaNs * 0.8 + dt * 0.2
             if (mode == FrameGenMode.MOTION && motionSupported && prev.valid) {
-                computeFlow(prev, slot)
+                enqueueFlow(prev, slot)
             }
         }
         lastIngest = slot
@@ -409,8 +501,10 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
 
     private fun pickSlot(prev: Slot?): Slot {
         var best: Slot? = null
+        val shown = displayedSlot
+        val next = shown?.let { successor(it) }
         for (s in slots) {
-            if (s === prev || s === displayedSlot) continue
+            if (s === prev || s === shown || s === next) continue
             if (!s.valid) return s
             if (best == null || s.seq < best.seq) best = s
         }
@@ -439,124 +533,300 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
         GLES30.glGenerateMipmap(GLES20.GL_TEXTURE_2D)
     }
 
-    private fun computeFlow(a: Slot, b: Slot) {
-        // 1) grob: volle Suche auf kleiner Mipmap-Stufe
-        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, coarseFbo)
-        GLES20.glViewport(0, 0, coarseW, coarseH)
-        GLES20.glUseProgram(progCoarse)
-        bindTexture(0, a.tex); bindTexture(1, b.tex)
-        GLES20.glUniform1i(uniform(progCoarse, "uPrev"), 0)
-        GLES20.glUniform1i(uniform(progCoarse, "uCurr"), 1)
-        GLES20.glUniform1i(uniform(progCoarse, "uLod"), coarseLod)
-        drawQuad()
+    // ------------------------------------------------------------------ Bewegungsschätzung (Jobs)
 
-        // 2) + 3) Verfeinerung mit Kandidaten (räumlich + zeitlich)
-        val temporal = a.flowValid && a.flowTex != 0
-        GLES20.glUseProgram(progRefine)
-        GLES20.glUniform1i(uniform(progRefine, "uPrev"), 0)
-        GLES20.glUniform1i(uniform(progRefine, "uCurr"), 1)
-        GLES20.glUniform1i(uniform(progRefine, "uPred"), 2)
-        GLES20.glUniform1i(uniform(progRefine, "uTemporal"), 3)
-        GLES20.glUniform1i(uniform(progRefine, "uUseTemporal"), if (temporal) 1 else 0)
-        bindTexture(0, a.tex); bindTexture(1, b.tex)
-        bindTexture(3, if (temporal) a.flowTex else coarseTex)
-
-        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, midFbo)
-        GLES20.glViewport(0, 0, midW, midH)
-        bindTexture(2, coarseTex)
-        GLES20.glUniform1i(uniform(progRefine, "uLod"), fineLod + 1)
-        drawQuad()
-
-        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, fineTmpFbo)
-        GLES20.glViewport(0, 0, fineW, fineH)
-        bindTexture(2, midTex)
-        GLES20.glUniform1i(uniform(progRefine, "uLod"), fineLod)
-        drawQuad()
-
-        // 4) Median
-        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, b.flowFbo)
-        GLES20.glUseProgram(progMedian)
-        bindTexture(0, fineTmpTex)
-        GLES20.glUniform1i(uniform(progMedian, "uFlow"), 0)
-        drawQuad()
-        b.flowValid = true
+    /**
+     * Legt die Render-Passes für ein Bildpaar an. Bei normaler Geschwindigkeit laufen alle sofort,
+     * in Zeitlupe werden sie auf mehrere Display-Refreshes verteilt (kein Ruckeln durch Lastspitzen).
+     */
+    private fun enqueueFlow(a: Slot, b: Slot) {
+        while (jobs.size >= 4) jobs.removeFirst()
+        val job = FlowJob(a, a.seq, b, b.seq)
+        addFlowPasses(job, forward = true)
+        if (activeQuality.bidirectional) addFlowPasses(job, forward = false)
+        jobs.addLast(job)
     }
+
+    private fun addFlowPasses(job: FlowJob, forward: Boolean) {
+        val a = job.a
+        val b = job.b
+        // vorwärts: Raster von B, gesucht in A (A(x+F) = B(x)); rückwärts: Raster von A, gesucht in B
+        val searchIn = if (forward) a else b
+        val grid = if (forward) b else a
+        val cl = coarseLod
+        val fl = fineLod
+        job.passes.addLast {
+            GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, coarseFbo)
+            GLES20.glViewport(0, 0, coarseW, coarseH)
+            GLES20.glUseProgram(progCoarse)
+            bindTexture(0, searchIn.tex); bindTexture(1, grid.tex)
+            GLES20.glUniform1i(uniform(progCoarse, "uPrev"), 0)
+            GLES20.glUniform1i(uniform(progCoarse, "uCurr"), 1)
+            GLES20.glUniform1i(uniform(progCoarse, "uLod"), cl)
+            drawQuad()
+        }
+        var predTex = coarseTex
+        for (lod in (cl - 1) downTo fl) {
+            val outFbo = if (lod == fl) fineTmpFbo else levelFbo[lod]
+            val outTex = if (lod == fl) fineTmpTex else levelTex[lod]
+            val w = max(1, frameW shr lod)
+            val h = max(1, frameH shr lod)
+            val pred = predTex
+            job.passes.addLast {
+                val temporal = forward && a.flowValid && a.flowTex != 0
+                GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, outFbo)
+                GLES20.glViewport(0, 0, w, h)
+                GLES20.glUseProgram(progRefine)
+                bindTexture(0, searchIn.tex); bindTexture(1, grid.tex); bindTexture(2, pred)
+                bindTexture(3, if (temporal) a.flowTex else pred)
+                GLES20.glUniform1i(uniform(progRefine, "uPrev"), 0)
+                GLES20.glUniform1i(uniform(progRefine, "uCurr"), 1)
+                GLES20.glUniform1i(uniform(progRefine, "uPred"), 2)
+                GLES20.glUniform1i(uniform(progRefine, "uTemporal"), 3)
+                GLES20.glUniform1i(uniform(progRefine, "uUseTemporal"), if (temporal) 1 else 0)
+                GLES20.glUniform1i(uniform(progRefine, "uLod"), lod)
+                drawQuad()
+            }
+            predTex = outTex
+        }
+        val boundary = progBoundary != 0 && fineTmp2Fbo != 0
+        job.passes.addLast {
+            val target = if (forward) b.flowFbo else b.bwdFbo
+            GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, if (boundary) fineTmp2Fbo else target)
+            GLES20.glViewport(0, 0, fineW, fineH)
+            GLES20.glUseProgram(progMedian)
+            bindTexture(0, fineTmpTex)
+            GLES20.glUniform1i(uniform(progMedian, "uFlow"), 0)
+            drawQuad()
+            if (!boundary) {
+                if (forward) b.flowValid = true else b.bwdValid = true
+            }
+        }
+        if (boundary) {
+            job.passes.addLast {
+                GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, if (forward) b.flowFbo else b.bwdFbo)
+                GLES20.glViewport(0, 0, fineW, fineH)
+                GLES20.glUseProgram(progBoundary)
+                bindTexture(0, searchIn.tex); bindTexture(1, grid.tex); bindTexture(2, fineTmp2Tex)
+                GLES20.glUniform1i(uniform(progBoundary, "uPrev"), 0)
+                GLES20.glUniform1i(uniform(progBoundary, "uCurr"), 1)
+                GLES20.glUniform1i(uniform(progBoundary, "uPred"), 2)
+                GLES20.glUniform1i(uniform(progBoundary, "uLod"), fl)
+                drawQuad()
+                if (forward) b.flowValid = true else b.bwdValid = true
+            }
+        }
+    }
+
+    private fun jobAlive(job: FlowJob): Boolean =
+        job.a.seq == job.aSeq && job.b.seq == job.bSeq && job.a.valid && job.b.valid
+
+    private fun runJobs(budget: Int) {
+        var left = budget
+        while (left > 0) {
+            val job = jobs.firstOrNull() ?: return
+            if (!jobAlive(job)) {
+                jobs.removeFirst()
+                continue
+            }
+            val pass = job.passes.removeFirstOrNull()
+            if (pass == null) {
+                jobs.removeFirst()
+                continue
+            }
+            pass()
+            left--
+        }
+    }
+
+    /** Wird ein Bewegungsfeld jetzt gebraucht, aber ist noch nicht fertig, sofort fertigrechnen. */
+    private fun finishJobFor(b: Slot) {
+        if (jobs.none { it.b === b && it.bSeq == b.seq }) return
+        var guard = 0
+        while (jobs.isNotEmpty() && guard++ < 64) {
+            val head = jobs.first()
+            val isTarget = head.b === b && head.bSeq == b.seq
+            runJobs(1)
+            if (isTarget && (jobs.isEmpty() || jobs.first() !== head)) return
+        }
+    }
+
+    private fun passBudget(): Int = if (playbackSpeed < SLOWMO_SPEED) SLOWMO_PASSES_PER_FRAME else Int.MAX_VALUE
 
     // ------------------------------------------------------------------ Anzeige
 
-    private fun drawDisplay(now: Long) {
+    private fun expectedIntervalNs(): Double {
+        val fps = contentFrameRate
+        val sp = playbackSpeed.coerceAtLeast(0.01f)
+        return if (fps > 1f && fps < 400f) 1e9 / (fps * sp) else intervalEmaNs
+    }
+
+    private fun maxLinkGapNs(): Long {
+        val iv = expectedIntervalNs()
+        return max(MAX_LINK_GAP_NS, min(5e9, iv * 2.5).toLong())
+    }
+
+    /**
+     * Anzeigeverzögerung, damit das nächste Bild schon vorliegt, wenn interpoliert wird.
+     * ExoPlayer gibt Bilder ca. 40–50 ms vor ihrem Zeitpunkt frei – bei normaler Geschwindigkeit
+     * reicht das (Verzögerung ≈ 0). In Zeitlupe liegen die Bilder weiter auseinander.
+     */
+    private fun displayLagNs(): Long {
+        if (mode == FrameGenMode.OFF || !realtime) return 0L
+        val iv = expectedIntervalNs()
+        if (iv <= 0.0) return 0L
+        if (arrivalMode) return iv.toLong()
+        var lag = max(0.0, iv - EARLY_RELEASE_NS)
+        if (playbackSpeed < SLOWMO_SPEED) lag += min(iv * 0.5, 150e6)
+        return lag.toLong()
+    }
+
+    private fun slotWithSeq(seq: Long): Slot? {
+        for (s in slots) if (s.valid && s.seq == seq) return s
+        return null
+    }
+
+    private fun successor(s: Slot): Slot? {
+        val n = slotWithSeq(s.seq + 1) ?: return null
+        return if (n.linked) n else null
+    }
+
+    private fun select(now: Long): Selection? {
+        val vsync = currentVsyncNs()
+        var a: Slot? = null
+        if (!realtime) {
+            for (s in slots) if (s.valid && (a == null || s.seq > a.seq)) a = s
+            a ?: return null
+            displayedSlot = a
+            return Selection(a, null, 0f)
+        }
+        val targetReal = now + vsync / 2
+        // 1) aktuelle Kette = Kette des neuesten fälligen Bildes
+        var real: Slot? = null
+        for (s in slots) {
+            if (!s.valid || s.ts > targetReal) continue
+            if (real == null || s.seq > real.seq) real = s
+        }
+        if (real == null) {
+            for (s in slots) if (s.valid && (a == null || s.ts < a.ts)) a = s
+            a ?: return null
+            displayedSlot = a
+            return Selection(a, null, 0f)
+        }
+        var start: Slot = real
+        while (start.linked) start = slotWithSeq(start.seq - 1) ?: break
+        // 2) innerhalb der Kette um die Anzeigeverzögerung zurück
+        val lag = displayLagNs()
+        lastLagNs = lag
+        val target = targetReal - lag
+        a = start
+        var cur: Slot? = start
+        while (cur != null) {
+            if (cur.ts <= target) a = cur
+            if (cur.ts > target) break
+            cur = successor(cur)
+        }
+        val chosen = a ?: return null
+        displayedSlot = chosen
+        val b = successor(chosen)
+        var t = 0f
+        if (mode != FrameGenMode.OFF && b != null && b.ts > target && chosen.ts <= target) {
+            val dt = b.ts - chosen.ts
+            if (dt in MIN_INTERP_NS..maxLinkGapNs() && dt > vsync * 1.15) {
+                t = ((target - chosen.ts).toDouble() / dt.toDouble()).toFloat().coerceIn(0f, 1f)
+            }
+        }
+        return Selection(chosen, b, t)
+    }
+
+    private fun clearScreen() {
         GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0)
         GLES20.glViewport(0, 0, surfW, surfH)
         GLES20.glClearColor(0f, 0f, 0f, 1f)
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
+    }
 
-        val vsync = currentVsyncNs()
-        val lag = if (arrivalMode && mode != FrameGenMode.OFF && intervalEmaNs > 0.0) intervalEmaNs.toLong() else 0L
-        val target = now + vsync / 2 - lag
-
-        var a: Slot? = null
-        if (!realtime) {
-            for (s in slots) if (s.valid && (a == null || s.seq > a.seq)) a = s
-        } else {
-            for (s in slots) {
-                if (!s.valid || s.ts > target) continue
-                if (a == null || s.ts > a.ts || (s.ts == a.ts && s.seq > a.seq)) a = s
-            }
-            if (a == null) {
-                for (s in slots) if (s.valid && (a == null || s.ts < a.ts)) a = s
-            }
-        }
-        if (a == null) return
-        displayedSlot = a
-
-        var b: Slot? = null
-        for (s in slots) if (s.valid && s.linked && s.seq == a.seq + 1) b = s
-
-        var t = 0f
-        if (realtime && mode != FrameGenMode.OFF && b != null && b.ts > target) {
-            val dt = b.ts - a.ts
-            if (dt in MIN_INTERP_NS..MAX_LINK_GAP_NS && dt > vsync * 1.15) {
-                t = ((target - a.ts).toDouble() / dt.toDouble()).toFloat().coerceIn(0f, 1f)
-            }
-        }
-
-        GLES20.glUseProgram(progDisplay)
+    private fun screenRect(): FloatArray {
         val r = displayRect
         val x = r[0] * surfW
         val yTop = r[1] * surfH
         val w = max(1f, (r[2] - r[0]) * surfW)
         val h = max(1f, (r[3] - r[1]) * surfH)
-        GLES20.glUniform4f(uniform(progDisplay, "uRect"), x, surfH - (yTop + h), w, h)
+        return floatArrayOf(x, surfH - (yTop + h), w, h)
+    }
+
+    private fun adjustmentsActive(): Boolean {
         val adj = adjustments
-        val adjOn = adj[0] != 0f || adj[1] != 1f || adj[2] != 1f || adj[3] != 1f
+        return adj[0] != 0f || adj[1] != 1f || adj[2] != 1f || adj[3] != 1f
+    }
+
+    private fun draw(sel: Selection) {
+        val a = sel.a
+        val b = sel.b
+        val t = sel.t
+        val generated = b != null && t > 0.02f && t < 0.98f
+        val shown = if (b != null && t >= 0.98f) b else a
+        val useUpscaler = upscaler != UpscalerMode.OFF && progUpscale != 0
+        val rect = screenRect()
+        lastUpscaleFactor = rect[2] / max(1, frameW)
+        if (!useUpscaler) {
+            clearScreen()
+            displayPass(sel, shown, generated, rect)
+        } else {
+            val src: Int
+            if (generated || adjustmentsActive()) {
+                GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, composeFbo)
+                GLES20.glViewport(0, 0, frameW, frameH)
+                displayPass(sel, shown, generated, floatArrayOf(0f, 0f, frameW.toFloat(), frameH.toFloat()))
+                src = composeTex
+            } else {
+                src = shown.tex
+            }
+            clearScreen()
+            GLES20.glUseProgram(progUpscale)
+            bindTexture(0, src)
+            GLES20.glUniform1i(uniform(progUpscale, "uSrc"), 0)
+            GLES20.glUniform4f(uniform(progUpscale, "uRect"), rect[0], rect[1], rect[2], rect[3])
+            GLES20.glUniform1i(uniform(progUpscale, "uKernel"), if (upscaler == UpscalerMode.EDGE) 1 else 0)
+            GLES20.glUniform1f(uniform(progUpscale, "uSharp"), sharpness.coerceIn(0f, 1f))
+            drawQuad()
+        }
+        statsDraws++
+        if (generated) statsGenerated++
+    }
+
+    private fun displayPass(sel: Selection, shown: Slot, generated: Boolean, rect: FloatArray) {
+        GLES20.glUseProgram(progDisplay)
+        GLES20.glUniform4f(uniform(progDisplay, "uRect"), rect[0], rect[1], rect[2], rect[3])
+        val adj = adjustments
         GLES20.glUniform4f(uniform(progDisplay, "uAdj"), adj[0], adj[1], adj[2], max(0.1f, adj[3]))
-        GLES20.glUniform1i(uniform(progDisplay, "uAdjOn"), if (adjOn) 1 else 0)
+        GLES20.glUniform1i(uniform(progDisplay, "uAdjOn"), if (adjustmentsActive()) 1 else 0)
         GLES20.glUniform1i(uniform(progDisplay, "uA"), 0)
         GLES20.glUniform1i(uniform(progDisplay, "uB"), 1)
         GLES20.glUniform1i(uniform(progDisplay, "uFlow"), 2)
-
-        val generated: Boolean
-        if (b == null || t <= 0.02f) {
-            bindTexture(0, a.tex); bindTexture(1, a.tex); bindTexture(2, a.flowTex)
+        GLES20.glUniform1i(uniform(progDisplay, "uFlowB"), 3)
+        val b = sel.b
+        if (!generated || b == null) {
+            bindTexture(0, shown.tex); bindTexture(1, shown.tex)
+            bindTexture(2, shown.flowTex); bindTexture(3, shown.flowTex)
             GLES20.glUniform1i(uniform(progDisplay, "uMode"), 0)
+            GLES20.glUniform1i(uniform(progDisplay, "uDual"), 0)
             GLES20.glUniform1f(uniform(progDisplay, "uT"), 0f)
-            generated = false
-        } else if (t >= 0.98f) {
-            bindTexture(0, b.tex); bindTexture(1, b.tex); bindTexture(2, b.flowTex)
-            GLES20.glUniform1i(uniform(progDisplay, "uMode"), 0)
-            GLES20.glUniform1f(uniform(progDisplay, "uT"), 0f)
-            generated = false
         } else {
             val motion = mode == FrameGenMode.MOTION && motionSupported && b.flowValid
-            bindTexture(0, a.tex); bindTexture(1, b.tex); bindTexture(2, b.flowTex)
+            val dual = motion && activeQuality.bidirectional && b.bwdValid && b.bwdTex != 0
+            bindTexture(0, sel.a.tex); bindTexture(1, b.tex)
+            bindTexture(2, b.flowTex); bindTexture(3, if (dual) b.bwdTex else b.flowTex)
             GLES20.glUniform1i(uniform(progDisplay, "uMode"), if (motion) 2 else 1)
-            GLES20.glUniform1f(uniform(progDisplay, "uT"), t)
-            generated = true
-            lastActiveMode = if (motion) "Bewegung" else "Überblendung"
+            GLES20.glUniform1i(uniform(progDisplay, "uDual"), if (dual) 1 else 0)
+            GLES20.glUniform1f(uniform(progDisplay, "uT"), sel.t)
+            lastActiveMode = when {
+                dual -> "Bewegung (bidirektional)"
+                motion -> "Bewegung"
+                else -> "Überblendung"
+            }
         }
         drawQuad()
-        statsDraws++
-        if (generated) statsGenerated++
     }
 
     private fun handleSnapshot() {
@@ -615,8 +885,14 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
             pct == 0 -> "Bereit"
             else -> lastActiveMode
         }
+        val q = activeQuality
         listener?.onRenderStats(
-            RenderStats(src, out, pct, active, frameW, frameH, fineW, fineH, !arrivalMode)
+            RenderStats(
+                src, out, pct, active, frameW, frameH, fineW, fineH, !arrivalMode,
+                q.label, q != quality, q.bidirectional,
+                if (progUpscale != 0) upscaler.label else "nicht verfügbar",
+                lastUpscaleFactor, (lastLagNs / 1_000_000L).toInt()
+            )
         )
         statsWindowStart = now
         statsDraws = 0
@@ -656,6 +932,10 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
         private const val SLOT_COUNT = 6
         private const val MAX_FRAME_DIM = 1920
         private const val MAX_LINK_GAP_NS = 150_000_000L
+        private const val EARLY_RELEASE_NS = 38_000_000.0
+        private const val SLOWMO_SPEED = 0.75f
+        private const val SLOWMO_PASSES_PER_FRAME = 3
+        private const val MAX_LEVELS = 16
         private const val MIN_INTERP_NS = 3_000_000L
         private const val TIMESTAMP_TOLERANCE_NS = 2_000_000_000L
     }

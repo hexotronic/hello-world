@@ -73,6 +73,10 @@ import com.hexotronic.fluxplayer.data.DecoderPreference
 import com.hexotronic.fluxplayer.data.FrameGenMode
 import com.hexotronic.fluxplayer.data.FrameGenQuality
 import com.hexotronic.fluxplayer.data.OrientationMode
+import com.hexotronic.fluxplayer.data.UpscalerMode
+import androidx.compose.material.icons.rounded.AutoFixHigh
+import kotlin.math.exp
+import kotlin.math.ln
 import com.hexotronic.fluxplayer.ui.theme.Accent
 import com.hexotronic.fluxplayer.util.Format
 import java.util.Locale
@@ -88,6 +92,7 @@ fun PlayerDialogs(ui: PlayerUiState, actions: PlayerActions) {
         PlayerDialog.VIDEO_QUALITY -> TrackDialog("Videoqualität / Videospur", C.TRACK_TYPE_VIDEO, ui, actions, close, allowOff = false)
         PlayerDialog.SPEED -> SpeedDialog(ui, actions, close)
         PlayerDialog.FRAME_GEN -> FrameGenDialog(ui, actions, close)
+        PlayerDialog.UPSCALER -> UpscalerDialog(ui, actions, close)
         PlayerDialog.ZOOM -> ZoomDialog(ui, actions, close)
         PlayerDialog.ADJUST -> AdjustDialog(ui, actions, close)
         PlayerDialog.EQUALIZER -> EqualizerDialog(ui, actions, close)
@@ -229,6 +234,7 @@ private fun MenuItem(icon: ImageVector, title: String, value: String? = null, on
 private fun MenuDialog(ui: PlayerUiState, actions: PlayerActions, close: () -> Unit) {
     DialogFrame("Optionen", close) {
         MenuItem(Icons.Rounded.AutoAwesome, "Frame-Generierung", ui.frameGenMode.label) { actions.openDialog(PlayerDialog.FRAME_GEN) }
+        MenuItem(Icons.Rounded.AutoFixHigh, "Upscaler & Schärfe", ui.upscaler.label) { actions.openDialog(PlayerDialog.UPSCALER) }
         MenuItem(Icons.Rounded.AspectRatio, "Zoom & Seitenverhältnis", "${ui.aspect.label} · ${ui.zoomPercent} %") { actions.openDialog(PlayerDialog.ZOOM) }
         MenuItem(Icons.Rounded.Audiotrack, "Audiospur") { actions.openDialog(PlayerDialog.AUDIO) }
         MenuItem(Icons.Rounded.Subtitles, "Untertitel") { actions.openDialog(PlayerDialog.SUBTITLES) }
@@ -313,27 +319,95 @@ private fun SubtitleDialog(ui: PlayerUiState, actions: PlayerActions, close: () 
     }
 }
 
+private const val MIN_SPEED = 0.05f
+private const val MAX_SPEED = 4f
+private val SPEED_LOG_RANGE = ln(MAX_SPEED / MIN_SPEED)
+
+private fun snapSpeed(v: Float): Float =
+    if (v < 1f) (v * 100f).roundToInt() / 100f else (v * 20f).roundToInt() / 20f
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SpeedDialog(ui: PlayerUiState, actions: PlayerActions, close: () -> Unit) {
     DialogFrame("Wiedergabegeschwindigkeit", close) {
         Text(Format.speed(ui.speed), style = MaterialTheme.typography.headlineMedium, color = Accent)
+        // logarithmischer Regler: feine Schritte im Zeitlupenbereich
+        val pos = (ln(ui.speed.coerceIn(MIN_SPEED, MAX_SPEED) / MIN_SPEED) / SPEED_LOG_RANGE).toFloat()
         Slider(
-            value = ui.speed,
-            onValueChange = { actions.setSpeed((it * 20).roundToInt() / 20f) },
-            valueRange = 0.25f..4f
+            value = pos,
+            onValueChange = { p ->
+                actions.setSpeed(snapSpeed((MIN_SPEED * exp(p * SPEED_LOG_RANGE)).toFloat()).coerceIn(MIN_SPEED, MAX_SPEED))
+            },
+            valueRange = 0f..1f
         )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            val step = if (ui.speed <= 1f) 0.05f else 0.25f
+            OutlinedButton(onClick = { actions.setSpeed(snapSpeed((ui.speed - step).coerceAtLeast(MIN_SPEED))) }) { Text("−") }
+            OutlinedButton(onClick = { actions.setSpeed(snapSpeed((ui.speed + step).coerceAtMost(MAX_SPEED))) }) { Text("+") }
+            OutlinedButton(onClick = { actions.setSpeed(1f) }) { Text("1x") }
+        }
+        SectionTitle("Zeitlupe")
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(0.25f, 0.5f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f, 2.5f, 3f, 4f).forEach { s ->
+            listOf(0.05f, 0.1f, 0.15f, 0.2f, 0.25f, 0.33f, 0.5f, 0.75f).forEach { s ->
                 FilterChip(selected = ui.speed == s, onClick = { actions.setSpeed(s) }, label = { Text(Format.speed(s)) })
             }
         }
+        SectionTitle("Schneller")
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(1f, 1.25f, 1.5f, 1.75f, 2f, 2.5f, 3f, 4f).forEach { s ->
+                FilterChip(selected = ui.speed == s, onClick = { actions.setSpeed(s) }, label = { Text(Format.speed(s)) })
+            }
+        }
+        val hint = buildString {
+            append("Unter 0,1x wird der Ton stummgeschaltet (Grenze der Audio-Engine). ")
+            if (ui.frameGenMode == FrameGenMode.MOTION) {
+                append("Die Frame-Generierung füllt die Zeitlupe mit berechneten Zwischenbildern")
+                if (ui.slowMoBoost) append(" – Zeitlupen-Boost aktiv")
+                append(". ")
+            } else {
+                append("Tipp: Für flüssige Zeitlupe Frame-Generierung „Bewegungsinterpolation“ einschalten. ")
+            }
+            append("Lange auf das Video drücken = vorübergehend 2x.")
+        }
         Text(
-            "Tipp: Lange auf das Video drücken = vorübergehend 2x.",
+            hint,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 8.dp)
         )
+    }
+}
+
+@Composable
+private fun UpscalerDialog(ui: PlayerUiState, actions: PlayerActions, close: () -> Unit) {
+    DialogFrame("Upscaler & Schärfe", close) {
+        Text(
+            "Rechnet Videos mit niedriger Auflösung (z. B. 480p/720p) hochwertig auf die Displayauflösung hoch. " +
+                "Die Schärfung wirkt auch bei Videos in voller Auflösung.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        SectionTitle("Verfahren")
+        UpscalerMode.entries.forEach { m ->
+            RadioRow(m.label, m.description, ui.upscaler == m) { actions.setUpscaler(m) }
+        }
+        SectionTitle("Schärfe: ${(ui.sharpness * 100).roundToInt()} %")
+        Slider(
+            value = ui.sharpness,
+            onValueChange = { actions.setSharpness((it * 20).roundToInt() / 20f) },
+            valueRange = 0f..1f,
+            enabled = ui.upscaler != UpscalerMode.OFF
+        )
+        ui.stats?.let { s ->
+            Text(
+                String.format(
+                    Locale.GERMANY, "Quelle %d×%d → Skalierung ×%.2f auf dem Display",
+                    s.frameWidth, s.frameHeight, s.upscaleFactor
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = Accent
+            )
+        }
     }
 }
 
@@ -352,13 +426,14 @@ private fun FrameGenDialog(ui: PlayerUiState, actions: PlayerActions, close: () 
         }
         SectionTitle("Qualität der Bewegungsschätzung")
         FrameGenQuality.entries.forEach { q ->
-            val detail = when (q) {
-                FrameGenQuality.PERFORMANCE -> "Schnell, für ältere Geräte"
-                FrameGenQuality.BALANCED -> "Empfohlen"
-                FrameGenQuality.QUALITY -> "Feineres Bewegungsfeld, braucht eine starke GPU"
-            }
-            RadioRow(q.label, detail, ui.frameGenQuality == q) { actions.setFrameGenQuality(q) }
+            RadioRow(q.label, q.description, ui.frameGenQuality == q) { actions.setFrameGenQuality(q) }
         }
+        SwitchRow(
+            "Zeitlupen-Boost",
+            "In Zeitlupe automatisch stärker rechnen: ≤ 0,6× mindestens „Qualität“, ≤ 0,3× „Ultra“ " +
+                "(Bilder kommen seltener – mehr GPU-Zeit pro Bild)",
+            ui.slowMoBoost
+        ) { actions.setSlowMoBoost(it) }
         HorizontalDivider(Modifier.padding(vertical = 8.dp))
         SwitchRow(
             "Hohe Bildwiederholrate anfordern",

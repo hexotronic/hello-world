@@ -31,6 +31,7 @@ import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.Audiotrack
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.BrightnessMedium
 import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.material.icons.rounded.FastRewind
@@ -173,7 +174,8 @@ private fun Controls(ui: PlayerUiState, actions: PlayerActions) {
             }
             val badges = buildList {
                 if (ui.frameGenMode != FrameGenMode.OFF) add("FG: " + ui.frameGenMode.label)
-                if (ui.speed != 1f) add(Format.speed(ui.speed))
+                if (ui.speed != 1f) add(Format.speed(ui.speed) + if (ui.slowMoMuted) " (stumm)" else "")
+                ui.stats?.let { if (it.boosted) add("Zeitlupen-Boost: " + it.qualityLabel) }
                 if (ui.abStart != null) add(if (ui.abEnd != null) "A-B aktiv" else "A gesetzt")
                 ui.sleepEndsAt?.let { add("Sleep " + Format.time((it - System.currentTimeMillis()).coerceAtLeast(0))) }
                 if (ui.sleepAtEnd) add("Sleep: Videoende")
@@ -222,7 +224,12 @@ private fun Controls(ui: PlayerUiState, actions: PlayerActions) {
                     Icon(Icons.Rounded.AspectRatio, "Zoom & Seitenverhältnis", tint = Color.White)
                 }
                 FrameGenChip(ui) { actions.openDialog(PlayerDialog.FRAME_GEN) }
-                Spacer(Modifier.width(4.dp))
+                IconButton(onClick = { actions.openDialog(PlayerDialog.UPSCALER) }) {
+                    Icon(
+                        Icons.Rounded.AutoFixHigh, "Upscaler",
+                        tint = if (ui.upscaler != com.hexotronic.fluxplayer.data.UpscalerMode.OFF) Accent else Color.White
+                    )
+                }
                 Surface(
                     onClick = { actions.openDialog(PlayerDialog.SPEED) },
                     shape = RoundedCornerShape(50),
@@ -413,6 +420,10 @@ private fun StatsPanel(ui: PlayerUiState, modifier: Modifier) {
                 add("Ausgabe: " + if (s != null) String.format(Locale.GERMANY, "%.1f fps", s.outputFps) else "–")
                 add("Display: " + String.format(Locale.GERMANY, "%.0f Hz", ui.displayHz))
                 add("Frame-Gen: " + (s?.activeMode ?: "–") + (s?.let { " · ${it.generatedPercent} % generiert" } ?: ""))
+                if (s != null) add("Qualität: " + s.qualityLabel + (if (s.boosted) " (Zeitlupen-Boost)" else "") +
+                    (if (s.bidirectional) " · bidirektional" else ""))
+                if (s != null) add(String.format(Locale.GERMANY, "Upscaler: %s · ×%.2f", s.upscaler, s.upscaleFactor))
+                if (s != null && s.latencyMs > 0) add("Zeitlupen-Puffer: ${s.latencyMs} ms")
                 if (s != null) add("Puffer: ${s.frameWidth}×${s.frameHeight} · Fluss ${s.flowWidth}×${s.flowHeight}")
                 if (s != null) add("Timing: " + if (s.timestampMode) "Zeitstempel" else "Ankunft (+1 Bild Latenz)")
                 add("Video: " + ui.videoSize)

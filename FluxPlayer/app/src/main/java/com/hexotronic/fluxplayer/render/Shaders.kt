@@ -248,6 +248,94 @@ internal object Shaders {
         """
     )
 
+    /**
+     * Kanten-Verfeinerung (nur „Ultra“): kleine 3x3-Blöcke mit Farbvergleich (RGB) statt Helligkeit,
+     * Kandidaten = eigener Vektor, 8 direkte und 4 entfernte Nachbarn, Nullvektor.
+     * Dadurch übernehmen Pixel am Objektrand den Vektor der richtigen Seite statt eines Mischvektors.
+     */
+    fun boundaryFs(lambda: Float): String = es3(
+        "#define LAMBDA ${glFloat(lambda)}",
+        """
+        uniform sampler2D uPrev;
+        uniform sampler2D uCurr;
+        uniform sampler2D uPred;
+        uniform int uLod;
+        out vec4 fragColor;
+
+        ivec2 gSz;
+        ivec2 gP;
+        vec3 gB[9];
+        float gBest;
+        ivec2 gBestD;
+
+        vec3 fetchC(sampler2D s, ivec2 p) {
+            return texelFetch(s, clamp(p, ivec2(0), gSz - ivec2(1)), uLod).rgb;
+        }
+
+        float cost(ivec2 d) {
+            float c = 0.0;
+            for (int i = 0; i < 9; i++) {
+                vec3 e = abs(gB[i] - fetchC(uPrev, gP + d + ivec2(i % 3 - 1, i / 3 - 1)));
+                c += e.r + e.g + e.b;
+            }
+            return c;
+        }
+
+        void tryVec(vec2 flowUv, float bias) {
+            ivec2 d = ivec2(floor(flowUv * vec2(gSz) + 0.5));
+            float v = cost(d) + bias;
+            if (v < gBest) {
+                gBest = v;
+                gBestD = d;
+            }
+        }
+
+        vec2 predAt(ivec2 o) {
+            ivec2 sz = textureSize(uPred, 0);
+            return unpackFlow(texelFetch(uPred, clamp(gP + o, ivec2(0), sz - ivec2(1)), 0));
+        }
+
+        void main() {
+            gSz = textureSize(uCurr, uLod);
+            gP = ivec2(gl_FragCoord.xy);
+            for (int i = 0; i < 9; i++) {
+                gB[i] = fetchC(uCurr, gP + ivec2(i % 3 - 1, i / 3 - 1));
+            }
+            vec2 own = predAt(ivec2(0));
+            gBest = 1e9;
+            gBestD = ivec2(0);
+            tryVec(own, 0.0);
+            for (int i = 0; i < 9; i++) {
+                if (i == 4) continue;
+                tryVec(predAt(ivec2(i % 3 - 1, i / 3 - 1)), LAMBDA);
+            }
+            tryVec(predAt(ivec2(-3, 0)), LAMBDA * 2.0);
+            tryVec(predAt(ivec2(3, 0)), LAMBDA * 2.0);
+            tryVec(predAt(ivec2(0, -3)), LAMBDA * 2.0);
+            tryVec(predAt(ivec2(0, 3)), LAMBDA * 2.0);
+            tryVec(vec2(0.0), LAMBDA * 2.0);
+
+            ivec2 bd = gBestD;
+            // Hat sich der Vektor nicht geändert, die Subpixel-Genauigkeit der Vorstufe behalten
+            if (bd == ivec2(floor(own * vec2(gSz) + 0.5))) {
+                fragColor = packFlow(own);
+                return;
+            }
+            float c0 = cost(bd);
+            float cxm = cost(bd - ivec2(1, 0));
+            float cxp = cost(bd + ivec2(1, 0));
+            float cym = cost(bd - ivec2(0, 1));
+            float cyp = cost(bd + ivec2(0, 1));
+            vec2 sub = vec2(0.0);
+            float ddx = cxm - 2.0 * c0 + cxp;
+            float ddy = cym - 2.0 * c0 + cyp;
+            if (ddx > 1e-4) sub.x = clamp(0.5 * (cxm - cxp) / ddx, -0.5, 0.5);
+            if (ddy > 1e-4) sub.y = clamp(0.5 * (cym - cyp) / ddy, -0.5, 0.5);
+            fragColor = packFlow((vec2(bd) + sub) / vec2(gSz));
+        }
+        """
+    )
+
     /** Komponentenweiser 3x3-Median (entfernt Ausreißer im Bewegungsfeld). */
     val MEDIAN_FS: String = es3(
         "",
@@ -296,6 +384,8 @@ internal object Shaders {
         uniform sampler2D uA;
         uniform sampler2D uB;
         uniform sampler2D uFlow;
+        uniform sampler2D uFlowB;
+        uniform int uDual;
         uniform vec4 uRect;
         uniform float uT;
         uniform int uMode;
@@ -303,17 +393,17 @@ internal object Shaders {
         uniform int uAdjOn;
         out vec4 fragColor;
 
-        vec2 flowAt(vec2 uv) {
-            ivec2 fsz = textureSize(uFlow, 0);
+        vec2 flowAt(sampler2D fl, vec2 uv) {
+            ivec2 fsz = textureSize(fl, 0);
             vec2 pos = uv * vec2(fsz) - 0.5;
             vec2 i0 = floor(pos);
             vec2 fr = pos - i0;
             ivec2 a = ivec2(i0);
             ivec2 mx = fsz - ivec2(1);
-            vec2 f00 = unpackFlow(texelFetch(uFlow, clamp(a, ivec2(0), mx), 0));
-            vec2 f10 = unpackFlow(texelFetch(uFlow, clamp(a + ivec2(1, 0), ivec2(0), mx), 0));
-            vec2 f01 = unpackFlow(texelFetch(uFlow, clamp(a + ivec2(0, 1), ivec2(0), mx), 0));
-            vec2 f11 = unpackFlow(texelFetch(uFlow, clamp(a + ivec2(1, 1), ivec2(0), mx), 0));
+            vec2 f00 = unpackFlow(texelFetch(fl, clamp(a, ivec2(0), mx), 0));
+            vec2 f10 = unpackFlow(texelFetch(fl, clamp(a + ivec2(1, 0), ivec2(0), mx), 0));
+            vec2 f01 = unpackFlow(texelFetch(fl, clamp(a + ivec2(0, 1), ivec2(0), mx), 0));
+            vec2 f11 = unpackFlow(texelFetch(fl, clamp(a + ivec2(1, 1), ivec2(0), mx), 0));
             return mix(mix(f00, f10, fr.x), mix(f01, f11, fr.x), fr.y);
         }
 
@@ -338,8 +428,39 @@ internal object Shaders {
                 c = textureGrad(uA, uv, gx, gy).rgb;
             } else if (uMode == 1) {
                 c = mix(textureGrad(uA, uv, gx, gy).rgb, textureGrad(uB, uv, gx, gy).rgb, uT);
+            } else if (uDual == 1) {
+                // Bidirektional: jede Seite löst ihre Warping-Gleichung per Fixpunkt-Iteration
+                // (A-Seite mit G auf dem A-Raster, B-Seite mit F auf dem B-Raster).
+                // Springt die Lösung, gibt es dort kein passendes Pixel (Verdeckung oder Fehlschätzung)
+                // und die andere Seite übernimmt.
+                vec2 fsz = vec2(textureSize(uA, 0));
+                vec2 G0 = flowAt(uFlowB, uv);
+                vec2 xa = uv - uT * G0;
+                vec2 G1 = flowAt(uFlowB, xa);
+                xa = uv - uT * G1;
+                vec2 F0 = flowAt(uFlow, uv);
+                vec2 xb = uv - (1.0 - uT) * F0;
+                vec2 F1 = flowAt(uFlow, xb);
+                xb = uv - (1.0 - uT) * F1;
+                float jumpA = length((G1 - G0) * fsz) * uT;
+                float jumpB = length((F1 - F0) * fsz) * (1.0 - uT);
+                float relA = 1.0 - smoothstep(0.75, 3.0, jumpA);
+                float relB = 1.0 - smoothstep(0.75, 3.0, jumpB);
+                vec3 ca = textureGrad(uA, xa, gx, gy).rgb;
+                vec3 cb = textureGrad(uB, xb, gx, gy).rgb;
+                float wA = (1.0 - uT) * (relA + 0.02);
+                float wB = uT * (relB + 0.02);
+                vec3 warped = (ca * wA + cb * wB) / (wA + wB);
+                vec3 d = abs(ca - cb);
+                float diff = max(max(d.r, d.g), d.b) * relA * relB;
+                float w = smoothstep(0.15, 0.45, diff);
+                c = warped;
+                if (w > 0.0) {
+                    vec3 plain = mix(textureGrad(uA, uv, gx, gy).rgb, textureGrad(uB, uv, gx, gy).rgb, uT);
+                    c = mix(warped, plain, w);
+                }
             } else {
-                vec2 f = flowAt(uv);
+                vec2 f = flowAt(uFlow, uv);
                 vec3 ca = textureGrad(uA, uv + uT * f, gx, gy).rgb;
                 vec3 cb = textureGrad(uB, uv - (1.0 - uT) * f, gx, gy).rgb;
                 vec3 warped = mix(ca, cb, uT);
@@ -356,6 +477,140 @@ internal object Shaders {
                 c = adjust(c);
             }
             fragColor = vec4(c, 1.0);
+        }
+        """
+    )
+
+    /**
+     * Upscaler (Bildschirmauflösung): 4x4-Texel-Nachbarschaft, wahlweise Catmull-Rom (bikubisch) oder
+     * kantenadaptiver Lanczos-2-Kern (entlang Kanten breiter, quer schärfer – ähnlich FSR 1 EASU)
+     * mit Anti-Ringing, danach kontrastadaptive Schärfung (CAS-artig) aus denselben Texeln.
+     */
+    val UPSCALE_FS: String = es3(
+        "",
+        """
+        uniform sampler2D uSrc;
+        uniform vec4 uRect;
+        uniform int uKernel;
+        uniform float uSharp;
+        out vec4 fragColor;
+
+        float lanczos2sq(float x2) {
+            x2 = min(x2, 4.0);
+            float a = 0.4 * x2 - 1.0;
+            float b = 0.25 * x2 - 1.0;
+            return (1.5625 * a * a - 0.5625) * (b * b);
+        }
+
+        float cubicW(float x) {
+            x = abs(x);
+            if (x < 1.0) return (1.5 * x - 2.5) * x * x + 1.0;
+            if (x < 2.0) return ((-0.5 * x + 2.5) * x - 4.0) * x + 2.0;
+            return 0.0;
+        }
+
+        void main() {
+            vec2 uv = (gl_FragCoord.xy - uRect.xy) / uRect.zw;
+            vec2 gx = dFdx(uv);
+            vec2 gy = dFdy(uv);
+            if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) {
+                fragColor = vec4(0.0, 0.0, 0.0, 1.0);
+                return;
+            }
+            ivec2 sz = textureSize(uSrc, 0);
+            vec2 fsz = vec2(sz);
+            if (uRect.z < fsz.x * 0.95) {
+                // Verkleinern: normale Filterung
+                fragColor = vec4(textureGrad(uSrc, uv, gx, gy).rgb, 1.0);
+                return;
+            }
+            vec2 p = uv * fsz - 0.5;
+            vec2 ip = floor(p);
+            vec2 f = p - ip;
+            ivec2 base = ivec2(ip) - ivec2(1);
+            ivec2 mx = sz - ivec2(1);
+            vec3 c[16];
+            float l[16];
+            vec3 mn16 = vec3(1.0);
+            vec3 mx16 = vec3(0.0);
+            for (int j = 0; j < 4; j++) {
+                for (int i = 0; i < 4; i++) {
+                    vec3 v = texelFetch(uSrc, clamp(base + ivec2(i, j), ivec2(0), mx), 0).rgb;
+                    c[j * 4 + i] = v;
+                    l[j * 4 + i] = lumaOf(v);
+                    mn16 = min(mn16, v);
+                    mx16 = max(mx16, v);
+                }
+            }
+            vec3 mn4 = min(min(c[5], c[6]), min(c[9], c[10]));
+            vec3 mx4 = max(max(c[5], c[6]), max(c[9], c[10]));
+
+            // Basis: Catmull-Rom (bikubisch, separierbar)
+            vec4 wx = vec4(cubicW(1.0 + f.x), cubicW(f.x), cubicW(1.0 - f.x), cubicW(2.0 - f.x));
+            vec4 wy = vec4(cubicW(1.0 + f.y), cubicW(f.y), cubicW(1.0 - f.y), cubicW(2.0 - f.y));
+            vec3 res = vec3(0.0);
+            float ws = 0.0;
+            for (int j = 0; j < 4; j++) {
+                for (int i = 0; i < 4; i++) {
+                    float w = wx[i] * wy[j];
+                    res += c[j * 4 + i] * w;
+                    ws += w;
+                }
+            }
+            res /= ws;
+            if (uKernel == 1) {
+                // An echten Kanten: Lanczos-2 im kantenparallelen Koordinatensystem (entlang breiter,
+                // quer schärfer) + Anti-Ringing; Texturen behalten den bikubischen Kern.
+                vec2 g00 = vec2(l[6] - l[4], l[9] - l[1]);
+                vec2 g10 = vec2(l[7] - l[5], l[10] - l[2]);
+                vec2 g01 = vec2(l[10] - l[8], l[13] - l[5]);
+                vec2 g11 = vec2(l[11] - l[9], l[14] - l[6]);
+                vec2 g = mix(mix(g00, g10, f.x), mix(g01, g11, f.x), f.y);
+                float len = length(g);
+                float edge = smoothstep(0.12, 0.45, len);
+                if (edge > 0.0) {
+                    vec2 n = g / max(len, 1e-5);
+                    vec2 t = vec2(-n.y, n.x);
+                    vec3 re = vec3(0.0);
+                    float we = 0.0;
+                    for (int j = 0; j < 4; j++) {
+                        for (int i = 0; i < 4; i++) {
+                            vec2 o = vec2(float(i) - 1.0, float(j) - 1.0) - f;
+                            float u = dot(o, t) * 0.55;
+                            float v = dot(o, n) * 1.1;
+                            float w = lanczos2sq(u * u) * lanczos2sq(v * v);
+                            re += c[j * 4 + i] * w;
+                            we += w;
+                        }
+                    }
+                    if (we > 1e-4) {
+                        re = clamp(re / we, mn4, mx4);
+                        res = mix(res, re, edge);
+                    }
+                }
+            }
+
+            if (uSharp > 0.0) {
+                vec4 gwx = vec4(1.0 + f.x, f.x, 1.0 - f.x, 2.0 - f.x);
+                vec4 gwy = vec4(1.0 + f.y, f.y, 1.0 - f.y, 2.0 - f.y);
+                gwx = exp(-gwx * gwx * 0.72);
+                gwy = exp(-gwy * gwy * 0.72);
+                vec3 blur = vec3(0.0);
+                float bw = 0.0;
+                for (int j = 0; j < 4; j++) {
+                    for (int i = 0; i < 4; i++) {
+                        float w = gwx[i] * gwy[j];
+                        blur += c[j * 4 + i] * w;
+                        bw += w;
+                    }
+                }
+                blur /= bw;
+                vec3 dd = mx4 - mn4;
+                float contrast = max(max(dd.r, dd.g), dd.b);
+                float amount = uSharp * (1.0 - smoothstep(0.25, 0.8, contrast));
+                res = clamp(res + (res - blur) * amount, mn16, mx16);
+            }
+            fragColor = vec4(clamp(res, 0.0, 1.0), 1.0);
         }
         """
     )

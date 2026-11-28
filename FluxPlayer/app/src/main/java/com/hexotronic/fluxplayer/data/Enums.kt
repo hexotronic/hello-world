@@ -9,18 +9,35 @@ enum class FrameGenMode(val label: String, val description: String) {
 
 /**
  * Qualitätsstufe der Bewegungsschätzung.
- * [fineLod] = Mipmap-Stufe des feinen Bewegungsfelds (3 = 1/8 Auflösung),
- * [coarseRadius] = Suchradius der groben Stufe, [fineRadius] = Suchradius je Kandidat der Verfeinerung.
+ * [fineLod] = Mipmap-Stufe des feinsten Bewegungsfelds (3 = 1/8 Auflösung, 1 = 1/2),
+ * [coarseLod] = Stufe der groben Vollsuche, dazwischen wird auf jeder Stufe verfeinert,
+ * [coarseRadius] = Suchradius der groben Stufe, [fineRadius] = Suchradius je Kandidat der Verfeinerung,
+ * [bidirectional] = zusätzlich Rückwärtsfluss + Verdeckungserkennung.
  */
 enum class FrameGenQuality(
     val label: String,
+    val description: String,
     val fineLod: Int,
+    val coarseLod: Int,
     val coarseRadius: Int,
-    val fineRadius: Int
+    val fineRadius: Int,
+    val bidirectional: Boolean
 ) {
-    PERFORMANCE("Leistung", 4, 4, 1),
-    BALANCED("Ausgewogen", 3, 5, 1),
-    QUALITY("Qualität", 2, 6, 1)
+    PERFORMANCE("Leistung", "Schnell, für ältere Geräte", 4, 6, 4, 1, false),
+    BALANCED("Ausgewogen", "Empfohlen für normale Wiedergabe", 3, 5, 5, 1, false),
+    QUALITY("Qualität", "Feineres Bewegungsfeld, braucht eine starke GPU", 2, 4, 6, 1, false),
+    ULTRA(
+        "Ultra (Zeitlupe)",
+        "Halbe Auflösung, 4 Pyramidenstufen, bidirektional mit Verdeckungserkennung – sehr GPU-intensiv, ideal für Zeitlupe",
+        1, 5, 5, 1, true
+    )
+}
+
+/** Upscaler für die Skalierung auf Bildschirmauflösung. */
+enum class UpscalerMode(val label: String, val description: String) {
+    OFF("Aus (bilinear)", "Standard-GPU-Filterung"),
+    BICUBIC("Bikubisch", "Catmull-Rom, schärfer als bilinear"),
+    EDGE("Kantenadaptiv", "Lanczos-Kern, der sich an Kanten ausrichtet (FSR-artig) – weniger Treppen und Unschärfe")
 }
 
 /** Seitenverhältnis / Skalierungsmodus. */

@@ -12,11 +12,12 @@ import com.hexotronic.fluxplayer.data.FrameGenMode
 import com.hexotronic.fluxplayer.data.FrameGenQuality
 import com.hexotronic.fluxplayer.data.MediaEntry
 import com.hexotronic.fluxplayer.data.OrientationMode
+import com.hexotronic.fluxplayer.data.UpscalerMode
 import com.hexotronic.fluxplayer.player.AudioEffects
 import com.hexotronic.fluxplayer.render.RenderStats
 
 enum class PlayerDialog {
-    MENU, AUDIO, SUBTITLES, VIDEO_QUALITY, SPEED, FRAME_GEN, ZOOM, ADJUST, EQUALIZER,
+    MENU, AUDIO, SUBTITLES, VIDEO_QUALITY, SPEED, FRAME_GEN, UPSCALER, ZOOM, ADJUST, EQUALIZER,
     SLEEP, PLAYLIST, INFO, DECODER, ORIENTATION
 }
 
@@ -49,6 +50,10 @@ class PlayerUiState {
     var frameGenMode by mutableStateOf(FrameGenMode.MOTION)
     var frameGenQuality by mutableStateOf(FrameGenQuality.BALANCED)
     var highRefresh by mutableStateOf(true)
+    var slowMoBoost by mutableStateOf(true)
+    var upscaler by mutableStateOf(UpscalerMode.EDGE)
+    var sharpness by mutableFloatStateOf(0.3f)
+    var slowMoMuted by mutableStateOf(false)
     var displayHz by mutableFloatStateOf(60f)
     var stats by mutableStateOf<RenderStats?>(null)
     var showStats by mutableStateOf(false)
@@ -107,6 +112,9 @@ interface PlayerActions {
     fun setFrameGenQuality(quality: FrameGenQuality)
     fun setHighRefresh(enabled: Boolean)
     fun setShowStats(enabled: Boolean)
+    fun setSlowMoBoost(enabled: Boolean)
+    fun setUpscaler(mode: UpscalerMode)
+    fun setSharpness(value: Float)
 
     fun setAspect(mode: AspectMode)
     fun setZoomPercent(percent: Int)

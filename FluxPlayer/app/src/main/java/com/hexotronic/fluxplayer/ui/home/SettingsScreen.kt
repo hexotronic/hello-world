@@ -32,6 +32,7 @@ import com.hexotronic.fluxplayer.data.FrameGenMode
 import com.hexotronic.fluxplayer.data.FrameGenQuality
 import com.hexotronic.fluxplayer.data.OrientationMode
 import com.hexotronic.fluxplayer.data.Prefs
+import com.hexotronic.fluxplayer.data.UpscalerMode
 import com.hexotronic.fluxplayer.ui.theme.Accent
 import kotlin.math.roundToInt
 
@@ -44,6 +45,9 @@ fun SettingsScreen() {
     var fgQuality by remember { mutableStateOf(p.frameGenQuality) }
     var highRefresh by remember { mutableStateOf(p.highRefreshRate) }
     var stats by remember { mutableStateOf(p.showStats) }
+    var slowBoost by remember { mutableStateOf(p.slowMoBoost) }
+    var upscaler by remember { mutableStateOf(p.upscaler) }
+    var sharp by remember { mutableStateOf(p.sharpness) }
     var resume by remember { mutableStateOf(p.resumePlayback) }
     var background by remember { mutableStateOf(p.backgroundPlayback) }
     var autoPip by remember { mutableStateOf(p.autoPip) }
@@ -69,14 +73,29 @@ fun SettingsScreen() {
         ChoiceSetting("Modus", fgMode, FrameGenMode.entries, { it.label }, { it.description }) {
             fgMode = it; p.frameGenMode = it
         }
-        ChoiceSetting("Qualität", fgQuality, FrameGenQuality.entries, { it.label }, { null }) {
+        ChoiceSetting("Qualität", fgQuality, FrameGenQuality.entries, { it.label }, { it.description }) {
             fgQuality = it; p.frameGenQuality = it
+        }
+        SwitchSetting("Zeitlupen-Boost", "In Zeitlupe automatisch stärkere Bewegungsschätzung (bis „Ultra“)", slowBoost) {
+            slowBoost = it; p.slowMoBoost = it
         }
         SwitchSetting("Hohe Bildwiederholrate", "Display während der Wiedergabe auf maximale Hz schalten", highRefresh) {
             highRefresh = it; p.highRefreshRate = it
         }
         SwitchSetting("Statistik einblenden", "fps-Anzeige und Anteil generierter Bilder", stats) {
             stats = it; p.showStats = it
+        }
+
+        Section("Upscaler")
+        ChoiceSetting("Verfahren", upscaler, UpscalerMode.entries, { it.label }, { it.description }) {
+            upscaler = it; p.upscaler = it
+        }
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+            Text("Schärfe: ${(sharp * 100).roundToInt()} %")
+            Slider(value = sharp, onValueChange = {
+                sharp = (it * 20).roundToInt() / 20f
+                p.sharpness = sharp
+            }, valueRange = 0f..1f)
         }
 
         Section("Wiedergabe")

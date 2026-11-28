@@ -19,6 +19,15 @@ class Prefs(context: Context) {
     var highRefreshRate: Boolean
         get() = sp.getBoolean("high_refresh", true)
         set(v) = putBool("high_refresh", v)
+    var slowMoBoost: Boolean
+        get() = sp.getBoolean("slowmo_boost", true)
+        set(v) = putBool("slowmo_boost", v)
+    var upscaler: UpscalerMode
+        get() = enumValue("upscaler", UpscalerMode.EDGE)
+        set(v) = putString("upscaler", v.name)
+    var sharpness: Float
+        get() = sp.getFloat("sharpness", 0.3f)
+        set(v) = sp.edit().putFloat("sharpness", v).apply()
     var showStats: Boolean
         get() = sp.getBoolean("show_stats", false)
         set(v) = putBool("show_stats", v)

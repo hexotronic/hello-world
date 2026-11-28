@@ -16,6 +16,8 @@ class ShaderDumpTest {
         File(dir, "vs_es3.glsl").writeText(Shaders.VS_ES3)
         File(dir, "median.glsl").writeText(Shaders.MEDIAN_FS)
         File(dir, "display.glsl").writeText(Shaders.DISPLAY_FS)
+        File(dir, "upscale.glsl").writeText(Shaders.UPSCALE_FS)
+        File(dir, "boundary.glsl").writeText(Shaders.boundaryFs(0.02f))
         for (q in FrameGenQuality.entries) {
             File(dir, "coarse_${q.name}.glsl").writeText(Shaders.coarseFs(q.coarseRadius, 0.012f))
             File(dir, "refine_${q.name}.glsl").writeText(Shaders.refineFs(q.fineRadius, 0.010f, 0.015f))

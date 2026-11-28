@@ -15,7 +15,8 @@ flüssig mit 60/90/120 Hz laufen, plus **frei zoombares Bild**.
 - Hardware/Software-Decoder umschaltbar
 - Audiospuren, Untertitelspuren, Videoqualität (HLS/DASH) wählbar
 - Externe Untertitel laden (SRT, VTT, ASS/SSA, TTML), Untertitel-Verzögerung und -Größe
-- Geschwindigkeit 0,25×–4×, langes Drücken = 2×
+- Geschwindigkeit **0,05×–4×** (logarithmischer Regler mit Feinschritten), langes Drücken = 2×;
+  unter 0,1× wird der Ton automatisch stummgeschaltet (Untergrenze der Audio-Engine)
 - A-B-Wiederholung, Wiederholen (Titel/Alle), Zufall, Sleep-Timer (auch „am Videoende“)
 - Playlists (ganzer Ordner, M3U/PLS), Fortsetzen an der letzten Position, Verlauf
 - Bild-in-Bild (auch automatisch), Hintergrundwiedergabe mit Medien-Benachrichtigung
@@ -37,8 +38,20 @@ flüssig mit 60/90/120 Hz laufen, plus **frei zoombares Bild**.
   (räumliche Nachbarn + zeitliche Vorhersage, Subpixel-Genauigkeit) → Median-Filter;
   das Zwischenbild entsteht durch Warping beider Nachbarbilder entlang des Bewegungsfelds,
   bei unsicheren Stellen (Verdeckungen) wird weich auf Überblendung zurückgefallen
-- Qualitätsstufen *Leistung / Ausgewogen / Qualität*, Display wird auf maximale Hz geschaltet
+- Qualitätsstufen *Leistung / Ausgewogen / Qualität / Ultra*, Display wird auf maximale Hz geschaltet
+- **Ultra (Zeitlupe)**: Bewegungsfeld in halber Auflösung über 4 Pyramidenstufen, Kanten-Verfeinerung
+  mit Farbvergleich, **bidirektionaler Fluss** (Vorwärts + Rückwärts) mit Verdeckungserkennung per
+  Fixpunkt-Iteration – Objektkanten bleiben sauber statt auszufransen
+- **Zeitlupen-Boost**: in Zeitlupe automatisch stärker rechnen (≤ 0,6× mind. „Qualität“, ≤ 0,3× „Ultra“);
+  tempoabhängiges Timing, damit auch bei 0,05× (Bilder 0,8 s auseinander) flüssig interpoliert wird;
+  die Berechnung wird auf mehrere Display-Refreshes verteilt, damit sie nicht ruckelt
 - Statistik-Overlay (Quell-fps, Ausgabe-fps, Anteil generierter Bilder)
+
+**Upscaler**
+- *Bikubisch* (Catmull-Rom) oder *Kantenadaptiv*: an echten Kanten ein entlang der Kante ausgerichteter
+  Lanczos-Kern mit Anti-Ringing (ähnlich FSR 1), Texturen bleiben bikubisch
+- Kontrastadaptive Schärfung (CAS-artig), wirkt auch bei voller Auflösung
+- Arbeitet zusammen mit der Frame-Generierung (Zwischenbild in Quellauflösung → Upscaling auf das Display)
 
 **Zoom & Bild**
 - Pinch-Zoom 25 %–1000 % um den Fingerpunkt, Verschieben mit einem oder zwei Fingern
