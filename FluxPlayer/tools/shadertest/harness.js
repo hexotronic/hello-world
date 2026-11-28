@@ -32,6 +32,8 @@ function run(SHADERS, scenes, quality) {
   progs.display = program(SHADERS.vs_es3, SHADERS.display, 'display');
   progs.upscale = program(SHADERS.vs_es3, SHADERS.upscale, 'upscale');
   progs.boundary = program(SHADERS.vs_es3, SHADERS.boundary, 'boundary');
+  if (SHADERS.blit) progs.blit = program(SHADERS.vs_es3, SHADERS.blit, 'blit');
+  if (SHADERS.upscale_old) progs.upscaleOld = program(SHADERS.vs_es3, SHADERS.upscale_old, 'upscale_old');
 
   const vbo = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
@@ -282,13 +284,13 @@ function run(SHADERS, scenes, quality) {
   }
   // ---------------------------------------------------------------- Upscaler
   out.upscale = [];
-  function upTest(name, img) {
+  function upTest(name, img, aliased) {
     // 2x verkleinern (Box), wieder auf W x H hochrechnen, mit Original vergleichen
     const w2 = W / 2, h2 = H / 2;
     const small = new Uint8Array(w2 * h2 * 4);
     for (let y = 0; y < h2; y++) for (let x = 0; x < w2; x++) for (let c = 0; c < 4; c++) {
       const i = (a, b) => ((b * W + a) * 4 + c);
-      small[(y * w2 + x) * 4 + c] = Math.round((img[i(2 * x, 2 * y)] + img[i(2 * x + 1, 2 * y)] + img[i(2 * x, 2 * y + 1)] + img[i(2 * x + 1, 2 * y + 1)]) / 4);
+      small[(y * w2 + x) * 4 + c] = aliased ? img[i(2 * x, 2 * y)] : Math.round((img[i(2 * x, 2 * y)] + img[i(2 * x + 1, 2 * y)] + img[i(2 * x, 2 * y + 1)] + img[i(2 * x + 1, 2 * y + 1)]) / 4);
     }
     const tS = tex(w2, h2, 1, false, small);
     gl.bindTexture(gl.TEXTURE_2D, tS);
@@ -315,6 +317,43 @@ function run(SHADERS, scenes, quality) {
     }
     out.upscale.push(res);
   }
+  // BENCH: Upscaler-Kosten 854x480 -> 2400x1080 (relativ, SwiftShader)
+  out.bench = {};
+  {
+    const sw = 854, sh = 480, dw = 2400, dh = 1080;
+    const data = new Uint8Array(sw * sh * 4);
+    for (let i = 0; i < data.length; i++) data[i] = (i * 2654435761 >>> 24) & 255;
+    const tS = tex(sw, sh, 1, false, data);
+    gl.bindTexture(gl.TEXTURE_2D, tS);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    const tD = tex(dw, dh, 1, false), fD = fbo(tD);
+    const one = new Uint8Array(4);
+    const variants = [['alt (16 Texel, Arrays)', progs.upscaleOld], ['neu', progs.upscale]];
+    for (const [label, p] of variants) {
+      if (!p) continue;
+      for (const [kname, kernel, sharp] of [['bikubisch', 0, 0], ['kantenadaptiv+schärfe', 1, 0.3]]) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fD); gl.viewport(0, 0, dw, dh); gl.useProgram(p);
+        bind(0, tS); gl.uniform1i(u(p, 'uSrc'), 0);
+        gl.uniform4f(u(p, 'uRect'), 0, 0, dw, dh); gl.uniform1i(u(p, 'uKernel'), kernel); gl.uniform1f(u(p, 'uSharp'), sharp);
+        draw(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, one);
+        const n = 4, t0 = performance.now();
+        for (let i = 0; i < n; i++) draw();
+        gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, one);
+        out.bench[label + ' / ' + kname] = +((performance.now() - t0) / n).toFixed(1);
+      }
+    }
+    if (progs.blit) {
+      const p = progs.blit;
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fD); gl.useProgram(p); bind(0, tD);
+      const tC = tex(dw, dh, 1, false), fC = fbo(tC);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fC); bind(0, tD); gl.uniform1i(u(p, 'uTex'), 0);
+      draw(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, one);
+      const t0 = performance.now(); for (let i = 0; i < 4; i++) draw();
+      gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, one);
+      out.bench['Kopie aus Zwischenspeicher'] = +((performance.now() - t0) / 4).toFixed(1);
+    }
+  }
   NATURAL = true;
   upTest('natürliches Muster', render({ kind: 'pan', vx: 0, vy: 0 }, 0));
   // harte Kanten: gedrehtes Quadrat + Kreis + Linien (geglättet)
@@ -335,5 +374,7 @@ function run(SHADERS, scenes, quality) {
     edges[i] = Math.round(30 + 200 * v); edges[i + 1] = Math.round(40 + 180 * v); edges[i + 2] = Math.round(60 + 140 * v); edges[i + 3] = 255;
   }
   upTest('harte Kanten', edges);
+  // harte Kanten ohne Antialiasing in der Quelle (Treppen) – Referenz bleibt das glatte Original
+  upTest('Treppen-Quelle', edges, true);
   return out;
 }

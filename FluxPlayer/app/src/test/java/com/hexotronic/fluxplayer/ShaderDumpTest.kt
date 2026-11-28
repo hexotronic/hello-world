@@ -17,6 +17,7 @@ class ShaderDumpTest {
         File(dir, "median.glsl").writeText(Shaders.MEDIAN_FS)
         File(dir, "display.glsl").writeText(Shaders.DISPLAY_FS)
         File(dir, "upscale.glsl").writeText(Shaders.UPSCALE_FS)
+        File(dir, "blit.glsl").writeText(Shaders.BLIT_FS)
         File(dir, "boundary.glsl").writeText(Shaders.boundaryFs(0.02f))
         for (q in FrameGenQuality.entries) {
             File(dir, "coarse_${q.name}.glsl").writeText(Shaders.coarseFs(q.coarseRadius, 0.012f))

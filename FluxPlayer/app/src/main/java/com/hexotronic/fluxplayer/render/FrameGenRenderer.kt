@@ -104,6 +104,20 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
     private var progMedian = 0
     private var progUpscale = 0
     private var progBoundary = 0
+    private var progBlit = 0
+
+    // Zwischenspeicher für das hochskalierte Bild (wird nur bei neuem Inhalt neu gerechnet)
+    private var cacheTex = 0
+    private var cacheFbo = 0
+    private var cacheW = 0
+    private var cacheH = 0
+    private var cacheValid = false
+    private var cacheSeq = -1L
+    private var cacheSrc = 0
+    private var cacheMode: UpscalerMode? = null
+    private var cacheSharp = -1f
+    private val cacheRect = FloatArray(4)
+    private val cacheAdj = FloatArray(4)
     private var motionSupported = false
     private var builtQuality: FrameGenQuality? = null
     private var quadVbo = 0
@@ -174,6 +188,7 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
     private var statsGenerated = 0
     private var lastActiveMode = "–"
     private var lastUpscaleFactor = 1f
+    private var upscalerActive = false
     private var lastLagNs = 0L
 
     fun setVideoSize(width: Int, height: Int) {
@@ -224,6 +239,11 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
                 Log.w(TAG, "Upscaler nicht verfügbar", e)
                 0
             }
+            progBlit = try {
+                GlUtil.buildProgram(Shaders.VS_ES3, Shaders.BLIT_FS)
+            } catch (e: Exception) {
+                0
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Basis-Shader fehlgeschlagen", e)
             listener?.onRendererError("OpenGL-Fehler: ${e.message}")
@@ -249,6 +269,7 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
     override fun onSurfaceChanged(unused: GL10?, width: Int, height: Int) {
         surfW = max(1, width)
         surfH = max(1, height)
+        cacheValid = false
         GLES20.glViewport(0, 0, surfW, surfH)
     }
 
@@ -287,6 +308,8 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
     private fun forgetGlObjects() {
         // Der alte Kontext ist weg – IDs sind ungültig und werden nur vergessen.
         progCopy = 0; progDisplay = 0; progCoarse = 0; progRefine = 0; progMedian = 0; progUpscale = 0; progBoundary = 0
+        progBlit = 0
+        cacheTex = 0; cacheFbo = 0; cacheW = 0; cacheH = 0; cacheValid = false
         motionSupported = false
         builtQuality = null
         quadVbo = 0
@@ -766,33 +789,89 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
         val t = sel.t
         val generated = b != null && t > 0.02f && t < 0.98f
         val shown = if (b != null && t >= 0.98f) b else a
-        val useUpscaler = upscaler != UpscalerMode.OFF && progUpscale != 0
         val rect = screenRect()
-        lastUpscaleFactor = rect[2] / max(1, frameW)
+        val scale = rect[2] / max(1, frameW)
+        lastUpscaleFactor = scale
+        val sharp = sharpness.coerceIn(0f, 1f)
+        // Upscaler nur, wenn er etwas bringt: echte Vergrößerung oder Schärfung, nie beim Verkleinern
+        val useUpscaler = upscaler != UpscalerMode.OFF && progUpscale != 0 &&
+            scale >= 0.95f && (scale > 1.05f || sharp > 0f)
+        upscalerActive = useUpscaler
         if (!useUpscaler) {
             clearScreen()
             displayPass(sel, shown, generated, rect)
-        } else {
-            val src: Int
-            if (generated || adjustmentsActive()) {
-                GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, composeFbo)
-                GLES20.glViewport(0, 0, frameW, frameH)
-                displayPass(sel, shown, generated, floatArrayOf(0f, 0f, frameW.toFloat(), frameH.toFloat()))
-                src = composeTex
-            } else {
-                src = shown.tex
-            }
+        } else if (generated) {
+            // Zwischenbild: jedes Refresh neu – direkt auf den Bildschirm
+            GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, composeFbo)
+            GLES20.glViewport(0, 0, frameW, frameH)
+            displayPass(sel, shown, true, floatArrayOf(0f, 0f, frameW.toFloat(), frameH.toFloat()))
             clearScreen()
-            GLES20.glUseProgram(progUpscale)
-            bindTexture(0, src)
-            GLES20.glUniform1i(uniform(progUpscale, "uSrc"), 0)
-            GLES20.glUniform4f(uniform(progUpscale, "uRect"), rect[0], rect[1], rect[2], rect[3])
-            GLES20.glUniform1i(uniform(progUpscale, "uKernel"), if (upscaler == UpscalerMode.EDGE) 1 else 0)
-            GLES20.glUniform1f(uniform(progUpscale, "uSharp"), sharpness.coerceIn(0f, 1f))
-            drawQuad()
+            upscalePass(composeTex, rect, sharp)
+            cacheValid = false
+        } else {
+            drawCachedUpscale(sel, shown, rect, sharp)
         }
         statsDraws++
         if (generated) statsGenerated++
+    }
+
+    private fun upscalePass(src: Int, rect: FloatArray, sharp: Float) {
+        GLES20.glUseProgram(progUpscale)
+        bindTexture(0, src)
+        GLES20.glUniform1i(uniform(progUpscale, "uSrc"), 0)
+        GLES20.glUniform4f(uniform(progUpscale, "uRect"), rect[0], rect[1], rect[2], rect[3])
+        GLES20.glUniform1i(uniform(progUpscale, "uKernel"), if (upscaler == UpscalerMode.EDGE) 1 else 0)
+        GLES20.glUniform1f(uniform(progUpscale, "uSharp"), sharp)
+        drawQuad()
+    }
+
+    /** Unverändertes Bild: Upscaling nur einmal pro Videobild, danach nur noch kopieren. */
+    private fun drawCachedUpscale(sel: Selection, shown: Slot, rect: FloatArray, sharp: Float) {
+        if (progBlit == 0) {
+            val src = composeIfAdjusted(sel, shown)
+            clearScreen()
+            upscalePass(src, rect, sharp)
+            return
+        }
+        if (cacheTex == 0 || cacheW != surfW || cacheH != surfH) {
+            GlUtil.deleteFramebuffer(cacheFbo); GlUtil.deleteTexture(cacheTex)
+            cacheTex = GlUtil.createStorageTexture(surfW, surfH, 1, mipmapped = false, linear = false)
+            cacheFbo = GlUtil.createFramebuffer(cacheTex)
+            cacheW = surfW
+            cacheH = surfH
+            cacheValid = false
+        }
+        val adj = adjustments
+        val same = cacheValid && cacheSeq == shown.seq && cacheSrc == shown.tex && cacheMode == upscaler &&
+            cacheSharp == sharp && rect.contentEquals(cacheRect) && adj.contentEquals(cacheAdj)
+        if (!same) {
+            val src = composeIfAdjusted(sel, shown)
+            GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, cacheFbo)
+            GLES20.glViewport(0, 0, surfW, surfH)
+            GLES20.glClearColor(0f, 0f, 0f, 1f)
+            GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
+            upscalePass(src, rect, sharp)
+            cacheValid = true
+            cacheSeq = shown.seq
+            cacheSrc = shown.tex
+            cacheMode = upscaler
+            cacheSharp = sharp
+            rect.copyInto(cacheRect)
+            adj.copyInto(cacheAdj)
+        }
+        clearScreen()
+        GLES20.glUseProgram(progBlit)
+        bindTexture(0, cacheTex)
+        GLES20.glUniform1i(uniform(progBlit, "uTex"), 0)
+        drawQuad()
+    }
+
+    private fun composeIfAdjusted(sel: Selection, shown: Slot): Int {
+        if (!adjustmentsActive()) return shown.tex
+        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, composeFbo)
+        GLES20.glViewport(0, 0, frameW, frameH)
+        displayPass(sel, shown, false, floatArrayOf(0f, 0f, frameW.toFloat(), frameH.toFloat()))
+        return composeTex
     }
 
     private fun displayPass(sel: Selection, shown: Slot, generated: Boolean, rect: FloatArray) {
@@ -890,7 +969,12 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
             RenderStats(
                 src, out, pct, active, frameW, frameH, fineW, fineH, !arrivalMode,
                 q.label, q != quality, q.bidirectional,
-                if (progUpscale != 0) upscaler.label else "nicht verfügbar",
+                when {
+                    progUpscale == 0 -> "nicht verfügbar"
+                    upscaler == UpscalerMode.OFF -> upscaler.label
+                    upscalerActive -> upscaler.label
+                    else -> upscaler.label + " (inaktiv, keine Vergrößerung)"
+                },
                 lastUpscaleFactor, (lastLagNs / 1_000_000L).toInt()
             )
         )

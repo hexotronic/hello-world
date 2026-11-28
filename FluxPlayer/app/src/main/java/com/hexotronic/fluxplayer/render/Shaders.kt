@@ -482,9 +482,12 @@ internal object Shaders {
     )
 
     /**
-     * Upscaler (Bildschirmauflösung): 4x4-Texel-Nachbarschaft, wahlweise Catmull-Rom (bikubisch) oder
-     * kantenadaptiver Lanczos-2-Kern (entlang Kanten breiter, quer schärfer – ähnlich FSR 1 EASU)
-     * mit Anti-Ringing, danach kontrastadaptive Schärfung (CAS-artig) aus denselben Texeln.
+     * Upscaler (Bildschirmauflösung), auf Mobil-GPUs optimiert:
+     *  - Catmull-Rom (bikubisch) über 9 bilineare Abtastungen statt 16 Einzeltexel
+     *  - kantenadaptiv: Gradient aus den 4 nächsten Texeln, an echten Kanten 2 zusätzliche
+     *    Abtastungen entlang der Kante (glättet Treppen) + Anti-Ringing auf die 2x2-Spanne
+     *  - Schärfung (kontrastadaptiv): bikubisch minus bilinear als Hochpass, 1 zusätzliche Abtastung
+     * Keine Arrays, keine Schleifen -> kein Register-Spilling.
      */
     val UPSCALE_FS: String = es3(
         "",
@@ -495,122 +498,87 @@ internal object Shaders {
         uniform float uSharp;
         out vec4 fragColor;
 
-        float lanczos2sq(float x2) {
-            x2 = min(x2, 4.0);
-            float a = 0.4 * x2 - 1.0;
-            float b = 0.25 * x2 - 1.0;
-            return (1.5625 * a * a - 0.5625) * (b * b);
-        }
-
-        float cubicW(float x) {
-            x = abs(x);
-            if (x < 1.0) return (1.5 * x - 2.5) * x * x + 1.0;
-            if (x < 2.0) return ((-0.5 * x + 2.5) * x - 4.0) * x + 2.0;
-            return 0.0;
+        vec3 tex(vec2 p) {
+            return textureLod(uSrc, p, 0.0).rgb;
         }
 
         void main() {
             vec2 uv = (gl_FragCoord.xy - uRect.xy) / uRect.zw;
-            vec2 gx = dFdx(uv);
-            vec2 gy = dFdy(uv);
             if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) {
                 fragColor = vec4(0.0, 0.0, 0.0, 1.0);
                 return;
             }
-            ivec2 sz = textureSize(uSrc, 0);
-            vec2 fsz = vec2(sz);
-            if (uRect.z < fsz.x * 0.95) {
-                // Verkleinern: normale Filterung
-                fragColor = vec4(textureGrad(uSrc, uv, gx, gy).rgb, 1.0);
-                return;
-            }
-            vec2 p = uv * fsz - 0.5;
-            vec2 ip = floor(p);
-            vec2 f = p - ip;
-            ivec2 base = ivec2(ip) - ivec2(1);
-            ivec2 mx = sz - ivec2(1);
-            vec3 c[16];
-            float l[16];
-            vec3 mn16 = vec3(1.0);
-            vec3 mx16 = vec3(0.0);
-            for (int j = 0; j < 4; j++) {
-                for (int i = 0; i < 4; i++) {
-                    vec3 v = texelFetch(uSrc, clamp(base + ivec2(i, j), ivec2(0), mx), 0).rgb;
-                    c[j * 4 + i] = v;
-                    l[j * 4 + i] = lumaOf(v);
-                    mn16 = min(mn16, v);
-                    mx16 = max(mx16, v);
-                }
-            }
-            vec3 mn4 = min(min(c[5], c[6]), min(c[9], c[10]));
-            vec3 mx4 = max(max(c[5], c[6]), max(c[9], c[10]));
+            ivec2 isz = textureSize(uSrc, 0);
+            vec2 fsz = vec2(isz);
+            vec2 inv = 1.0 / fsz;
 
-            // Basis: Catmull-Rom (bikubisch, separierbar)
-            vec4 wx = vec4(cubicW(1.0 + f.x), cubicW(f.x), cubicW(1.0 - f.x), cubicW(2.0 - f.x));
-            vec4 wy = vec4(cubicW(1.0 + f.y), cubicW(f.y), cubicW(1.0 - f.y), cubicW(2.0 - f.y));
-            vec3 res = vec3(0.0);
-            float ws = 0.0;
-            for (int j = 0; j < 4; j++) {
-                for (int i = 0; i < 4; i++) {
-                    float w = wx[i] * wy[j];
-                    res += c[j * 4 + i] * w;
-                    ws += w;
-                }
-            }
-            res /= ws;
+            // --- Catmull-Rom mit 9 bilinearen Abtastungen
+            vec2 sp = uv * fsz;
+            vec2 tc1 = floor(sp - 0.5) + 0.5;
+            vec2 f = sp - tc1;
+            vec2 f2 = f * f;
+            vec2 f3 = f2 * f;
+            vec2 w0 = f2 - 0.5 * (f3 + f);
+            vec2 w1 = 1.5 * f3 - 2.5 * f2 + 1.0;
+            vec2 w3 = 0.5 * (f3 - f2);
+            vec2 w2 = 1.0 - w0 - w1 - w3;
+            vec2 w12 = w1 + w2;
+            vec2 t0 = (tc1 - 1.0) * inv;
+            vec2 t3 = (tc1 + 2.0) * inv;
+            vec2 t12 = (tc1 + w2 / w12) * inv;
+            vec3 res =
+                (tex(vec2(t0.x, t0.y)) * w0.x + tex(vec2(t12.x, t0.y)) * w12.x + tex(vec2(t3.x, t0.y)) * w3.x) * w0.y +
+                (tex(vec2(t0.x, t12.y)) * w0.x + tex(vec2(t12.x, t12.y)) * w12.x + tex(vec2(t3.x, t12.y)) * w3.x) * w12.y +
+                (tex(vec2(t0.x, t3.y)) * w0.x + tex(vec2(t12.x, t3.y)) * w12.x + tex(vec2(t3.x, t3.y)) * w3.x) * w3.y;
+
+            // --- die 4 nächsten Texel (Kanten, Anti-Ringing, Schärfung)
+            ivec2 b = ivec2(tc1 - 0.5);
+            ivec2 mx = isz - ivec2(1);
+            vec3 c00 = texelFetch(uSrc, clamp(b, ivec2(0), mx), 0).rgb;
+            vec3 c10 = texelFetch(uSrc, clamp(b + ivec2(1, 0), ivec2(0), mx), 0).rgb;
+            vec3 c01 = texelFetch(uSrc, clamp(b + ivec2(0, 1), ivec2(0), mx), 0).rgb;
+            vec3 c11 = texelFetch(uSrc, clamp(b + ivec2(1, 1), ivec2(0), mx), 0).rgb;
+            vec3 lo = min(min(c00, c10), min(c01, c11));
+            vec3 hi = max(max(c00, c10), max(c01, c11));
+
             if (uKernel == 1) {
-                // An echten Kanten: Lanczos-2 im kantenparallelen Koordinatensystem (entlang breiter,
-                // quer schärfer) + Anti-Ringing; Texturen behalten den bikubischen Kern.
-                vec2 g00 = vec2(l[6] - l[4], l[9] - l[1]);
-                vec2 g10 = vec2(l[7] - l[5], l[10] - l[2]);
-                vec2 g01 = vec2(l[10] - l[8], l[13] - l[5]);
-                vec2 g11 = vec2(l[11] - l[9], l[14] - l[6]);
-                vec2 g = mix(mix(g00, g10, f.x), mix(g01, g11, f.x), f.y);
+                float l00 = lumaOf(c00);
+                float l10 = lumaOf(c10);
+                float l01 = lumaOf(c01);
+                float l11 = lumaOf(c11);
+                vec2 g = vec2((l10 - l00) + (l11 - l01), (l01 - l00) + (l11 - l10)) * 0.5;
                 float len = length(g);
-                float edge = smoothstep(0.12, 0.45, len);
+                float edge = smoothstep(0.05, 0.2, len);
                 if (edge > 0.0) {
-                    vec2 n = g / max(len, 1e-5);
-                    vec2 t = vec2(-n.y, n.x);
-                    vec3 re = vec3(0.0);
-                    float we = 0.0;
-                    for (int j = 0; j < 4; j++) {
-                        for (int i = 0; i < 4; i++) {
-                            vec2 o = vec2(float(i) - 1.0, float(j) - 1.0) - f;
-                            float u = dot(o, t) * 0.55;
-                            float v = dot(o, n) * 1.1;
-                            float w = lanczos2sq(u * u) * lanczos2sq(v * v);
-                            re += c[j * 4 + i] * w;
-                            we += w;
-                        }
-                    }
-                    if (we > 1e-4) {
-                        re = clamp(re / we, mn4, mx4);
-                        res = mix(res, re, edge);
-                    }
+                    vec2 d = vec2(-g.y, g.x) / len * 0.85 * inv;
+                    vec3 along = 0.5 * (tex(uv + d) + tex(uv - d));
+                    res = mix(res, 0.5 * (res + along), edge);
+                    res = mix(res, clamp(res, lo, hi), edge);
                 }
             }
 
             if (uSharp > 0.0) {
-                vec4 gwx = vec4(1.0 + f.x, f.x, 1.0 - f.x, 2.0 - f.x);
-                vec4 gwy = vec4(1.0 + f.y, f.y, 1.0 - f.y, 2.0 - f.y);
-                gwx = exp(-gwx * gwx * 0.72);
-                gwy = exp(-gwy * gwy * 0.72);
-                vec3 blur = vec3(0.0);
-                float bw = 0.0;
-                for (int j = 0; j < 4; j++) {
-                    for (int i = 0; i < 4; i++) {
-                        float w = gwx[i] * gwy[j];
-                        blur += c[j * 4 + i] * w;
-                        bw += w;
-                    }
-                }
-                blur /= bw;
-                vec3 dd = mx4 - mn4;
+                // Hochpass = bikubisch minus bilinear an derselben Stelle (1 Abtastung)
+                vec3 dd = hi - lo;
                 float contrast = max(max(dd.r, dd.g), dd.b);
-                float amount = uSharp * (1.0 - smoothstep(0.25, 0.8, contrast));
-                res = clamp(res + (res - blur) * amount, mn16, mx16);
+                float amount = 1.5 * uSharp * (1.0 - smoothstep(0.2, 0.7, contrast));
+                float k = 0.1 * uSharp;
+                res = clamp(res + (res - tex(uv)) * amount, lo - k, hi + k);
             }
             fragColor = vec4(clamp(res, 0.0, 1.0), 1.0);
+        }
+        """
+    )
+
+    /** 1:1-Kopie einer bildschirmgroßen Textur (zwischengespeichertes Upscaling). */
+    val BLIT_FS: String = es3(
+        "",
+        """
+        uniform sampler2D uTex;
+        out vec4 fragColor;
+
+        void main() {
+            fragColor = texelFetch(uTex, ivec2(gl_FragCoord.xy), 0);
         }
         """
     )

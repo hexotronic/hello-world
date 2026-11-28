@@ -5,7 +5,10 @@ const dir = process.argv[2];
 const SH = {};
 for (const f of fs.readdirSync(dir)) SH[f.replace('.glsl', '')] = fs.readFileSync(path.join(dir, f), 'utf8');
 const harness = fs.readFileSync(path.join(__dirname, 'harness.js'), 'utf8');
+if (process.env.UPSCALE_OLD) SH.upscale_old = fs.readFileSync(process.env.UPSCALE_OLD, 'utf8');
 // UPVARIANTS: optionale Shader-Varianten für Experimente (Umgebungsvariable UPVARIANT)
+if (process.env.UPVARIANT === 'noalong' || process.env.UPVARIANT === 'both') SH.upscale = SH.upscale.replace('res = mix(res, 0.5 * (res + along), edge);', '');
+if (process.env.UPVARIANT === 'sharpbil' || process.env.UPVARIANT === 'both') SH.upscale = SH.upscale.replace('res = clamp(res + (res - avg) * amount, lo - k, hi + k);', 'res = clamp(res + (res - tex(uv)) * amount * 1.5, lo - k, hi + k);');
 if (process.env.UPVARIANT === 'iso') SH.upscale = SH.upscale.replace(/float edge = [^;]+;/, 'float edge = 0.0;');
 if (process.env.UPVARIANT === 'noclamp') SH.upscale = SH.upscale.replace(/res = mix\(res, clamp\(res, mn4, mx4\), edge\);/, '');
 const scenes = [

@@ -52,6 +52,9 @@ flüssig mit 60/90/120 Hz laufen, plus **frei zoombares Bild**.
   Lanczos-Kern mit Anti-Ringing (ähnlich FSR 1), Texturen bleiben bikubisch
 - Kontrastadaptive Schärfung (CAS-artig), wirkt auch bei voller Auflösung
 - Arbeitet zusammen mit der Frame-Generierung (Zwischenbild in Quellauflösung → Upscaling auf das Display)
+- Für Mobil-GPUs optimiert: bikubisch über 9 bilineare Abtastungen, ohne Arrays/Schleifen; läuft nur, wenn
+  wirklich vergrößert oder geschärft wird; bei unverändertem Bild wird das Ergebnis aus einem Zwischenspeicher
+  kopiert statt neu berechnet
 
 **Zoom & Bild**
 - Pinch-Zoom 25 %–1000 % um den Fingerpunkt, Verschieben mit einem oder zwei Fingern
