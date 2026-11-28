@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="flux_bg">#FF0E0F12</color>
+    <color name="flux_icon_bg">#FF15171B</color>
+    <color name="flux_accent">#FFFF7A3D</color>
+
+    <style name="Theme.Flux" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/flux_bg</item>
+        <item name="android:colorAccent">@color/flux_accent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <style name="Theme.Flux.Player">
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:windowFullscreen">true</item>
+    </style>
+</resources>
