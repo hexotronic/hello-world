@@ -86,6 +86,30 @@ class PlayerActivityTest {
     }
 
     @Test
+    fun upscalerSwitchAndAutoArePersisted() {
+        val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val intent = Intent(ctx, PlayerActivity::class.java)
+            .setAction(Intent.ACTION_VIEW)
+            .setDataAndType(Uri.parse("file:///sdcard/upscale.mp4"), "video/mp4")
+        val controller = Robolectric.buildActivity(PlayerActivity::class.java, intent).setup()
+        idle(500)
+        val activity = controller.get()
+        val prefs = com.hexotronic.fluxplayer.data.Prefs(ctx)
+        activity.setUpscalerEnabled(false)
+        assertTrue(!prefs.upscalerEnabled)
+        activity.setUpscalerAuto(false)
+        activity.setUpscaler(com.hexotronic.fluxplayer.data.UpscalerMode.AI_M)
+        assertTrue(!prefs.upscalerAuto)
+        assertEquals(com.hexotronic.fluxplayer.data.UpscalerMode.AI_M, prefs.upscaler)
+        assertTrue("Modellwahl schaltet nicht ungefragt ein", !prefs.upscalerEnabled)
+        activity.setUpscalerEnabled(true)
+        activity.setUpscalerAuto(true)
+        assertTrue(prefs.upscalerEnabled && prefs.upscalerAuto)
+        controller.pause().stop().destroy()
+        idle()
+    }
+
+    @Test
     fun sharedTextStartsResolver() {
         val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
         val intent = Intent(ctx, PlayerActivity::class.java)

@@ -235,7 +235,14 @@ private fun MenuItem(icon: ImageVector, title: String, value: String? = null, on
 private fun MenuDialog(ui: PlayerUiState, actions: PlayerActions, close: () -> Unit) {
     DialogFrame("Optionen", close) {
         MenuItem(Icons.Rounded.AutoAwesome, "Frame-Generierung", ui.frameGenMode.label) { actions.openDialog(PlayerDialog.FRAME_GEN) }
-        MenuItem(Icons.Rounded.AutoFixHigh, "Upscaler & Schärfe", ui.upscaler.label) { actions.openDialog(PlayerDialog.UPSCALER) }
+        MenuItem(
+            Icons.Rounded.AutoFixHigh, "Upscaler",
+            when {
+                !ui.upscalerEnabled -> "Aus"
+                ui.upscalerAuto -> "Automatisch"
+                else -> ui.upscaler.label
+            }
+        ) { actions.openDialog(PlayerDialog.UPSCALER) }
         MenuItem(Icons.Rounded.AspectRatio, "Zoom & Seitenverhältnis", "${ui.aspect.label} · ${ui.zoomPercent} %") { actions.openDialog(PlayerDialog.ZOOM) }
         MenuItem(Icons.Rounded.Audiotrack, "Audiospur") { actions.openDialog(PlayerDialog.AUDIO) }
         MenuItem(Icons.Rounded.Subtitles, "Untertitel") { actions.openDialog(PlayerDialog.SUBTITLES) }
@@ -382,47 +389,75 @@ private fun SpeedDialog(ui: PlayerUiState, actions: PlayerActions, close: () -> 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun UpscalerDialog(ui: PlayerUiState, actions: PlayerActions, close: () -> Unit) {
-    DialogFrame("Upscaler & Schärfe", close) {
-        Text(
-            "Jedes Videobild wird einmal hochgerechnet (nicht bei jedem Display-Refresh). " +
-                "Die KI-Modelle sind neuronale Netze, die Kanten und Details rekonstruieren.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        SectionTitle("Modell")
-        UpscalerMode.entries.forEach { m ->
-            RadioRow(m.label, m.description, ui.upscaler == m) { actions.setUpscaler(m) }
+    DialogFrame("Upscaler", close) {
+        SwitchRow(
+            "Upscaler",
+            if (ui.upscalerEnabled) "An – Videos werden hochgerechnet und geschärft" else "Aus – Bild wird nur von der GPU gefiltert",
+            ui.upscalerEnabled
+        ) { actions.setUpscalerEnabled(it) }
+
+        SectionTitle("Steuerung")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = ui.upscalerAuto,
+                enabled = ui.upscalerEnabled,
+                onClick = { actions.setUpscalerAuto(true) },
+                label = { Text("Automatisch") }
+            )
+            FilterChip(
+                selected = !ui.upscalerAuto,
+                enabled = ui.upscalerEnabled,
+                onClick = { actions.setUpscalerAuto(false) },
+                label = { Text("Selbst bestimmen") }
+            )
         }
-        SectionTitle("Hochrechnen auf")
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            UpscaleFactor.entries.forEach { f ->
-                FilterChip(
-                    selected = ui.upscaleFactor == f,
-                    enabled = ui.upscaler != UpscalerMode.OFF,
-                    onClick = { actions.setUpscaleFactor(f) },
-                    label = { Text(if (f == UpscaleFactor.AUTO) "Auto (Display)" else f.label) }
-                )
+        if (ui.upscalerAuto) {
+            Text(
+                "Der Player wählt Modell und Faktor selbst: bis zur Displayauflösung, je nach Videoauflösung, " +
+                    "Bildrate und GPU (KI M → KI S → Kantenadaptiv). Ruckelt es, schaltet er automatisch eine Stufe herunter.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 6.dp)
+            )
+        } else {
+            SectionTitle("Modell")
+            UpscalerMode.entries.filter { it != UpscalerMode.OFF }.forEach { m ->
+                RadioRow(m.label, m.description, ui.upscaler == m) {
+                    if (!ui.upscalerEnabled) actions.setUpscalerEnabled(true)
+                    actions.setUpscaler(m)
+                }
             }
+            SectionTitle("Hochrechnen auf")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                UpscaleFactor.entries.forEach { f ->
+                    FilterChip(
+                        selected = ui.upscaleFactor == f,
+                        enabled = ui.upscalerEnabled,
+                        onClick = { actions.setUpscaleFactor(f) },
+                        label = { Text(if (f == UpscaleFactor.AUTO) "Auto (Display)" else f.label) }
+                    )
+                }
+            }
+            Text(
+                "Größer als das Display lohnt sich nur zum Hineinzoomen und für Schnappschüsse (max. 2560 px). " +
+                    "KI-Modelle rechnen je Durchgang 2× – ab 3× laufen sie zweimal.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
-        Text(
-            "Größer als das Display lohnt sich nur zum Hineinzoomen und für Schnappschüsse (max. 2560 px). " +
-                "KI-Modelle rechnen je Durchgang 2× – ab 3× laufen sie zweimal.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
         SectionTitle("Schärfe: ${(ui.sharpness * 100).roundToInt()} %")
         Slider(
             value = ui.sharpness,
             onValueChange = { actions.setSharpness((it * 20).roundToInt() / 20f) },
             valueRange = 0f..1f,
-            enabled = ui.upscaler != UpscalerMode.OFF
+            enabled = ui.upscalerEnabled
         )
-        if (ui.upscaleInfo.isNotEmpty()) {
+        if (ui.upscalerEnabled && ui.upscaleInfo.isNotEmpty()) {
             Text("Aktuell: " + ui.upscaleInfo, style = MaterialTheme.typography.bodySmall, color = Accent)
         }
         Text(
-            "KI-Modelle: Anime4K von bloc97 (MIT-Lizenz) – für Zeichentrick/Anime optimiert, schärft aber auch " +
-                "normale Videos. Benötigt eine GPU mit Float-Texturen (praktisch alle aktuellen Handys).",
+            "Tipp: In der Leiste unten schaltet „Upscale“ per Tippen an/aus, langes Drücken öffnet diese Einstellungen. " +
+                "KI-Modelle: Anime4K von bloc97 (MIT-Lizenz).",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 8.dp)

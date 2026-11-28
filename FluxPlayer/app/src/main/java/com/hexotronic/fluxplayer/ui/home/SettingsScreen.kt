@@ -50,6 +50,8 @@ fun SettingsScreen() {
     var upscaler by remember { mutableStateOf(p.upscaler) }
     var sharp by remember { mutableStateOf(p.sharpness) }
     var factor by remember { mutableStateOf(p.upscaleFactor) }
+    var upOn by remember { mutableStateOf(p.upscalerEnabled) }
+    var upAuto by remember { mutableStateOf(p.upscalerAuto) }
     var resume by remember { mutableStateOf(p.resumePlayback) }
     var background by remember { mutableStateOf(p.backgroundPlayback) }
     var autoPip by remember { mutableStateOf(p.autoPip) }
@@ -89,18 +91,31 @@ fun SettingsScreen() {
         }
 
         Section("Upscaler")
-        ChoiceSetting("Modell", upscaler, UpscalerMode.entries, { it.label }, { it.description }) {
-            upscaler = it; p.upscaler = it
+        SwitchSetting("Upscaler", "Videos hochrechnen und schärfen", upOn) {
+            upOn = it; p.upscalerEnabled = it
         }
-        ChoiceSetting("Hochrechnen auf", factor, UpscaleFactor.entries, { it.label }, { null }) {
-            factor = it; p.upscaleFactor = it
-        }
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
-            Text("Schärfe: ${(sharp * 100).roundToInt()} %")
-            Slider(value = sharp, onValueChange = {
-                sharp = (it * 20).roundToInt() / 20f
-                p.sharpness = sharp
-            }, valueRange = 0f..1f)
+        if (upOn) {
+            SwitchSetting(
+                "Automatisch wählen",
+                if (upAuto) "Player wählt Modell und Faktor passend zu Video und Gerät, schaltet bei Rucklern herunter"
+                else "Aus – Modell und Faktor selbst bestimmen",
+                upAuto
+            ) { upAuto = it; p.upscalerAuto = it }
+            if (!upAuto) {
+                ChoiceSetting("Modell", upscaler, UpscalerMode.entries.filter { it != UpscalerMode.OFF }, { it.label }, { it.description }) {
+                    upscaler = it; p.upscaler = it
+                }
+                ChoiceSetting("Hochrechnen auf", factor, UpscaleFactor.entries, { it.label }, { null }) {
+                    factor = it; p.upscaleFactor = it
+                }
+            }
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                Text("Schärfe: ${(sharp * 100).roundToInt()} %")
+                Slider(value = sharp, onValueChange = {
+                    sharp = (it * 20).roundToInt() / 20f
+                    p.sharpness = sharp
+                }, valueRange = 0f..1f)
+            }
         }
 
         Section("Wiedergabe")

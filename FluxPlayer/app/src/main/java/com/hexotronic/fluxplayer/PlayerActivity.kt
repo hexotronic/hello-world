@@ -365,6 +365,8 @@ class PlayerActivity : ComponentActivity(),
         ui.upscaler = prefs.upscaler
         ui.sharpness = prefs.sharpness
         ui.upscaleFactor = prefs.upscaleFactor
+        ui.upscalerEnabled = prefs.upscalerEnabled
+        ui.upscalerAuto = prefs.upscalerAuto
         ui.showStats = prefs.showStats
         ui.backgroundPlayback = prefs.backgroundPlayback
         ui.orientation = prefs.orientation
@@ -378,7 +380,8 @@ class PlayerActivity : ComponentActivity(),
         r.statsEnabled = ui.showStats
         r.adjustments = ui.adjustments
         r.slowMoBoost = ui.slowMoBoost
-        r.upscaler = ui.upscaler
+        r.upscaler = if (ui.upscalerEnabled) ui.upscaler else UpscalerMode.OFF
+        r.upscalerAuto = ui.upscalerAuto
         r.sharpness = ui.sharpness
         r.upscaleFactor = ui.upscaleFactor
         val appAssets = applicationContext.assets
@@ -1354,9 +1357,33 @@ class PlayerActivity : ComponentActivity(),
     }
 
     override fun setUpscaler(mode: UpscalerMode) {
+        if (mode == UpscalerMode.OFF) {
+            setUpscalerEnabled(false)
+            return
+        }
         ui.upscaler = mode
         prefs.upscaler = mode
-        glView.renderer.upscaler = mode
+        if (ui.upscalerEnabled) glView.renderer.upscaler = mode
+        glView.requestRender()
+    }
+
+    override fun setUpscalerEnabled(enabled: Boolean) {
+        ui.upscalerEnabled = enabled
+        prefs.upscalerEnabled = enabled
+        glView.renderer.upscaler = if (enabled) ui.upscaler else UpscalerMode.OFF
+        glView.requestRender()
+        val what = if (ui.upscalerAuto) "automatisch" else ui.upscaler.label
+        showFeedback(
+            FeedbackKind.INFO,
+            if (enabled) "Upscaler an ($what)" else "Upscaler aus",
+            autoHideMs = 1500
+        )
+    }
+
+    override fun setUpscalerAuto(auto: Boolean) {
+        ui.upscalerAuto = auto
+        prefs.upscalerAuto = auto
+        glView.renderer.upscalerAuto = auto
         glView.requestRender()
     }
 

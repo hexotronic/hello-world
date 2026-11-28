@@ -70,6 +70,8 @@ class PlayerOverlayTest {
         override fun setUpscaler(mode: UpscalerMode) {}
         override fun setSharpness(value: Float) {}
         override fun setUpscaleFactor(factor: UpscaleFactor) {}
+        override fun setUpscalerEnabled(enabled: Boolean) {}
+        override fun setUpscalerAuto(auto: Boolean) {}
         override fun setAspect(mode: AspectMode) {}
         override fun setZoomPercent(percent: Int) {}
         override fun resetZoom() {}
@@ -117,6 +119,18 @@ class PlayerOverlayTest {
             rule.runOnIdle { ui.dialog = d }
             rule.waitForIdle()
             assertTrue("Dialog $d", rule.onAllNodesWithText("Fertig").fetchSemanticsNodes().isNotEmpty())
+        }
+        // Upscaler-Dialog in beiden Varianten und ausgeschaltet
+        for ((auto, on) in listOf(true to true, false to true, false to false)) {
+            rule.runOnIdle {
+                ui.upscalerAuto = auto
+                ui.upscalerEnabled = on
+                ui.dialog = PlayerDialog.UPSCALER
+            }
+            rule.waitForIdle()
+            assertTrue(rule.onAllNodesWithText("Selbst bestimmen").fetchSemanticsNodes().isNotEmpty())
+            val manualVisible = rule.onAllNodesWithText("Hochrechnen auf").fetchSemanticsNodes().isNotEmpty()
+            assertTrue("Manuelle Optionen nur bei „Selbst bestimmen“", manualVisible == !auto)
         }
         rule.runOnIdle {
             ui.dialog = null

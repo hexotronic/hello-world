@@ -22,9 +22,18 @@ class Prefs(context: Context) {
     var slowMoBoost: Boolean
         get() = sp.getBoolean("slowmo_boost", true)
         set(v) = putBool("slowmo_boost", v)
+    /** Gewähltes Modell für „Selbst bestimmen“ (nie OFF – dafür gibt es den Schalter). */
     var upscaler: UpscalerMode
-        get() = enumValue("upscaler", UpscalerMode.EDGE)
-        set(v) = putString("upscaler", v.name)
+        get() = enumValue("upscaler", UpscalerMode.EDGE).let { if (it == UpscalerMode.OFF) UpscalerMode.EDGE else it }
+        set(v) = putString("upscaler", (if (v == UpscalerMode.OFF) UpscalerMode.EDGE else v).name)
+    var upscalerEnabled: Boolean
+        get() = if (sp.contains("upscaler_on")) sp.getBoolean("upscaler_on", true)
+        else enumValue("upscaler", UpscalerMode.EDGE) != UpscalerMode.OFF
+        set(v) = putBool("upscaler_on", v)
+    /** true = Player wählt Modell und Faktor selbst, false = selbst bestimmen. */
+    var upscalerAuto: Boolean
+        get() = sp.getBoolean("upscaler_auto", true)
+        set(v) = putBool("upscaler_auto", v)
     var upscaleFactor: UpscaleFactor
         get() = enumValue("upscale_factor", UpscaleFactor.AUTO)
         set(v) = putString("upscale_factor", v.name)

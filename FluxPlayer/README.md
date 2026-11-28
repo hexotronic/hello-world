@@ -48,6 +48,10 @@ flüssig mit 60/90/120 Hz laufen, plus **frei zoombares Bild**.
 - Statistik-Overlay (Quell-fps, Ausgabe-fps, Anteil generierter Bilder)
 
 **Upscaler** (einmal pro Videobild, nicht pro Display-Refresh)
+- Ein/Aus-Schalter („Upscale“ in der Player-Leiste: Tippen = an/aus, lang drücken = Einstellungen)
+- **Automatisch** (Standard): Modell und Faktor passend zu Auflösung × Bildrate × Tempo und GPU
+  (KI M → KI S → Kantenadaptiv), bei Rucklern schaltet die Automatik selbst eine Stufe herunter;
+  oder **selbst bestimmen**: Modell und Faktor frei wählen
 - Modelle: *Bikubisch* (Catmull-Rom), *Kantenadaptiv* (glättet Treppen, FSR-artig) und
   **KI S / M / L** – neuronale Upscaler (Anime4K CNN x2 von bloc97, MIT-Lizenz, siehe
   `app/src/main/assets/upscalers/LICENSE-Anime4K.txt`), ausgeführt über einen eingebauten

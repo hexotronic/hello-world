@@ -81,6 +81,9 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
     @Volatile var nominalVsyncNs: Long = 16_666_667L
     @Volatile var upscaler: UpscalerMode = UpscalerMode.OFF
     @Volatile var upscaleFactor: UpscaleFactor = UpscaleFactor.AUTO
+    /** Modell und Faktor automatisch wählen (mit Herunterschalten bei Rucklern). */
+    @Volatile var upscalerAuto: Boolean = false
+    @Volatile private var resetAutoDowngrade = false
     /** Lädt Modell-Dateien (assets) für die KI-Upscaler. */
     @Volatile var assetLoader: ((String) -> String?)? = null
     /** Schärfung 0..1 (nur mit Upscaler). */
@@ -139,6 +142,12 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
     private var appliedSharp = -1f
     private var appliedFactor: UpscaleFactor? = null
     private var lastUpscaleNote = ""
+    private var autoChosen: UpscalerMode = UpscalerMode.EDGE
+    private var autoDowngrade = 0
+    private var paceWindowStart = 0L
+    private var paceFrames = 0
+    private var paceMissed = 0
+    private var paceCooldownUntil = 0L
 
     private var motionSupported = false
     private var builtQuality: FrameGenQuality? = null
@@ -215,6 +224,7 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
         private set
 
     fun setVideoSize(width: Int, height: Int) {
+        if (width != videoWidth || height != videoHeight) resetAutoDowngrade = true
         videoWidth = width
         videoHeight = height
         renderRequester?.invoke()
@@ -272,6 +282,11 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
             listener?.onRendererError("OpenGL-Fehler: ${e.message}")
             return
         }
+        floatTargets = try {
+            HookUpscaler.floatTargetsSupported()
+        } catch (e: Exception) {
+            false
+        }
         activeQuality = effectiveQuality()
         buildMotionPrograms(activeQuality)
         quadVbo = GlUtil.createQuadBuffer()
@@ -310,6 +325,7 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
                 activeQuality = q
                 buildMotionPrograms(q)
             }
+            updateAutoChoice()
             ensureFrameTextures()
             if (flowAllocatedFor != activeQuality) allocateFlowTextures()
             applyUpscaleSettingsIfChanged()
@@ -394,10 +410,66 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
     }
 
     /** Zielgröße der Einzelbilder nach dem Hochrechnen. */
+    /** Tatsächlich verwendetes Modell (Schalter, Automatik oder eigene Wahl). */
+    private fun effectiveUpscaler(): UpscalerMode = when {
+        upscaler == UpscalerMode.OFF -> UpscalerMode.OFF
+        upscalerAuto -> autoChosen
+        else -> upscaler
+    }
+
+    private fun sourceSize(): IntArray {
+        var vw = videoWidth
+        var vh = videoHeight
+        if (vw <= 0 || vh <= 0) {
+            vw = 1280; vh = 720
+        }
+        val scale = min(1f, MAX_FRAME_DIM.toFloat() / max(vw, vh))
+        return intArrayOf(max(2, (vw * scale).roundToInt()), max(2, (vh * scale).roundToInt()))
+    }
+
+    private fun updateAutoChoice() {
+        if (resetAutoDowngrade) {
+            resetAutoDowngrade = false
+            autoDowngrade = 0
+        }
+        if (!upscalerAuto || upscaler == UpscalerMode.OFF) return
+        val src = sourceSize()
+        val auto = targetSizeFor(src[0], src[1], UpscaleFactor.AUTO)
+        autoChosen = UpscaleAuto.choose(
+            src[0], src[1], contentFrameRate, playbackSpeed,
+            needsUpscale = auto[0] > src[0], aiSupported = floatTargets == true && !aiFailed,
+            downgrade = autoDowngrade
+        )
+    }
+
+    /** Ruckelt die Anzeige im Automatik-Modus, eine Stufe leichter wählen. */
+    private fun monitorPacing(now: Long, dt: Long) {
+        if (!upscalerAuto || !realtime || upscaler == UpscalerMode.OFF) {
+            paceWindowStart = now; paceFrames = 0; paceMissed = 0
+            return
+        }
+        paceFrames++
+        if (dt > nominalVsyncNs * 16 / 10) paceMissed++
+        if (now - paceWindowStart < 2_000_000_000L) return
+        val overloaded = paceFrames > 30 && paceMissed * 8 > paceFrames
+        if (overloaded && now > paceCooldownUntil && autoChosen != UpscaleAuto.LADDER.last()) {
+            autoDowngrade++
+            paceCooldownUntil = now + 4_000_000_000L
+            Log.i(TAG, "Automatik: Upscaler wird leichter gewählt (Stufe $autoDowngrade)")
+        }
+        paceWindowStart = now
+        paceFrames = 0
+        paceMissed = 0
+    }
+
     private fun targetSize(sw: Int, sh: Int): IntArray {
-        if (upscaler == UpscalerMode.OFF) return intArrayOf(sw, sh)
-        var f = upscaleFactor.factor
-        if (upscaleFactor == UpscaleFactor.AUTO) {
+        if (effectiveUpscaler() == UpscalerMode.OFF) return intArrayOf(sw, sh)
+        return targetSizeFor(sw, sh, if (upscalerAuto) UpscaleFactor.AUTO else upscaleFactor)
+    }
+
+    private fun targetSizeFor(sw: Int, sh: Int, factor: UpscaleFactor): IntArray {
+        var f = factor.factor
+        if (factor == UpscaleFactor.AUTO) {
             // bis zur Displayauflösung (unabhängig von der Ausrichtung)
             val big = max(surfW, surfH).toFloat()
             val small = min(surfW, surfH).toFloat()
@@ -417,14 +489,9 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
     }
 
     private fun ensureFrameTextures() {
-        var vw = videoWidth
-        var vh = videoHeight
-        if (vw <= 0 || vh <= 0) {
-            vw = 1280; vh = 720
-        }
-        val scale = min(1f, MAX_FRAME_DIM.toFloat() / max(vw, vh))
-        val sw = max(2, (vw * scale).roundToInt())
-        val sh = max(2, (vh * scale).roundToInt())
+        val srcSize = sourceSize()
+        val sw = srcSize[0]
+        val sh = srcSize[1]
         if (sw != srcW || sh != srcH || srcTex == 0) {
             GlUtil.deleteFramebuffer(srcFbo); GlUtil.deleteTexture(srcTex)
             srcTex = GlUtil.createStorageTexture(sw, sh, 1, mipmapped = false, linear = true)
@@ -467,15 +534,16 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
             slot.linked = false
             lastIngest = slot
         }
-        appliedMode = upscaler
+        appliedMode = effectiveUpscaler()
         appliedSharp = sharpness
         appliedFactor = upscaleFactor
     }
 
     /** Geänderte Upscaler-Einstellungen sofort auf das aktuelle Bild anwenden (auch in der Pause). */
     private fun applyUpscaleSettingsIfChanged() {
-        if (appliedMode == upscaler && appliedSharp == sharpness && appliedFactor == upscaleFactor) return
-        appliedMode = upscaler
+        val eff = effectiveUpscaler()
+        if (appliedMode == eff && appliedSharp == sharpness && appliedFactor == upscaleFactor) return
+        appliedMode = eff
         appliedSharp = sharpness
         appliedFactor = upscaleFactor
         val last = lastIngest
@@ -647,7 +715,7 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
 
     /** Quellbild -> Einzelbild-Slot: Hochrechnen (klassisch oder KI) bzw. Schärfen, dann Mipmaps. */
     private fun processInto(slot: Slot) {
-        val mode = upscaler
+        val mode = effectiveUpscaler()
         val sharp = sharpness.coerceIn(0f, 1f)
         val upscaling = frameW != srcW || frameH != srcH
         var note = ""
@@ -681,6 +749,7 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
         }
         lastUpscaleNote = note
         upscaleInfo = buildString {
+            if (upscalerAuto && mode != UpscalerMode.OFF) append("Automatisch: ${mode.label} · ")
             append("${srcW}×${srcH} → ${frameW}×${frameH}")
             if (frameW != srcW) append(String.format(java.util.Locale.GERMANY, " (×%.2f)", frameW.toFloat() / srcW))
             if (note.isNotEmpty()) append(" · ").append(note)
@@ -1078,6 +1147,7 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
     // ------------------------------------------------------------------ Hilfen
 
     private fun trackVsync(now: Long) {
+        if (lastDrawNs != 0L) monitorPacing(now, now - lastDrawNs)
         if (realtime && lastDrawNs != 0L) {
             val dt = (now - lastDrawNs).toDouble()
             if (dt > 4_000_000.0 && dt < 50_000_000.0) {
@@ -1115,9 +1185,10 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
                 when {
                     progUpscale == 0 -> "nicht verfügbar"
                     lastUpscaleNote.isNotEmpty() -> lastUpscaleNote
-                    upscaler == UpscalerMode.OFF -> upscaler.label
-                    frameW == srcW -> upscaler.label + (if (sharpness > 0f) " (nur Schärfe)" else " (keine Vergrößerung nötig)")
-                    else -> upscaler.label
+                    upscaler == UpscalerMode.OFF -> "Aus"
+                    upscalerAuto && frameW != srcW -> "Auto: " + effectiveUpscaler().label
+                    frameW == srcW -> effectiveUpscaler().label + (if (sharpness > 0f) " (nur Schärfe)" else " (keine Vergrößerung nötig)")
+                    else -> effectiveUpscaler().label
                 },
                 lastUpscaleFactor, (lastLagNs / 1_000_000L).toInt(), srcW, srcH
             )

@@ -3,7 +3,9 @@ package com.hexotronic.fluxplayer.ui.player
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -224,12 +226,7 @@ private fun Controls(ui: PlayerUiState, actions: PlayerActions) {
                     Icon(Icons.Rounded.AspectRatio, "Zoom & Seitenverhältnis", tint = Color.White)
                 }
                 FrameGenChip(ui) { actions.openDialog(PlayerDialog.FRAME_GEN) }
-                IconButton(onClick = { actions.openDialog(PlayerDialog.UPSCALER) }) {
-                    Icon(
-                        Icons.Rounded.AutoFixHigh, "Upscaler",
-                        tint = if (ui.upscaler != com.hexotronic.fluxplayer.data.UpscalerMode.OFF) Accent else Color.White
-                    )
-                }
+                UpscalerToggle(ui, actions)
                 Surface(
                     onClick = { actions.openDialog(PlayerDialog.SPEED) },
                     shape = RoundedCornerShape(50),
@@ -348,6 +345,41 @@ private fun FrameGenChip(ui: PlayerUiState, onClick: () -> Unit) {
                 FrameGenMode.MOTION -> "FG ${ui.displayHz.toInt()} Hz"
             }
             Text(label, color = if (active) Color.Black else Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+
+/** Tippen = Upscaler an/aus, lange drücken = Einstellungen. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun UpscalerToggle(ui: PlayerUiState, actions: PlayerActions) {
+    val on = ui.upscalerEnabled
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = if (on) Accent.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.12f),
+        modifier = Modifier.padding(horizontal = 4.dp)
+    ) {
+        Row(
+            Modifier
+                .combinedClickable(
+                    onClick = { actions.setUpscalerEnabled(!on) },
+                    onLongClick = { actions.openDialog(PlayerDialog.UPSCALER) }
+                )
+                .padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Rounded.AutoFixHigh, null, tint = if (on) Color.Black else Color.White, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(4.dp))
+            Text(
+                when {
+                    !on -> "Upscale aus"
+                    ui.upscalerAuto -> "Upscale auto"
+                    else -> "Upscale"
+                },
+                color = if (on) Color.Black else Color.White,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold
+            )
         }
     }
 }

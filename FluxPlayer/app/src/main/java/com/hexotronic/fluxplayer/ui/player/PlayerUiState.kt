@@ -55,6 +55,8 @@ class PlayerUiState {
     var upscaler by mutableStateOf(UpscalerMode.EDGE)
     var sharpness by mutableFloatStateOf(0.3f)
     var upscaleFactor by mutableStateOf(UpscaleFactor.AUTO)
+    var upscalerEnabled by mutableStateOf(true)
+    var upscalerAuto by mutableStateOf(true)
     var upscaleInfo by mutableStateOf("")
     var slowMoMuted by mutableStateOf(false)
     var displayHz by mutableFloatStateOf(60f)
@@ -119,6 +121,8 @@ interface PlayerActions {
     fun setUpscaler(mode: UpscalerMode)
     fun setSharpness(value: Float)
     fun setUpscaleFactor(factor: UpscaleFactor)
+    fun setUpscalerEnabled(enabled: Boolean)
+    fun setUpscalerAuto(auto: Boolean)
 
     fun setAspect(mode: AspectMode)
     fun setZoomPercent(percent: Int)
