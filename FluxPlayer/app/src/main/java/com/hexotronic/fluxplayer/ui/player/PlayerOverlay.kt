@@ -422,7 +422,8 @@ private fun StatsPanel(ui: PlayerUiState, modifier: Modifier) {
                 add("Frame-Gen: " + (s?.activeMode ?: "–") + (s?.let { " · ${it.generatedPercent} % generiert" } ?: ""))
                 if (s != null) add("Qualität: " + s.qualityLabel + (if (s.boosted) " (Zeitlupen-Boost)" else "") +
                     (if (s.bidirectional) " · bidirektional" else ""))
-                if (s != null) add(String.format(Locale.GERMANY, "Upscaler: %s · ×%.2f", s.upscaler, s.upscaleFactor))
+                if (s != null) add(String.format(Locale.GERMANY, "Upscaler: %s · %d×%d → %d×%d", s.upscaler,
+                    s.sourceWidth, s.sourceHeight, s.frameWidth, s.frameHeight))
                 if (s != null && s.latencyMs > 0) add("Zeitlupen-Puffer: ${s.latencyMs} ms")
                 if (s != null) add("Puffer: ${s.frameWidth}×${s.frameHeight} · Fluss ${s.flowWidth}×${s.flowHeight}")
                 if (s != null) add("Timing: " + if (s.timestampMode) "Zeitstempel" else "Ankunft (+1 Bild Latenz)")

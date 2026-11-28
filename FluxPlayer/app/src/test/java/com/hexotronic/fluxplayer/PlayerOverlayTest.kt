@@ -11,6 +11,7 @@ import com.hexotronic.fluxplayer.data.FrameGenQuality
 import com.hexotronic.fluxplayer.data.MediaEntry
 import com.hexotronic.fluxplayer.data.OrientationMode
 import com.hexotronic.fluxplayer.data.Prefs
+import com.hexotronic.fluxplayer.data.UpscaleFactor
 import com.hexotronic.fluxplayer.data.UpscalerMode
 import com.hexotronic.fluxplayer.player.AudioEffects
 import com.hexotronic.fluxplayer.render.RenderStats
@@ -68,6 +69,7 @@ class PlayerOverlayTest {
         override fun setSlowMoBoost(enabled: Boolean) {}
         override fun setUpscaler(mode: UpscalerMode) {}
         override fun setSharpness(value: Float) {}
+        override fun setUpscaleFactor(factor: UpscaleFactor) {}
         override fun setAspect(mode: AspectMode) {}
         override fun setZoomPercent(percent: Int) {}
         override fun resetZoom() {}
@@ -104,6 +106,8 @@ class PlayerOverlayTest {
             abStart = 1000
             speed = 0.05f
             slowMoMuted = true
+            upscaleInfo = "854×480 → 1708×960 (×2,00)"
+            upscaler = UpscalerMode.AI_M
         }
         rule.setContent { FluxTheme { PlayerOverlay(ui, actions) } }
         rule.waitForIdle()

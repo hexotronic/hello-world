@@ -47,14 +47,18 @@ flüssig mit 60/90/120 Hz laufen, plus **frei zoombares Bild**.
   die Berechnung wird auf mehrere Display-Refreshes verteilt, damit sie nicht ruckelt
 - Statistik-Overlay (Quell-fps, Ausgabe-fps, Anteil generierter Bilder)
 
-**Upscaler**
-- *Bikubisch* (Catmull-Rom) oder *Kantenadaptiv*: an echten Kanten ein entlang der Kante ausgerichteter
-  Lanczos-Kern mit Anti-Ringing (ähnlich FSR 1), Texturen bleiben bikubisch
-- Kontrastadaptive Schärfung (CAS-artig), wirkt auch bei voller Auflösung
-- Arbeitet zusammen mit der Frame-Generierung (Zwischenbild in Quellauflösung → Upscaling auf das Display)
-- Für Mobil-GPUs optimiert: bikubisch über 9 bilineare Abtastungen, ohne Arrays/Schleifen; läuft nur, wenn
-  wirklich vergrößert oder geschärft wird; bei unverändertem Bild wird das Ergebnis aus einem Zwischenspeicher
-  kopiert statt neu berechnet
+**Upscaler** (einmal pro Videobild, nicht pro Display-Refresh)
+- Modelle: *Bikubisch* (Catmull-Rom), *Kantenadaptiv* (glättet Treppen, FSR-artig) und
+  **KI S / M / L** – neuronale Upscaler (Anime4K CNN x2 von bloc97, MIT-Lizenz, siehe
+  `app/src/main/assets/upscalers/LICENSE-Anime4K.txt`), ausgeführt über einen eingebauten
+  Interpreter für mpv-User-Shader (`render/MpvHook.kt`); Zwischenergebnisse in RGBA16F
+- Faktor wählbar: Automatisch (bis Displayauflösung), 1,5×, 2×, 3×, 4× (max. 2560 px);
+  KI-Modelle rechnen je Durchgang 2×, ab 3× zweimal hintereinander
+- Kontrastadaptive Schärfung; Frame-Generierung arbeitet direkt auf den hochgerechneten Bildern
+  (Bewegungsschätzung auf unveränderter absoluter Auflösung, damit sie nicht teurer wird)
+- Gemessen (2× gegen Original, PSNR): harte Kanten Bikubisch 29,2 dB → KI M 37,0 dB;
+  feine Naturtexturen Bikubisch+Schärfe 54,1 dB, KI ~50 dB – KI ist ideal für Anime, Zeichentrick,
+  Text und klare Konturen, Bikubisch/Kantenadaptiv für feinkörnige Realfilm-Texturen
 
 **Zoom & Bild**
 - Pinch-Zoom 25 %–1000 % um den Fingerpunkt, Verschieben mit einem oder zwei Fingern

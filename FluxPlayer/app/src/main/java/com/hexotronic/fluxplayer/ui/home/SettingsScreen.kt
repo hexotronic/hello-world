@@ -32,6 +32,7 @@ import com.hexotronic.fluxplayer.data.FrameGenMode
 import com.hexotronic.fluxplayer.data.FrameGenQuality
 import com.hexotronic.fluxplayer.data.OrientationMode
 import com.hexotronic.fluxplayer.data.Prefs
+import com.hexotronic.fluxplayer.data.UpscaleFactor
 import com.hexotronic.fluxplayer.data.UpscalerMode
 import com.hexotronic.fluxplayer.ui.theme.Accent
 import kotlin.math.roundToInt
@@ -48,6 +49,7 @@ fun SettingsScreen() {
     var slowBoost by remember { mutableStateOf(p.slowMoBoost) }
     var upscaler by remember { mutableStateOf(p.upscaler) }
     var sharp by remember { mutableStateOf(p.sharpness) }
+    var factor by remember { mutableStateOf(p.upscaleFactor) }
     var resume by remember { mutableStateOf(p.resumePlayback) }
     var background by remember { mutableStateOf(p.backgroundPlayback) }
     var autoPip by remember { mutableStateOf(p.autoPip) }
@@ -87,8 +89,11 @@ fun SettingsScreen() {
         }
 
         Section("Upscaler")
-        ChoiceSetting("Verfahren", upscaler, UpscalerMode.entries, { it.label }, { it.description }) {
+        ChoiceSetting("Modell", upscaler, UpscalerMode.entries, { it.label }, { it.description }) {
             upscaler = it; p.upscaler = it
+        }
+        ChoiceSetting("Hochrechnen auf", factor, UpscaleFactor.entries, { it.label }, { null }) {
+            factor = it; p.upscaleFactor = it
         }
         Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
             Text("Schärfe: ${(sharp * 100).roundToInt()} %")

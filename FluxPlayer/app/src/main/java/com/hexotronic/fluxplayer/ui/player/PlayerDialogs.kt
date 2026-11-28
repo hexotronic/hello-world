@@ -73,6 +73,7 @@ import com.hexotronic.fluxplayer.data.DecoderPreference
 import com.hexotronic.fluxplayer.data.FrameGenMode
 import com.hexotronic.fluxplayer.data.FrameGenQuality
 import com.hexotronic.fluxplayer.data.OrientationMode
+import com.hexotronic.fluxplayer.data.UpscaleFactor
 import com.hexotronic.fluxplayer.data.UpscalerMode
 import androidx.compose.material.icons.rounded.AutoFixHigh
 import kotlin.math.exp
@@ -378,19 +379,37 @@ private fun SpeedDialog(ui: PlayerUiState, actions: PlayerActions, close: () -> 
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun UpscalerDialog(ui: PlayerUiState, actions: PlayerActions, close: () -> Unit) {
     DialogFrame("Upscaler & Schärfe", close) {
         Text(
-            "Rechnet Videos mit niedriger Auflösung (z. B. 480p/720p) hochwertig auf die Displayauflösung hoch. " +
-                "Die Schärfung wirkt auch bei Videos in voller Auflösung.",
+            "Jedes Videobild wird einmal hochgerechnet (nicht bei jedem Display-Refresh). " +
+                "Die KI-Modelle sind neuronale Netze, die Kanten und Details rekonstruieren.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        SectionTitle("Verfahren")
+        SectionTitle("Modell")
         UpscalerMode.entries.forEach { m ->
             RadioRow(m.label, m.description, ui.upscaler == m) { actions.setUpscaler(m) }
         }
+        SectionTitle("Hochrechnen auf")
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            UpscaleFactor.entries.forEach { f ->
+                FilterChip(
+                    selected = ui.upscaleFactor == f,
+                    enabled = ui.upscaler != UpscalerMode.OFF,
+                    onClick = { actions.setUpscaleFactor(f) },
+                    label = { Text(if (f == UpscaleFactor.AUTO) "Auto (Display)" else f.label) }
+                )
+            }
+        }
+        Text(
+            "Größer als das Display lohnt sich nur zum Hineinzoomen und für Schnappschüsse (max. 2560 px). " +
+                "KI-Modelle rechnen je Durchgang 2× – ab 3× laufen sie zweimal.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         SectionTitle("Schärfe: ${(ui.sharpness * 100).roundToInt()} %")
         Slider(
             value = ui.sharpness,
@@ -398,16 +417,16 @@ private fun UpscalerDialog(ui: PlayerUiState, actions: PlayerActions, close: () 
             valueRange = 0f..1f,
             enabled = ui.upscaler != UpscalerMode.OFF
         )
-        ui.stats?.let { s ->
-            Text(
-                String.format(
-                    Locale.GERMANY, "Quelle %d×%d → Skalierung ×%.2f auf dem Display",
-                    s.frameWidth, s.frameHeight, s.upscaleFactor
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = Accent
-            )
+        if (ui.upscaleInfo.isNotEmpty()) {
+            Text("Aktuell: " + ui.upscaleInfo, style = MaterialTheme.typography.bodySmall, color = Accent)
         }
+        Text(
+            "KI-Modelle: Anime4K von bloc97 (MIT-Lizenz) – für Zeichentrick/Anime optimiert, schärft aber auch " +
+                "normale Videos. Benötigt eine GPU mit Float-Texturen (praktisch alle aktuellen Handys).",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 8.dp)
+        )
     }
 }
 

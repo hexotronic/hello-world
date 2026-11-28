@@ -33,11 +33,25 @@ enum class FrameGenQuality(
     )
 }
 
-/** Upscaler für die Skalierung auf Bildschirmauflösung. */
-enum class UpscalerMode(val label: String, val description: String) {
-    OFF("Aus (bilinear)", "Standard-GPU-Filterung"),
-    BICUBIC("Bikubisch", "Catmull-Rom, schärfer als bilinear"),
-    EDGE("Kantenadaptiv", "Lanczos-Kern, der sich an Kanten ausrichtet (FSR-artig) – weniger Treppen und Unschärfe")
+/** Upscaler: wird einmal pro Videobild angewendet (nicht pro Display-Refresh). */
+enum class UpscalerMode(val label: String, val description: String, val asset: String? = null) {
+    OFF("Aus", "Keine Hochskalierung – Bild wird nur von der GPU gefiltert"),
+    BICUBIC("Bikubisch", "Catmull-Rom, schnell und schärfer als bilinear"),
+    EDGE("Kantenadaptiv", "Glättet Treppen an Kanten (FSR-artig), sehr schnell"),
+    AI_S("KI S (Anime4K)", "Neuronales Netz, klein – läuft auf fast allen Handys flüssig", "upscalers/Anime4K_Upscale_CNN_x2_S.glsl"),
+    AI_M("KI M (Anime4K)", "Neuronales Netz, mittel – deutlich schärfere Linien und Details", "upscalers/Anime4K_Upscale_CNN_x2_M.glsl"),
+    AI_L("KI L (Anime4K)", "Neuronales Netz, groß – beste Qualität, nur für starke GPUs", "upscalers/Anime4K_Upscale_CNN_x2_L.glsl");
+
+    val isAi: Boolean get() = asset != null
+}
+
+/** Wie stark hochgerechnet wird (bezogen auf die Videoauflösung). */
+enum class UpscaleFactor(val label: String, val factor: Float) {
+    AUTO("Automatisch (Displayauflösung)", 0f),
+    X1_5("1,5×", 1.5f),
+    X2("2×", 2f),
+    X3("3×", 3f),
+    X4("4×", 4f)
 }
 
 /** Seitenverhältnis / Skalierungsmodus. */

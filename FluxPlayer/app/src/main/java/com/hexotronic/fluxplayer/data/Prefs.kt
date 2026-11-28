@@ -25,6 +25,9 @@ class Prefs(context: Context) {
     var upscaler: UpscalerMode
         get() = enumValue("upscaler", UpscalerMode.EDGE)
         set(v) = putString("upscaler", v.name)
+    var upscaleFactor: UpscaleFactor
+        get() = enumValue("upscale_factor", UpscaleFactor.AUTO)
+        set(v) = putString("upscale_factor", v.name)
     var sharpness: Float
         get() = sp.getFloat("sharpness", 0.3f)
         set(v) = sp.edit().putFloat("sharpness", v).apply()

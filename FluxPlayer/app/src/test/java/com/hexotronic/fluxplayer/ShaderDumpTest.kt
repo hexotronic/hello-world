@@ -23,7 +23,7 @@ class ShaderDumpTest {
             File(dir, "coarse_${q.name}.glsl").writeText(Shaders.coarseFs(q.coarseRadius, 0.012f))
             File(dir, "refine_${q.name}.glsl").writeText(Shaders.refineFs(q.fineRadius, 0.010f, 0.015f))
         }
-        for (f in dir.listFiles()!!) {
+        for (f in dir.listFiles()!!.filter { it.name.endsWith(".glsl") }) {
             val text = f.readText()
             if (f.name != "vs_copy.glsl" && f.name != "fs_copy_oes.glsl") {
                 assertTrue("${f.name} muss mit #version beginnen", text.startsWith("#version 300 es"))

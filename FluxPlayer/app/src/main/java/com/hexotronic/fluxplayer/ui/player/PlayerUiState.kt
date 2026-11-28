@@ -12,6 +12,7 @@ import com.hexotronic.fluxplayer.data.FrameGenMode
 import com.hexotronic.fluxplayer.data.FrameGenQuality
 import com.hexotronic.fluxplayer.data.MediaEntry
 import com.hexotronic.fluxplayer.data.OrientationMode
+import com.hexotronic.fluxplayer.data.UpscaleFactor
 import com.hexotronic.fluxplayer.data.UpscalerMode
 import com.hexotronic.fluxplayer.player.AudioEffects
 import com.hexotronic.fluxplayer.render.RenderStats
@@ -53,6 +54,8 @@ class PlayerUiState {
     var slowMoBoost by mutableStateOf(true)
     var upscaler by mutableStateOf(UpscalerMode.EDGE)
     var sharpness by mutableFloatStateOf(0.3f)
+    var upscaleFactor by mutableStateOf(UpscaleFactor.AUTO)
+    var upscaleInfo by mutableStateOf("")
     var slowMoMuted by mutableStateOf(false)
     var displayHz by mutableFloatStateOf(60f)
     var stats by mutableStateOf<RenderStats?>(null)
@@ -115,6 +118,7 @@ interface PlayerActions {
     fun setSlowMoBoost(enabled: Boolean)
     fun setUpscaler(mode: UpscalerMode)
     fun setSharpness(value: Float)
+    fun setUpscaleFactor(factor: UpscaleFactor)
 
     fun setAspect(mode: AspectMode)
     fun setZoomPercent(percent: Int)

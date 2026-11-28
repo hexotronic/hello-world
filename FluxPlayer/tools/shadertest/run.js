@@ -3,7 +3,10 @@ const path = require('path');
 const { chromium } = require('playwright');
 const dir = process.argv[2];
 const SH = {};
-for (const f of fs.readdirSync(dir)) SH[f.replace('.glsl', '')] = fs.readFileSync(path.join(dir, f), 'utf8');
+for (const f of fs.readdirSync(dir)) {
+  if (f.endsWith('.glsl')) SH[f.replace('.glsl', '')] = fs.readFileSync(path.join(dir, f), 'utf8');
+  if (f.startsWith('ai_') && f.endsWith('.json')) { SH.ai = SH.ai || {}; SH.ai[f.slice(3, -5)] = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')); }
+}
 const harness = fs.readFileSync(path.join(__dirname, 'harness.js'), 'utf8');
 if (process.env.UPSCALE_OLD) SH.upscale_old = fs.readFileSync(process.env.UPSCALE_OLD, 'utf8');
 // UPVARIANTS: optionale Shader-Varianten für Experimente (Umgebungsvariable UPVARIANT)

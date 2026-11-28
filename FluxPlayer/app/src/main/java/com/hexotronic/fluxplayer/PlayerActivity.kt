@@ -72,6 +72,7 @@ import com.hexotronic.fluxplayer.data.MediaRepository
 import com.hexotronic.fluxplayer.data.OrientationMode
 import com.hexotronic.fluxplayer.data.PlaylistHandoff
 import com.hexotronic.fluxplayer.data.Prefs
+import com.hexotronic.fluxplayer.data.UpscaleFactor
 import com.hexotronic.fluxplayer.data.UpscalerMode
 import com.hexotronic.fluxplayer.net.StreamResolver
 import com.hexotronic.fluxplayer.player.AudioEffects
@@ -363,6 +364,7 @@ class PlayerActivity : ComponentActivity(),
         ui.slowMoBoost = prefs.slowMoBoost
         ui.upscaler = prefs.upscaler
         ui.sharpness = prefs.sharpness
+        ui.upscaleFactor = prefs.upscaleFactor
         ui.showStats = prefs.showStats
         ui.backgroundPlayback = prefs.backgroundPlayback
         ui.orientation = prefs.orientation
@@ -378,6 +380,9 @@ class PlayerActivity : ComponentActivity(),
         r.slowMoBoost = ui.slowMoBoost
         r.upscaler = ui.upscaler
         r.sharpness = ui.sharpness
+        r.upscaleFactor = ui.upscaleFactor
+        val appAssets = applicationContext.assets
+        r.assetLoader = { path -> appAssets.open(path).bufferedReader().use { it.readText() } }
         applyHighRefresh(ui.highRefresh)
         applySubtitleStyle()
         applyZoom()
@@ -797,6 +802,7 @@ class PlayerActivity : ComponentActivity(),
         if (seekTarget < 0) ui.position = pos
         ui.duration = player.duration.takeIf { it != C.TIME_UNSET && it > 0 } ?: 0L
         ui.bufferedPosition = player.bufferedPosition
+        ui.upscaleInfo = glView.renderer.upscaleInfo
         val a = ui.abStart
         val b = ui.abEnd
         if (a != null && b != null && pos >= b) player.seekTo(a)
@@ -1354,6 +1360,13 @@ class PlayerActivity : ComponentActivity(),
         glView.requestRender()
     }
 
+    override fun setUpscaleFactor(factor: UpscaleFactor) {
+        ui.upscaleFactor = factor
+        prefs.upscaleFactor = factor
+        glView.renderer.upscaleFactor = factor
+        glView.requestRender()
+    }
+
     override fun setSharpness(value: Float) {
         ui.sharpness = value
         prefs.sharpness = value
@@ -1624,6 +1637,7 @@ class PlayerActivity : ComponentActivity(),
         out += "Modus" to ui.frameGenMode.label + " · " + ui.frameGenQuality.label
         out += "Display" to String.format(Locale.GERMANY, "%.0f Hz", ui.displayHz)
         out += "Upscaler" to ui.upscaler.label + String.format(Locale.GERMANY, " · Schärfe %d %%", (ui.sharpness * 100).roundToInt())
+        if (ui.upscaleInfo.isNotEmpty()) out += "Auflösung" to ui.upscaleInfo
         ui.stats?.let { s -> out += "Aktive Stufe" to s.qualityLabel + if (s.boosted) " (Zeitlupen-Boost)" else "" }
         ui.stats?.let { s ->
             out += "Quelle" to String.format(Locale.GERMANY, "%.2f fps", s.sourceFps)

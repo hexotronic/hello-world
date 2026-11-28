@@ -13,6 +13,7 @@ import android.util.Log
 import android.view.Surface
 import com.hexotronic.fluxplayer.data.FrameGenMode
 import com.hexotronic.fluxplayer.data.FrameGenQuality
+import com.hexotronic.fluxplayer.data.UpscaleFactor
 import com.hexotronic.fluxplayer.data.UpscalerMode
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -22,6 +23,7 @@ import java.util.concurrent.atomic.AtomicReference
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 import kotlin.math.abs
+import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -42,7 +44,9 @@ data class RenderStats(
     val bidirectional: Boolean,
     val upscaler: String,
     val upscaleFactor: Float,
-    val latencyMs: Int
+    val latencyMs: Int,
+    val sourceWidth: Int = frameWidth,
+    val sourceHeight: Int = frameHeight
 )
 
 /**
@@ -76,6 +80,9 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
     @Volatile var statsEnabled: Boolean = false
     @Volatile var nominalVsyncNs: Long = 16_666_667L
     @Volatile var upscaler: UpscalerMode = UpscalerMode.OFF
+    @Volatile var upscaleFactor: UpscaleFactor = UpscaleFactor.AUTO
+    /** Lädt Modell-Dateien (assets) für die KI-Upscaler. */
+    @Volatile var assetLoader: ((String) -> String?)? = null
     /** Schärfung 0..1 (nur mit Upscaler). */
     @Volatile var sharpness: Float = 0.3f
     /** Aktuelles Wiedergabetempo (für Zeitlupen-Timing). */
@@ -106,18 +113,33 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
     private var progBoundary = 0
     private var progBlit = 0
 
-    // Zwischenspeicher für das hochskalierte Bild (wird nur bei neuem Inhalt neu gerechnet)
-    private var cacheTex = 0
-    private var cacheFbo = 0
-    private var cacheW = 0
-    private var cacheH = 0
-    private var cacheValid = false
-    private var cacheSeq = -1L
-    private var cacheSrc = 0
-    private var cacheMode: UpscalerMode? = null
-    private var cacheSharp = -1f
-    private val cacheRect = FloatArray(4)
-    private val cacheAdj = FloatArray(4)
+    // Quellbild (Videoauflösung) – wird beim Eingang einmal hochgerechnet
+    private var srcTex = 0
+    private var srcFbo = 0
+    private var srcW = 0
+    private var srcH = 0
+    private var srcValid = false
+    private var srcTs = 0L
+    private var meLodOffset = 0
+
+    // KI-Upscaler
+    private var ai: HookUpscaler? = null
+    private var aiFor: UpscalerMode? = null
+    private var aiFailed = false
+    private var floatTargets: Boolean? = null
+    private var aiOut1Tex = 0
+    private var aiOut1Fbo = 0
+    private var aiOut1W = 0
+    private var aiOut1H = 0
+    private var aiOut2Tex = 0
+    private var aiOut2Fbo = 0
+    private var aiOut2W = 0
+    private var aiOut2H = 0
+    private var appliedMode: UpscalerMode? = null
+    private var appliedSharp = -1f
+    private var appliedFactor: UpscaleFactor? = null
+    private var lastUpscaleNote = ""
+
     private var motionSupported = false
     private var builtQuality: FrameGenQuality? = null
     private var quadVbo = 0
@@ -153,8 +175,6 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
     private var coarseH = 1
     private val levelTex = IntArray(MAX_LEVELS)
     private val levelFbo = IntArray(MAX_LEVELS)
-    private var composeTex = 0
-    private var composeFbo = 0
     private var activeQuality: FrameGenQuality = FrameGenQuality.BALANCED
 
     private class FlowJob(val a: Slot, val aSeq: Long, val b: Slot, val bSeq: Long) {
@@ -188,8 +208,11 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
     private var statsGenerated = 0
     private var lastActiveMode = "–"
     private var lastUpscaleFactor = 1f
-    private var upscalerActive = false
     private var lastLagNs = 0L
+
+    /** Kurzinfo für die Oberfläche: Quelle -> Ziel. */
+    @Volatile var upscaleInfo: String = ""
+        private set
 
     fun setVideoSize(width: Int, height: Int) {
         videoWidth = width
@@ -269,7 +292,6 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
     override fun onSurfaceChanged(unused: GL10?, width: Int, height: Int) {
         surfW = max(1, width)
         surfH = max(1, height)
-        cacheValid = false
         GLES20.glViewport(0, 0, surfW, surfH)
     }
 
@@ -290,6 +312,7 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
             }
             ensureFrameTextures()
             if (flowAllocatedFor != activeQuality) allocateFlowTextures()
+            applyUpscaleSettingsIfChanged()
             if (discontinuity.getAndSet(false)) handleDiscontinuity(now)
             consumeFrames(st, now)
             val sel = select(now)
@@ -309,7 +332,11 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
         // Der alte Kontext ist weg – IDs sind ungültig und werden nur vergessen.
         progCopy = 0; progDisplay = 0; progCoarse = 0; progRefine = 0; progMedian = 0; progUpscale = 0; progBoundary = 0
         progBlit = 0
-        cacheTex = 0; cacheFbo = 0; cacheW = 0; cacheH = 0; cacheValid = false
+        srcTex = 0; srcFbo = 0; srcW = 0; srcH = 0; srcValid = false
+        ai = null; aiFor = null; aiFailed = false; floatTargets = null
+        aiOut1Tex = 0; aiOut1Fbo = 0; aiOut1W = 0; aiOut1H = 0
+        aiOut2Tex = 0; aiOut2Fbo = 0; aiOut2W = 0; aiOut2H = 0
+        appliedMode = null; appliedFactor = null; appliedSharp = -1f
         motionSupported = false
         builtQuality = null
         quadVbo = 0
@@ -321,7 +348,6 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
         }
         frameW = 0; frameH = 0
         coarseTex = 0; coarseFbo = 0; fineTmpTex = 0; fineTmpFbo = 0; fineTmp2Tex = 0; fineTmp2Fbo = 0
-        composeTex = 0; composeFbo = 0
         levelTex.fill(0)
         levelFbo.fill(0)
         jobs.clear()
@@ -367,6 +393,29 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
         }
     }
 
+    /** Zielgröße der Einzelbilder nach dem Hochrechnen. */
+    private fun targetSize(sw: Int, sh: Int): IntArray {
+        if (upscaler == UpscalerMode.OFF) return intArrayOf(sw, sh)
+        var f = upscaleFactor.factor
+        if (upscaleFactor == UpscaleFactor.AUTO) {
+            // bis zur Displayauflösung (unabhängig von der Ausrichtung)
+            val big = max(surfW, surfH).toFloat()
+            val small = min(surfW, surfH).toFloat()
+            f = min(big / max(sw, sh), small / min(sw, sh))
+        }
+        f = f.coerceIn(1f, 4f)
+        if (f < 1.05f) return intArrayOf(sw, sh)
+        var tw = (sw * f).roundToInt()
+        var th = (sh * f).roundToInt()
+        val m = max(tw, th)
+        if (m > MAX_UPSCALED_DIM) {
+            val k = MAX_UPSCALED_DIM.toFloat() / m
+            tw = (tw * k).roundToInt()
+            th = (th * k).roundToInt()
+        }
+        return intArrayOf(max(sw, tw), max(sh, th))
+    }
+
     private fun ensureFrameTextures() {
         var vw = videoWidth
         var vh = videoHeight
@@ -374,28 +423,67 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
             vw = 1280; vh = 720
         }
         val scale = min(1f, MAX_FRAME_DIM.toFloat() / max(vw, vh))
-        val w = max(2, (vw * scale).roundToInt())
-        val h = max(2, (vh * scale).roundToInt())
+        val sw = max(2, (vw * scale).roundToInt())
+        val sh = max(2, (vh * scale).roundToInt())
+        if (sw != srcW || sh != srcH || srcTex == 0) {
+            GlUtil.deleteFramebuffer(srcFbo); GlUtil.deleteTexture(srcTex)
+            srcTex = GlUtil.createStorageTexture(sw, sh, 1, mipmapped = false, linear = true)
+            srcFbo = GlUtil.createFramebuffer(srcTex)
+            srcW = sw
+            srcH = sh
+            srcValid = false
+            ai?.releaseTargets()
+        }
+        val target = targetSize(sw, sh)
+        val w = target[0]
+        val h = target[1]
         if (w == frameW && h == frameH && slots[0].tex != 0) return
 
         for (s in slots) {
             GlUtil.deleteFramebuffer(s.fbo); GlUtil.deleteTexture(s.tex)
             s.fbo = 0; s.tex = 0; s.valid = false; s.flowValid = false; s.bwdValid = false
         }
-        GlUtil.deleteFramebuffer(composeFbo); GlUtil.deleteTexture(composeTex)
         jobs.clear()
         frameW = w
         frameH = h
         frameLevels = levelsFor(max(w, h))
+        // Bewegungsschätzung auf derselben absoluten Auflösung wie ohne Upscaling
+        val ratio = frameW.toFloat() / srcW
+        meLodOffset = kotlin.math.floor(ln(ratio.toDouble()) / ln(2.0) + 0.25).toInt().coerceAtLeast(0)
         for (s in slots) {
             s.tex = GlUtil.createStorageTexture(w, h, frameLevels, mipmapped = true, linear = true)
             s.fbo = GlUtil.createFramebuffer(s.tex)
         }
-        composeTex = GlUtil.createStorageTexture(w, h, 1, mipmapped = false, linear = true)
-        composeFbo = GlUtil.createFramebuffer(composeTex)
         lastIngest = null
         displayedSlot = null
         allocateFlowTextures()
+        // aktuelles Bild mit neuer Größe wiederherstellen (wichtig bei Pause)
+        if (srcValid) {
+            val slot = pickSlot(null)
+            processInto(slot)
+            slot.ts = srcTs
+            slot.seq = ++seqCounter
+            slot.valid = true
+            slot.linked = false
+            lastIngest = slot
+        }
+        appliedMode = upscaler
+        appliedSharp = sharpness
+        appliedFactor = upscaleFactor
+    }
+
+    /** Geänderte Upscaler-Einstellungen sofort auf das aktuelle Bild anwenden (auch in der Pause). */
+    private fun applyUpscaleSettingsIfChanged() {
+        if (appliedMode == upscaler && appliedSharp == sharpness && appliedFactor == upscaleFactor) return
+        appliedMode = upscaler
+        appliedSharp = sharpness
+        appliedFactor = upscaleFactor
+        val last = lastIngest
+        if (srcValid && last != null && last.valid) {
+            processInto(last)
+            last.flowValid = false
+            last.bwdValid = false
+        }
     }
 
     private fun allocateFlowTextures() {
@@ -415,10 +503,10 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
             s.bwdFbo = 0; s.bwdTex = 0; s.bwdValid = false
         }
         val q = activeQuality
-        var cl = q.coarseLod
+        var cl = q.coarseLod + meLodOffset
         while (cl > 1 && (min(frameW, frameH) shr cl) < 4) cl--
         cl = min(cl, frameLevels - 1).coerceAtLeast(1)
-        val fl = min(q.fineLod, cl - 1).coerceAtLeast(0)
+        val fl = min(q.fineLod + meLodOffset, cl - 1).coerceAtLeast(0)
         coarseLod = cl
         fineLod = fl
         fineW = max(1, frameW shr fl)
@@ -505,7 +593,10 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
             }
         }
         val slot = pickSlot(prev)
-        copyOesToSlot(slot)
+        copyOesToSource()
+        srcValid = true
+        srcTs = ts
+        processInto(slot)
         slot.ts = ts
         slot.seq = ++seqCounter
         slot.valid = true
@@ -534,9 +625,9 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
         return best ?: slots.first { it !== prev }
     }
 
-    private fun copyOesToSlot(slot: Slot) {
-        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, slot.fbo)
-        GLES20.glViewport(0, 0, frameW, frameH)
+    private fun copyOesToSource() {
+        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, srcFbo)
+        GLES20.glViewport(0, 0, srcW, srcH)
         GLES20.glDisable(GLES20.GL_BLEND)
         GLES20.glUseProgram(progCopy)
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
@@ -544,16 +635,136 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
         GLES20.glUniform1i(uniform(progCopy, "uTex"), 0)
         GLES20.glUniformMatrix4fv(uniform(progCopy, "uTexMatrix"), 1, false, texMatrix, 0)
         val vw = videoWidth
-        val downscale = vw > 0 && vw > frameW * 1.3f
+        val downscale = vw > 0 && vw > srcW * 1.3f
         if (downscale) {
-            GLES20.glUniform2f(uniform(progCopy, "uOff"), 0.25f / frameW, 0.25f / frameH)
+            GLES20.glUniform2f(uniform(progCopy, "uOff"), 0.25f / srcW, 0.25f / srcH)
         } else {
             GLES20.glUniform2f(uniform(progCopy, "uOff"), 0f, 0f)
         }
         drawQuad()
         GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, 0)
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, slot.tex)
+    }
+
+    /** Quellbild -> Einzelbild-Slot: Hochrechnen (klassisch oder KI) bzw. Schärfen, dann Mipmaps. */
+    private fun processInto(slot: Slot) {
+        val mode = upscaler
+        val sharp = sharpness.coerceIn(0f, 1f)
+        val upscaling = frameW != srcW || frameH != srcH
+        var note = ""
+        var done = false
+        if (mode.isAi && upscaling) {
+            val net = ensureAi(mode)
+            if (net != null) {
+                done = try {
+                    runAi(net, slot, sharp)
+                    true
+                } catch (e: Exception) {
+                    Log.w(TAG, "KI-Upscaler-Lauf fehlgeschlagen", e)
+                    net.release()
+                    ai = null
+                    aiFailed = true
+                    false
+                }
+                if (!done) note = "KI-Fehler → Kantenadaptiv"
+            } else {
+                note = "KI nicht verfügbar → Kantenadaptiv"
+            }
+        }
+        if (!done) {
+            if (mode == UpscalerMode.OFF || (!upscaling && sharp <= 0f) || progUpscale == 0) {
+                blit(srcTex, slot.fbo, frameW, frameH)
+            } else {
+                GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, slot.fbo)
+                GLES20.glViewport(0, 0, frameW, frameH)
+                upscalePass(srcTex, frameW, frameH, if (mode == UpscalerMode.BICUBIC) 0 else 1, sharp)
+            }
+        }
+        lastUpscaleNote = note
+        upscaleInfo = buildString {
+            append("${srcW}×${srcH} → ${frameW}×${frameH}")
+            if (frameW != srcW) append(String.format(java.util.Locale.GERMANY, " (×%.2f)", frameW.toFloat() / srcW))
+            if (note.isNotEmpty()) append(" · ").append(note)
+        }
+        bindTexture(0, slot.tex)
         GLES30.glGenerateMipmap(GLES20.GL_TEXTURE_2D)
+    }
+
+    private fun runAi(net: HookUpscaler, slot: Slot, sharp: Float) {
+        val o1 = net.outputSize(srcW, srcH)
+        if (aiOut1Tex == 0 || aiOut1W != o1[0] || aiOut1H != o1[1]) {
+            GlUtil.deleteFramebuffer(aiOut1Fbo); GlUtil.deleteTexture(aiOut1Tex)
+            aiOut1Tex = GlUtil.createStorageTexture(o1[0], o1[1], 1, mipmapped = false, linear = true)
+            aiOut1Fbo = GlUtil.createFramebuffer(aiOut1Tex)
+            aiOut1W = o1[0]; aiOut1H = o1[1]
+        }
+        net.run(srcTex, srcW, srcH, aiOut1Fbo)
+        var cur = aiOut1Tex
+        var cw = o1[0]
+        var ch = o1[1]
+        // Zweiter Durchlauf (4x), wenn das Ziel deutlich größer ist als 2x
+        if (frameW > cw * 1.15f) {
+            val o2 = net.outputSize(cw, ch)
+            if (max(o2[0], o2[1]) <= MAX_AI_DIM) {
+                if (aiOut2Tex == 0 || aiOut2W != o2[0] || aiOut2H != o2[1]) {
+                    GlUtil.deleteFramebuffer(aiOut2Fbo); GlUtil.deleteTexture(aiOut2Tex)
+                    aiOut2Tex = GlUtil.createStorageTexture(o2[0], o2[1], 1, mipmapped = false, linear = true)
+                    aiOut2Fbo = GlUtil.createFramebuffer(aiOut2Tex)
+                    aiOut2W = o2[0]; aiOut2H = o2[1]
+                }
+                net.run(aiOut1Tex, cw, ch, aiOut2Fbo)
+                cur = aiOut2Tex
+                cw = o2[0]
+                ch = o2[1]
+            }
+        }
+        if (cw == frameW && ch == frameH && sharp <= 0f) {
+            blit(cur, slot.fbo, frameW, frameH)
+        } else {
+            GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, slot.fbo)
+            GLES20.glViewport(0, 0, frameW, frameH)
+            upscalePass(cur, frameW, frameH, 0, sharp)
+        }
+    }
+
+    private fun ensureAi(mode: UpscalerMode): HookUpscaler? {
+        if (aiFor == mode) return ai
+        ai?.release()
+        ai = null
+        aiFor = mode
+        val supported = floatTargets ?: HookUpscaler.floatTargetsSupported().also { floatTargets = it }
+        if (!supported) return null
+        val text = try {
+            mode.asset?.let { assetLoader?.invoke(it) }
+        } catch (e: Exception) {
+            null
+        } ?: return null
+        val net = try {
+            HookUpscaler(MpvHook.parse(text)) { drawQuad() }
+        } catch (e: Exception) {
+            Log.w(TAG, "KI-Upscaler fehlgeschlagen", e)
+            null
+        }
+        if (net == null || !net.ok) {
+            net?.release()
+            if (!aiFailed) listener?.onRendererError("KI-Upscaler wird von dieser GPU nicht unterstützt – nutze Kantenadaptiv.")
+            aiFailed = true
+            return null
+        }
+        ai = net
+        return net
+    }
+
+    private fun blit(src: Int, fbo: Int, w: Int, h: Int) {
+        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, fbo)
+        GLES20.glViewport(0, 0, w, h)
+        if (progBlit != 0) {
+            GLES20.glUseProgram(progBlit)
+            bindTexture(0, src)
+            GLES20.glUniform1i(uniform(progBlit, "uTex"), 0)
+            drawQuad()
+        } else {
+            upscalePass(src, w, h, 0, 0f)
+        }
     }
 
     // ------------------------------------------------------------------ Bewegungsschätzung (Jobs)
@@ -789,89 +1000,21 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
         val t = sel.t
         val generated = b != null && t > 0.02f && t < 0.98f
         val shown = if (b != null && t >= 0.98f) b else a
-        val rect = screenRect()
-        val scale = rect[2] / max(1, frameW)
-        lastUpscaleFactor = scale
-        val sharp = sharpness.coerceIn(0f, 1f)
-        // Upscaler nur, wenn er etwas bringt: echte Vergrößerung oder Schärfung, nie beim Verkleinern
-        val useUpscaler = upscaler != UpscalerMode.OFF && progUpscale != 0 &&
-            scale >= 0.95f && (scale > 1.05f || sharp > 0f)
-        upscalerActive = useUpscaler
-        if (!useUpscaler) {
-            clearScreen()
-            displayPass(sel, shown, generated, rect)
-        } else if (generated) {
-            // Zwischenbild: jedes Refresh neu – direkt auf den Bildschirm
-            GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, composeFbo)
-            GLES20.glViewport(0, 0, frameW, frameH)
-            displayPass(sel, shown, true, floatArrayOf(0f, 0f, frameW.toFloat(), frameH.toFloat()))
-            clearScreen()
-            upscalePass(composeTex, rect, sharp)
-            cacheValid = false
-        } else {
-            drawCachedUpscale(sel, shown, rect, sharp)
-        }
+        lastUpscaleFactor = frameW.toFloat() / max(1, srcW)
+        clearScreen()
+        displayPass(sel, shown, generated, screenRect())
         statsDraws++
         if (generated) statsGenerated++
     }
 
-    private fun upscalePass(src: Int, rect: FloatArray, sharp: Float) {
+    private fun upscalePass(src: Int, w: Int, h: Int, kernel: Int, sharp: Float) {
         GLES20.glUseProgram(progUpscale)
         bindTexture(0, src)
         GLES20.glUniform1i(uniform(progUpscale, "uSrc"), 0)
-        GLES20.glUniform4f(uniform(progUpscale, "uRect"), rect[0], rect[1], rect[2], rect[3])
-        GLES20.glUniform1i(uniform(progUpscale, "uKernel"), if (upscaler == UpscalerMode.EDGE) 1 else 0)
+        GLES20.glUniform4f(uniform(progUpscale, "uRect"), 0f, 0f, w.toFloat(), h.toFloat())
+        GLES20.glUniform1i(uniform(progUpscale, "uKernel"), kernel)
         GLES20.glUniform1f(uniform(progUpscale, "uSharp"), sharp)
         drawQuad()
-    }
-
-    /** Unverändertes Bild: Upscaling nur einmal pro Videobild, danach nur noch kopieren. */
-    private fun drawCachedUpscale(sel: Selection, shown: Slot, rect: FloatArray, sharp: Float) {
-        if (progBlit == 0) {
-            val src = composeIfAdjusted(sel, shown)
-            clearScreen()
-            upscalePass(src, rect, sharp)
-            return
-        }
-        if (cacheTex == 0 || cacheW != surfW || cacheH != surfH) {
-            GlUtil.deleteFramebuffer(cacheFbo); GlUtil.deleteTexture(cacheTex)
-            cacheTex = GlUtil.createStorageTexture(surfW, surfH, 1, mipmapped = false, linear = false)
-            cacheFbo = GlUtil.createFramebuffer(cacheTex)
-            cacheW = surfW
-            cacheH = surfH
-            cacheValid = false
-        }
-        val adj = adjustments
-        val same = cacheValid && cacheSeq == shown.seq && cacheSrc == shown.tex && cacheMode == upscaler &&
-            cacheSharp == sharp && rect.contentEquals(cacheRect) && adj.contentEquals(cacheAdj)
-        if (!same) {
-            val src = composeIfAdjusted(sel, shown)
-            GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, cacheFbo)
-            GLES20.glViewport(0, 0, surfW, surfH)
-            GLES20.glClearColor(0f, 0f, 0f, 1f)
-            GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
-            upscalePass(src, rect, sharp)
-            cacheValid = true
-            cacheSeq = shown.seq
-            cacheSrc = shown.tex
-            cacheMode = upscaler
-            cacheSharp = sharp
-            rect.copyInto(cacheRect)
-            adj.copyInto(cacheAdj)
-        }
-        clearScreen()
-        GLES20.glUseProgram(progBlit)
-        bindTexture(0, cacheTex)
-        GLES20.glUniform1i(uniform(progBlit, "uTex"), 0)
-        drawQuad()
-    }
-
-    private fun composeIfAdjusted(sel: Selection, shown: Slot): Int {
-        if (!adjustmentsActive()) return shown.tex
-        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, composeFbo)
-        GLES20.glViewport(0, 0, frameW, frameH)
-        displayPass(sel, shown, false, floatArrayOf(0f, 0f, frameW.toFloat(), frameH.toFloat()))
-        return composeTex
     }
 
     private fun displayPass(sel: Selection, shown: Slot, generated: Boolean, rect: FloatArray) {
@@ -971,11 +1114,12 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
                 q.label, q != quality, q.bidirectional,
                 when {
                     progUpscale == 0 -> "nicht verfügbar"
+                    lastUpscaleNote.isNotEmpty() -> lastUpscaleNote
                     upscaler == UpscalerMode.OFF -> upscaler.label
-                    upscalerActive -> upscaler.label
-                    else -> upscaler.label + " (inaktiv, keine Vergrößerung)"
+                    frameW == srcW -> upscaler.label + (if (sharpness > 0f) " (nur Schärfe)" else " (keine Vergrößerung nötig)")
+                    else -> upscaler.label
                 },
-                lastUpscaleFactor, (lastLagNs / 1_000_000L).toInt()
+                lastUpscaleFactor, (lastLagNs / 1_000_000L).toInt(), srcW, srcH
             )
         )
         statsWindowStart = now
@@ -1015,6 +1159,8 @@ class FrameGenRenderer : GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailable
         private const val TAG = "FrameGenRenderer"
         private const val SLOT_COUNT = 6
         private const val MAX_FRAME_DIM = 1920
+        private const val MAX_UPSCALED_DIM = 2560
+        private const val MAX_AI_DIM = 4096
         private const val MAX_LINK_GAP_NS = 150_000_000L
         private const val EARLY_RELEASE_NS = 38_000_000.0
         private const val SLOWMO_SPEED = 0.75f

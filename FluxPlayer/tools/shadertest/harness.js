@@ -33,6 +33,50 @@ function run(SHADERS, scenes, quality) {
   progs.upscale = program(SHADERS.vs_es3, SHADERS.upscale, 'upscale');
   progs.boundary = program(SHADERS.vs_es3, SHADERS.boundary, 'boundary');
   if (SHADERS.blit) progs.blit = program(SHADERS.vs_es3, SHADERS.blit, 'blit');
+  // AI_MODELS: mpv-Hook-Passes, wie sie der Kotlin-Interpreter erzeugt
+  const floatExt = gl.getExtension('EXT_color_buffer_float');
+  out.floatTargets = !!floatExt;
+  const aiNets = {};
+  for (const [name, passes] of Object.entries(SHADERS.ai || {})) {
+    aiNets[name] = passes.map((p, i) => ({ ...p, prog: program(SHADERS.vs_es3, p.fs, name + '_pass' + i) }));
+  }
+  function evalSize(expr, sizes) {
+    const st = [];
+    for (const t of expr.trim().split(/\s+/)) {
+      if ('+-*/'.includes(t) && t.length === 1) { const b = st.pop(), a = st.pop(); st.push(t === '+' ? a + b : t === '-' ? a - b : t === '*' ? a * b : a / b); }
+      else if (t.endsWith('.w')) st.push(sizes[t.slice(0, -2)][0]);
+      else if (t.endsWith('.h')) st.push(sizes[t.slice(0, -2)][1]);
+      else st.push(parseFloat(t));
+    }
+    return Math.round(st.pop());
+  }
+  const aiTargets = {};
+  function aiTarget(key, w, h) {
+    const k = key + '@' + w + 'x' + h;
+    if (aiTargets[k]) return aiTargets[k];
+    const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA16F, w, h);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    return (aiTargets[k] = { t, f: fbo(t) });
+  }
+  function runAi(net, srcTex, w, h, outFbo) {
+    const sizes = { MAIN: [w, h] }, texs = { MAIN: srcTex };
+    for (const p of net) {
+      const ow = evalSize(p.width, sizes), oh = evalSize(p.height, sizes);
+      const tgt = p.save === 'MAIN' ? null : aiTarget(p.save, ow, oh);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, tgt ? tgt.f : outFbo); gl.viewport(0, 0, ow, oh); gl.useProgram(p.prog);
+      gl.uniform2f(u(p.prog, 'uOutSize'), ow, oh);
+      p.binds.forEach((name, j) => {
+        bind(j, texs[name]);
+        gl.uniform1i(u(p.prog, name + '_raw'), j);
+        gl.uniform2f(u(p.prog, name + '_size'), sizes[name][0], sizes[name][1]);
+        gl.uniform2f(u(p.prog, name + '_pt'), 1 / sizes[name][0], 1 / sizes[name][1]);
+      });
+      draw();
+      if (tgt) { sizes[p.save] = [ow, oh]; texs[p.save] = tgt.t; }
+    }
+  }
   if (SHADERS.upscale_old) progs.upscaleOld = program(SHADERS.vs_es3, SHADERS.upscale_old, 'upscale_old');
 
   const vbo = gl.createBuffer();
@@ -315,6 +359,10 @@ function run(SHADERS, scenes, quality) {
       draw();
       res[label] = +psnr(read(fO, W, H), img, null).toFixed(2);
     }
+    for (const [name, net] of Object.entries(aiNets)) {
+      runAi(net, tS, w2, h2, fO);
+      res['KI ' + name] = +psnr(read(fO, W, H), img, null).toFixed(2);
+    }
     out.upscale.push(res);
   }
   // BENCH: Upscaler-Kosten 854x480 -> 2400x1080 (relativ, SwiftShader)
@@ -342,6 +390,14 @@ function run(SHADERS, scenes, quality) {
         gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, one);
         out.bench[label + ' / ' + kname] = +((performance.now() - t0) / n).toFixed(1);
       }
+    }
+    for (const [name, net] of Object.entries(aiNets)) {
+      const tO2 = tex(sw * 2, sh * 2, 1, false), fO2 = fbo(tO2);
+      runAi(net, tS, sw, sh, fO2); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, one);
+      const t0 = performance.now();
+      for (let i = 0; i < 2; i++) runAi(net, tS, sw, sh, fO2);
+      gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, one);
+      out.bench['KI ' + name + ' (einmal pro Videobild, 854x480 -> 1708x960)'] = +((performance.now() - t0) / 2).toFixed(1);
     }
     if (progs.blit) {
       const p = progs.blit;
